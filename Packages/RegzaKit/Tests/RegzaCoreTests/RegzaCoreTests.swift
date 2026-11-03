@@ -180,6 +180,7 @@ import Testing
         let nowPlaying = RegzaNowPlaying(playStatus: try decode(broadcast), now: now)
         #expect(nowPlaying.kind == .broadcast)
         #expect(nowPlaying.channelName == "日テレ１")
+        #expect(nowPlaying.channelCode == "JP-G7fe20410")
         #expect(nowPlaying.title.isEmpty)
         #expect(nowPlaying.position == 600)
         #expect(nowPlaying.duration == 7800)
@@ -203,5 +204,25 @@ import Testing
     @Test func otherKinds() throws {
         #expect(RegzaNowPlaying(playStatus: try decode(#"{"status":0,"content_type":"external"}"#)).kind == .external)
         #expect(RegzaNowPlaying(playStatus: try decode(#"{"status":0,"content_type":"other"}"#)).kind == .standby)
+    }
+}
+
+@Suite struct ChannelTests {
+    let json = """
+        {"status":0,"total":3,"channel_list":[\
+        {"channel_number":11,"rcu_channel_number":1,"channel":"JP-G00000001","ex_channel_number":"DUV_011-1","ex_name_info":"テスト局","name":"テスト局１","network_type":"","show_setting":"SHOW_REPRESENT"},\
+        {"channel_number":183,"rcu_channel_number":8,"channel":"JP-G00000002","ex_channel_number":"DBS_183","ex_name_info":"テストBS","name":"テストBS・１８３","network_type":"","show_setting":"SHOW"},\
+        {"channel_number":55,"channel":"JP-G00000003","ex_channel_number":"DCS_055","name":"テストCS"}]}
+        """
+
+    @Test func decodesChannelList() throws {
+        let channels = try #require(try JSONDecoder().decode(RegzaChannelList.self, from: Data(json.utf8)).channels)
+        #expect(channels.map(\.band) == [.terrestrial, .bs, .cs])
+        #expect(channels.map(\.formattedNumber) == ["011", "183", "055"])
+        #expect(channels[0].isRepresentative)
+        #expect(!channels[1].isRepresentative)
+        #expect(channels[1].remoteNumber == 8)
+        #expect(channels[2].remoteNumber == 0)
+        #expect(channels[0].code == "JP-G00000001")
     }
 }

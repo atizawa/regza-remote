@@ -89,6 +89,25 @@ public actor RegzaClient {
         return status
     }
 
+    /// テレビに登録されているチャンネル。未対応の機種では `RegzaError.httpStatus(404)` か `RegzaError.unsupported` になる
+    public func channels() async throws -> [RegzaChannel] {
+        let data = try await getData(path: "/v2/remote/settings/channel_list", query: nil)
+        guard let list = try? JSONDecoder().decode(RegzaChannelList.self, from: data) else {
+            throw RegzaError.unsupported
+        }
+        guard list.status == 0 else { throw RegzaError.commandRejected(String(list.status)) }
+        return list.channels ?? []
+    }
+
+    /// チャンネル一覧の `code` で選局する (`POST /v2/remote/status/channel`)
+    public func tune(to code: String) async throws {
+        let data = try await post(path: "/v2/remote/status/channel", form: ["channel": code])
+        guard let result = try? JSONDecoder().decode(RegzaResult.self, from: data) else {
+            throw RegzaError.unsupported
+        }
+        guard result.status == 0 else { throw RegzaError.commandRejected(String(result.status)) }
+    }
+
     /// 録画再生中に指定秒数の位置へ移動する
     public func seek(to seconds: Int) async throws {
         _ = try await get(path: "/remote/ts.htm", query: String(max(0, seconds)))
@@ -100,7 +119,7 @@ public actor RegzaClient {
         Self.decode(try await getData(path: path, query: query))
     }
 
-    /// フォームを POST する (PIN 登録用)。資格情報があれば Digest 認証を付ける
+    /// フォームを POST する。資格情報があれば Digest 認証を付ける
     func post(path: String, form: [String: String]) async throws -> Data {
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: "-._~")

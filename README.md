@@ -47,7 +47,13 @@ open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を�
   - 録画再生: 番組名、番組説明、再生位置、再生/一時停止
   - 外部入力 (HDMI)・待機中も判別できる
 - v2 API が無い機種（404 など）では旧 API の `status.htm` に切り替える（録画再生中の情報のみ）
-- 対応 API の一覧は `GET /v2/remote/support` で確認できる
+- 対応 API の一覧は `GET /v2/remote/support` で確認できる（HTTP 80 番では暗号化されて返る。HTTPS 4430 番なら JSON のまま読める）
+
+## チャンネル一覧
+
+- `GET /v2/remote/settings/channel_list` でテレビに登録されているチャンネルを取得し、地デジ・BS・CS ごとに並べる（種類は `ex_channel_number` の `DUV` / `DBS` / `DCS` で見分ける）
+- 押すと `POST /v2/remote/status/channel`（フォーム `channel` にチャンネル一覧の `channel` の値）で直接選局する。成功すると `{"status":0}`、存在しないチャンネルは `{"status":1}`
+- いま映っているチャンネルは `play/status` の `epg_info_current.channel` と照らし合わせて印を付ける
 
 ## 制限
 

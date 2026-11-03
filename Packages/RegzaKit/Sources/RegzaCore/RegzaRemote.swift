@@ -25,6 +25,11 @@ public actor RegzaRemote {
         lastCommand = key
     }
 
+    public func tune(to channel: RegzaChannel) async throws {
+        try await client.tune(to: channel.code)
+        lastCommand = nil
+    }
+
     public func seek(to seconds: Int) async throws {
         try await client.seek(to: seconds)
     }

@@ -56,6 +56,36 @@ public final class RemoteViewModel {
         }
     }
 
+    // MARK: - チャンネル
+
+    /// テレビに登録されているチャンネル。取得前は空
+    public private(set) var channels: [RegzaChannel] = []
+
+    /// チャンネル一覧を取得する。チャンネルの登録はあまり変わらないので、取得済みなら使い回す
+    public func loadChannels(force: Bool = false) async throws(RegzaError) {
+        guard force || channels.isEmpty else { return }
+        do {
+            channels = try await RegzaRemoteService.remote.client.channels()
+        } catch let error as RegzaError {
+            throw error
+        } catch {
+            throw .network(error.localizedDescription)
+        }
+    }
+
+    public func tune(to channel: RegzaChannel) async throws(RegzaError) {
+        tapCount += 1
+        do {
+            try await RegzaRemoteService.tune(to: channel)
+            lastError = nil
+            nowPlaying = await RegzaRemoteService.remote.nowPlaying
+        } catch let error as RegzaError {
+            throw error
+        } catch {
+            throw .network(error.localizedDescription)
+        }
+    }
+
     // MARK: - 状態の定期取得
 
     public func startPolling(interval: Duration = .seconds(2)) {
@@ -111,6 +141,7 @@ public final class RemoteViewModel {
         RegzaRemoteService.store.save(connection)
         self.connection = connection
         nowPlaying = nil
+        channels = []
         lastSearch = nil
         await RegzaRemoteService.reloadConnection()
         stopPolling()

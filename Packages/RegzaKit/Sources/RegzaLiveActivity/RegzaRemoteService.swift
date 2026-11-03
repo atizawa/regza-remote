@@ -27,6 +27,14 @@ public enum RegzaRemoteService {
         _ = await refresh()
     }
 
+    public static func tune(to channel: RegzaChannel) async throws {
+        try await remote.tune(to: channel)
+        try? await Task.sleep(for: .milliseconds(400))
+        _ = await refresh()
+        // 番組の終了時刻が変わるので、起こしてもらう時刻を予約し直す
+        await BackgroundRefresh.schedule()
+    }
+
     /// 状態を取得して Live Activity に反映する
     public static func refresh() async -> Result<RegzaNowPlaying, RegzaError> {
         let result: Result<RegzaNowPlaying, RegzaError>

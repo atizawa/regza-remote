@@ -17,6 +17,8 @@ public struct RegzaNowPlaying: Equatable, Sendable {
 
     public var kind: Kind
     public var channelName: String
+    /// 放送中のチャンネルの ID。チャンネル一覧の `RegzaChannel.code` と同じ
+    public var channelCode: String
     public var title: String
     public var description: String
     public var chapterName: String
@@ -31,12 +33,13 @@ public struct RegzaNowPlaying: Equatable, Sendable {
     public var updatedAt: Date
 
     public init(
-        kind: Kind = .unknown, channelName: String = "", title: String = "", description: String = "",
+        kind: Kind = .unknown, channelName: String = "", channelCode: String = "", title: String = "", description: String = "",
         chapterName: String = "", position: Int = 0, duration: Int = 0, isAdvancing: Bool = false,
         nextProgramStart: Date? = nil, updatedAt: Date = Date()
     ) {
         self.kind = kind
         self.channelName = channelName
+        self.channelCode = channelCode
         self.title = title
         self.description = description
         self.chapterName = chapterName
@@ -74,6 +77,7 @@ public struct RegzaNowPlaying: Equatable, Sendable {
             self.init(
                 kind: .broadcast,
                 channelName: program?.channelName ?? "",
+                channelCode: program?.channel ?? "",
                 title: Self.cleanTitle(program?.title ?? ""),
                 description: program?.description ?? "",
                 position: start.map { min(duration, max(0, Int(now.timeIntervalSince($0)))) } ?? 0,

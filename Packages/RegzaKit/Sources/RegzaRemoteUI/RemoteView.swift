@@ -65,6 +65,8 @@ public struct RemoteView: View {
 }
 
 private struct RemotePanel: View {
+    @State private var isShowingChannels = false
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -80,6 +82,15 @@ private struct RemotePanel: View {
                     KeyButton(key: .terrestrial)
                     KeyButton(key: .bs)
                     KeyButton(key: .cs)
+                    Button {
+                        isShowingChannels = true
+                    } label: {
+                        Image(systemName: "list.bullet")
+                            .font(.title3.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                    }
+                    .buttonStyle(RemoteButtonStyle())
+                    .accessibilityLabel("チャンネル一覧")
                 }
 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
@@ -145,6 +156,9 @@ private struct RemotePanel: View {
                 }
             }
             .padding()
+        }
+        .sheet(isPresented: $isShowingChannels) {
+            ChannelListView()
         }
     }
 
