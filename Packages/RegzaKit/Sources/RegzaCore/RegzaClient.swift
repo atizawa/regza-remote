@@ -53,6 +53,11 @@ public actor RegzaClient {
         self.session = URLSession(configuration: configuration)
     }
 
+    deinit {
+        // 接続テストや探し直しで作ったクライアントのセッションが残り続けないようにする
+        session.finishTasksAndInvalidate()
+    }
+
     public func update(connection: RegzaConnection) {
         guard connection != self.connection else { return }
         self.connection = connection

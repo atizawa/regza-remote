@@ -76,7 +76,12 @@ public struct RegzaLiveActivityWidget: Widget {
 private extension RegzaActivityAttributes.ContentState {
     /// 機種によっては放送中の番組名が返らないので、代わりにチャンネル名を見出しにする
     var showsChannelAsTitle: Bool {
-        isConnected && title.isEmpty && kind == .broadcast && !channelName.isEmpty
+        title.isEmpty && kind == .broadcast && !channelName.isEmpty
+    }
+
+    /// 番組名・チャンネル名・入力などを見出しに出せるか (つながらないときは直前に取得した情報)
+    var hasInfoHeadline: Bool {
+        !title.isEmpty || showsChannelAsTitle || kind == .external || kind == .standby
     }
 
     /// 見出しの上の小さなラベル。見出しと同じチャンネル名を重ねて出さない
@@ -129,9 +134,7 @@ private struct TitleText: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            if !state.isConnected {
-                Text("テレビに接続できません")
-            } else if !state.title.isEmpty {
+            if !state.title.isEmpty {
                 Text(state.title).lineLimit(2)
                 if !state.chapterName.isEmpty {
                     Text(state.chapterName)
@@ -145,10 +148,18 @@ private struct TitleText: View {
                 Text("外部入力")
             } else if state.kind == .standby {
                 Text("待機中")
+            } else if !state.isConnected {
+                Text("テレビに接続できません")
             } else if let lastCommand = state.lastCommand {
                 Text("\(lastCommand) を送信しました")
             } else {
                 Text("リモコン")
+            }
+            if !state.isConnected, state.hasInfoHeadline {
+                // 直前の情報を出しているときは、つながっていないことを小さく添える
+                Label("テレビに接続できません", systemImage: "wifi.exclamationmark")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
             }
             if isStale {
                 Text("アプリを開くと最新の状態に更新されます")

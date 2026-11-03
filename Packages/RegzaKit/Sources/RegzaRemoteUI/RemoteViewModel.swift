@@ -122,10 +122,10 @@ public final class RemoteViewModel {
         RegzaRemoteService.store.pairingUserID()
     }
 
-    /// 保存前の接続情報で status.htm を取得してみる
-    public func testConnection(_ connection: RegzaConnection) async -> Result<RegzaStatus, RegzaError> {
+    /// 保存前の接続情報で視聴状況を取得してみる (普段と同じく v2 API を優先し、無ければ旧 API)
+    public func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError> {
         do {
-            return .success(try await RegzaClient(connection: connection).status())
+            return .success(try await RegzaRemote(connection: connection).refresh())
         } catch let error as RegzaError {
             return .failure(error)
         } catch {

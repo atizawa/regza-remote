@@ -261,10 +261,9 @@ struct SettingsView: View {
         isTesting = true
         defer { isTesting = false }
         switch await model.testConnection(draft) {
-        case .success(let status):
-            testResult = status.isPlayingRecording
-                ? "接続できました: \(status.titleName)"
-                : "接続できました"
+        case .success(let nowPlaying):
+            let detail = nowPlaying.title.isEmpty ? nowPlaying.channelName : nowPlaying.title
+            testResult = detail.isEmpty ? "接続できました" : "接続できました: \(detail)"
         case .failure(let error):
             testResult = error.localizedDescription
         }

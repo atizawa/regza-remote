@@ -25,7 +25,8 @@ public struct RegzaActivityAttributes: ActivityAttributes {
             chapterName = nowPlaying?.chapterName ?? ""
             position = nowPlaying?.position ?? 0
             duration = nowPlaying?.duration ?? 0
-            isAdvancing = nowPlaying?.isAdvancing ?? false
+            // つながらない間は録画の再生位置が分からないので止めておく。放送は時刻から進めてよい
+            isAdvancing = (nowPlaying?.isAdvancing ?? false) && (isConnected || nowPlaying?.kind == .broadcast)
             updatedAt = nowPlaying?.updatedAt ?? Date()
             self.lastCommand = lastCommand?.label
             self.isConnected = isConnected

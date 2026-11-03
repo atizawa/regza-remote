@@ -36,8 +36,10 @@ public enum RegzaRemoteService {
         } catch {
             result = .failure(.network(error.localizedDescription))
         }
+        // 一時的な失敗で番組情報が消えないよう、失敗したときは直前の情報を「接続できません」付きで出す
+        let previous = await remote.nowPlaying
         let state = RegzaActivityAttributes.ContentState(
-            nowPlaying: try? result.get(),
+            nowPlaying: (try? result.get()) ?? previous,
             lastCommand: await remote.lastCommand,
             isConnected: (try? result.get()) != nil
         )
@@ -58,10 +60,14 @@ public enum LiveActivityController {
 
     public static func start(tvName: String = "REGZA") async throws {
         guard !isActive else { return }
+        // つながっていないのに「接続済み」で始めないよう、先に状態を取得する
+        let remote = RegzaRemoteService.remote
+        let current = try? await remote.refresh()
+        let previous = await remote.nowPlaying
         let state = RegzaActivityAttributes.ContentState(
-            nowPlaying: await RegzaRemoteService.remote.nowPlaying,
+            nowPlaying: current ?? previous,
             lastCommand: nil,
-            isConnected: true
+            isConnected: current != nil
         )
         _ = try Activity.request(
             attributes: RegzaActivityAttributes(tvName: tvName),
