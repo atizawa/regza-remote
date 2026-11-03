@@ -17,6 +17,10 @@ struct SettingsView: View {
     @State private var isShowingManualEntry = false
     @FocusState private var isPINFocused: Bool
 
+    /// 自動検出で見つかったテレビ
+    @State private var devices: [RegzaDevice] = []
+    @State private var isScanning = false
+    @State private var scanMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -27,10 +31,45 @@ struct SettingsView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .disabled(pairing != nil)
+                    ForEach(devices) { device in
+                        Button {
+                            Task { await select(device) }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(device.name)
+                                    Text(device.host)
+                                        .font(.caption.monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if draft.host == device.host {
+                                    Image(systemName: "checkmark").foregroundStyle(.tint)
+                                }
+                            }
+                        }
+                        .tint(.primary)
+                        .disabled(pairing != nil)
+                    }
+                    Button {
+                        Task { await scan() }
+                    } label: {
+                        HStack {
+                            Label(isScanning ? "テレビを探しています…" : "テレビを探す", systemImage: "magnifyingglass")
+                            Spacer()
+                            if isScanning { ProgressView() }
+                        }
+                    }
+                    .disabled(isScanning || pairing != nil)
+                    if let scanMessage {
+                        Text(scanMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 } header: {
                     Text("テレビ")
                 } footer: {
-                    Text("テレビの「設定」→「ネットワーク」で IP アドレスを確認できます。iPhone とテレビを同じ Wi-Fi につないでください。")
+                    Text("iPhone とテレビを同じ Wi-Fi につないでください。見つからないときは、テレビの「設定」→「ネットワーク」で IP アドレスを確認して入力してください。")
                 }
 
                 pairingSection
@@ -81,6 +120,10 @@ struct SettingsView: View {
                 }
             }
             .onAppear { draft = model.connection }
+            .task {
+                // 未設定なら開いたときに探し始める
+                if !model.connection.isConfigured { await scan() }
+            }
             .onDisappear {
                 // PIN を入れずに閉じたら、テレビの PIN 表示を消しておく
                 if let pairing { Task { await pairing.cancel() } }
@@ -137,6 +180,30 @@ struct SettingsView: View {
                 Text("テレビの画面に表示されている PIN を入力してください。")
             }
         }
+    }
+
+    private func scan() async {
+        isScanning = true
+        defer { isScanning = false }
+        scanMessage = nil
+        devices = []
+        for await device in RegzaDiscovery.devices() {
+            devices.append(device)
+            // 1 台目は選んでおく。登録は利用者がボタンを押してから
+            if devices.count == 1, draft.host.trimmingCharacters(in: .whitespaces).isEmpty {
+                draft.host = device.host
+            }
+        }
+        if devices.isEmpty {
+            scanMessage = "見つかりませんでした。テレビの電源が入っているか、iPhone の「設定」→「プライバシーとセキュリティ」→「ローカルネットワーク」でこのアプリが許可されているか確認してください。"
+        }
+    }
+
+    /// 未登録なら、選んだテレビにそのまま PIN を表示させる。
+    /// 登録済みなら IP アドレスだけ変える (DHCP でアドレスが変わった場合など)
+    private func select(_ device: RegzaDevice) async {
+        draft.host = device.host
+        if device.supportsPIN, !isRegistered { await startPairing() }
     }
 
     private var isRegistered: Bool {
