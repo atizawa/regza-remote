@@ -85,6 +85,33 @@ public enum RegzaDiscovery {
         }
     }
 
+    /// IP アドレスが変わったテレビを探し、新しいアドレスを返す。
+    /// 登録はテレビごとなので、保存済みの資格情報で認証が通ったものを同じテレビとみなす
+    public static func locate(_ connection: RegzaConnection, timeout: TimeInterval = 1.5) async -> String? {
+        for await device in devices(timeout: timeout) where device.host != connection.trimmedHost {
+            var candidate = connection
+            candidate.host = device.host
+            if await authenticates(candidate) { return device.host }
+        }
+        return nil
+    }
+
+    private static func authenticates(_ connection: RegzaConnection) async -> Bool {
+        let client = RegzaClient(connection: connection)
+        do {
+            _ = try await client.playStatus()
+            return true
+        } catch RegzaError.commandRejected {
+            // 認証は通っている
+            return true
+        } catch RegzaError.httpStatus(404), RegzaError.unsupported {
+            // v2 API が無い機種は旧 API で確かめる
+            return (try? await client.status()) != nil
+        } catch {
+            return false
+        }
+    }
+
     /// 1 台に問い合わせる。REGZA でなければ nil
     public static func probe(host: String, session: URLSession = .shared) async -> RegzaDevice? {
         guard let url = URL(string: "http://\(host)/public/feature") else { return nil }

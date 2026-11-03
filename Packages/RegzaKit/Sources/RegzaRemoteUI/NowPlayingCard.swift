@@ -9,7 +9,11 @@ struct NowPlayingCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let error = model.lastError {
+            if model.isSearchingTV {
+                Label("テレビが見つからないため、探しています…", systemImage: "magnifyingglass")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else if let error = model.lastError {
                 Label(error.localizedDescription, systemImage: "exclamationmark.triangle.fill")
                     .font(.subheadline)
                     .foregroundStyle(.orange)

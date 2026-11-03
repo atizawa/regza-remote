@@ -13,8 +13,13 @@ public final class RemoteViewModel {
     public private(set) var isLiveActivityOn: Bool
     /// ボタンを押したときの触覚フィードバック用
     public private(set) var tapCount = 0
+    /// つながらないので、IP アドレスが変わっていないかテレビを探している
+    public private(set) var isSearchingTV = false
 
     private var pollingTask: Task<Void, Never>?
+    private var lastSearch: Date?
+    /// テレビの電源が切れているだけのこともあるので、探し直す間隔を空ける
+    private static let searchInterval: TimeInterval = 180
 
     public init() {
         connection = RegzaRemoteService.store.load()
@@ -73,10 +78,31 @@ public final class RemoteViewModel {
         case .success(let value):
             nowPlaying = value
             lastError = nil
+            lastSearch = nil
         case .failure(let error):
             lastError = error
+            if case .network = error { await searchForMovedTV() }
         }
         isLiveActivityOn = LiveActivityController.isActive
+    }
+
+    /// DHCP などで IP アドレスが変わったテレビを探し、見つかればそのアドレスに切り替える
+    private func searchForMovedTV() async {
+        if let lastSearch, Date().timeIntervalSince(lastSearch) < Self.searchInterval { return }
+        lastSearch = Date()
+        isSearchingTV = true
+        defer { isSearchingTV = false }
+        let original = connection
+        guard let host = await RegzaDiscovery.locate(original),
+              // 探している間に設定画面で接続先が変えられていたら、そちらを優先する
+              !Task.isCancelled, connection == original
+        else { return }
+        var moved = original
+        moved.host = host
+        RegzaRemoteService.store.save(moved)
+        connection = moved
+        await RegzaRemoteService.reloadConnection()
+        await refresh()
     }
 
     // MARK: - 設定
@@ -85,6 +111,7 @@ public final class RemoteViewModel {
         RegzaRemoteService.store.save(connection)
         self.connection = connection
         nowPlaying = nil
+        lastSearch = nil
         await RegzaRemoteService.reloadConnection()
         stopPolling()
         startPolling()
