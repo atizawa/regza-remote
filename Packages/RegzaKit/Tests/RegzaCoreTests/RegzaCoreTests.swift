@@ -154,9 +154,10 @@ import Testing
     }
 
     @Test func userID() {
-        let id = RegzaPairing.makeUserID()
-        #expect(RegzaPairing.isUserID(id))
-        #expect(!RegzaPairing.isUserID("admin"))
+        let parts = RegzaPairing.makeUserID().split(separator: "-")
+        #expect(parts.count == 6)
+        #expect(parts.allSatisfy { $0.count == 2 && UInt8($0, radix: 16) != nil })
+        #expect(RegzaPairing.makeUserID() != RegzaPairing.makeUserID())
     }
 }
 

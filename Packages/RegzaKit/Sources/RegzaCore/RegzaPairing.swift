@@ -84,12 +84,6 @@ public actor RegzaPairing {
         bytes[0] = (bytes[0] & 0xFC) | 0x02
         return bytes.map { String(format: "%02X", $0) }.joined(separator: "-")
     }
-
-    /// 既存の接続情報のユーザー名を再利用できるか (PIN 登録で作った ID か)
-    public static func isUserID(_ user: String) -> Bool {
-        let parts = user.split(separator: "-", omittingEmptySubsequences: false)
-        return parts.count == 6 && parts.allSatisfy { $0.count == 2 && UInt8($0, radix: 16) != nil }
-    }
 }
 
 extension [UInt8] {

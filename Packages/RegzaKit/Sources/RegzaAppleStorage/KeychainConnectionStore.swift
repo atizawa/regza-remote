@@ -3,11 +3,13 @@ import Foundation
 import RegzaCore
 import Security
 
-/// ホストとユーザー名は UserDefaults、パスワードはキーチェーンに保存する。
+/// ホストとユーザー名は UserDefaults、パスワードと PIN 登録用のユーザー ID はキーチェーンに保存する。
+/// キーチェーンはアプリを削除しても残るので、入れ直しても同じ ID で登録し直せる。
 public struct KeychainConnectionStore: RegzaConnectionStore {
     private static let hostKey = "regza.host"
     private static let userKey = "regza.user"
     private static let passwordAccount = "regza.password"
+    private static let pairingUserIDAccount = "regza.pairingUserID"
     private static let service = "RegzaRemote"
 
     public init() {}
@@ -17,7 +19,7 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
         return RegzaConnection(
             host: defaults.string(forKey: Self.hostKey) ?? "",
             user: defaults.string(forKey: Self.userKey) ?? "",
-            password: readPassword() ?? ""
+            password: read(account: Self.passwordAccount) ?? ""
         )
     }
 
@@ -25,19 +27,30 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
         let defaults = UserDefaults.standard
         defaults.set(connection.host.trimmingCharacters(in: .whitespaces), forKey: Self.hostKey)
         defaults.set(connection.user, forKey: Self.userKey)
-        writePassword(connection.password)
+        write(connection.password, account: Self.passwordAccount)
     }
 
-    private var baseQuery: [CFString: Any] {
+    public func pairingUserID() -> String {
+        if let id = read(account: Self.pairingUserIDAccount) { return id }
+        // 以前のバージョンは UserDefaults に保存していた。テレビの登録をそのまま使えるよう引き継ぐ
+        let defaults = UserDefaults.standard
+        let id = defaults.string(forKey: Self.pairingUserIDAccount).flatMap { $0.isEmpty ? nil : $0 }
+            ?? RegzaPairing.makeUserID()
+        write(id, account: Self.pairingUserIDAccount)
+        defaults.removeObject(forKey: Self.pairingUserIDAccount)
+        return id
+    }
+
+    private func baseQuery(account: String) -> [CFString: Any] {
         [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: Self.service,
-            kSecAttrAccount: Self.passwordAccount,
+            kSecAttrAccount: account,
         ]
     }
 
-    private func readPassword() -> String? {
-        var query = baseQuery
+    private func read(account: String) -> String? {
+        var query = baseQuery(account: account)
         query[kSecReturnData] = true
         query[kSecMatchLimit] = kSecMatchLimitOne
         var result: AnyObject?
@@ -47,10 +60,10 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
         return String(data: data, encoding: .utf8)
     }
 
-    private func writePassword(_ password: String) {
-        SecItemDelete(baseQuery as CFDictionary)
-        var attributes = baseQuery
-        attributes[kSecValueData] = Data(password.utf8)
+    private func write(_ value: String, account: String) {
+        SecItemDelete(baseQuery(account: account) as CFDictionary)
+        var attributes = baseQuery(account: account)
+        attributes[kSecValueData] = Data(value.utf8)
         attributes[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlock
         SecItemAdd(attributes as CFDictionary, nil)
     }

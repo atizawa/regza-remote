@@ -16,6 +16,9 @@ struct SettingsView: View {
     @State private var pairingMessage: String?
     @State private var isShowingManualEntry = false
     @FocusState private var isPINFocused: Bool
+    /// このアプリ用のユーザー ID。手入力のユーザー名は他のツールと共有している
+    /// かもしれないので使い回さない (同じ ID で登録し直すと、前のパスワードが無効になる)
+    @State private var pairingUserID = ""
 
     /// 自動検出で見つかったテレビ
     @State private var devices: [RegzaDevice] = []
@@ -119,7 +122,10 @@ struct SettingsView: View {
                     .disabled(!draft.isConfigured || pairing != nil)
                 }
             }
-            .onAppear { draft = model.connection }
+            .onAppear {
+                draft = model.connection
+                pairingUserID = model.pairingUserID()
+            }
             .task {
                 // 未設定なら開いたときに探し始める
                 if !model.connection.isConfigured { await scan() }
@@ -207,18 +213,15 @@ struct SettingsView: View {
     }
 
     private var isRegistered: Bool {
-        RegzaPairing.isUserID(draft.user) && !draft.password.isEmpty
+        !pairingUserID.isEmpty && draft.user == pairingUserID && !draft.password.isEmpty
     }
 
     private func startPairing() async {
         isPairing = true
         defer { isPairing = false }
         pairingMessage = nil
-        // 登録し直すときは同じ ID を使い、テレビの登録機器が増えないようにする
-        let session = RegzaPairing(
-            host: draft.host,
-            user: RegzaPairing.isUserID(draft.user) ? draft.user : RegzaPairing.makeUserID()
-        )
+        // 登録し直すときはアプリの ID を使い回し、テレビの登録機器が増えないようにする
+        let session = RegzaPairing(host: draft.host, user: pairingUserID)
         do {
             try await session.start()
             pairing = session

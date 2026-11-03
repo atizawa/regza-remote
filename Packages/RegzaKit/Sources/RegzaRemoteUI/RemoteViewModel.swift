@@ -90,6 +90,11 @@ public final class RemoteViewModel {
         startPolling()
     }
 
+    /// PIN 登録に使うこのアプリ用のユーザー ID
+    public func pairingUserID() -> String {
+        RegzaRemoteService.store.pairingUserID()
+    }
+
     /// 保存前の接続情報で status.htm を取得してみる
     public func testConnection(_ connection: RegzaConnection) async -> Result<RegzaStatus, RegzaError> {
         do {
