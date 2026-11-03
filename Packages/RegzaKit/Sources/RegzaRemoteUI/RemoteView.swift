@@ -66,6 +66,8 @@ public struct RemoteView: View {
 
 private struct RemotePanel: View {
     @State private var isShowingChannels = false
+    @State private var isShowingRecordings = false
+    @State private var isShowingReservations = false
 
     var body: some View {
         ScrollView {
@@ -144,6 +146,23 @@ private struct RemotePanel: View {
                             KeyButton(key: .timeShift, showsIcon: false)
                             KeyButton(key: .jumpToStart, showsIcon: false)
                         }
+                        HStack(spacing: 10) {
+                            Button {
+                                isShowingRecordings = true
+                            } label: {
+                                Label("録画番組", systemImage: "film.stack")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity, minHeight: 48)
+                            }
+                            Button {
+                                isShowingReservations = true
+                            } label: {
+                                Label("録画予約", systemImage: "calendar.badge.clock")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity, minHeight: 48)
+                            }
+                        }
+                        .buttonStyle(RemoteButtonStyle())
                     }
                 }
 
@@ -159,6 +178,12 @@ private struct RemotePanel: View {
         }
         .sheet(isPresented: $isShowingChannels) {
             ChannelListView()
+        }
+        .sheet(isPresented: $isShowingRecordings) {
+            RecordingsView()
+        }
+        .sheet(isPresented: $isShowingReservations) {
+            ReservationsView()
         }
     }
 

@@ -99,6 +99,16 @@ public actor RegzaClient {
         return list.channels ?? []
     }
 
+    /// 録画予約の一覧
+    public func reservations() async throws -> [RegzaReservation] {
+        let data = try await getData(path: "/v2/remote/pvr/reserves/list", query: nil)
+        guard let list = try? JSONDecoder().decode(RegzaReservationList.self, from: data) else {
+            throw RegzaError.unsupported
+        }
+        guard list.status == 0 else { throw RegzaError.commandRejected(String(list.status)) }
+        return list.reservations ?? []
+    }
+
     /// チャンネル一覧の `code` で選局する (`POST /v2/remote/status/channel`)
     public func tune(to code: String) async throws {
         let data = try await post(path: "/v2/remote/status/channel", form: ["channel": code])

@@ -226,3 +226,56 @@ import Testing
         #expect(channels[0].code == "JP-G00000001")
     }
 }
+
+@Suite struct RecordingTests {
+    @Test func decodesReservations() throws {
+        let json = """
+            {"status":0,"rsv_list":[\
+            {"rsv_id":"1","title":"テスト番組　＃２[字]","channel":"JP-G00000001","start_time":1000000000,"duration":1800,"repeat":"weekly","series_rec":"true"},\
+            {"rsv_id":"2","title":"単発","channel":"JP-G00000002","start_time":2000000000,"duration":600,"repeat":"none","series_rec":"false"}]}
+            """
+        let list = try #require(try JSONDecoder().decode(RegzaReservationList.self, from: Data(json.utf8)).reservations)
+        #expect(list[0].title == "テスト番組　＃２")
+        #expect(list[0].repeatLabel == "毎週")
+        #expect(list[0].isSeries)
+        #expect(!list[0].isScheduled(now: Date(timeIntervalSince1970: 1_500_000_000)))
+        #expect(list[1].repeatLabel == nil)
+        #expect(list[1].isScheduled(now: Date(timeIntervalSince1970: 1_500_000_000)))
+        #expect(list[1].end == Date(timeIntervalSince1970: 2_000_000_600))
+    }
+
+    @Test func parsesBrowseResponse() throws {
+        let didl = """
+            <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" \
+            xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" xmlns:arib="urn:schemas-arib-or-jp:elements-1-0/" \
+            xmlns:regza="urn:schemas-toshiba-co-jp:regzadata-1-0">\
+            <container id="folder1" parentID="0" restricted="1" childCount="12"><dc:title>すべて</dc:title>\
+            <upnp:class>object.container</upnp:class></container>\
+            <item id="folder1/item1" parentID="folder1" restricted="1"><dc:title>テスト番組[字]</dc:title>\
+            <upnp:class>object.item.videoItem</upnp:class><dc:date>2026-01-02T21:00:00</dc:date>\
+            <upnp:genre>ドラマ</upnp:genre><upnp:channelName>テスト局</upnp:channelName>\
+            <arib:longDescription>説明 &amp; あらすじ</arib:longDescription><regza:playbackState>0</regza:playbackState>\
+            <res protocolInfo="http-get:*:application/x-dtcp1:*" duration="1:09:03.000">http://example.invalid/1.dtv</res></item>\
+            </DIDL-Lite>
+            """
+        let escaped = didl.replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
+        let soap = """
+            <?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>\
+            <u:BrowseResponse xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1"><Result>\(escaped)</Result>\
+            <NumberReturned>2</NumberReturned><TotalMatches>30</TotalMatches></u:BrowseResponse></s:Body></s:Envelope>
+            """
+        let page = try #require(RegzaMediaServer.parseBrowseResponse(Data(soap.utf8)))
+        #expect(page.total == 30)
+        #expect(page.folders == [RegzaRecordingFolder(id: "folder1", title: "すべて", childCount: 12)])
+        let recording = try #require(page.recordings.first)
+        #expect(recording.title == "テスト番組")
+        #expect(recording.channelName == "テスト局")
+        #expect(recording.genre == "ドラマ")
+        #expect(recording.description == "説明 & あらすじ")
+        #expect(recording.duration == 4143)
+        #expect(recording.isUnwatched)
+        // 2026-01-02 21:00 JST
+        #expect(recording.date == Date(timeIntervalSince1970: 1_767_355_200))
+    }
+}

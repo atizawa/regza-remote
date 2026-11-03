@@ -86,6 +86,33 @@ public final class RemoteViewModel {
         }
     }
 
+    // MARK: - 録画
+
+    /// 録画予約。予定のあるものを先に、時刻順に並べる
+    public private(set) var reservations: [RegzaReservation] = []
+
+    public func loadReservations() async throws(RegzaError) {
+        let list: [RegzaReservation]
+        do {
+            list = try await RegzaRemoteService.remote.client.reservations()
+        } catch let error as RegzaError {
+            throw error
+        } catch {
+            throw .network(error.localizedDescription)
+        }
+        let now = Date()
+        reservations = list.sorted { lhs, rhs in
+            let left = lhs.isScheduled(now: now), right = rhs.isScheduled(now: now)
+            // 予定のあるものは近い順、次の回が未定のものは最後に録画した回が新しい順
+            return left != right ? left : (left ? lhs.start < rhs.start : lhs.start > rhs.start)
+        }
+    }
+
+    /// 録画済み番組の一覧を読む DLNA サーバー
+    public func mediaServer() -> RegzaMediaServer {
+        RegzaMediaServer(host: connection.host)
+    }
+
     // MARK: - 状態の定期取得
 
     public func startPolling(interval: Duration = .seconds(2)) {
@@ -142,6 +169,7 @@ public final class RemoteViewModel {
         self.connection = connection
         nowPlaying = nil
         channels = []
+        reservations = []
         lastSearch = nil
         await RegzaRemoteService.reloadConnection()
         stopPolling()
