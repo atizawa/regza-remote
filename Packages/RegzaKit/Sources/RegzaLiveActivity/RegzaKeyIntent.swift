@@ -20,6 +20,8 @@ public struct RegzaKeyIntent: LiveActivityIntent {
     public func perform() async throws -> some IntentResult {
         if let key = RegzaKey(rawValue: keyCode) {
             try await RegzaRemoteService.send(key)
+            // チャンネルを変えると番組の終了時刻も変わるので、起こしてもらう時刻を予約し直す
+            await BackgroundRefresh.schedule()
         }
         return .result()
     }

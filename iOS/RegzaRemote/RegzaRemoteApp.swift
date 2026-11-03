@@ -9,6 +9,9 @@ struct RegzaRemoteApp: App {
         WindowGroup {
             RemoteView()
         }
+        .backgroundTask(.appRefresh(BackgroundRefresh.identifier)) {
+            await BackgroundRefresh.run()
+        }
     }
 }
 

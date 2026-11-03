@@ -57,6 +57,8 @@ public struct RemoteView: View {
                 model.startPolling()
             } else {
                 model.stopPolling()
+                // 閉じている間も Live Activity を更新できるよう、iOS に起こしてもらう時刻を予約する
+                if phase == .background { model.scheduleBackgroundRefresh() }
             }
         }
     }

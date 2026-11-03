@@ -147,6 +147,12 @@ public final class RemoteViewModel {
             lastError = .network("Live Activity を開始できませんでした: \(error.localizedDescription)")
         }
         isLiveActivityOn = LiveActivityController.isActive
+        await BackgroundRefresh.schedule()
+    }
+
+    /// Live Activity が出ていれば、閉じている間に iOS に起こしてもらう時刻を予約する
+    public func scheduleBackgroundRefresh() {
+        Task { await BackgroundRefresh.schedule() }
     }
 }
 #endif

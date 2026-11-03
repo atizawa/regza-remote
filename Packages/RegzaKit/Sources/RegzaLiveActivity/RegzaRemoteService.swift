@@ -1,5 +1,6 @@
 #if os(iOS)
 import ActivityKit
+import BackgroundTasks
 import Foundation
 import RegzaAppleStorage
 import RegzaCore
@@ -90,8 +91,47 @@ public enum LiveActivityController {
     private static func content(
         for state: RegzaActivityAttributes.ContentState
     ) -> ActivityContent<RegzaActivityAttributes.ContentState> {
-        // アプリがバックグラウンドに入ると更新が止まるので、古くなったら stale 表示にする
-        ActivityContent(state: state, staleDate: Date().addingTimeInterval(5 * 60))
+        ActivityContent(state: state, staleDate: staleDate(for: state))
+    }
+
+    /// 表示が古くなる時刻。システムはこの時刻に stale として描き直すので、アプリが止まっていても切り替わる。
+    /// 放送は番組の終了時刻 (「番組が終わりました」に切り替える)、それ以外は 5 分後
+    static func staleDate(for state: RegzaActivityAttributes.ContentState, now: Date = Date()) -> Date {
+        if state.isConnected, let end = state.programEnd, end > now { return end }
+        return now.addingTimeInterval(5 * 60)
+    }
+}
+
+/// アプリが閉じている間に、iOS に起こしてもらって Live Activity を更新する (BGAppRefreshTask)。
+/// いつ起こされるかはシステムが決めるので、番組の終了時刻ちょうどに更新されるとは限らない
+public enum BackgroundRefresh {
+    /// Info.plist の BGTaskSchedulerPermittedIdentifiers と同じ値
+    public static var identifier: String { (Bundle.main.bundleIdentifier ?? "RegzaRemote") + ".refresh" }
+
+    /// 起こされたときの処理。状態を取り直して Live Activity を更新し、次を予約する
+    public static func run() async {
+        guard LiveActivityController.isActive else { return }
+        _ = await RegzaRemoteService.refresh()
+        await schedule()
+    }
+
+    /// Live Activity が出ていれば、次に起こしてもらう時刻を予約する
+    public static func schedule() async {
+        guard LiveActivityController.isActive else {
+            BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: identifier)
+            return
+        }
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = await earliestBeginDate()
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    /// 放送中なら番組が切り替わった直後、それ以外は 15 分後 (システムが許す最短の目安)
+    static func earliestBeginDate(now: Date = Date()) async -> Date {
+        if let end = await RegzaRemoteService.remote.nowPlaying?.programEnd, end > now {
+            return end.addingTimeInterval(30)
+        }
+        return now.addingTimeInterval(15 * 60)
     }
 }
 #endif

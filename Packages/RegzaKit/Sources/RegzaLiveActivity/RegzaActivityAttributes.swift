@@ -14,6 +14,8 @@ public struct RegzaActivityAttributes: ActivityAttributes {
         public var duration: Int
         public var isAdvancing: Bool
         public var updatedAt: Date
+        /// 放送中の次の番組の開始時刻 (古いバージョンで開始した Live Activity にはない)
+        public var nextProgramStart: Date?
         /// 直前に送ったボタン
         public var lastCommand: String?
         public var isConnected: Bool
@@ -28,6 +30,7 @@ public struct RegzaActivityAttributes: ActivityAttributes {
             // つながらない間は録画の再生位置が分からないので止めておく。放送は時刻から進めてよい
             isAdvancing = (nowPlaying?.isAdvancing ?? false) && (isConnected || nowPlaying?.kind == .broadcast)
             updatedAt = nowPlaying?.updatedAt ?? Date()
+            nextProgramStart = nowPlaying?.nextProgramStart
             self.lastCommand = lastCommand?.label
             self.isConnected = isConnected
         }
@@ -39,6 +42,12 @@ public struct RegzaActivityAttributes: ActivityAttributes {
 
         public var progress: Double {
             duration > 0 ? min(1, Double(position) / Double(duration)) : 0
+        }
+
+        /// 放送中の番組の終了時刻
+        public var programEnd: Date? {
+            guard kind == .broadcast, duration > 0 else { return nil }
+            return updatedAt.addingTimeInterval(TimeInterval(duration - position))
         }
 
         /// 再生中なら Live Activity 側で時間を進められるよう、再生開始・終了時刻を逆算する

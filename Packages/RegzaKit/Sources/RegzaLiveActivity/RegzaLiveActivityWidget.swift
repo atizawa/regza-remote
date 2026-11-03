@@ -37,7 +37,7 @@ public struct RegzaLiveActivityWidget: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     // 左右の領域は狭く再生時間が折り返すため、時間は進捗バーの両端に出す
                     VStack(spacing: 8) {
-                        if state.hasTimeline {
+                        if state.hasTimeline, !state.hasProgramEnded(isStale: context.isStale) {
                             PlaybackBar(state: state)
                         }
                         ActivityButtons(state: state)
@@ -54,7 +54,7 @@ public struct RegzaLiveActivityWidget: Widget {
                     .minimumScaleFactor(0.75)
                     .frame(maxWidth: 72)
             } minimal: {
-                if state.hasTimeline {
+                if state.hasTimeline, !state.hasProgramEnded(isStale: context.isStale) {
                     PlaybackProgress(state: state, circular: true)
                 } else {
                     Image(systemName: "tv")
@@ -82,6 +82,13 @@ private extension RegzaActivityAttributes.ContentState {
     /// 番組名・チャンネル名・入力などを見出しに出せるか (つながらないときは直前に取得した情報)
     var hasInfoHeadline: Bool {
         !title.isEmpty || showsChannelAsTitle || kind == .external || kind == .standby
+    }
+
+    /// 放送中の番組が終わったか。システムは staleDate (番組の終了時刻) に stale として描き直すので、
+    /// アプリが止まっていてもこの時点で表示が切り替わる
+    func hasProgramEnded(isStale: Bool) -> Bool {
+        guard isStale, let programEnd else { return false }
+        return programEnd <= Date()
     }
 
     /// 見出しの上の小さなラベル。見出しと同じチャンネル名を重ねて出さない
@@ -119,7 +126,7 @@ private struct LockScreenView: View {
             TitleText(state: state, isStale: context.isStale)
                 .font(.headline)
                 .foregroundStyle(.white)
-            if state.hasTimeline {
+            if state.hasTimeline, !state.hasProgramEnded(isStale: context.isStale) {
                 PlaybackBar(state: state)
             }
             ActivityButtons(state: state)
@@ -160,6 +167,17 @@ private struct TitleText: View {
                 Label("テレビに接続できません", systemImage: "wifi.exclamationmark")
                     .font(.caption2)
                     .foregroundStyle(.orange)
+            }
+            if state.hasProgramEnded(isStale: isStale) {
+                Group {
+                    if let next = state.nextProgramStart {
+                        Text("番組が終わりました・次の番組 \(next, style: .time)〜")
+                    } else {
+                        Text("番組が終わりました")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             if isStale {
                 Text("アプリを開くと最新の状態に更新されます")

@@ -108,6 +108,12 @@ public struct RegzaNowPlaying: Equatable, Sendable {
     /// 経過時間と進捗バーを出せるか
     public var hasTimeline: Bool { duration > 0 }
 
+    /// 放送中の番組の終了時刻
+    public var programEnd: Date? {
+        guard kind == .broadcast, duration > 0 else { return nil }
+        return updatedAt.addingTimeInterval(TimeInterval(duration - position))
+    }
+
     public var progress: Double {
         duration > 0 ? min(1, Double(position) / Double(duration)) : 0
     }
