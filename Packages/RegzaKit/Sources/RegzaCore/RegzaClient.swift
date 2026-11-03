@@ -12,6 +12,8 @@ public enum RegzaError: Error, Equatable, Sendable {
     case commandRejected(String)
     /// 機種が API に対応していない
     case unsupported
+    /// PIN 登録で PIN が違う
+    case invalidPIN
     case network(String)
 }
 
@@ -24,6 +26,7 @@ extension RegzaError: LocalizedError {
         case .httpStatus(let code): "HTTPエラー (\(code))"
         case .commandRejected(let code): "テレビがコマンドを拒否しました (\(code))"
         case .unsupported: "この機種は対応していません"
+        case .invalidPIN: "PIN が正しくありません。テレビに表示されている数字を確認してください"
         case .network(let message): message
         }
     }
@@ -35,7 +38,7 @@ extension RegzaError: LocalizedError {
 /// - `GET /remote/status.htm` 再生状況
 /// - `GET /remote/ts.htm?SEC` シーク
 ///
-/// いずれも Digest 認証が必要。
+/// いずれも Digest 認証が必要。PIN 登録は `RegzaPairing` を使う。
 public actor RegzaClient {
     public private(set) var connection: RegzaConnection
     private let session: URLSession
@@ -92,12 +95,26 @@ public actor RegzaClient {
         Self.decode(try await getData(path: path, query: query))
     }
 
+    /// フォームを POST する (PIN 登録用)。資格情報があれば Digest 認証を付ける
+    func post(path: String, form: [String: String]) async throws -> Data {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        let body = form.sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")" }
+            .joined(separator: "&")
+        return try await request(method: "POST", path: path, query: nil, body: Data(body.utf8))
+    }
+
     private func getData(path: String, query: String?) async throws -> Data {
+        try await request(method: "GET", path: path, query: query, body: nil)
+    }
+
+    private func request(method: String, path: String, query: String?, body: Data?) async throws -> Data {
         guard connection.isConfigured else { throw RegzaError.notConfigured }
         guard let url = makeURL(path: path, query: query) else { throw RegzaError.invalidHost }
         let uri = query.map { "\(path)?\($0)" } ?? path
 
-        var (data, response) = try await perform(url: url, uri: uri)
+        var (data, response) = try await perform(method: method, url: url, uri: uri, body: body)
         if response.statusCode == 401 {
             // nonce の期限切れなどで再チャレンジされたら、新しいチャレンジで 1 回だけやり直す
             guard let header = response.value(forHTTPHeaderField: "WWW-Authenticate"),
@@ -107,7 +124,7 @@ public actor RegzaClient {
             challenge = newChallenge
             nonceCount = 0
             guard retry else { throw RegzaError.unauthorized }
-            (data, response) = try await perform(url: url, uri: uri)
+            (data, response) = try await perform(method: method, url: url, uri: uri, body: body)
         }
 
         switch response.statusCode {
@@ -117,14 +134,18 @@ public actor RegzaClient {
         }
     }
 
-    private func perform(url: URL, uri: String) async throws -> (Data, HTTPURLResponse) {
+    private func perform(method: String, url: URL, uri: String, body: Data?) async throws -> (Data, HTTPURLResponse) {
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = method
+        if let body {
+            request.httpBody = body
+            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        }
         if let challenge {
             nonceCount += 1
             request.setValue(
                 challenge.authorization(
-                    method: "GET", uri: uri,
+                    method: method, uri: uri,
                     user: connection.user, password: connection.password,
                     nonceCount: nonceCount, clientNonce: Self.makeClientNonce()
                 ),

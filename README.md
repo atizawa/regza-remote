@@ -27,7 +27,9 @@ open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を�
 
 ## テレビ側の準備
 
-- テレビの外部連携設定でユーザー名・パスワードを設定する（アプリの設定画面に入力）
+- アプリの設定画面で IP アドレスを入力し、「テレビに PIN を表示」→ テレビに出た PIN を入力して登録する（レグザAppsコネクト v2 の `request_connection` / `confirm_connection`）
+  - パスワードは PIN から作った鍵（PBKDF2-HMAC-SHA1, 1331 回）の AES-128-CBC で暗号化されて届く。Android でも動くよう SHA-1 / AES は `RegzaCore` で自前実装している
+- PIN 登録に対応していない機種は、テレビの外部連携設定で決めたユーザー名・パスワードを手入力する
 - 電源 ON をスマホから行うには、待機時の通信（クイック起動など）を有効にする
 
 ## 視聴状況の取得

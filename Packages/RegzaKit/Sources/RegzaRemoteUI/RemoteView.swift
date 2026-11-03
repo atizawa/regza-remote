@@ -19,7 +19,7 @@ public struct RemoteView: View {
                     ContentUnavailableView {
                         Label("テレビが未設定です", systemImage: "tv.badge.wifi")
                     } description: {
-                        Text("REGZA の IP アドレスとユーザー名・パスワードを設定してください")
+                        Text("REGZA の IP アドレスを入力し、テレビに表示される PIN で登録してください")
                     } actions: {
                         Button("設定する") { isShowingSettings = true }
                             .buttonStyle(.borderedProminent)
