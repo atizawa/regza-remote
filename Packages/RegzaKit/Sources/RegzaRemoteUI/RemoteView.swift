@@ -23,8 +23,6 @@ public struct RemoteView: View {
                             .navigationBarTitleDisplayMode(.inline)
                             .toolbar { remoteToolbar }
                     }
-                    // 右上のボタンも含め、リモコンの画面全体を本体の色になじませる
-                    .environment(\.colorScheme, .dark)
                     .tabItem { Label("リモコン", systemImage: "appletvremote.gen4.fill") }
                     .tag(AppTab.remote)
 
@@ -148,7 +146,6 @@ private struct RemotePanel: View {
             }
             .padding(Design.outer)
         }
-        // 本物のリモコンのように、ライトモードでも濃い色の本体にする (ダークモードの指定は NavigationStack 側)
         .background(RemoteBody.background.ignoresSafeArea())
     }
 

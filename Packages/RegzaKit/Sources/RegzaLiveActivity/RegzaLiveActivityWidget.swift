@@ -26,7 +26,7 @@ public struct RegzaLiveActivityWidget: Widget {
                         Image(systemName: "tv")
                     }
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(AppTheme.accentOnDark)
+                    .foregroundStyle(AppTheme.accent)
                     // 左上は角丸で削られるので内側に寄せる
                     .padding(.leading, 8)
                     .padding(.top, 4)
@@ -46,7 +46,7 @@ public struct RegzaLiveActivityWidget: Widget {
                 }
             } compactLeading: {
                 Image(systemName: "tv")
-                    .foregroundStyle(AppTheme.accentOnDark)
+                    .foregroundStyle(AppTheme.accent)
             } compactTrailing: {
                 // コンパクト表示の幅はシステムに制限されるので、少し縮小して文字数を稼ぐ
                 Text(compactTitle(state))
@@ -59,10 +59,10 @@ public struct RegzaLiveActivityWidget: Widget {
                     PlaybackProgress(state: state, circular: true)
                 } else {
                     Image(systemName: "tv")
-                        .foregroundStyle(AppTheme.accentOnDark)
+                        .foregroundStyle(AppTheme.accent)
                 }
             }
-            .keylineTint(AppTheme.accentOnDark)
+            .keylineTint(AppTheme.accent)
         }
     }
 
@@ -123,7 +123,7 @@ private struct LockScreenView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label(state.headerName(tvName: context.attributes.tvName), systemImage: "tv")
             .font(.caption.weight(.semibold))
-            .foregroundStyle(AppTheme.accentOnDark)
+            .foregroundStyle(AppTheme.accent)
             TitleText(state: state, isStale: context.isStale)
                 .font(.headline)
                 .foregroundStyle(.white)
@@ -246,7 +246,7 @@ private struct PlaybackProgress: View {
             }
         }
         .modifier(ProgressStyleModifier(circular: circular))
-        .tint(AppTheme.accentOnDark)
+        .tint(AppTheme.accent)
     }
 }
 

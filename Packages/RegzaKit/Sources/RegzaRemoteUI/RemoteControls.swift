@@ -117,7 +117,6 @@ struct RemoteButtonStyle: ButtonStyle {
 
 /// リモコンのタブの配色。テレビ付属のリモコンの写真から測った色に合わせる。
 /// 本体はグレーで、十字キーのあたりだけ黒い帯になっている。ボタンは黒に白い文字、決定は銀色。
-/// ライトモードでもこの配色にする (リモコンのタブを常にダークモードとして描く)
 enum RemoteBody {
     /// 本体のグレー (#7B7A80 付近。写真の色は暗く写っていたので明るめにしている)
     static let background = LinearGradient(

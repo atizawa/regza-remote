@@ -15,6 +15,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>同じネットワーク上の REGZA を操作するために使用します。</string>
 	<key>NSSupportsLiveActivities</key>
