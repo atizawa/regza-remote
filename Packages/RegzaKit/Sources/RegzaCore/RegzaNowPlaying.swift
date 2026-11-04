@@ -30,12 +30,16 @@ public struct RegzaNowPlaying: Equatable, Sendable {
     public var isAdvancing: Bool
     /// 放送中の次の番組の開始時刻
     public var nextProgramStart: Date?
+    /// 次の番組の長さ (秒)
+    public var nextProgramDuration: Int
+    /// 次の番組名 (番組表から補えたときだけ)
+    public var nextTitle: String
     public var updatedAt: Date
 
     public init(
         kind: Kind = .unknown, channelName: String = "", channelCode: String = "", title: String = "", description: String = "",
         chapterName: String = "", position: Int = 0, duration: Int = 0, isAdvancing: Bool = false,
-        nextProgramStart: Date? = nil, updatedAt: Date = Date()
+        nextProgramStart: Date? = nil, nextProgramDuration: Int = 0, nextTitle: String = "", updatedAt: Date = Date()
     ) {
         self.kind = kind
         self.channelName = channelName
@@ -47,6 +51,8 @@ public struct RegzaNowPlaying: Equatable, Sendable {
         self.duration = duration
         self.isAdvancing = isAdvancing
         self.nextProgramStart = nextProgramStart
+        self.nextProgramDuration = nextProgramDuration
+        self.nextTitle = nextTitle
         self.updatedAt = updatedAt
     }
 
@@ -84,6 +90,7 @@ public struct RegzaNowPlaying: Equatable, Sendable {
                 duration: duration,
                 isAdvancing: start != nil && duration > 0,
                 nextProgramStart: playStatus.nextProgram?.startTime.map { Date(timeIntervalSince1970: TimeInterval($0)) },
+                nextProgramDuration: playStatus.nextProgram?.duration ?? 0,
                 updatedAt: now
             )
         case "recorded":

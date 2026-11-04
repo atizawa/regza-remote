@@ -61,11 +61,6 @@ struct NowPlayingCard: View {
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
         }
-        if let next = nowPlaying.nextProgramStart {
-            Text("次の番組 \(next.formatted(date: .omitted, time: .shortened))〜")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
     }
 
     @ViewBuilder

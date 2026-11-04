@@ -11,8 +11,8 @@ public actor RegzaRemote {
     private var supportsPlayStatus: Bool?
     /// 放送中の番組名を補う番組表。未設定なら nil
     public private(set) var guide: Mirakurun?
-    /// 番組名を毎回問い合わせないよう、直前に調べた番組を覚えておく (取れなかったときは 1 分後に調べ直す)
-    private var lastProgram: (id: Int, program: MirakurunProgram?, checkedAt: Date)?
+    /// 番組名を毎回問い合わせないよう、調べた番組を覚えておく (取れなかったときは 1 分後に調べ直す)
+    private var programCache: [Int: (program: MirakurunProgram?, checkedAt: Date)] = [:]
 
     public init(connection: RegzaConnection, guide: Mirakurun? = nil) {
         client = RegzaClient(connection: connection)
@@ -21,7 +21,7 @@ public actor RegzaRemote {
 
     public func update(guide: Mirakurun?) {
         self.guide = guide
-        lastProgram = nil
+        programCache = [:]
     }
 
     public func update(connection: RegzaConnection) async {
@@ -65,27 +65,37 @@ public actor RegzaRemote {
         return updated
     }
 
-    /// テレビが放送中の番組名を返さない機種向けに、番組表から番組名と説明を補う
+    /// テレビが放送中の番組名を返さない機種向けに、番組表から番組名と説明を補う (次の番組名も)
     private func withProgramName(_ nowPlaying: RegzaNowPlaying, status: RegzaPlayStatus) async -> RegzaNowPlaying {
-        guard nowPlaying.kind == .broadcast, nowPlaying.title.isEmpty, let guide,
-              let id = status.currentProgram?.epgContentID.flatMap(Mirakurun.programID(epgContentID:))
-        else { return nowPlaying }
-        let program: MirakurunProgram?
-        if let lastProgram, lastProgram.id == id,
-           lastProgram.program != nil || Date().timeIntervalSince(lastProgram.checkedAt) < 60 {
-            program = lastProgram.program
-        } else {
-            // 番組表が取れなくても視聴状況はそのまま返す
-            program = try? await guide.program(id: id)
-            lastProgram = (id, program, Date())
-        }
-        guard let program else { return nowPlaying }
+        guard nowPlaying.kind == .broadcast else { return nowPlaying }
         var result = nowPlaying
-        result.title = program.name
-        if result.description.isEmpty {
-            result.description = program.description
+        if result.title.isEmpty, let program = await program(epgContentID: status.currentProgram?.epgContentID) {
+            result.title = program.name
+            if result.description.isEmpty {
+                result.description = program.description
+            }
+        }
+        if let next = status.nextProgram {
+            if let title = next.title.map(RegzaNowPlaying.cleanTitle(_:)), !title.isEmpty {
+                result.nextTitle = title
+            } else if let program = await program(epgContentID: next.epgContentID) {
+                result.nextTitle = program.name
+            }
         }
         return result
+    }
+
+    private func program(epgContentID: String?) async -> MirakurunProgram? {
+        guard let guide, let id = epgContentID.flatMap(Mirakurun.programID(epgContentID:)) else { return nil }
+        if let cached = programCache[id], cached.program != nil || Date().timeIntervalSince(cached.checkedAt) < 60 {
+            return cached.program
+        }
+        // 番組表が取れなくても視聴状況はそのまま返す
+        let program = try? await guide.program(id: id)
+        // 今と次の番組だけ覚えておけば足りるので、増えすぎたら捨てる
+        if programCache.count > 8 { programCache = [:] }
+        programCache[id] = (program, Date())
+        return program
     }
 
     private func legacyStatus() async throws -> RegzaNowPlaying {

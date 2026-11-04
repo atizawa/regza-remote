@@ -15,7 +15,8 @@ public struct RegzaLiveActivityWidget: Widget {
                 .activityBackgroundTint(Color.black.opacity(0.75))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
-            let state = context.state
+            // 番組が終わる時刻にシステムが stale として描き直すので、そこで次の番組の表示に切り替わる
+            let state = context.state.displayed(isStale: context.isStale)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Label {
@@ -87,8 +88,8 @@ private extension RegzaActivityAttributes.ContentState {
     /// 放送中の番組が終わったか。システムは staleDate (番組の終了時刻) に stale として描き直すので、
     /// アプリが止まっていてもこの時点で表示が切り替わる
     func hasProgramEnded(isStale: Bool) -> Bool {
-        guard isStale, let programEnd else { return false }
-        return programEnd <= Date()
+        // displayed(isStale:) と同じく、stale になっていれば終了時刻を過ぎている
+        isStale && isConnected && programEnd != nil && hasPredictedNextProgram != true
     }
 
     /// 見出しの上の小さなラベル。見出しと同じチャンネル名を重ねて出さない
@@ -118,7 +119,7 @@ private struct LockScreenView: View {
     let context: ActivityViewContext<RegzaActivityAttributes>
 
     var body: some View {
-        let state = context.state
+        let state = context.state.displayed(isStale: context.isStale)
         VStack(alignment: .leading, spacing: 10) {
             Label(state.headerName(tvName: context.attributes.tvName), systemImage: "tv")
             .font(.caption.weight(.semibold))
@@ -169,17 +170,13 @@ private struct TitleText: View {
                     .foregroundStyle(.orange)
             }
             if state.hasProgramEnded(isStale: isStale) {
-                Group {
-                    if let next = state.nextProgramStart {
-                        Text("番組が終わりました・次の番組 \(next, style: .time)〜")
-                    } else {
-                        Text("番組が終わりました")
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                // 次の番組が分からなかったとき
+                Text("番組が終わりました")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            if isStale {
+            // 次の番組の表示に切り替えたときは、番組が変わる時刻で stale になっているだけなので出さない
+            if isStale, state.hasPredictedNextProgram != true {
                 Text("アプリを開くと最新の状態に更新されます")
                     .font(.caption2)
                     .foregroundStyle(.secondary)

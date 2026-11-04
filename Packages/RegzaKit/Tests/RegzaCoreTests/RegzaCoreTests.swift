@@ -186,6 +186,7 @@ import Testing
         #expect(nowPlaying.duration == 7800)
         #expect(nowPlaying.isAdvancing)
         #expect(nowPlaying.nextProgramStart == Date(timeIntervalSince1970: 1_793_671_800))
+        #expect(nowPlaying.nextProgramDuration == 600)
         #expect(nowPlaying.programEnd == Date(timeIntervalSince1970: 1_793_664_000 + 7800))
     }
 
