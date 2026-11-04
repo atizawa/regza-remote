@@ -13,6 +13,8 @@ struct GuideGridView: View {
     @State private var day: Date?
     /// 表の左上がスクロールでどれだけずれたか (固定する局名の行と時刻の列を合わせる)
     @State private var scrollOrigin = ScrollOrigin()
+    @State private var search = GuideSearch()
+    @State private var isSearching = false
 
     /// 今の時刻の正時から 24 時間分
     static let hours = 24
@@ -26,6 +28,19 @@ struct GuideGridView: View {
             content
                 .navigationTitle("番組表")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
+                    if model.hasGuide, hasLoaded, !columns.isEmpty {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("番組を探す", systemImage: "magnifyingglass") { isSearching = true }
+                        }
+                    }
+                }
+                .navigationDestination(isPresented: $isSearching) {
+                    GuideSearchScreen(search: search) { program, channel in
+                        selection = GuideSelection(program: program, channel: channel)
+                    }
+                }
                 .navigationDestination(item: $selection) { selection in
                     ProgramDetailView(program: selection.program, channel: selection.channel)
                 }
@@ -166,6 +181,7 @@ struct GuideGridView: View {
         defer { hasLoaded = true }
         try? await model.loadChannels()
         await model.loadGuidePrograms()
+        await search.updateIndex(model.guidePrograms, loadedAt: model.guideProgramsLoadedAt)
         // 予約した番組に印を付けるため
         try? await model.loadReservations()
         #if DEBUG
@@ -173,6 +189,10 @@ struct GuideGridView: View {
         if SampleData.isEnabled, UserDefaults.standard.bool(forKey: "SampleDetail"),
            let column = columns.first, let program = column.programs.first(where: { $0.isOnAir() }) {
             selection = GuideSelection(program: program, channel: column.channel)
+        }
+        if SampleData.isEnabled, let text = UserDefaults.standard.string(forKey: "SampleSearch") {
+            isSearching = true
+            search.text = text
         }
         #endif
     }

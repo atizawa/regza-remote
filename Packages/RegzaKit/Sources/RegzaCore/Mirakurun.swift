@@ -179,12 +179,13 @@ public final class Mirakurun: Sendable {
     }
 
     /// ARIB STD-B10 のジャンル大分類
+    static let genreNames = [
+        "ニュース", "スポーツ", "情報", "ドラマ", "音楽", "バラエティ",
+        "映画", "アニメ", "ドキュメンタリー", "劇場・公演", "趣味・教育", "福祉",
+    ]
+
     static func genreName(_ level1: Int) -> String? {
-        let names = [
-            "ニュース", "スポーツ", "情報", "ドラマ", "音楽", "バラエティ",
-            "映画", "アニメ", "ドキュメンタリー", "劇場・公演", "趣味・教育", "福祉",
-        ]
-        return names.indices.contains(level1) ? names[level1] : nil
+        genreNames.indices.contains(level1) ? genreNames[level1] : nil
     }
 
     // MARK: - 探す

@@ -128,7 +128,8 @@ public final class RemoteViewModel {
     private var guide: Mirakurun?
     /// 全チャンネルの番組をチャンネルの ID ごとに時刻順で持つ (チャンネル一覧で今の番組を出す用)
     public private(set) var guidePrograms: [String: [MirakurunProgram]] = [:]
-    private var guideProgramsLoadedAt: Date?
+    /// 番組表を読み込んだ時刻 (検索の索引を作り直すかを決めるのに使う)
+    public private(set) var guideProgramsLoadedAt: Date?
 
     public func saveGuideHost(_ host: String) async {
         let host = host.trimmingCharacters(in: .whitespacesAndNewlines)

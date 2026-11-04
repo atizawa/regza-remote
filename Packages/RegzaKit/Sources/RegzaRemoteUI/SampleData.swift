@@ -4,7 +4,8 @@ import RegzaCore
 
 /// 開発中に、テレビや Mirakurun につながずに画面を確かめるための見本データ。
 /// 起動引数 `-SampleData YES` で使う (`-SampleKind recorded` で録画再生中、`-InitialTab guide` などで最初のタブ、
-/// `-SampleNoGuide YES` で Mirakurun が未設定のとき、`-ShowSettings YES` で設定画面を開く)。
+/// `-SampleNoGuide YES` で Mirakurun が未設定のとき、`-ShowSettings YES` で設定画面を開く、
+/// `-SampleSearch 言葉` で番組表を検索しておく)。
 /// 実在の機器の情報は入れない
 enum SampleData {
     static var isEnabled: Bool { UserDefaults.standard.bool(forKey: "SampleData") }
@@ -61,6 +62,8 @@ enum SampleData {
             "夜のニュース", "天気予報", "クイズ王決定戦", "ドラマ　港の灯", "世界の車窓",
             "アニメ　星の子", "スポーツまとめ", "映画　風の街", "料理のじかん", "ドキュメント　森",
         ]
+        // 架空の出演者 (検索で「〇〇 が出演」と出るのを確かめる)
+        let casts = ["見本太郎，例示花子", "", "試験一郎", "", "例示花子，仮名次郎", ""]
         let start = (Calendar.current.dateInterval(of: .hour, for: now)?.start ?? now).addingTimeInterval(-3600)
         var items: [String] = []
         for (index, _) in stations.enumerated() {
@@ -69,10 +72,11 @@ enum SampleData {
             while time < start.addingTimeInterval(26 * 3600) {
                 let minutes = [30, 60, 45, 90, 15, 60][(event + index) % 6]
                 let title = titles[(event * 3 + index) % titles.count]
+                let cast = casts[(event * 5 + index) % casts.count]
                 items.append("""
                     {"id":\(1 * 10_000_000_000 + (index + 1) * 100_000 + event),"eventId":\(event),"networkId":1,\
                     "serviceId":\(index + 1),"startAt":\(Int(time.timeIntervalSince1970 * 1000)),"duration":\(minutes * 60_000),\
-                    "name":"\(title)","description":"見本の番組です。","extended":{"番組内容":"見本の番組の内容です。"},\
+                    "name":"\(title)","description":"見本の番組です。","extended":{"番組内容":"見本の番組の内容です。"\(cast.isEmpty ? "" : ",\"出演者\":\"\(cast)\"")},\
                     "genres":[{"lv1":\((event + index) % 12)}]}
                     """)
                 time = time.addingTimeInterval(TimeInterval(minutes * 60))
