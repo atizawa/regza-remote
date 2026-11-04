@@ -7,6 +7,15 @@ import WidgetKit
 struct RegzaRemoteWidgetBundle: WidgetBundle {
     var body: some Widget {
         RegzaLiveActivityWidget()
+        // ホーム画面のリモコンのウィジェット
+        RemoteWidget()
+        // コントロールセンター・ロック画面・アクションボタンに置けるボタン
+        PowerControl()
+        MuteControl()
+        VolumeUpControl()
+        VolumeDownControl()
+        ChannelUpControl()
+        ChannelDownControl()
     }
 }
 
