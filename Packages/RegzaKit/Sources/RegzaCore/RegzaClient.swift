@@ -112,15 +112,19 @@ public actor RegzaClient {
         return list.reservations ?? []
     }
 
-    /// 番組を 1 回だけ録画予約する (`POST /v2/remote/pvr/reserves/new`)。保存先などはテレビの設定どおり
-    public func reserve(channel: String, epgContentID: String, start: Date, duration: Int) async throws {
-        // HTTP (80 番) では内容によらず status 2 になる
-        let data = try await post(path: "/v2/remote/pvr/reserves/new", secure: true, form: [
+    /// 番組を録画予約する (`POST /v2/remote/pvr/reserves/new`)。保存先などはテレビの設定どおり。
+    /// `series` なら連ドラ予約にする。繰り返し (毎週・月〜金など) とキーワードはテレビが番組から決める
+    /// (`series_rec=true` だけを送ると受け付けられ、`repeat_series` などを自分で入れると status 2 になった)
+    public func reserve(channel: String, epgContentID: String, start: Date, duration: Int, series: Bool = false) async throws {
+        var form = [
             "channel": channel,
             "epg_content_id": epgContentID,
             "start_time": String(Int(start.timeIntervalSince1970)),
             "duration": String(duration),
-        ])
+        ]
+        if series { form["series_rec"] = "true" }
+        // HTTP (80 番) では内容によらず status 2 になる
+        let data = try await post(path: "/v2/remote/pvr/reserves/new", secure: true, form: form)
         try Self.checkResult(data)
     }
 

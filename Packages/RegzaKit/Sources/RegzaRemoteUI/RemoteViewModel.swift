@@ -197,14 +197,15 @@ public final class RemoteViewModel {
         reservation(for: program) != nil
     }
 
-    /// 番組表の番組を 1 回だけ録画予約する
-    public func reserve(_ program: MirakurunProgram) async throws(RegzaError) {
+    /// 番組表の番組を録画予約する。`series` なら連ドラ予約 (次の回以降も録画する)
+    public func reserve(_ program: MirakurunProgram, series: Bool = false) async throws(RegzaError) {
         do {
             try await RegzaRemoteService.remote.client.reserve(
                 channel: program.channelCode,
                 epgContentID: program.epgContentID,
                 start: program.start,
-                duration: Int(program.end.timeIntervalSince(program.start))
+                duration: Int(program.end.timeIntervalSince(program.start)),
+                series: series
             )
         } catch let error as RegzaError {
             throw error

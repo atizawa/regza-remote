@@ -134,8 +134,13 @@ struct ProgramDetailView: View {
 
     @State private var isTuning = false
     @State private var tuneError: String?
-    @State private var isReserving = false
+    /// 予約・取り消しの途中のもの
+    @State private var isReserving: Reserving?
     @State private var reserveMessage: String?
+
+    private enum Reserving {
+        case single, series, cancel
+    }
     /// 予約・取り消しが終わったときの触覚フィードバック用
     @State private var reserveFeedback = 0
 
@@ -176,31 +181,47 @@ struct ProgramDetailView: View {
             if program.end > Date() {
                 Section {
                     if let reservation = model.reservation(for: program) {
-                        Label("録画予約しました", systemImage: "checkmark.circle.fill")
+                        Label(reservation.isSeries ? "連ドラ予約しました" : "録画予約しました", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.red)
                             .font(.body.weight(.semibold))
+                        if reservation.isSeries, let repeatLabel = reservation.repeatLabel {
+                            Text("\(repeatLabel)、この番組の続きを録画します。")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                         Button(role: .destructive) {
                             Task { await cancel(reservation) }
                         } label: {
                             HStack {
                                 Label("予約を取り消す", systemImage: "xmark.circle")
                                 Spacer()
-                                if isReserving { ProgressView() }
+                                if isReserving == .cancel { ProgressView() }
                             }
                         }
-                        .disabled(isReserving)
+                        .disabled(isReserving != nil)
                     } else {
                         Button {
-                            Task { await reserve() }
+                            Task { await reserve(series: false) }
                         } label: {
                             HStack {
-                                Label("録画予約", systemImage: "record.circle")
+                                Label("この回を録画予約", systemImage: "record.circle")
                                 Spacer()
-                                if isReserving { ProgressView() }
+                                if isReserving == .single { ProgressView() }
                             }
                         }
                         .tint(.red)
-                        .disabled(isReserving)
+                        .disabled(isReserving != nil)
+                        Button {
+                            Task { await reserve(series: true) }
+                        } label: {
+                            HStack {
+                                Label("連ドラ予約（毎回録画）", systemImage: "repeat.circle")
+                                Spacer()
+                                if isReserving == .series { ProgressView() }
+                            }
+                        }
+                        .tint(.red)
+                        .disabled(isReserving != nil)
                     }
                     if let reserveMessage {
                         Text(reserveMessage)
@@ -209,7 +230,7 @@ struct ProgramDetailView: View {
                     }
                 } footer: {
                     if !model.isReserved(program) {
-                        Text("この回だけを予約します。保存先などはテレビの設定どおりです。")
+                        Text("連ドラ予約では、毎週・平日などの繰り返しをテレビが番組から決めます。保存先などはテレビの設定どおりです。")
                     }
                 }
             }
@@ -243,12 +264,12 @@ struct ProgramDetailView: View {
         }
     }
 
-    private func reserve() async {
-        isReserving = true
-        defer { isReserving = false }
+    private func reserve(series: Bool) async {
+        isReserving = series ? .series : .single
+        defer { isReserving = nil }
         reserveMessage = nil
         do {
-            try await model.reserve(program)
+            try await model.reserve(program, series: series)
             reserveFeedback += 1
             if !model.isReserved(program) {
                 // テレビの一覧にまだ反映されていない
@@ -263,8 +284,8 @@ struct ProgramDetailView: View {
     }
 
     private func cancel(_ reservation: RegzaReservation) async {
-        isReserving = true
-        defer { isReserving = false }
+        isReserving = .cancel
+        defer { isReserving = nil }
         reserveMessage = nil
         do {
             try await model.cancel(reservation)
