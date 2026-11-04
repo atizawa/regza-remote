@@ -15,13 +15,14 @@ struct GuideGridView: View {
     @State private var scrollOrigin = ScrollOrigin()
     @State private var search = GuideSearch()
     @State private var isSearching = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// 今の時刻の正時から 24 時間分
     static let hours = 24
-    static let columnWidth: CGFloat = 120
-    static let pointsPerMinute: CGFloat = 2.4
-    static let timeColumnWidth: CGFloat = 28
-    static let headerHeight: CGFloat = 36
+    /// 文字をこれより大きくすると 1 画面に 1 局も収まらなくなるので、番組表はここで止める
+    static let maximumDynamicTypeSize = DynamicTypeSize.accessibility1
+
+    private var metrics: GuideMetrics { GuideMetrics(dynamicTypeSize: min(dynamicTypeSize, Self.maximumDynamicTypeSize)) }
 
     var body: some View {
         NavigationStack {
@@ -83,18 +84,20 @@ struct GuideGridView: View {
                 TimelineView(.periodic(from: .now, by: 60)) { context in
                     grid(now: context.date)
                 }
+                .dynamicTypeSize(...Self.maximumDynamicTypeSize)
             }
         }
     }
 
     private func grid(now: Date) -> some View {
         let window = Self.window(now: now, day: day)
-        let height = CGFloat(Self.hours * 60) * Self.pointsPerMinute
+        let metrics = metrics
+        let height = CGFloat(Self.hours * 60) * metrics.pointsPerMinute
         // 縦横を 1 つのスクロールにまとめ、局名の行と時刻の列はスクロール量に合わせてずらして重ねる
         return ScrollView([.horizontal, .vertical]) {
             HStack(alignment: .top, spacing: 0) {
                 ForEach(columns, id: \.channel) { column in
-                    ProgramColumn(programs: column.programs, window: window) { program in
+                    ProgramColumn(channel: column.channel, programs: column.programs, window: window, metrics: metrics) { program in
                         selection = GuideSelection(program: program, channel: column.channel)
                     }
                 }
@@ -106,12 +109,13 @@ struct GuideGridView: View {
                     Rectangle()
                         .fill(.red)
                         .frame(height: 1)
-                        .offset(y: Self.offset(of: now, in: window))
+                        .offset(y: metrics.offset(of: now, in: window))
                         .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                 }
             }
-            .padding(.leading, Self.timeColumnWidth)
-            .padding(.top, Self.headerHeight)
+            .padding(.leading, metrics.timeColumnWidth)
+            .padding(.top, metrics.headerHeight)
         }
         .onScrollGeometryChange(for: CGPoint.self) { geometry in
             // 余白 (ナビゲーションバーの下など) を除いた、中身の左上の位置
@@ -123,28 +127,32 @@ struct GuideGridView: View {
             scrollOrigin.value = value
         }
         .overlay(alignment: .topLeading) {
-            PinnedTimeColumn(window: window, height: height, origin: scrollOrigin)
+            PinnedTimeColumn(window: window, height: height, metrics: metrics, origin: scrollOrigin)
                 // 表示している範囲で切る (列そのものは 24 時間分の高さがある)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .clipped()
                 // 重ねた行と列の上からでもスクロールできるようにする
                 .allowsHitTesting(false)
+                // 番組の枠ごとに局名と時刻を読み上げるので、重ねた行と列は読まない
+                .accessibilityHidden(true)
         }
         .overlay(alignment: .topLeading) {
-            PinnedHeader(channels: columns.map(\.channel), origin: scrollOrigin)
+            PinnedHeader(channels: columns.map(\.channel), metrics: metrics, origin: scrollOrigin)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: Self.headerHeight)
+                .frame(height: metrics.headerHeight)
                 .clipped()
                 .background(.bar)
                 .overlay(alignment: .bottom) { GridLine(axis: .horizontal) }
                 .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
         .overlay(alignment: .topLeading) {
             // 左上の角は局名の行と時刻の列が重なるので隠す
             Rectangle()
                 .fill(.bar)
-                .frame(width: Self.timeColumnWidth, height: Self.headerHeight)
+                .frame(width: metrics.timeColumnWidth, height: metrics.headerHeight)
                 .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
     }
 
@@ -218,8 +226,25 @@ struct GuideGridView: View {
         }
         return result
     }
+}
 
-    static func offset(of date: Date, in window: ClosedRange<Date>) -> CGFloat {
+/// 番組表の枠の大きさ。文字の大きさの設定 (Dynamic Type) に合わせて、枠の幅と 1 分あたりの高さも同じ割合で広げる
+/// (文字だけ大きくすると、枠に収まらず番組名が切れる)
+struct GuideMetrics {
+    /// 標準の文字の大きさ (大) を 1 とした、番組の枠の文字 (caption2) の大きさ
+    let scale: CGFloat
+
+    init(dynamicTypeSize: DynamicTypeSize) {
+        let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
+        scale = UIFontMetrics(forTextStyle: .caption2).scaledValue(for: 1, compatibleWith: traits)
+    }
+
+    var columnWidth: CGFloat { 120 * scale }
+    var pointsPerMinute: CGFloat { 2.4 * scale }
+    var timeColumnWidth: CGFloat { 28 * scale }
+    var headerHeight: CGFloat { 36 * scale }
+
+    func offset(of date: Date, in window: ClosedRange<Date>) -> CGFloat {
         let clamped = min(max(date, window.lowerBound), window.upperBound)
         return CGFloat(clamped.timeIntervalSince(window.lowerBound) / 60) * pointsPerMinute
     }
@@ -246,18 +271,20 @@ private final class ScrollOrigin {
 private struct PinnedTimeColumn: View {
     let window: ClosedRange<Date>
     let height: CGFloat
+    let metrics: GuideMetrics
     let origin: ScrollOrigin
 
     var body: some View {
-        TimeColumn(window: window)
+        TimeColumn(window: window, metrics: metrics)
             .frame(height: height, alignment: .top)
-            .offset(y: GuideGridView.headerHeight + origin.value.y)
+            .offset(y: metrics.headerHeight + origin.value.y)
     }
 }
 
 /// 上に固定する局名の行。横のスクロールにだけ合わせて動かす
 private struct PinnedHeader: View {
     let channels: [RegzaChannel]
+    let metrics: GuideMetrics
     let origin: ScrollOrigin
 
     var body: some View {
@@ -268,11 +295,11 @@ private struct PinnedHeader: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .padding(.horizontal, 4)
-                    .frame(width: GuideGridView.columnWidth, height: GuideGridView.headerHeight)
+                    .frame(width: metrics.columnWidth, height: metrics.headerHeight)
                     .overlay(alignment: .trailing) { GridLine(axis: .vertical) }
             }
         }
-        .offset(x: GuideGridView.timeColumnWidth + origin.value.x)
+        .offset(x: metrics.timeColumnWidth + origin.value.x)
     }
 }
 
@@ -284,6 +311,7 @@ private struct GuideSelection: Hashable {
 /// 左端の時刻 (正時ごと)
 private struct TimeColumn: View {
     let window: ClosedRange<Date>
+    let metrics: GuideMetrics
 
     /// 番組表と同じく、朝 4 時より前は前の日の続きとして 24〜27 時と書く
     static func hourLabel(_ date: Date) -> Int {
@@ -297,13 +325,13 @@ private struct TimeColumn: View {
                 Text("\(Self.hourLabel(date))")
                     .font(.caption2.monospacedDigit().weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .frame(width: GuideGridView.timeColumnWidth, height: 60 * GuideGridView.pointsPerMinute, alignment: .top)
+                    .frame(width: metrics.timeColumnWidth, height: 60 * metrics.pointsPerMinute, alignment: .top)
                     .padding(.top, 2)
                     .overlay(alignment: .top) { GridLine(axis: .horizontal) }
-                    .offset(y: GuideGridView.offset(of: date, in: window))
+                    .offset(y: metrics.offset(of: date, in: window))
             }
         }
-        .frame(width: GuideGridView.timeColumnWidth, alignment: .top)
+        .frame(width: metrics.timeColumnWidth, alignment: .top)
         .frame(maxHeight: .infinity, alignment: .top)
         // 表の上に重ねるので、下の番組が透けないようにする
         .background(.fill.quinary)
@@ -314,27 +342,32 @@ private struct TimeColumn: View {
 
 /// 1 局分の番組の枠
 private struct ProgramColumn: View {
+    let channel: RegzaChannel
     let programs: [MirakurunProgram]
     let window: ClosedRange<Date>
+    let metrics: GuideMetrics
     var onSelect: (MirakurunProgram) -> Void
 
     var body: some View {
         ZStack(alignment: .top) {
             ForEach(programs.filter { $0.end > window.lowerBound && $0.start < window.upperBound }) { program in
-                let top = GuideGridView.offset(of: program.start, in: window)
-                let bottom = GuideGridView.offset(of: program.end, in: window)
+                let top = metrics.offset(of: program.start, in: window)
+                let bottom = metrics.offset(of: program.end, in: window)
                 Button {
                     onSelect(program)
                 } label: {
-                    ProgramCell(program: program)
-                        .frame(width: GuideGridView.columnWidth, height: max(1, bottom - top), alignment: .topLeading)
+                    ProgramCell(program: program, channelName: channel.name)
+                        .frame(width: metrics.columnWidth, height: max(1, bottom - top), alignment: .topLeading)
                         .clipped()
                 }
                 .buttonStyle(.plain)
                 .offset(y: top)
             }
         }
-        .frame(width: GuideGridView.columnWidth, alignment: .top)
+        // VoiceOver のローターで局ごとに移れるようにする
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(channel.name)
+        .frame(width: metrics.columnWidth, alignment: .top)
         .frame(maxHeight: .infinity, alignment: .top)
         .overlay(alignment: .trailing) { GridLine(axis: .vertical) }
     }
@@ -343,6 +376,7 @@ private struct ProgramColumn: View {
 private struct ProgramCell: View {
     @Environment(RemoteViewModel.self) private var model
     let program: MirakurunProgram
+    let channelName: String
 
     var body: some View {
         let isOnAir = program.isOnAir()
@@ -355,7 +389,6 @@ private struct ProgramCell: View {
                     Image(systemName: "record.circle.fill")
                         .font(.caption2)
                         .foregroundStyle(.red)
-                        .accessibilityLabel("録画予約済み")
                 }
             }
             Text(program.name)
@@ -376,6 +409,18 @@ private struct ProgramCell: View {
             Rectangle().fill(genreColor.opacity(0.8)).frame(width: 3)
         }
         .overlay(alignment: .top) { GridLine(axis: .horizontal) }
+        // VoiceOver では枠を 1 つにまとめ、重ねた局名の行と時刻の列の代わりに局名と時刻も読む
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText(isOnAir: isOnAir))
+    }
+
+    /// 「22時00分から22時45分、スポーツまとめ、みどりテレビ、スポーツ、録画予約済み」
+    private func accessibilityText(isOnAir: Bool) -> String {
+        let time = "\(program.start.formatted(date: .omitted, time: .shortened))から\(program.end.formatted(date: .omitted, time: .shortened))"
+        var parts = [isOnAir ? "放送中、\(time)" : time, program.name, channelName]
+        if let genre = program.genreName { parts.append(genre) }
+        if model.isReserved(program) { parts.append("録画予約済み") }
+        return parts.joined(separator: "、")
     }
 
     /// ジャンル (ARIB の大分類) ごとの色
