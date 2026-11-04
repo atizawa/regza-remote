@@ -237,7 +237,7 @@ struct ProgramDetailView: View {
             if program.isOnAir() {
                 Section {
                     Button {
-                        Task { await tune() }
+                        Task { await tune(startOver: false) }
                     } label: {
                         HStack {
                             Label("このチャンネルに切り替える", systemImage: "tv")
@@ -246,6 +246,14 @@ struct ProgramDetailView: View {
                         }
                     }
                     .disabled(isTuning)
+                    if model.canStartOver(channelCode: program.channelCode, programStart: program.start) {
+                        Button {
+                            Task { await tune(startOver: true) }
+                        } label: {
+                            Label("切り替えて最初から見る", systemImage: "backward.end.alt")
+                        }
+                        .disabled(isTuning)
+                    }
                     if let tuneError {
                         Text(tuneError)
                             .font(.footnote)
@@ -259,8 +267,9 @@ struct ProgramDetailView: View {
         .sensoryFeedback(.success, trigger: reserveFeedback)
         .animation(.default, value: model.isReserved(program))
         .task {
-            // 予約済みかを出すため
+            // 予約済みか、最初から見られるかを出すため
             if model.reservations.isEmpty { try? await model.loadReservations() }
+            await model.loadTimeshiftSettings()
         }
     }
 
@@ -295,11 +304,15 @@ struct ProgramDetailView: View {
         }
     }
 
-    private func tune() async {
+    private func tune(startOver: Bool) async {
         isTuning = true
         defer { isTuning = false }
         do {
-            try await model.tune(to: channel)
+            if startOver {
+                try await model.tuneAndStartOver(channel)
+            } else {
+                try await model.tune(to: channel)
+            }
             onTune()
         } catch {
             tuneError = error.localizedDescription

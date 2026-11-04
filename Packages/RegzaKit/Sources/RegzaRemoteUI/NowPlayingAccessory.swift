@@ -148,6 +148,16 @@ private struct NowPlayingDetailView: View {
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 4)
                     }
+                    if model.canStartOverNowPlaying {
+                        Button {
+                            model.startOver()
+                        } label: {
+                            Label("この番組を最初から見る", systemImage: "backward.end.alt")
+                                .font(.body.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
+                        }
+                        .buttonStyle(RemoteButtonStyle())
+                    }
                     LiveActivityToggle()
                         .padding(Design.outer)
                         .background(Surface.button, in: RoundedRectangle(cornerRadius: Design.cornerRadius, style: .continuous))
@@ -157,6 +167,7 @@ private struct NowPlayingDetailView: View {
             .background(Surface.background)
             .navigationTitle("視聴中")
             .navigationBarTitleDisplayMode(.inline)
+            .task { await model.loadTimeshiftSettings() }
         }
     }
 }

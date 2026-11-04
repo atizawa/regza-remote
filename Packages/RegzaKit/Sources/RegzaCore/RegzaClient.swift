@@ -102,6 +102,15 @@ public actor RegzaClient {
         return list.channels ?? []
     }
 
+    /// タイムシフトマシンの設定 (録画している局と時間帯)
+    public func timeshiftSettings() async throws -> RegzaTimeshiftSettings {
+        let data = try await getData(path: "/v2/remote/settings/timeshift", query: nil)
+        guard let settings = try? JSONDecoder().decode(RegzaTimeshiftSettings.self, from: data) else {
+            throw RegzaError.unsupported
+        }
+        return settings
+    }
+
     /// 録画予約の一覧
     public func reservations() async throws -> [RegzaReservation] {
         let data = try await getData(path: "/v2/remote/pvr/reserves/list", query: nil)

@@ -165,6 +165,42 @@ public final class RemoteViewModel {
         }
     }
 
+    // MARK: - 最初から見る (タイムシフトマシン)
+
+    /// タイムシフトマシンの設定。録画している局と時間帯で「最初から見る」を出すか決める
+    public private(set) var timeshiftSettings: RegzaTimeshiftSettings?
+
+    public func loadTimeshiftSettings() async {
+        guard !isSampleMode, timeshiftSettings == nil else { return }
+        timeshiftSettings = try? await RegzaRemoteService.remote.client.timeshiftSettings()
+    }
+
+    /// その局の番組を最初から見られるか。録画していない番組で「始めにジャンプ」を押すとテレビにエラーが出るので、
+    /// 対象の局で、番組の始まりから今までずっと録画している時間帯のときだけ true
+    public func canStartOver(channelCode: String, programStart: Date) -> Bool {
+        timeshiftSettings?.canStartOver(channelCode: channelCode, programStart: programStart) ?? false
+    }
+
+    /// いま映っている放送を最初から見られるか
+    public var canStartOverNowPlaying: Bool {
+        guard let nowPlaying, nowPlaying.kind == .broadcast, nowPlaying.hasTimeline else { return false }
+        let start = nowPlaying.updatedAt.addingTimeInterval(-TimeInterval(nowPlaying.position))
+        return canStartOver(channelCode: nowPlaying.channelCode, programStart: start)
+    }
+
+    /// いま映っている番組を最初から再生する (リモコンの「始めにジャンプ」)
+    public func startOver() {
+        send(.jumpToStart)
+    }
+
+    /// チャンネルを切り替えてから、その番組を最初から再生する
+    public func tuneAndStartOver(_ channel: RegzaChannel) async throws(RegzaError) {
+        try await tune(to: channel)
+        // 選局が落ち着くのを待ってから送る
+        try? await Task.sleep(for: .seconds(3))
+        send(.jumpToStart)
+    }
+
     // MARK: - 録画
 
     /// 録画予約。予定のあるものを先に、時刻順に並べる
@@ -284,6 +320,7 @@ public final class RemoteViewModel {
         nowPlaying = nil
         channels = []
         reservations = []
+        timeshiftSettings = nil
         lastSearch = nil
         await RegzaRemoteService.reloadConnection()
         stopPolling()
