@@ -86,7 +86,7 @@ final class GuideSearch {
             case 1: return "明日"
             case 2: return "あさって"
             case let offset:
-                let today = ProgramSearch.broadcastDayStart(of: Date())
+                let today = BroadcastDay.start(of: Date())
                 let day = Calendar.current.date(byAdding: .day, value: offset, to: today) ?? today
                 return day.formatted(.dateTime.locale(Locale(identifier: "ja_JP")).month().day().weekday())
             }

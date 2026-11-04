@@ -90,16 +90,16 @@ public struct ProgramSearchIndex: Sendable {
         let groups = query.keywordGroups
             .map { group in group.map { ($0, Array(ProgramSearch.normalize($0).utf8)) }.filter { !$0.1.isEmpty } }
             .filter { !$0.isEmpty }
-        let today = ProgramSearch.broadcastDayStart(of: now, calendar: calendar)
+        let today = BroadcastDay.start(of: now, calendar: calendar)
         let day = query.dayOffset.flatMap { calendar.date(byAdding: .day, value: $0, to: today) }
         var results: [ProgramSearchResult] = []
         for entry in entries where entry.program.end > now {
             let program = entry.program
             if !query.genres.isEmpty, !program.genres.contains(where: query.genres.contains) { continue }
-            if let day, ProgramSearch.broadcastDayStart(of: program.start, calendar: calendar) != day { continue }
+            if let day, BroadcastDay.start(of: program.start, calendar: calendar) != day { continue }
             // 時刻の計算は軽くないので、時間帯を聞かれたときだけ行う
             if query.startHour != nil || query.endHour != nil {
-                let hour = ProgramSearch.broadcastHour(of: program.start, calendar: calendar)
+                let hour = BroadcastDay.hour(of: program.start, calendar: calendar)
                 if let startHour = query.startHour, hour < startHour { continue }
                 if let endHour = query.endHour, hour >= endHour { continue }
             }
@@ -149,23 +149,8 @@ extension ProgramSearchIndex.Entry {
 }
 
 public enum ProgramSearch {
-    /// 番組表の 1 日の始まり (朝 4 時)
-    public static let dayStartHour = 4
-
     /// ジャンルの名前 (ARIB の大分類の順)
     public static var genreNames: [String] { Mirakurun.genreNames }
-
-    /// その時刻が入る番組表の 1 日の始まり (その日か前の日の朝 4 時)
-    public static func broadcastDayStart(of date: Date, calendar: Calendar = .current) -> Date {
-        let shifted = date.addingTimeInterval(-TimeInterval(dayStartHour * 3600))
-        return calendar.startOfDay(for: shifted).addingTimeInterval(TimeInterval(dayStartHour * 3600))
-    }
-
-    /// 番組表での時刻 (4〜27 時)。朝 4 時より前は前の日の続きとして 24 時を足す
-    public static func broadcastHour(of date: Date, calendar: Calendar = .current) -> Int {
-        let hour = calendar.component(.hour, from: date)
-        return hour < dayStartHour ? hour + 24 : hour
-    }
 
     /// 全角・半角、ひらがな・カタカナ、大文字・小文字の違いを無視して比べるための形。
     /// NFKC で全角英数を半角に、半角カナを全角にそろえ (ｶﾞ → ガ)、ひらがなはカタカナにする。
@@ -194,7 +179,7 @@ extension ProgramSearchQuery {
     /// 言葉の途中は読まない (「朝ドラ」「大河ドラマ」はそのまま探す言葉にする)
     public init(parsing text: String, now: Date = Date(), calendar: Calendar = .current) {
         self.init()
-        let today = ProgramSearch.broadcastDayStart(of: now, calendar: calendar)
+        let today = BroadcastDay.start(of: now, calendar: calendar)
         let digits = String(text.map { character -> Character in
             // 全角の数字は半角にする (ほかの文字は打ったままにする)
             guard let value = character.unicodeScalars.first?.value, (0xFF10...0xFF19).contains(value),
@@ -247,7 +232,7 @@ extension ProgramSearchQuery {
     static func condition(at text: Substring) -> (Condition, Int)? {
         // 「21時」「11/7」「11月7日」
         if let match = text.prefixMatch(of: /(\d{1,2})時(半)?/), let hour = Int(match.1), hour <= 28 {
-            return (.hour(hour < ProgramSearch.dayStartHour ? hour + 24 : hour), match.0.count)
+            return (.hour(hour < BroadcastDay.startHour ? hour + 24 : hour), match.0.count)
         }
         if let match = text.prefixMatch(of: /(\d{1,2})(?:\/|月)(\d{1,2})日?/), let month = Int(match.1),
            let day = Int(match.2), (1...12).contains(month), (1...31).contains(day) {

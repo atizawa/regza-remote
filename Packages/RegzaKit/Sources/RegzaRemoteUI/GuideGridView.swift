@@ -217,9 +217,9 @@ struct GuideGridView: View {
 
     /// 明日から、Mirakurun が番組表を持っている最後の日まで (今日は nil で表す)
     private var days: [Date] {
-        let today = ProgramSearch.broadcastDayStart(of: Date())
+        let today = BroadcastDay.start(of: Date())
         guard let last = model.guidePrograms.values.compactMap({ $0.last?.start }).max() else { return [] }
-        let lastDay = ProgramSearch.broadcastDayStart(of: last)
+        let lastDay = BroadcastDay.start(of: last)
         var result: [Date] = []
         var day = Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today
         while day <= lastDay {
@@ -318,7 +318,7 @@ private struct TimeColumn: View {
 
     /// 番組表と同じく、朝 4 時より前は前の日の続きとして 24〜27 時と書く
     static func hourLabel(_ date: Date) -> Int {
-        ProgramSearch.broadcastHour(of: date)
+        BroadcastDay.hour(of: date)
     }
 
     var body: some View {
@@ -478,7 +478,7 @@ private struct DayPicker: View {
     private func label(_ day: Date?) -> String {
         guard let day else { return "今日" }
         let calendar = Calendar.current
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: ProgramSearch.broadcastDayStart(of: Date()))
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: BroadcastDay.start(of: Date()))
         if day == tomorrow { return "明日" }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ja_JP")
