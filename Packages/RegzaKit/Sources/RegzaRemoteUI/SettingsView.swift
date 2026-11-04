@@ -112,13 +112,14 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) {
                         Task {
-                            await model.saveGuideHost(guideHost)
-                            model.saveStreamHost(streamHost)
+                            await model.saveGuideHost(ServerAddress(guideHost).saved)
+                            model.saveStreamHost(ServerAddress(streamHost).saved)
                             await model.save(draft)
                             dismiss()
                         }
                     }
-                    .disabled(!draft.isConfigured || pairing != nil)
+                    .disabled(!draft.isConfigured || pairing != nil
+                              || !ServerAddress(guideHost).isValid || !ServerAddress(streamHost).isValid)
                 }
             }
             .onAppear {
@@ -271,14 +272,14 @@ struct SettingsView: View {
 
     /// Mirakurun のアドレスが入っているか (保存前の入力も含む)
     private var hasGuideDraft: Bool {
-        !guideHost.trimmingCharacters(in: .whitespaces).isEmpty
+        !ServerAddress(guideHost).saved.isEmpty
     }
 
     /// Mirakurun と同じサーバーで EPGStation が動いていれば、候補として出す
     private func suggestStreamHost() async {
         guard streamHost.trimmingCharacters(in: .whitespaces).isEmpty, streamHosts.isEmpty else { return }
         // Mirakurun のアドレスからポートを除いたもの
-        let server = guideHost.trimmingCharacters(in: .whitespaces).split(separator: ":").first.map(String.init) ?? ""
+        let server = ServerAddress(guideHost).address
         guard !server.isEmpty, await EPGStation(host: server, timeout: 3).isAvailable() else { return }
         streamHosts = [server]
         streamHost = server
@@ -292,7 +293,7 @@ struct SettingsView: View {
     }
 
     private func status(of host: String) -> String {
-        let host = host.trimmingCharacters(in: .whitespaces)
+        let host = ServerAddress(host).saved
         return host.isEmpty ? "未設定" : host
     }
 
@@ -350,10 +351,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var guideSection: some View {
         Section {
-            TextField("IPアドレス (例: 192.168.0.2)", text: $guideHost)
-                .keyboardType(.URL)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
+            ServerAddressField(host: $guideHost, defaultPort: Mirakurun.defaultPort)
             ForEach(guideHosts, id: \.self) { host in
                 Button {
                     guideHost = host
@@ -393,10 +391,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var streamSection: some View {
         Section {
-            TextField("IPアドレス (例: 192.168.0.2)", text: $streamHost)
-                .keyboardType(.URL)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
+            ServerAddressField(host: $streamHost, defaultPort: EPGStation.defaultPort)
             ForEach(streamHosts, id: \.self) { host in
                 Button {
                     streamHost = host
@@ -537,6 +532,85 @@ struct SettingsView: View {
             testResult = detail.isEmpty ? "接続できました" : "接続できました: \(detail)"
         case .failure(let error):
             testResult = error.localizedDescription
+        }
+    }
+}
+/// 録画サーバーのアドレス。保存するときは `192.168.0.2` か `192.168.0.2:40780` の 1 つの文字列にする
+struct ServerAddress: Equatable {
+    var address: String
+    /// 空なら標準のポート
+    var port: String
+
+    init(address: String, port: String) {
+        self.address = address
+        self.port = port
+    }
+
+    /// `host` か `host:port` を分ける
+    init(_ text: String) {
+        let text = text.trimmingCharacters(in: .whitespaces)
+        if let colon = text.lastIndex(of: ":"), text[text.index(after: colon)...].allSatisfy(\.isNumber) {
+            address = String(text[..<colon])
+            port = String(text[text.index(after: colon)...])
+        } else {
+            address = text
+            port = ""
+        }
+    }
+
+    var combined: String {
+        let address = address.trimmingCharacters(in: .whitespaces)
+        let port = port.trimmingCharacters(in: .whitespaces)
+        // アドレスより先にポートを入れても消えないよう、アドレスが空でもポートは残す
+        return port.isEmpty ? address : "\(address):\(port)"
+    }
+
+    /// 保存する値。アドレスが空なら連携しない (ポートだけ入っていても空にする)
+    var saved: String {
+        address.trimmingCharacters(in: .whitespaces).isEmpty ? "" : combined
+    }
+
+    /// ポートが空か 1〜65535 の数字
+    var isValid: Bool {
+        let port = port.trimmingCharacters(in: .whitespaces)
+        guard !port.isEmpty else { return true }
+        return Int(port).map { (1...65535).contains($0) } ?? false
+    }
+}
+
+/// アドレスとポートを別々に入れる欄。ポートが空なら標準のポートを使う
+private struct ServerAddressField: View {
+    @Binding var host: String
+    let defaultPort: Int
+
+    private var address: Binding<String> {
+        Binding(get: { ServerAddress(host).address },
+                set: { host = ServerAddress(address: $0, port: ServerAddress(host).port).combined })
+    }
+
+    private var port: Binding<String> {
+        Binding(get: { ServerAddress(host).port },
+                set: { host = ServerAddress(address: ServerAddress(host).address, port: $0).combined })
+    }
+
+    var body: some View {
+        HStack {
+            TextField("IPアドレス (例: 192.168.0.2)", text: address)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Divider()
+            // 標準のポートを薄く出し、空なら標準のポートを使う
+            TextField(String(defaultPort), text: port)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 72)
+                .accessibilityLabel("ポート")
+        }
+        if !ServerAddress(host).isValid {
+            Text("ポートは 1〜65535 の数字で入れてください。空のままなら \(defaultPort) を使います。")
+                .font(.footnote)
+                .foregroundStyle(.red)
         }
     }
 }
