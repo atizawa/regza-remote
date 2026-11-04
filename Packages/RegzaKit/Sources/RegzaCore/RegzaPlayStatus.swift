@@ -23,6 +23,8 @@ public struct RegzaPlayStatus: Decodable, Equatable, Sendable {
     public struct Program: Decodable, Equatable, Sendable {
         public var channel: String?
         public var channelName: String?
+        /// `JP-0000` + network_id + service_id + event_id (16 進)
+        public var epgContentID: String?
         public var title: String?
         public var description: String?
         /// Unix 秒
@@ -33,6 +35,7 @@ public struct RegzaPlayStatus: Decodable, Equatable, Sendable {
         enum CodingKeys: String, CodingKey {
             case channel, title, description, duration
             case channelName = "channel_name"
+            case epgContentID = "epg_content_id"
             case startTime = "start_time"
         }
     }

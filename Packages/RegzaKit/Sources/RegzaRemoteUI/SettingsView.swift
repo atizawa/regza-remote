@@ -25,6 +25,12 @@ struct SettingsView: View {
     @State private var isScanning = false
     @State private var scanMessage: String?
 
+    /// 番組表 (Mirakurun) のアドレス
+    @State private var guideHost = ""
+    @State private var guideHosts: [String] = []
+    @State private var isScanningGuide = false
+    @State private var guideMessage: String?
+
     var body: some View {
         NavigationStack {
             Form {
@@ -77,6 +83,8 @@ struct SettingsView: View {
 
                 pairingSection
 
+                guideSection
+
                 Section {
                     DisclosureGroup("ユーザー名とパスワードを入力", isExpanded: $isShowingManualEntry) {
                         TextField("ユーザー名", text: $draft.user)
@@ -115,6 +123,7 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
                         Task {
+                            await model.saveGuideHost(guideHost)
                             await model.save(draft)
                             dismiss()
                         }
@@ -125,6 +134,7 @@ struct SettingsView: View {
             .onAppear {
                 draft = model.connection
                 pairingUserID = model.pairingUserID()
+                guideHost = model.guideHost
             }
             .task {
                 // 未設定なら開いたときに探し始める
@@ -185,6 +195,62 @@ struct SettingsView: View {
             } else {
                 Text("テレビの画面に表示されている PIN を入力してください。")
             }
+        }
+    }
+
+    @ViewBuilder
+    private var guideSection: some View {
+        Section {
+            TextField("IPアドレス (例: 192.168.0.2)", text: $guideHost)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            ForEach(guideHosts, id: \.self) { host in
+                Button {
+                    guideHost = host
+                } label: {
+                    HStack {
+                        Text(host).monospacedDigit()
+                        Spacer()
+                        if guideHost == host {
+                            Image(systemName: "checkmark").foregroundStyle(.tint)
+                        }
+                    }
+                }
+                .tint(.primary)
+            }
+            Button {
+                Task { await scanGuide() }
+            } label: {
+                HStack {
+                    Label(isScanningGuide ? "Mirakurun を探しています…" : "Mirakurun を探す", systemImage: "magnifyingglass")
+                    Spacer()
+                    if isScanningGuide { ProgressView() }
+                }
+            }
+            .disabled(isScanningGuide)
+            if let guideMessage {
+                Text(guideMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("番組表 (Mirakurun)")
+        } footer: {
+            Text("Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。")
+        }
+    }
+
+    private func scanGuide() async {
+        isScanningGuide = true
+        defer { isScanningGuide = false }
+        guideMessage = nil
+        guideHosts = await Mirakurun.find()
+        if let first = guideHosts.first, guideHost.trimmingCharacters(in: .whitespaces).isEmpty {
+            guideHost = first
+        }
+        if guideHosts.isEmpty {
+            guideMessage = "見つかりませんでした。Mirakurun が動いているか、ポート \(Mirakurun.defaultPort) で待ち受けているか確認してください。"
         }
     }
 

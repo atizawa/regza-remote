@@ -86,6 +86,63 @@ public final class RemoteViewModel {
         }
     }
 
+    // MARK: - 番組表 (Mirakurun)
+
+    /// Mirakurun のアドレス。未設定なら空
+    public private(set) var guideHost = RegzaRemoteService.store.guideHost
+    public var hasGuide: Bool { !guideHost.isEmpty }
+    private var guide: Mirakurun?
+    /// 全チャンネルの番組をチャンネルの ID ごとに時刻順で持つ (チャンネル一覧で今の番組を出す用)
+    public private(set) var guidePrograms: [String: [MirakurunProgram]] = [:]
+    private var guideProgramsLoadedAt: Date?
+
+    public func saveGuideHost(_ host: String) async {
+        let host = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard host != guideHost else { return }
+        RegzaRemoteService.store.guideHost = host
+        guideHost = host
+        guide = nil
+        guidePrograms = [:]
+        guideProgramsLoadedAt = nil
+        await RegzaRemoteService.reloadGuide()
+        await refresh()
+    }
+
+    private func guideClient() -> Mirakurun? {
+        guard hasGuide else { return nil }
+        if let guide, guide.host == guideHost { return guide }
+        let client = Mirakurun(host: guideHost)
+        guide = client
+        return client
+    }
+
+    /// 全チャンネルの番組を読む。数 MB あるので 30 分に 1 回まで
+    public func loadGuidePrograms() async {
+        guard let guide = guideClient() else { return }
+        if let guideProgramsLoadedAt, Date().timeIntervalSince(guideProgramsLoadedAt) < 30 * 60 { return }
+        guard let programs = try? await guide.allPrograms() else { return }
+        guidePrograms = Dictionary(grouping: programs, by: \.channelCode).mapValues { $0.sorted { $0.start < $1.start } }
+        guideProgramsLoadedAt = Date()
+    }
+
+    /// そのチャンネルでいま放送中の番組
+    public func currentProgram(for channel: RegzaChannel, at date: Date = Date()) -> MirakurunProgram? {
+        guidePrograms[channel.code]?.first { $0.isOnAir(at: date) }
+    }
+
+    /// 1 チャンネルの番組表 (放送中の番組から)
+    public func programs(for channel: RegzaChannel) async throws(RegzaError) -> [MirakurunProgram] {
+        guard let guide = guideClient() else { throw .notConfigured }
+        do {
+            let now = Date()
+            return try await guide.programs(channelCode: channel.code).filter { $0.end > now }
+        } catch let error as RegzaError {
+            throw error
+        } catch {
+            throw .network(error.localizedDescription)
+        }
+    }
+
     // MARK: - 録画
 
     /// 録画予約。予定のあるものを先に、時刻順に並べる

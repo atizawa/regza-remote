@@ -9,9 +9,19 @@ public actor RegzaRemote {
     public private(set) var lastCommand: RegzaKey?
     /// v2 API (`play/status`) に対応しているか。未確認なら nil
     private var supportsPlayStatus: Bool?
+    /// 放送中の番組名を補う番組表。未設定なら nil
+    public private(set) var guide: Mirakurun?
+    /// 番組名を毎回問い合わせないよう、直前に調べた番組を覚えておく (取れなかったときは 1 分後に調べ直す)
+    private var lastProgram: (id: Int, program: MirakurunProgram?, checkedAt: Date)?
 
-    public init(connection: RegzaConnection) {
+    public init(connection: RegzaConnection, guide: Mirakurun? = nil) {
         client = RegzaClient(connection: connection)
+        self.guide = guide
+    }
+
+    public func update(guide: Mirakurun?) {
+        self.guide = guide
+        lastProgram = nil
     }
 
     public func update(connection: RegzaConnection) async {
@@ -41,8 +51,9 @@ public actor RegzaRemote {
         let updated: RegzaNowPlaying
         if supportsPlayStatus != false {
             do {
-                updated = RegzaNowPlaying(playStatus: try await client.playStatus())
+                let status = try await client.playStatus()
                 supportsPlayStatus = true
+                updated = await withProgramName(RegzaNowPlaying(playStatus: status), status: status)
             } catch RegzaError.httpStatus(404), RegzaError.unsupported {
                 supportsPlayStatus = false
                 updated = try await legacyStatus()
@@ -52,6 +63,29 @@ public actor RegzaRemote {
         }
         nowPlaying = updated
         return updated
+    }
+
+    /// テレビが放送中の番組名を返さない機種向けに、番組表から番組名と説明を補う
+    private func withProgramName(_ nowPlaying: RegzaNowPlaying, status: RegzaPlayStatus) async -> RegzaNowPlaying {
+        guard nowPlaying.kind == .broadcast, nowPlaying.title.isEmpty, let guide,
+              let id = status.currentProgram?.epgContentID.flatMap(Mirakurun.programID(epgContentID:))
+        else { return nowPlaying }
+        let program: MirakurunProgram?
+        if let lastProgram, lastProgram.id == id,
+           lastProgram.program != nil || Date().timeIntervalSince(lastProgram.checkedAt) < 60 {
+            program = lastProgram.program
+        } else {
+            // 番組表が取れなくても視聴状況はそのまま返す
+            program = try? await guide.program(id: id)
+            lastProgram = (id, program, Date())
+        }
+        guard let program else { return nowPlaying }
+        var result = nowPlaying
+        result.title = program.name
+        if result.description.isEmpty {
+            result.description = program.description
+        }
+        return result
     }
 
     private func legacyStatus() async throws -> RegzaNowPlaying {

@@ -26,4 +26,6 @@ public protocol RegzaConnectionStore: Sendable {
     /// 入れ直しても同じ ID になるよう、アプリを削除しても消えない場所に保存する
     /// (同じ ID で登録し直すとテレビ側で上書きされ、登録が増えない)
     func pairingUserID() -> String
+    /// 番組表を読む Mirakurun のアドレス。未設定なら空
+    var guideHost: String { get nonmutating set }
 }

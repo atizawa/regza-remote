@@ -130,6 +130,8 @@ public struct RegzaNowPlaying: Equatable, Sendable {
               result.distance(from: open, to: close) <= 3 {
             result.removeSubrange(open...close)
         }
+        // Mirakurun は番組記号を 🈑 🈖 などの囲み文字にして返す
+        result.unicodeScalars.removeAll { (0x1F100...0x1F2FF).contains($0.value) }
         return result.trimmingCharacters(in: .whitespaces)
     }
 }

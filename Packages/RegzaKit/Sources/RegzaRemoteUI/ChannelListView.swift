@@ -12,6 +12,8 @@ struct ChannelListView: View {
     @State private var tuneError: String?
     /// 切り替え中のチャンネル
     @State private var tuning: RegzaChannel?
+    /// 番組表を開いているチャンネル
+    @State private var guideChannel: RegzaChannel?
 
     var body: some View {
         NavigationStack {
@@ -32,7 +34,13 @@ struct ChannelListView: View {
                         .disabled(isLoading)
                     }
                 }
-                .task { await load(force: false) }
+                .navigationDestination(item: $guideChannel) { channel in
+                    ChannelProgramsView(channel: channel) { dismiss() }
+                }
+                .task {
+                    await load(force: false)
+                    await model.loadGuidePrograms()
+                }
         }
     }
 
@@ -76,27 +84,49 @@ struct ChannelListView: View {
     }
 
     private func row(_ channel: RegzaChannel) -> some View {
-        Button {
-            Task { await tune(to: channel) }
-        } label: {
-            HStack(spacing: 12) {
-                Text(channel.formattedNumber)
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                Text(channel.name)
-                    // 同じ放送局のサブチャンネルは控えめに出す
-                    .foregroundStyle(channel.isRepresentative || channel.band == .cs ? .primary : .secondary)
-                    .lineLimit(1)
-                Spacer()
-                if tuning == channel {
-                    ProgressView()
-                } else if channel.code == model.nowPlaying?.channelCode {
-                    Image(systemName: "checkmark").foregroundStyle(.tint)
+        HStack(spacing: 12) {
+            Button {
+                Task { await tune(to: channel) }
+            } label: {
+                HStack(spacing: 12) {
+                    Text(channel.formattedNumber)
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(channel.name)
+                            // 同じ放送局のサブチャンネルは控えめに出す
+                            .foregroundStyle(channel.isRepresentative || channel.band == .cs ? .primary : .secondary)
+                            .lineLimit(1)
+                        if let program = model.currentProgram(for: channel) {
+                            Text(program.name)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer()
+                    if tuning == channel {
+                        ProgressView()
+                    } else if channel.code == model.nowPlaying?.channelCode {
+                        Image(systemName: "checkmark").foregroundStyle(.tint)
+                    }
                 }
+                .contentShape(Rectangle())
+            }
+            // 行の中に 2 つのボタンがあるので、行全体ではなくそれぞれが押されるようにする
+            .buttonStyle(.borderless)
+            .tint(.primary)
+            .disabled(tuning != nil)
+            if model.hasGuide, model.guidePrograms[channel.code] != nil {
+                Button {
+                    guideChannel = channel
+                } label: {
+                    Image(systemName: "calendar")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("\(channel.name) の番組表")
             }
         }
-        .tint(.primary)
-        .disabled(tuning != nil)
     }
 
     /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)

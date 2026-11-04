@@ -9,10 +9,20 @@ import RegzaCore
 /// 操作のたびに Live Activity の表示も更新する。
 public enum RegzaRemoteService {
     public static let store = KeychainConnectionStore()
-    public static let remote = RegzaRemote(connection: store.load())
+    public static let remote = RegzaRemote(connection: store.load(), guide: makeGuide())
 
     public static func reloadConnection() async {
         await remote.update(connection: store.load())
+    }
+
+    /// 番組表 (Mirakurun) の設定を読み直す
+    public static func reloadGuide() async {
+        await remote.update(guide: makeGuide())
+    }
+
+    /// 視聴状況を 2 秒ごとに取るので、番組表が応答しないときに待たされないよう短めにする
+    private static func makeGuide() -> Mirakurun? {
+        store.guideHost.isEmpty ? nil : Mirakurun(host: store.guideHost, timeout: 3)
     }
 
     public static func send(_ key: RegzaKey) async throws {

@@ -8,6 +8,7 @@ import Security
 public struct KeychainConnectionStore: RegzaConnectionStore {
     private static let hostKey = "regza.host"
     private static let userKey = "regza.user"
+    private static let guideHostKey = "mirakurun.host"
     private static let passwordAccount = "regza.password"
     private static let pairingUserIDAccount = "regza.pairingUserID"
     private static let service = "RegzaRemote"
@@ -28,6 +29,13 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
         defaults.set(connection.host.trimmingCharacters(in: .whitespaces), forKey: Self.hostKey)
         defaults.set(connection.user, forKey: Self.userKey)
         write(connection.password, account: Self.passwordAccount)
+    }
+
+    public var guideHost: String {
+        get { UserDefaults.standard.string(forKey: Self.guideHostKey) ?? "" }
+        nonmutating set {
+            UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: Self.guideHostKey)
+        }
     }
 
     public func pairingUserID() -> String {

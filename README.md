@@ -55,6 +55,17 @@ open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を�
 - 押すと `POST /v2/remote/status/channel`（フォーム `channel` にチャンネル一覧の `channel` の値）で直接選局する。成功すると `{"status":0}`、存在しないチャンネルは `{"status":1}`
 - いま映っているチャンネルは `play/status` の `epg_info_current.channel` と照らし合わせて印を付ける
 
+## 番組表（Mirakurun）
+
+テレビの番組表 API は番組名を返さないので、Mirakurun（録画サーバー）が設定されていれば、そこから番組名と番組表を読む。設定画面で同じ /24 のポート 40772 に `GET /api/version` を問い合わせて探せる。認証は不要。
+
+- テレビと Mirakurun は放送波の ID をそのまま使っているので、変換するだけで照らし合わせられる
+  - チャンネル: テレビの `JP-G` + network_id + service_id（16 進 4 桁ずつ）。例: `JP-G7fe00400`
+  - 番組: テレビの `epg_content_id`（`JP-0000` + network_id + service_id + event_id）→ Mirakurun の番組 ID `network_id × 10^10 + service_id × 10^5 + event_id`
+- 放送中の番組名が空のときは `GET /api/programs/:id` で補い、アプリと Live Activity に出す。同じ番組は問い合わせ直さない
+- チャンネル一覧では `GET /api/programs`（全チャンネル分で数 MB）を 30 分に 1 回読み、各局の今の番組名を添える。カレンダーのボタンからその局の番組表（`?networkId=&serviceId=`）を開ける
+- Mirakurun が受信していない放送（CS など）は番組名が出ない
+
 ## 録画
 
 - 録画予約: `GET /v2/remote/pvr/reserves/list`。連ドラ予約は次の回が番組表に載ると `start_time` と `title` がその回に更新され、それまでは最後に録画した回のまま残るので、「予定」と「次の回を待っている」に分けて出す
