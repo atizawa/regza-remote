@@ -19,6 +19,8 @@ public struct RegzaActivityAttributes: ActivityAttributes {
         /// 次の番組の長さ (秒) と番組名。番組が終わった時刻に、アプリが止まっていても次の番組の表示に切り替える
         public var nextProgramDuration: Int?
         public var nextTitle: String?
+        /// 放送中の番組のジャンル。番組名が取れないときに添える (前のバージョンの状態にはない)
+        public var genre: String?
         /// `displayed(isStale:)` で次の番組の表示に切り替えたもの (アプリからは送らない)。
         /// 前のバージョンの状態も読めるよう optional にしている
         public var hasPredictedNextProgram: Bool?
@@ -39,6 +41,7 @@ public struct RegzaActivityAttributes: ActivityAttributes {
             nextProgramStart = nowPlaying?.nextProgramStart
             nextProgramDuration = nowPlaying?.nextProgramDuration
             nextTitle = nowPlaying?.nextTitle
+            genre = nowPlaying?.genre
             self.lastCommand = lastCommand?.label
             self.isConnected = isConnected
         }
@@ -77,6 +80,7 @@ public struct RegzaActivityAttributes: ActivityAttributes {
             next.nextProgramStart = nil
             next.nextProgramDuration = nil
             next.nextTitle = nil
+            next.genre = nil
             next.hasPredictedNextProgram = true
             return next
         }

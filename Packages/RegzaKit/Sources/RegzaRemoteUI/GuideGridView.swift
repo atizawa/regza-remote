@@ -38,10 +38,14 @@ struct GuideGridView: View {
     @ViewBuilder
     private var content: some View {
         if !model.hasGuide {
+            // Mirakurun がなくてもタブは消さず (HIG)、何ができるかと設定のしかたを案内する
             ContentUnavailableView {
-                Label("番組表が設定されていません", systemImage: "calendar")
+                Label("番組表を使うには", systemImage: "calendar")
             } description: {
-                Text("番組表は録画サーバー Mirakurun から読みます。設定画面の「番組表 (Mirakurun)」でアドレスを設定してください。")
+                Text("""
+                    録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。
+                    設定画面の「録画サーバーとの連携」で Mirakurun のアドレスを設定してください。
+                    """)
             } actions: {
                 Button("設定を開く") { showSettings() }
                     .buttonStyle(.borderedProminent)

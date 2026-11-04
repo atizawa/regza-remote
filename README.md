@@ -7,6 +7,8 @@ iOS 26 以上が対象。画面はダークモードに固定している（Info
 
 画面は「リモコン」（テレビを操作するボタン）と、見るための「番組表」「チャンネル」「録画予約」のタブに分けている。テレビで映っているものは、どのタブでもタブバーの上のミニプレーヤー（`tabViewBottomAccessory`）に出し、押すと番組の詳細（録画ならシーク）を開く。色は REGZA の公式サイトで使われている深い緑（`#00442D`）を基調にしている（`AppTheme`。ダークモード固定なので、暗い背景でも見える明るめの `#1D866F` を使う）。ロゴはまねしない。
 
+REGZA だけでもリモコン・Live Activity・Siri・チャンネル一覧と選局・録画予約の一覧・最初から見るが使える。Mirakurun（番組名・番組表・番組表からの予約）と EPGStation（ライブ視聴）は、設定画面の「録画サーバーとの連携」で設定した人だけが使う。番組表のタブは未設定でも消さず（タブを出したり消したりしない HIG に合わせる）、何ができるかと設定のしかたを案内する。連携は、それぞれの設定画面の「連携を解除」でやめられる。EPGStation は Mirakurun から放送を受け取るので、ライブ視聴は Mirakurun を設定してから設定できるようにし（EPGStation だけでは番組名も出ず、見られない局も一覧に混ざる）、Mirakurun と同じサーバーで EPGStation が動いていれば候補として出す。Mirakurun の連携を解除すると EPGStation の連携も解除する。
+
 ## 構成
 
 ```
@@ -29,7 +31,7 @@ cd Packages/RegzaKit && swift test        # コアのテスト
 open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を設定して実機へ
 ```
 
-テレビや Mirakurun につながずに画面を確かめるときは、Debug ビルドを起動引数 `-SampleData YES` で起動すると見本データ（架空のチャンネルと番組）を表示する。`-SampleKind recorded` で録画再生中、`-InitialTab guide` / `channels` / `reservations` で最初に開くタブを選べる。`-InitialTab guide -SampleDetail YES` で放送中の番組の詳細を開く。`-LiveHost <EPGStation のアドレス> -LiveChannel <チャンネルの ID>` で、すぐ「iPhone で見る」の再生画面を開く（実際に配信を頼むので、確かめたら EPGStation で配信を止める）。
+テレビや Mirakurun につながずに画面を確かめるときは、Debug ビルドを起動引数 `-SampleData YES` で起動すると見本データ（架空のチャンネルと番組）を表示する。`-SampleKind recorded` で録画再生中、`-InitialTab guide` / `channels` / `reservations` で最初に開くタブを選べる。`-InitialTab guide -SampleDetail YES` で放送中の番組の詳細を開く。`-SampleNoGuide YES` で Mirakurun が未設定のとき、`-ShowSettings YES` で設定画面を開いた状態を確かめられる。`-LiveHost <EPGStation のアドレス> -LiveChannel <チャンネルの ID>` で、すぐライブ視聴の再生画面を開く（実際に配信を頼むので、確かめたら EPGStation で配信を止める）。
 
 ```sh
 xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab guide
@@ -80,9 +82,9 @@ xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab g
   - チャンネル一覧のカレンダーのボタンからは、その局だけの番組表（`?networkId=&serviceId=`、8 日分ほど）を開ける
 - Mirakurun が受信していない放送（CS など）は番組名が出ない
 
-## iPhone で見る（EPGStation）
+## ライブ視聴（EPGStation）
 
-EPGStation が設定されていれば、放送中の番組を iPhone で見られる（番組の詳細と視聴中の画面の「iPhone で見る」）。家の Wi-Fi の中だけで使う。
+EPGStation が設定されていれば、放送中の番組をアプリで見られる（番組の詳細と視聴中の画面の「アプリで見る」）。家の Wi-Fi の中だけで使う。
 
 再生画面は縦向きでは映像の下に今の番組の情報（Mirakurun の番組表から。30 秒ごとに更新）と局の一覧を出し、局を押すと前の配信を止めてその局の配信を頼み直す。局の一覧は Mirakurun が受信している局（＝ EPGStation で見られる局）の代表チャンネルだけで、地デジ/BS/CS の選択は番組表・チャンネルのタブと共有する。横向きでは映像だけを出す。映像の部分は iOS 標準のプレーヤーなので、全画面・ピクチャインピクチャ・AirPlay のボタンはそのまま使える。
 
@@ -124,7 +126,7 @@ App Intents で次の操作を出している（`RemoteIntents.swift`。言い�
   - テレビ本体のリモコンで切り替えられたときにも重ならないよう、ふだんの 2 秒ごとの確認は旧 API（`status.htm`）で行う。旧 API は切り替えの最中に 0.2 秒おきに問い合わせても再起動しないことを実機で確認した。旧 API の値（再生状態・チャンネル・番組）が変わったら切り替え中とみなして 6 秒待ち、`play/status` は落ち着いているときに 15 秒に 1 回と、自分でキーを送った後だけにする。その間の再生位置は旧 API の値や経過時間で進める
   - テレビ本体のリモコンで放送のチャンネルを変えたことは、旧 API では分からないので、反映まで最大 15 秒ほどかかる
 - 切り替え中は `play/status` が一時的に 404 を返す。一度でも v2 API で取れたテレビでは、404 が返っても旧 API（`status.htm`）に切り替えない
-- 機種によっては v2 API が放送中の番組名・番組説明を空文字で返すため、放送中はチャンネル名と放送時間のみ表示する（`/v2/remote/epg/:channel_code` も同様）
+- 機種によっては v2 API が放送中の番組名・番組説明を空文字で返す（`/v2/remote/epg/:channel_code` も同様）。Mirakurun がなければ、チャンネル名と放送時間に、`play/status` のジャンル（`genre` の 4 桁の 16 進の 3 桁目が ARIB の大分類。`00a8` なら趣味・教育）を添えて表示する
 - Live Activity は、アプリを開いている間は 2 秒ごとに更新される。閉じている間は次のときに更新される
   - Live Activity のボタンを押したとき
   - iOS がアプリを起こしたとき（BGAppRefreshTask。放送中は番組の終了時刻の後、それ以外は 15 分後以降で予約するが、実際にいつ起こされるかはシステム次第で、起こされないこともある）

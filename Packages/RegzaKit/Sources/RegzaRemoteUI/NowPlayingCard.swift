@@ -76,6 +76,10 @@ struct NowPlayingCard: View {
             Text(nowPlaying.title)
                 .font(.headline)
                 .lineLimit(2)
+        } else if !nowPlaying.genre.isEmpty {
+            // 番組名が取れない機種では、ジャンルで何の番組かを示す
+            Text(nowPlaying.genre)
+                .font(.headline)
         }
         if nowPlaying.hasTimeline {
             let start = nowPlaying.updatedAt.addingTimeInterval(-TimeInterval(nowPlaying.position))

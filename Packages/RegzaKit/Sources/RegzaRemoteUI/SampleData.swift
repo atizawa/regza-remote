@@ -3,7 +3,8 @@ import Foundation
 import RegzaCore
 
 /// 開発中に、テレビや Mirakurun につながずに画面を確かめるための見本データ。
-/// 起動引数 `-SampleData YES` で使う (`-SampleKind recorded` で録画再生中、`-InitialTab guide` などで最初のタブ)。
+/// 起動引数 `-SampleData YES` で使う (`-SampleKind recorded` で録画再生中、`-InitialTab guide` などで最初のタブ、
+/// `-SampleNoGuide YES` で Mirakurun が未設定のとき、`-ShowSettings YES` で設定画面を開く)。
 /// 実在の機器の情報は入れない
 enum SampleData {
     static var isEnabled: Bool { UserDefaults.standard.bool(forKey: "SampleData") }

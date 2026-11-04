@@ -34,12 +34,15 @@ public struct RegzaNowPlaying: Equatable, Sendable {
     public var nextProgramDuration: Int
     /// 次の番組名 (番組表から補えたときだけ)
     public var nextTitle: String
+    /// 放送中の番組のジャンル (「ニュース」など)。番組名が返らない機種でも、何の番組かの手がかりになる
+    public var genre: String
     public var updatedAt: Date
 
     public init(
         kind: Kind = .unknown, channelName: String = "", channelCode: String = "", title: String = "", description: String = "",
         chapterName: String = "", position: Int = 0, duration: Int = 0, isAdvancing: Bool = false,
-        nextProgramStart: Date? = nil, nextProgramDuration: Int = 0, nextTitle: String = "", updatedAt: Date = Date()
+        nextProgramStart: Date? = nil, nextProgramDuration: Int = 0, nextTitle: String = "", genre: String = "",
+        updatedAt: Date = Date()
     ) {
         self.kind = kind
         self.channelName = channelName
@@ -53,6 +56,7 @@ public struct RegzaNowPlaying: Equatable, Sendable {
         self.nextProgramStart = nextProgramStart
         self.nextProgramDuration = nextProgramDuration
         self.nextTitle = nextTitle
+        self.genre = genre
         self.updatedAt = updatedAt
     }
 
@@ -91,6 +95,7 @@ public struct RegzaNowPlaying: Equatable, Sendable {
                 isAdvancing: start != nil && duration > 0,
                 nextProgramStart: playStatus.nextProgram?.startTime.map { Date(timeIntervalSince1970: TimeInterval($0)) },
                 nextProgramDuration: playStatus.nextProgram?.duration ?? 0,
+                genre: program?.genre?.first.flatMap(Self.genreName(code:)) ?? "",
                 updatedAt: now
             )
         case "recorded":
@@ -127,6 +132,13 @@ public struct RegzaNowPlaying: Equatable, Sendable {
 
     public var progress: Double {
         duration > 0 ? min(1, Double(position) / Double(duration)) : 0
+    }
+
+    /// テレビの ARIB のジャンル (`00a8` なら 3 桁目の `a` が大分類) を名前にする
+    static func genreName(code: String) -> String? {
+        let digits = Array(code)
+        guard digits.count == 4, let level1 = Int(String(digits[2]), radix: 16) else { return nil }
+        return Mirakurun.genreName(level1)
     }
 
     /// `[字]` `[新]` などの番組記号を取り除く

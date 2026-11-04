@@ -38,6 +38,8 @@ public final class RemoteViewModel {
         connection = RegzaConnection(host: "192.0.2.1")
         nowPlaying = SampleData.nowPlaying()
         channels = SampleData.channels()
+        // -SampleNoGuide YES で Mirakurun が未設定のときの画面を確かめる
+        guard !UserDefaults.standard.bool(forKey: "SampleNoGuide") else { return }
         let programs = SampleData.programs()
         guideHost = "192.0.2.2"
         guidePrograms = Dictionary(grouping: programs, by: \.channelCode).mapValues { $0.sorted { $0.start < $1.start } }
@@ -176,11 +178,13 @@ public final class RemoteViewModel {
         }
     }
 
-    // MARK: - iPhone で見る (EPGStation)
+    // MARK: - ライブ視聴 (EPGStation)
 
     /// EPGStation のアドレス。未設定なら空
     public private(set) var streamHost = RegzaRemoteService.store.streamHost
-    public var canStream: Bool { !streamHost.isEmpty && !isSampleMode }
+    /// EPGStation は Mirakurun から放送を受け取るので、Mirakurun も設定しているときだけ使う
+    /// (EPGStation だけでは番組名も出ず、見られない局も一覧に混ざる)
+    public var canStream: Bool { !streamHost.isEmpty && hasGuide && !isSampleMode }
 
     public func saveStreamHost(_ host: String) {
         let host = host.trimmingCharacters(in: .whitespacesAndNewlines)

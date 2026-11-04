@@ -1,6 +1,6 @@
 import AppIntents
 import RegzaLiveActivity
-import SwiftUI  
+import SwiftUI
 import WidgetKit
 
 @main

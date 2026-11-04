@@ -31,9 +31,11 @@ public struct RegzaPlayStatus: Decodable, Equatable, Sendable {
         public var startTime: Int?
         /// 秒
         public var duration: Int?
+        /// ARIB のジャンル (`00a8` のような 4 桁の 16 進。3 桁目が大分類)
+        public var genre: [String]?
 
         enum CodingKeys: String, CodingKey {
-            case channel, title, description, duration
+            case channel, title, description, duration, genre
             case channelName = "channel_name"
             case epgContentID = "epg_content_id"
             case startTime = "start_time"

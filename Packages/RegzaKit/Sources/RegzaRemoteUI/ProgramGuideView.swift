@@ -244,7 +244,7 @@ struct ProgramDetailView: View {
                 Button {
                     isShowingPlayer = true
                 } label: {
-                    actionLabel("iPhone で見る", systemImage: "iphone", isBusy: false)
+                    actionLabel("アプリで見る", systemImage: "play.tv", isBusy: false)
                 }
                 .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
             }

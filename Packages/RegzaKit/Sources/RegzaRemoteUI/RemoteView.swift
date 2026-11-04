@@ -6,7 +6,7 @@ import SwiftUI
 /// アプリのルート画面。テレビを操作する「リモコン」と、見るための一覧 (番組表・チャンネル・録画予約) をタブで分ける
 public struct RemoteView: View {
     @State private var model = RemoteViewModel()
-    @State private var isShowingSettings = false
+    @State private var isShowingSettings = Self.showsSettingsAtLaunch
     @State private var tab = Self.initialTab
     @Environment(\.scenePhase) private var scenePhase
 
@@ -74,7 +74,7 @@ public struct RemoteView: View {
         .tint(AppTheme.accent)
         .sensoryFeedback(.impact(weight: .light), trigger: model.tapCount)
         .task {
-            // 前回、強制終了などで止められずに残った「iPhone で見る」の配信を止める
+            // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
             if let server = model.streamServer() { await LiveStreams.cleanUp(server) }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
@@ -97,6 +97,15 @@ public struct RemoteView: View {
                 if phase == .background { model.scheduleBackgroundRefresh() }
             }
         }
+    }
+
+    /// 開発用: 起動引数 -ShowSettings YES で設定画面を開いておく
+    private static var showsSettingsAtLaunch: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "ShowSettings")
+        #else
+        false
+        #endif
     }
 
     private static var initialTab: AppTab {

@@ -70,7 +70,9 @@ struct NowPlayingAccessory: View {
         guard let nowPlaying else { return nil }
         switch nowPlaying.kind {
         case .broadcast:
-            return nowPlaying.title.isEmpty ? nil : nowPlaying.channelName
+            // 番組名が取れないときは、局名を大きく出し、上にジャンルを添える
+            if nowPlaying.title.isEmpty { return nowPlaying.genre.isEmpty ? nil : nowPlaying.genre }
+            return nowPlaying.channelName
         case .recorded:
             return nowPlaying.channelName.isEmpty ? "録画" : "録画 · \(nowPlaying.channelName)"
         default:
@@ -154,7 +156,7 @@ private struct NowPlayingDetailView: View {
                         Button {
                             isShowingPlayer = true
                         } label: {
-                            Label("iPhone で見る", systemImage: "iphone")
+                            Label("アプリで見る", systemImage: "play.tv")
                                 .font(.body.weight(.semibold))
                                 .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
                         }

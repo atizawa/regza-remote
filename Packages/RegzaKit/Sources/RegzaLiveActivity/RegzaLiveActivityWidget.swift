@@ -152,6 +152,12 @@ private struct TitleText: View {
                 }
             } else if state.showsChannelAsTitle {
                 Text(state.channelName).lineLimit(1)
+                if let genre = state.genre, !genre.isEmpty {
+                    // 番組名が取れない機種では、ジャンルで何の番組かを示す
+                    Text(genre)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             } else if state.kind == .external {
                 Text("外部入力")
             } else if state.kind == .standby {

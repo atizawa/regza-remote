@@ -187,6 +187,8 @@ import Testing
         #expect(nowPlaying.isAdvancing)
         #expect(nowPlaying.nextProgramStart == Date(timeIntervalSince1970: 1_793_671_800))
         #expect(nowPlaying.nextProgramDuration == 600)
+        // "0022" の大分類 2 は情報/ワイドショー
+        #expect(nowPlaying.genre == "情報")
         #expect(nowPlaying.programEnd == Date(timeIntervalSince1970: 1_793_664_000 + 7800))
     }
 
