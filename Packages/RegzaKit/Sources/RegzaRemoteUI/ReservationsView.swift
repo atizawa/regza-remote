@@ -8,6 +8,9 @@ struct ReservationsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var loadError: RegzaError?
     @State private var hasLoaded = false
+    /// 取り消すか確かめている予約
+    @State private var canceling: RegzaReservation?
+    @State private var cancelError: String?
 
     var body: some View {
         NavigationStack {
@@ -21,6 +24,20 @@ struct ReservationsView: View {
                 }
                 .task { await load() }
                 .refreshable { await load() }
+                .confirmationDialog(
+                    canceling.map { "「\($0.title)」の予約を取り消しますか？" } ?? "",
+                    isPresented: Binding(get: { canceling != nil }, set: { if !$0 { canceling = nil } }),
+                    titleVisibility: .visible,
+                    presenting: canceling
+                ) { reservation in
+                    Button(reservation.isSeries ? "連ドラ予約を取り消す" : "予約を取り消す", role: .destructive) {
+                        Task { await cancel(reservation) }
+                    }
+                } message: { reservation in
+                    if reservation.isSeries {
+                        Text("連ドラ予約なので、次の回以降も録画されなくなります。")
+                    }
+                }
         }
     }
 
@@ -44,6 +61,11 @@ struct ReservationsView: View {
             ContentUnavailableView("録画予約はありません", systemImage: "calendar")
         } else {
             List {
+                if let cancelError {
+                    Text(cancelError)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
                 if !scheduled.isEmpty {
                     Section("予定") {
                         ForEach(scheduled) { row($0, isScheduled: true) }
@@ -63,6 +85,13 @@ struct ReservationsView: View {
     }
 
     private func row(_ reservation: RegzaReservation, isScheduled: Bool) -> some View {
+        rowContent(reservation, isScheduled: isScheduled)
+            .swipeActions {
+                Button("取り消す", role: .destructive) { canceling = reservation }
+            }
+    }
+
+    private func rowContent(_ reservation: RegzaReservation, isScheduled: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(reservation.title)
                 .lineLimit(2)
@@ -88,6 +117,15 @@ struct ReservationsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private func cancel(_ reservation: RegzaReservation) async {
+        cancelError = nil
+        do {
+            try await model.cancel(reservation)
+        } catch {
+            cancelError = "「\(reservation.title)」の予約を取り消せませんでした: \(error.localizedDescription)"
         }
     }
 

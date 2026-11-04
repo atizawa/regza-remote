@@ -50,8 +50,11 @@ public actor RegzaClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = timeout
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        self.session = URLSession(configuration: configuration)
+        self.session = URLSession(configuration: configuration, delegate: LocalTrustDelegate(), delegateQueue: nil)
     }
+
+    /// テレビの HTTPS のポート。録画予約の追加はこちらでしか受け付けない
+    static let securePort = 4430
 
     deinit {
         // 接続テストや探し直しで作ったクライアントのセッションが残り続けないようにする
@@ -109,13 +112,37 @@ public actor RegzaClient {
         return list.reservations ?? []
     }
 
-    /// チャンネル一覧の `code` で選局する (`POST /v2/remote/status/channel`)
-    public func tune(to code: String) async throws {
-        let data = try await post(path: "/v2/remote/status/channel", form: ["channel": code])
+    /// 番組を 1 回だけ録画予約する (`POST /v2/remote/pvr/reserves/new`)。保存先などはテレビの設定どおり
+    public func reserve(channel: String, epgContentID: String, start: Date, duration: Int) async throws {
+        // HTTP (80 番) では内容によらず status 2 になる
+        let data = try await post(path: "/v2/remote/pvr/reserves/new", secure: true, form: [
+            "channel": channel,
+            "epg_content_id": epgContentID,
+            "start_time": String(Int(start.timeIntervalSince1970)),
+            "duration": String(duration),
+        ])
+        try Self.checkResult(data)
+    }
+
+    /// 録画予約を取り消す (`DELETE /v2/remote/pvr/reserves/list/:rsv_id`)
+    public func cancelReservation(id: String) async throws {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        let path = "/v2/remote/pvr/reserves/list/" + (id.addingPercentEncoding(withAllowedCharacters: allowed) ?? id)
+        try Self.checkResult(try await request(method: "DELETE", path: path, query: nil, body: nil))
+    }
+
+    /// `{"status":0}` 以外はテレビに断られた
+    private static func checkResult(_ data: Data) throws {
         guard let result = try? JSONDecoder().decode(RegzaResult.self, from: data) else {
             throw RegzaError.unsupported
         }
         guard result.status == 0 else { throw RegzaError.commandRejected(String(result.status)) }
+    }
+
+    /// チャンネル一覧の `code` で選局する (`POST /v2/remote/status/channel`)
+    public func tune(to code: String) async throws {
+        try Self.checkResult(try await post(path: "/v2/remote/status/channel", form: ["channel": code]))
     }
 
     /// 録画再生中に指定秒数の位置へ移動する
@@ -130,22 +157,22 @@ public actor RegzaClient {
     }
 
     /// フォームを POST する。資格情報があれば Digest 認証を付ける
-    func post(path: String, form: [String: String]) async throws -> Data {
+    func post(path: String, secure: Bool = false, form: [String: String]) async throws -> Data {
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: "-._~")
         let body = form.sorted { $0.key < $1.key }
             .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")" }
             .joined(separator: "&")
-        return try await request(method: "POST", path: path, query: nil, body: Data(body.utf8))
+        return try await request(method: "POST", path: path, query: nil, body: Data(body.utf8), secure: secure)
     }
 
     private func getData(path: String, query: String?) async throws -> Data {
         try await request(method: "GET", path: path, query: query, body: nil)
     }
 
-    private func request(method: String, path: String, query: String?, body: Data?) async throws -> Data {
+    private func request(method: String, path: String, query: String?, body: Data?, secure: Bool = false) async throws -> Data {
         guard connection.isConfigured else { throw RegzaError.notConfigured }
-        guard let url = makeURL(path: path, query: query) else { throw RegzaError.invalidHost }
+        guard let url = makeURL(path: path, query: query, secure: secure) else { throw RegzaError.invalidHost }
         let uri = query.map { "\(path)?\($0)" } ?? path
 
         var (data, response) = try await perform(method: method, url: url, uri: uri, body: body)
@@ -201,10 +228,17 @@ public actor RegzaClient {
         }
     }
 
-    private func makeURL(path: String, query: String?) -> URL? {
+    private func makeURL(path: String, query: String?, secure: Bool = false) -> URL? {
         var host = connection.trimmedHost
         if !host.contains("://") { host = "http://" + host }
         while host.hasSuffix("/") { host.removeLast() }
+        if secure {
+            // http://192.168.0.10 → https://192.168.0.10:4430
+            guard var components = URLComponents(string: host) else { return nil }
+            components.scheme = "https"
+            components.port = Self.securePort
+            host = components.string ?? host
+        }
         return URL(string: host + path + (query.map { "?\($0)" } ?? ""))
     }
 
@@ -218,5 +252,22 @@ public actor RegzaClient {
             if let text = String(data: data, encoding: encoding) { return text }
         }
         return String(decoding: data, as: UTF8.self)
+    }
+}
+
+/// テレビの HTTPS は自己署名の証明書なので、テレビの HTTPS のポートへの接続に限って証明書を受け入れる。
+/// 同じ内容は HTTP (80 番) でも平文で送っているので、受け入れても安全性は下がらない
+private final class LocalTrustDelegate: NSObject, URLSessionDelegate, Sendable {
+    func urlSession(
+        _ session: URLSession, didReceive challenge: URLAuthenticationChallenge
+    ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        #if canImport(Security)
+        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+           challenge.protectionSpace.port == RegzaClient.securePort,
+           let trust = challenge.protectionSpace.serverTrust {
+            return (.useCredential, URLCredential(trust: trust))
+        }
+        #endif
+        return (.performDefaultHandling, nil)
     }
 }

@@ -161,6 +161,8 @@ struct GuideGridView: View {
         defer { hasLoaded = true }
         try? await model.loadChannels()
         await model.loadGuidePrograms()
+        // 予約した番組に印を付けるため
+        try? await model.loadReservations()
         if !bands.contains(band), let first = bands.first { band = first }
     }
 
@@ -318,13 +320,22 @@ private struct ProgramColumn: View {
 }
 
 private struct ProgramCell: View {
+    @Environment(RemoteViewModel.self) private var model
     let program: MirakurunProgram
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(program.start, format: .dateTime.hour().minute())
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
+            HStack(spacing: 3) {
+                Text(program.start, format: .dateTime.hour().minute())
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                if model.isReserved(program) {
+                    Image(systemName: "record.circle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                        .accessibilityLabel("録画予約済み")
+                }
+            }
             Text(program.name)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(.primary)

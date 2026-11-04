@@ -165,6 +165,44 @@ public final class RemoteViewModel {
         }
     }
 
+    /// その番組の予約。なければ nil
+    public func reservation(for program: MirakurunProgram) -> RegzaReservation? {
+        reservations.first { $0.isReservation(of: program.epgContentID) }
+    }
+
+    public func isReserved(_ program: MirakurunProgram) -> Bool {
+        reservation(for: program) != nil
+    }
+
+    /// 番組表の番組を 1 回だけ録画予約する
+    public func reserve(_ program: MirakurunProgram) async throws(RegzaError) {
+        do {
+            try await RegzaRemoteService.remote.client.reserve(
+                channel: program.channelCode,
+                epgContentID: program.epgContentID,
+                start: program.start,
+                duration: Int(program.end.timeIntervalSince(program.start))
+            )
+        } catch let error as RegzaError {
+            throw error
+        } catch {
+            throw .network(error.localizedDescription)
+        }
+        try? await loadReservations()
+    }
+
+    public func cancel(_ reservation: RegzaReservation) async throws(RegzaError) {
+        do {
+            try await RegzaRemoteService.remote.client.cancelReservation(id: reservation.id)
+        } catch let error as RegzaError {
+            throw error
+        } catch {
+            throw .network(error.localizedDescription)
+        }
+        reservations.removeAll { $0.id == reservation.id }
+        try? await loadReservations()
+    }
+
     // MARK: - 状態の定期取得
 
     public func startPolling(interval: Duration = .seconds(2)) {

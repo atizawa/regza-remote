@@ -21,6 +21,8 @@ struct ChannelProgramsView: View {
             }
             .task {
                 if programs == nil { await load() }
+                // 予約した番組に印を付けるため
+                if model.reservations.isEmpty { try? await model.loadReservations() }
             }
             .refreshable { await load() }
     }
@@ -77,7 +79,23 @@ struct ChannelProgramsView: View {
     }
 }
 
+/// 録画予約した番組に付ける印
+struct ReservedBadge: View {
+    var compact = false
+
+    var body: some View {
+        Label(compact ? "予約" : "録画予約済み", systemImage: "record.circle.fill")
+            .font(compact ? .caption2.weight(.bold) : .caption.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, compact ? 4 : 6)
+            .padding(.vertical, 2)
+            .background(.red, in: Capsule())
+            .labelStyle(.titleAndIcon)
+    }
+}
+
 private struct ProgramRow: View {
+    @Environment(RemoteViewModel.self) private var model
     let program: MirakurunProgram
 
     var body: some View {
@@ -90,6 +108,9 @@ private struct ProgramRow: View {
                 Text(program.name)
                     .lineLimit(2)
                 HStack(spacing: 6) {
+                    if model.isReserved(program) {
+                        ReservedBadge(compact: true)
+                    }
                     if program.isOnAir() {
                         Text("放送中").foregroundStyle(.orange)
                     }
@@ -112,11 +133,18 @@ struct ProgramDetailView: View {
 
     @State private var isTuning = false
     @State private var tuneError: String?
+    @State private var isReserving = false
+    @State private var reserveMessage: String?
+    /// 予約・取り消しが終わったときの触覚フィードバック用
+    @State private var reserveFeedback = 0
 
     var body: some View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 6) {
+                    if model.isReserved(program) {
+                        ReservedBadge()
+                    }
                     Text(program.name)
                         .font(.headline)
                     HStack(spacing: 4) {
@@ -144,6 +172,46 @@ struct ProgramDetailView: View {
                         .font(.subheadline)
                 }
             }
+            if program.end > Date() {
+                Section {
+                    if let reservation = model.reservation(for: program) {
+                        Label("録画予約しました", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.red)
+                            .font(.body.weight(.semibold))
+                        Button(role: .destructive) {
+                            Task { await cancel(reservation) }
+                        } label: {
+                            HStack {
+                                Label("予約を取り消す", systemImage: "xmark.circle")
+                                Spacer()
+                                if isReserving { ProgressView() }
+                            }
+                        }
+                        .disabled(isReserving)
+                    } else {
+                        Button {
+                            Task { await reserve() }
+                        } label: {
+                            HStack {
+                                Label("録画予約", systemImage: "record.circle")
+                                Spacer()
+                                if isReserving { ProgressView() }
+                            }
+                        }
+                        .tint(.red)
+                        .disabled(isReserving)
+                    }
+                    if let reserveMessage {
+                        Text(reserveMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } footer: {
+                    if !model.isReserved(program) {
+                        Text("この回だけを予約します。保存先などはテレビの設定どおりです。")
+                    }
+                }
+            }
             if program.isOnAir() {
                 Section {
                     Button {
@@ -166,6 +234,43 @@ struct ProgramDetailView: View {
         }
         .navigationTitle("番組の詳細")
         .navigationBarTitleDisplayMode(.inline)
+        .sensoryFeedback(.success, trigger: reserveFeedback)
+        .animation(.default, value: model.isReserved(program))
+        .task {
+            // 予約済みかを出すため
+            if model.reservations.isEmpty { try? await model.loadReservations() }
+        }
+    }
+
+    private func reserve() async {
+        isReserving = true
+        defer { isReserving = false }
+        reserveMessage = nil
+        do {
+            try await model.reserve(program)
+            reserveFeedback += 1
+            if !model.isReserved(program) {
+                // テレビの一覧にまだ反映されていない
+                reserveMessage = "予約しました。テレビの予約一覧に反映されるまで少しかかることがあります。"
+            }
+        } catch .commandRejected(let code) {
+            // 重なる予約が多い、ハードディスクがないなど
+            reserveMessage = "テレビが予約を受け付けませんでした (\(code))。テレビの予約一覧や録画機器を確認してください。"
+        } catch {
+            reserveMessage = error.localizedDescription
+        }
+    }
+
+    private func cancel(_ reservation: RegzaReservation) async {
+        isReserving = true
+        defer { isReserving = false }
+        reserveMessage = nil
+        do {
+            try await model.cancel(reservation)
+            reserveFeedback += 1
+        } catch {
+            reserveMessage = "予約を取り消せませんでした: \(error.localizedDescription)"
+        }
     }
 
     private func tune() async {

@@ -8,6 +8,7 @@ public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
     public var id: Int
     public var networkId: Int
     public var serviceId: Int
+    public var eventId: Int
     public var start: Date
     public var end: Date
     public var name: String
@@ -25,13 +26,18 @@ public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
     /// テレビのチャンネル一覧の `RegzaChannel.code` と同じ形式
     public var channelCode: String { Mirakurun.channelCode(networkId: networkId, serviceId: serviceId) }
 
+    /// テレビの番組 ID (`epg_content_id`)。録画予約に使う
+    public var epgContentID: String {
+        Mirakurun.epgContentID(networkId: networkId, serviceId: serviceId, eventId: eventId)
+    }
+
     public func isOnAir(at date: Date = Date()) -> Bool { start <= date && date < end }
 
     /// 最初のジャンルの名前
     public var genreName: String? { genres.first.flatMap(Mirakurun.genreName) }
 
     enum CodingKeys: String, CodingKey {
-        case id, networkId, serviceId, startAt, duration, name, description, extended, genres
+        case id, networkId, serviceId, eventId, startAt, duration, name, description, extended, genres
     }
 
     struct Genre: Decodable {
@@ -43,6 +49,7 @@ public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
         id = try container.decode(Int.self, forKey: .id)
         networkId = try container.decode(Int.self, forKey: .networkId)
         serviceId = try container.decode(Int.self, forKey: .serviceId)
+        eventId = try container.decodeIfPresent(Int.self, forKey: .eventId) ?? id % 100_000
         // ミリ秒
         let startAt = try container.decode(Double.self, forKey: .startAt)
         let duration = try container.decodeIfPresent(Double.self, forKey: .duration) ?? 0
@@ -147,6 +154,10 @@ public final class Mirakurun: Sendable {
             return nil
         }
         return (networkId, serviceId)
+    }
+
+    public static func epgContentID(networkId: Int, serviceId: Int, eventId: Int) -> String {
+        "JP-0000" + hex4(networkId) + hex4(serviceId) + hex4(eventId)
     }
 
     /// テレビの `epg_content_id` (`JP-0000` + network_id + service_id + event_id の 16 進) を Mirakurun の番組 ID にする
