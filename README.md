@@ -37,7 +37,7 @@ open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を�
 xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab guide
 ```
 
-画面の余白・ボタンの高さ・色は `Design`（`RemoteControls.swift`）と `AppTheme` にまとめている。余白は 16 / 12 / 24、ボタンの高さは 56 / 48 / 40 の 3 段階だけを使い、色は選択中・進行中（緑）と電源・録画（赤）だけに使う。リモコンのタブは、テレビ付属のリモコンの写真から測った色に合わせ、グレーの本体に、十字キーのあたりだけ黒い帯、黒いボタンに白い文字、銀色の決定、赤い電源ボタンの配色（`RemoteBody`）にしている。
+画面の余白・ボタンの高さ・色は `Design`（`RemoteControls.swift`）と `AppTheme` にまとめている。余白は 16 / 12 / 24、ボタンの高さは 56 / 48 / 40 の 3 段階だけを使い、色は選択中・進行中（緑）と電源・録画（赤）だけに使う。リモコンのタブは、テレビ付属のリモコンの写真から測った色に合わせ、明るいグレーの本体にグレーのボタンと黒い文字、十字キーのあたりだけ黒い帯に黒いボタンと白い文字、銀色の決定、赤い電源ボタンの配色（`RemoteBody`・`RemoteKeyTone`）にしている。
 
 ## テレビ側の準備
 

@@ -35,6 +35,7 @@ enum ButtonSize {
 /// キーを 1 つ送るボタン
 struct KeyButton: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(\.remoteKeyTone) private var tone
     let key: RegzaKey
     var title: String?
     var size = ButtonSize.regular
@@ -58,29 +59,38 @@ struct KeyButton: View {
                     if showsCaption {
                         Text(title ?? key.label)
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .opacity(0.7)
                             .lineLimit(1)
                     }
                 } else {
                     Text(title ?? key.label)
-                        .font(size == .compact ? .footnote.weight(.semibold) : .body.weight(.semibold))
+                        .font(labelFont)
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: size.height)
         }
-        .buttonStyle(RemoteButtonStyle(isDestructive: isDestructive, isSelected: isSelected, isFilled: isFilled))
+        .buttonStyle(RemoteButtonStyle(isDestructive: isDestructive, isSelected: isSelected, isFilled: isFilled, tone: tone))
         .accessibilityLabel(key.label)
+    }
+
+    /// 数字のボタンは、実物のリモコンと同じく大きく太い字にする。
+    /// 地デジ・BS・CS も数字と同じ太さにするが、数字が主役になるよう大きさはそのまま
+    private var labelFont: Font {
+        if RegzaKey.numbers.contains(key) { return .title2.weight(.heavy) }
+        let weight: Font.Weight = [.terrestrial, .bs, .cs].contains(key) ? .heavy : .semibold
+        return size == .compact ? .footnote.weight(weight) : .body.weight(weight)
     }
 }
 
-/// リモコンのボタンの見た目。地の色は 1 色にし、色は選択中 (緑) と電源・録画 (赤) だけに使う
+/// リモコンのボタンの見た目。置かれている場所の色に合わせ、色は選択中 (緑) と電源・録画 (赤) だけに使う
 struct RemoteButtonStyle: ButtonStyle {
     var isDestructive = false
     var isSelected = false
     /// 電源のように、ボタン全体を赤く塗る
     var isFilled = false
+    var tone = RemoteKeyTone.gray
     var shape: AnyShape = AnyShape(RoundedRectangle(cornerRadius: Design.cornerRadius, style: .continuous))
 
     func makeBody(configuration: Configuration) -> some View {
@@ -91,14 +101,14 @@ struct RemoteButtonStyle: ButtonStyle {
                 if isFilled {
                     shape.fill(RemoteBody.power)
                 } else if isSelected {
-                    shape.fill(AppTheme.accent.opacity(0.22))
+                    shape.fill(AppTheme.accent)
                 } else {
-                    shape.fill(RemoteBody.key)
+                    shape.fill(tone == .gray ? RemoteBody.grayKey : RemoteBody.key)
                         .overlay { shape.fill(RemoteBody.keyHighlight) }
                 }
             }
             .overlay {
-                shape.stroke(isSelected ? AppTheme.accent : RemoteBody.edge, lineWidth: isSelected ? 1 : 0.5)
+                shape.stroke(RemoteBody.edge, lineWidth: 0.5)
             }
             .contentShape(shape)
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
@@ -107,32 +117,46 @@ struct RemoteButtonStyle: ButtonStyle {
     }
 
     private var foreground: Color {
-        if isFilled { return .white }
-        if isDestructive { return Color(red: 1.0, green: 0.27, blue: 0.27) }
-        // 選択中は緑の枠と地で示し、文字は読みやすい白にする
-        if isSelected { return .white }
-        return .primary
+        // 選択中は緑の地に白い文字
+        if isFilled || isSelected { return .white }
+        switch tone {
+        case .gray: return isDestructive ? Color(red: 0.75, green: 0.08, blue: 0.1) : .black
+        case .black: return isDestructive ? Color(red: 1.0, green: 0.27, blue: 0.27) : .white
+        }
     }
 }
 
-/// リモコンのタブの配色。テレビ付属のリモコンの写真から測った色に合わせる。
-/// 本体はグレーで、十字キーのあたりだけ黒い帯になっている。ボタンは黒に白い文字、決定は銀色。
+/// ボタンが置かれている場所。実物のリモコンと同じく、グレーの部分はグレーのボタンに黒い文字、
+/// 黒い帯の部分は黒いボタンに白い文字にする
+enum RemoteKeyTone {
+    case gray, black
+}
+
+extension EnvironmentValues {
+    @Entry var remoteKeyTone = RemoteKeyTone.gray
+}
+
+/// リモコンのタブの配色。テレビ付属のリモコンに合わせる。
+/// 本体はグレーで、十字キーのあたりだけ黒い帯になっている。グレーの部分はグレーのボタンに黒い文字、
+/// 黒い帯の部分は黒いボタンに白い文字、決定は銀色
 enum RemoteBody {
-    /// 本体のグレー (#7B7A80 付近。写真の色は暗く写っていたので明るめにしている)
+    /// 本体のグレー (#ADACB2 付近)
     static let background = LinearGradient(
-        colors: [Color(red: 0.502, green: 0.498, blue: 0.518), Color(red: 0.447, green: 0.443, blue: 0.463)],
+        colors: [Color(red: 0.690, green: 0.686, blue: 0.706), Color(red: 0.635, green: 0.631, blue: 0.651)],
         startPoint: .top, endPoint: .bottom
     )
+    /// グレーの部分のボタン (本体より少し明るいグレー)
+    static let grayKey = Color(red: 0.800, green: 0.796, blue: 0.812)
     /// 十字キーのあたりの黒い帯 (#33323A 付近)
     static let panel = Color(red: 0.200, green: 0.196, blue: 0.227)
-    /// ボタンの地の色 (黒)
+    /// 黒い帯の部分のボタン (黒)
     static let key = Color(red: 0.110, green: 0.110, blue: 0.125)
     /// ボタンの上側のごく薄い光沢 (物のボタンらしく見せる)
     static let keyHighlight = LinearGradient(
-        colors: [.white.opacity(0.08), .white.opacity(0)], startPoint: .top, endPoint: .center
+        colors: [.white.opacity(0.12), .white.opacity(0)], startPoint: .top, endPoint: .center
     )
     /// ボタンの縁
-    static let edge = Color.black.opacity(0.4)
+    static let edge = Color.black.opacity(0.3)
     /// 十字キーの輪 (#212224 付近)
     static let ring = Color(red: 0.129, green: 0.133, blue: 0.141)
     /// 決定ボタンの銀色 (#919296 付近)
@@ -154,6 +178,7 @@ enum Surface {
 /// 青・赤・緑・黄のカラーボタン。テレビのリモコンと同じく細長い色の帯にする
 struct ColorKeyButton: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(\.remoteKeyTone) private var tone
     let key: RegzaKey
     let color: Color
 
@@ -167,7 +192,7 @@ struct ColorKeyButton: View {
                 .padding(.horizontal, 10)
                 .frame(maxWidth: .infinity, minHeight: Design.compactHeight)
         }
-        .buttonStyle(RemoteButtonStyle())
+        .buttonStyle(RemoteButtonStyle(tone: tone))
         .accessibilityLabel(key.label)
     }
 }
@@ -186,9 +211,11 @@ struct RockerControl: View {
             rockerButton(up, image: upImage)
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.6))
             rockerButton(down, image: downImage)
         }
+        // 黒い帯の上に置くので、文字は白にする
+        .foregroundStyle(.white)
         .background {
             Capsule().fill(RemoteBody.key)
                 .overlay { Capsule().fill(RemoteBody.keyHighlight) }
@@ -246,6 +273,8 @@ struct DirectionPad: View {
             }
             .buttonStyle(.plain)
         }
+        // 黒い帯の上に置くので、矢印は白にする
+        .foregroundStyle(.white)
         .frame(width: diameter, height: diameter)
     }
 
@@ -291,7 +320,7 @@ struct RemoteSection<Content: View>: View {
         VStack(alignment: .leading, spacing: Design.item) {
             Text(title)
                 .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.black.opacity(0.6))
                 .padding(.leading, 4)
             content
         }

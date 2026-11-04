@@ -21,8 +21,12 @@ public struct RemoteView: View {
                             .navigationTitle("リモコン")
                             // ボタンを上に詰めるため、大きな見出しにしない
                             .navigationBarTitleDisplayMode(.inline)
+                            // 本体が明るいグレーなので、見出しと時計を黒い文字にする
+                            .toolbarColorScheme(.light, for: .navigationBar)
                             .toolbar { remoteToolbar }
                     }
+                    // 本体が明るいグレーなので、右上のボタンなども明るい背景用の色にする
+                    .environment(\.colorScheme, .light)
                     .tabItem { Label("リモコン", systemImage: "appletvremote.gen4.fill") }
                     .tag(AppTab.remote)
 
@@ -188,6 +192,7 @@ private struct RemotePanel: View {
         }
         .padding(.vertical, Design.group)
         .padding(.horizontal, Design.outer)
+        .environment(\.remoteKeyTone, .black)
         .background(RemoteBody.panel)
         .padding(.horizontal, -Design.outer)
     }
@@ -279,7 +284,7 @@ private struct RemotePanel: View {
                     Image(systemName: "chevron.down")
                         .rotationEffect(.degrees(isShowingMore ? 180 : 0))
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.black.opacity(0.6))
                 .padding(.horizontal, 4)
                 .contentShape(Rectangle())
             }
