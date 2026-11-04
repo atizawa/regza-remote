@@ -54,13 +54,14 @@ public struct ProgramSearchResult: Sendable, Identifiable {
     }
 }
 
-/// 番組を探しやすい形 (正規化した文字) にしたもの。番組表を読み込んだときに 1 度だけ作る
+/// 番組を探しやすい形 (正規化した文字の UTF-8) にしたもの。番組表を読み込んだときに 1 度だけ作る。
+/// String の contains は 1 万件を超えると打つたびに数百ミリ秒かかるので、バイト列のまま比べる
 public struct ProgramSearchIndex: Sendable {
     struct Entry: Sendable {
         var program: MirakurunProgram
-        var title: String
-        var cast: String
-        var description: String
+        var title: [UInt8]
+        var cast: [UInt8]
+        var description: [UInt8]
     }
 
     let entries: [Entry]
@@ -71,11 +72,11 @@ public struct ProgramSearchIndex: Sendable {
             let isCast = { (item: MirakurunProgram.Extended) in item.title.contains("出演") }
             return Entry(
                 program: program,
-                title: ProgramSearch.normalize(program.name),
-                cast: ProgramSearch.normalize(program.extended.filter(isCast).map(\.text).joined(separator: " ")),
-                description: ProgramSearch.normalize(
+                title: Array(ProgramSearch.normalize(program.name).utf8),
+                cast: Array(ProgramSearch.normalize(program.extended.filter(isCast).map(\.text).joined(separator: " ")).utf8),
+                description: Array(ProgramSearch.normalize(
                     ([program.description] + program.extended.filter { !isCast($0) }.map(\.text)).joined(separator: " ")
-                )
+                ).utf8)
             )
         }
     }
@@ -87,7 +88,7 @@ public struct ProgramSearchIndex: Sendable {
         _ query: ProgramSearchQuery, now: Date = Date(), calendar: Calendar = .current
     ) -> [ProgramSearchResult] {
         let groups = query.keywordGroups
-            .map { group in group.map { ($0, ProgramSearch.normalize($0)) }.filter { !$0.1.isEmpty } }
+            .map { group in group.map { ($0, Array(ProgramSearch.normalize($0).utf8)) }.filter { !$0.1.isEmpty } }
             .filter { !$0.isEmpty }
         let today = ProgramSearch.broadcastDayStart(of: now, calendar: calendar)
         let day = query.dayOffset.flatMap { calendar.date(byAdding: .day, value: $0, to: today) }
@@ -96,9 +97,12 @@ public struct ProgramSearchIndex: Sendable {
             let program = entry.program
             if !query.genres.isEmpty, !program.genres.contains(where: query.genres.contains) { continue }
             if let day, ProgramSearch.broadcastDayStart(of: program.start, calendar: calendar) != day { continue }
-            let hour = ProgramSearch.broadcastHour(of: program.start, calendar: calendar)
-            if let startHour = query.startHour, hour < startHour { continue }
-            if let endHour = query.endHour, hour >= endHour { continue }
+            // 時刻の計算は軽くないので、時間帯を聞かれたときだけ行う
+            if query.startHour != nil || query.endHour != nil {
+                let hour = ProgramSearch.broadcastHour(of: program.start, calendar: calendar)
+                if let startHour = query.startHour, hour < startHour { continue }
+                if let endHour = query.endHour, hour >= endHour { continue }
+            }
             var matches: [ProgramSearchResult.Match] = []
             for group in groups {
                 guard let match = entry.match(group) else { break }
@@ -113,14 +117,34 @@ public struct ProgramSearchIndex: Sendable {
 
 extension ProgramSearchIndex.Entry {
     /// グループの言葉のうち、いちばん目立つ場所 (番組名 → 出演者 → 説明) に入っているもの
-    func match(_ group: [(String, String)]) -> ProgramSearchResult.Match? {
-        let fields: [(ProgramSearchResult.Field, String)] = [(.title, title), (.cast, cast), (.description, description)]
+    func match(_ group: [(String, [UInt8])]) -> ProgramSearchResult.Match? {
+        let fields: [(ProgramSearchResult.Field, [UInt8])] = [(.title, title), (.cast, cast), (.description, description)]
         for (field, text) in fields {
-            if let term = group.first(where: { text.contains($0.1) }) {
+            if let term = group.first(where: { Self.contains(text, $0.1) }) {
                 return ProgramSearchResult.Match(term: term.0, field: field)
             }
         }
         return nil
+    }
+
+    /// UTF-8 は文字の途中から一致することがないので、バイト列のまま探してよい
+    static func contains(_ text: [UInt8], _ word: [UInt8]) -> Bool {
+        guard let first = word.first, word.count <= text.count else { return word.isEmpty }
+        return text.withUnsafeBufferPointer { text in
+            word.withUnsafeBufferPointer { word in
+                guard let base = text.baseAddress, let wordBase = word.baseAddress else { return false }
+                var offset = 0
+                let last = text.count - word.count
+                while offset <= last {
+                    // 最初のバイトを memchr で探してから、残りを比べる
+                    guard let found = memchr(base + offset, Int32(first), last - offset + 1) else { return false }
+                    let position = base.distance(to: found.assumingMemoryBound(to: UInt8.self))
+                    if memcmp(base + position, wordBase, word.count) == 0 { return true }
+                    offset = position + 1
+                }
+                return false
+            }
+        }
     }
 }
 
@@ -143,11 +167,24 @@ public enum ProgramSearch {
         return hour < dayStartHour ? hour + 24 : hour
     }
 
-    /// 全角・半角、ひらがな・カタカナ、大文字・小文字の違いを無視して比べるための形
+    /// 全角・半角、ひらがな・カタカナ、大文字・小文字の違いを無視して比べるための形。
+    /// NFKC で全角英数を半角に、半角カナを全角にそろえ (ｶﾞ → ガ)、ひらがなはカタカナにする。
+    /// applyingTransform (ICU) は 1 万件を超えると数秒かかるので使わない
     static func normalize(_ text: String) -> String {
-        let halfwidth = text.applyingTransform(.fullwidthToHalfwidth, reverse: false) ?? text
-        let katakana = halfwidth.applyingTransform(.hiraganaToKatakana, reverse: false) ?? halfwidth
-        return katakana.lowercased().filter { !$0.isWhitespace }
+        var scalars = String.UnicodeScalarView()
+        for scalar in text.precomposedStringWithCompatibilityMapping.lowercased().unicodeScalars {
+            if scalar.properties.isWhitespace { continue }
+            // ぁ〜ゖ・ゝゞ は、同じ並びのカタカナ (0x60 後ろ) にする
+            if (0x3041...0x3096).contains(scalar.value) || (0x309D...0x309E).contains(scalar.value),
+               let katakana = Unicode.Scalar(scalar.value + 0x60) {
+                scalars.append(katakana)
+            } else {
+                scalars.append(scalar)
+            }
+        }
+        // 半角の濁点は NFKC でも「ス + ゛」と分かれたままなので、最後に NFC で「ズ」にまとめる
+        // (バイト列で比べるので、同じ文字は同じバイト列にしておく)
+        return String(scalars).precomposedStringWithCanonicalMapping
     }
 }
 

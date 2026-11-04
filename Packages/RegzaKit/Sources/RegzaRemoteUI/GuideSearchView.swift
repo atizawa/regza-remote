@@ -21,18 +21,28 @@ final class GuideSearch {
     private(set) var results: [ProgramSearchResult] = []
     /// 条件を読み取らず、打った言葉そのままで探すか (「夜のニュース」という番組名を探すときなど)
     private(set) var isLiteral = false
+    /// 索引を作っている途中か (その間は結果が空でも「見つかりません」と出さない)
+    private(set) var isIndexing = false
     private var removed: Set<Condition> = []
 
     private var index = ProgramSearchIndex([])
     private var indexedAt: Date?
 
-    /// 番組表を読み込み直したときに、探すための索引を作り直す (正規化に時間がかかるので裏で行う)
-    func updateIndex(_ programs: [String: [MirakurunProgram]], loadedAt: Date?) async {
+    /// 番組表を読み込み直したときに、探すための索引を作り直す。
+    /// 1 週間分で 1 秒ほどかかるので、番組表の表示を待たせないよう裏で作る
+    func updateIndex(_ programs: [String: [MirakurunProgram]], loadedAt: Date?) {
         guard loadedAt != indexedAt || index.isEmpty else { return }
         indexedAt = loadedAt
         let all = programs.values.flatMap { $0 }
-        index = await Task.detached { ProgramSearchIndex(all) }.value
-        refresh()
+        isIndexing = true
+        Task {
+            let index = await Task.detached { ProgramSearchIndex(all) }.value
+            // 作っている間に番組表を読み込み直していたら、古い索引は使わない
+            guard loadedAt == indexedAt else { return }
+            self.index = index
+            isIndexing = false
+            refresh()
+        }
     }
 
     /// 読み取った条件から 1 つ外す
@@ -138,6 +148,8 @@ struct GuideSearchResults: View {
                 } description: {
                     Text("1 週間分の番組から、番組名・出演者・説明で探します。\n「明日の夜のドラマ」「土曜 21時から」のように、日付・時間帯・ジャンルでも絞り込めます。")
                 }
+            } else if search.results.isEmpty, search.isIndexing {
+                ProgressView("番組を読み込んでいます")
             } else if search.results.isEmpty {
                 ContentUnavailableView.search(text: search.text)
             }

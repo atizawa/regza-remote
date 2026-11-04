@@ -418,6 +418,15 @@ import Testing
         ])
     }
 
+    @Test func normalizesWidthKanaAndCase() {
+        // 検索はバイト列で比べるので、String の == (正準等価) ではなくバイト列で確かめる
+        let bytes = { (text: String) in Array(ProgramSearch.normalize(text).utf8) }
+        #expect(bytes("ｶﾞﾝﾀﾞﾑ") == bytes("がんだむ"))
+        #expect(bytes("ｸｲｽﾞ") == bytes("クイズ"))
+        #expect(bytes("ＡＢＣ　１２３") == Array("abc123".utf8))
+        #expect(bytes("サッカー") == bytes("ｻｯｶｰ"))
+    }
+
     @Test func filtersByDayHourAndGenre() throws {
         let programs = [
             try program(1, "サッカー　日本代表戦", start: "2026-11-05 19:00", genre: 1),

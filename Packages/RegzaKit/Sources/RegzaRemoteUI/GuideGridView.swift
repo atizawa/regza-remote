@@ -181,7 +181,7 @@ struct GuideGridView: View {
         defer { hasLoaded = true }
         try? await model.loadChannels()
         await model.loadGuidePrograms()
-        await search.updateIndex(model.guidePrograms, loadedAt: model.guideProgramsLoadedAt)
+        search.updateIndex(model.guidePrograms, loadedAt: model.guideProgramsLoadedAt)
         // 予約した番組に印を付けるため
         try? await model.loadReservations()
         #if DEBUG
@@ -205,22 +205,11 @@ struct GuideGridView: View {
         return start...start.addingTimeInterval(TimeInterval(hours * 3600))
     }
 
-    /// 番組表の 1 日の始まり (朝 4 時)。深夜番組 (〜28 時) は前の日の続きとして扱う
-    static let dayStartHour = 4
-
-    /// その時刻が入る、番組表の 1 日の始まり (その日か前の日の朝 4 時)
-    static func broadcastDayStart(of date: Date) -> Date {
-        let calendar = Calendar.current
-        let shifted = date.addingTimeInterval(-TimeInterval(dayStartHour * 3600))
-        let midnight = calendar.startOfDay(for: shifted)
-        return midnight.addingTimeInterval(TimeInterval(dayStartHour * 3600))
-    }
-
     /// 明日から、Mirakurun が番組表を持っている最後の日まで (今日は nil で表す)
     private var days: [Date] {
-        let today = Self.broadcastDayStart(of: Date())
+        let today = ProgramSearch.broadcastDayStart(of: Date())
         guard let last = model.guidePrograms.values.compactMap({ $0.last?.start }).max() else { return [] }
-        let lastDay = Self.broadcastDayStart(of: last)
+        let lastDay = ProgramSearch.broadcastDayStart(of: last)
         var result: [Date] = []
         var day = Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today
         while day <= lastDay {
@@ -298,8 +287,7 @@ private struct TimeColumn: View {
 
     /// 番組表と同じく、朝 4 時より前は前の日の続きとして 24〜27 時と書く
     static func hourLabel(_ date: Date) -> Int {
-        let hour = Calendar.current.component(.hour, from: date)
-        return hour < GuideGridView.dayStartHour ? hour + 24 : hour
+        ProgramSearch.broadcastHour(of: date)
     }
 
     var body: some View {
@@ -442,7 +430,7 @@ private struct DayPicker: View {
     private func label(_ day: Date?) -> String {
         guard let day else { return "今日" }
         let calendar = Calendar.current
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: GuideGridView.broadcastDayStart(of: Date()))
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: ProgramSearch.broadcastDayStart(of: Date()))
         if day == tomorrow { return "明日" }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ja_JP")
