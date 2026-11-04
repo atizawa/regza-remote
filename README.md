@@ -29,7 +29,7 @@ cd Packages/RegzaKit && swift test        # コアのテスト
 open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を設定して実機へ
 ```
 
-テレビや Mirakurun につながずに画面を確かめるときは、Debug ビルドを起動引数 `-SampleData YES` で起動すると見本データ（架空のチャンネルと番組）を表示する。`-SampleKind recorded` で録画再生中、`-InitialTab guide` / `channels` / `reservations` で最初に開くタブを選べる。
+テレビや Mirakurun につながずに画面を確かめるときは、Debug ビルドを起動引数 `-SampleData YES` で起動すると見本データ（架空のチャンネルと番組）を表示する。`-SampleKind recorded` で録画再生中、`-InitialTab guide` / `channels` / `reservations` で最初に開くタブを選べる。`-InitialTab guide -SampleDetail YES` で放送中の番組の詳細を開く。
 
 ```sh
 xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab guide

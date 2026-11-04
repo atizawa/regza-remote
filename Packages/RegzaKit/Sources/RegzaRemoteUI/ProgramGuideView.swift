@@ -145,123 +145,21 @@ struct ProgramDetailView: View {
     @State private var reserveFeedback = 0
 
     var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    if model.isReserved(program) {
-                        ReservedBadge()
-                    }
-                    Text(program.name)
-                        .font(.headline)
-                    HStack(spacing: 4) {
-                        Text(program.start, format: .dateTime.month().day().weekday().hour().minute())
-                        Text("〜")
-                        Text(program.end, format: .dateTime.hour().minute())
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    HStack(spacing: 6) {
-                        Text(channel.name)
-                        if let genre = program.genreName { Text("· \(genre)") }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: Design.group) {
+                header
+                actions
+                if let message = reserveMessage ?? tuneError {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
-                if !program.description.isEmpty {
-                    Text(program.description)
-                        .font(.subheadline)
-                }
+                details
             }
-            ForEach(program.extended, id: \.title) { item in
-                Section(item.title) {
-                    Text(item.text)
-                        .font(.subheadline)
-                }
-            }
-            if program.end > Date() {
-                Section {
-                    if let reservation = model.reservation(for: program) {
-                        Label(reservation.isSeries ? "連ドラ予約しました" : "録画予約しました", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.red)
-                            .font(.body.weight(.semibold))
-                        if reservation.isSeries, let repeatLabel = reservation.repeatLabel {
-                            Text("\(repeatLabel)、この番組の続きを録画します。")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        Button(role: .destructive) {
-                            Task { await cancel(reservation) }
-                        } label: {
-                            HStack {
-                                Label("予約を取り消す", systemImage: "xmark.circle")
-                                Spacer()
-                                if isReserving == .cancel { ProgressView() }
-                            }
-                        }
-                        .disabled(isReserving != nil)
-                    } else {
-                        Button {
-                            Task { await reserve(series: false) }
-                        } label: {
-                            HStack {
-                                Label("この回を録画予約", systemImage: "record.circle")
-                                Spacer()
-                                if isReserving == .single { ProgressView() }
-                            }
-                        }
-                        .tint(.red)
-                        .disabled(isReserving != nil)
-                        Button {
-                            Task { await reserve(series: true) }
-                        } label: {
-                            HStack {
-                                Label("連ドラ予約（毎回録画）", systemImage: "repeat.circle")
-                                Spacer()
-                                if isReserving == .series { ProgressView() }
-                            }
-                        }
-                        .tint(.red)
-                        .disabled(isReserving != nil)
-                    }
-                    if let reserveMessage {
-                        Text(reserveMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                } footer: {
-                    if !model.isReserved(program) {
-                        Text("連ドラ予約では、毎週・平日などの繰り返しをテレビが番組から決めます。保存先などはテレビの設定どおりです。")
-                    }
-                }
-            }
-            if program.isOnAir() {
-                Section {
-                    Button {
-                        Task { await tune(startOver: false) }
-                    } label: {
-                        HStack {
-                            Label("このチャンネルに切り替える", systemImage: "tv")
-                            Spacer()
-                            if isTuning { ProgressView() }
-                        }
-                    }
-                    .disabled(isTuning)
-                    if model.canStartOver(channelCode: program.channelCode, programStart: program.start) {
-                        Button {
-                            Task { await tune(startOver: true) }
-                        } label: {
-                            Label("切り替えて最初から見る", systemImage: "backward.end.alt")
-                        }
-                        .disabled(isTuning)
-                    }
-                    if let tuneError {
-                        Text(tuneError)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
+            .padding(Design.outer)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .background(Surface.background)
         .navigationTitle("番組の詳細")
         .navigationBarTitleDisplayMode(.inline)
         .sensoryFeedback(.success, trigger: reserveFeedback)
@@ -271,6 +169,153 @@ struct ProgramDetailView: View {
             if model.reservations.isEmpty { try? await model.loadReservations() }
             await model.loadTimeshiftSettings()
         }
+    }
+
+    /// 局名・番組名・時刻。番組名をいちばん大きくする
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Text(channel.name)
+                if program.isOnAir() {
+                    Text("· 放送中")
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(AppTheme.accent)
+
+            Text(program.name)
+                .font(.title2.weight(.bold))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 6) {
+                Text(program.start, format: .dateTime.month().day().weekday().hour().minute())
+                Text("〜")
+                Text(program.end, format: .dateTime.hour().minute())
+                Text("· \(Int(program.end.timeIntervalSince(program.start) / 60))分")
+                if let genre = program.genreName { Text("· \(genre)") }
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+
+            if program.isOnAir() {
+                ProgressView(timerInterval: program.start...program.end, countsDown: false) {
+                    EmptyView()
+                } currentValueLabel: {
+                    EmptyView()
+                }
+                .tint(AppTheme.accent)
+                .padding(.top, 4)
+            }
+
+            if let reservation = model.reservation(for: program) {
+                Label(reservedText(reservation), systemImage: "record.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.red)
+                    .padding(.top, 4)
+            }
+        }
+    }
+
+    /// 主な操作。見る・切り替えは緑、録画は赤で塗る
+    private var actions: some View {
+        VStack(spacing: Design.item) {
+            HStack(spacing: Design.item) {
+                if program.isOnAir() {
+                    Button {
+                        Task { await tune(startOver: false) }
+                    } label: {
+                        actionLabel("切り替えて見る", systemImage: "play.fill", isBusy: isTuning)
+                    }
+                    .buttonStyle(FilledActionStyle(color: AppTheme.accent))
+                    .disabled(isTuning)
+                }
+                if program.end > Date() {
+                    reserveMenu
+                }
+            }
+            if program.isOnAir(), model.canStartOver(channelCode: program.channelCode, programStart: program.start) {
+                Button {
+                    Task { await tune(startOver: true) }
+                } label: {
+                    actionLabel("最初から見る", systemImage: "backward.end.alt", isBusy: false)
+                }
+                .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
+                .disabled(isTuning)
+            }
+        }
+    }
+
+    /// 「録画予約」を押すと、この回だけか連ドラ予約かを選ぶ。予約済みならメニューから取り消す
+    @ViewBuilder
+    private var reserveMenu: some View {
+        if let reservation = model.reservation(for: program) {
+            Menu {
+                Button(role: .destructive) {
+                    Task { await cancel(reservation) }
+                } label: {
+                    Label(reservation.isSeries ? "連ドラ予約を取り消す" : "予約を取り消す", systemImage: "xmark.circle")
+                }
+            } label: {
+                actionLabel("予約済み", systemImage: "checkmark", isBusy: isReserving != nil)
+            }
+            .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .red))
+            .disabled(isReserving != nil)
+        } else {
+            Menu {
+                Button {
+                    Task { await reserve(series: false) }
+                } label: {
+                    Label("この回だけ録画", systemImage: "record.circle")
+                }
+                Button {
+                    Task { await reserve(series: true) }
+                } label: {
+                    Label("連ドラ予約（毎回録画）", systemImage: "repeat")
+                }
+            } label: {
+                actionLabel("録画予約", systemImage: "record.circle", isBusy: isReserving != nil)
+            }
+            .buttonStyle(FilledActionStyle(color: .red))
+            .disabled(isReserving != nil)
+        }
+    }
+
+    private func actionLabel(_ title: String, systemImage: String, isBusy: Bool) -> some View {
+        HStack(spacing: 6) {
+            if isBusy {
+                ProgressView()
+            } else {
+                Image(systemName: systemImage)
+            }
+            Text(title)
+        }
+        .font(.body.weight(.semibold))
+        .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
+    }
+
+    /// 説明と、番組内容・出演者などを見出し付きの文章で続ける
+    @ViewBuilder
+    private var details: some View {
+        if !program.description.isEmpty {
+            Text(program.description)
+                .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        ForEach(program.extended, id: \.title) { item in
+            VStack(alignment: .leading, spacing: 6) {
+                Text(item.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(item.text)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func reservedText(_ reservation: RegzaReservation) -> String {
+        guard reservation.isSeries else { return "録画予約済み" }
+        return reservation.repeatLabel.map { "連ドラ予約済み（\($0)）" } ?? "連ドラ予約済み"
     }
 
     private func reserve(series: Bool) async {
@@ -317,6 +362,18 @@ struct ProgramDetailView: View {
         } catch {
             tuneError = error.localizedDescription
         }
+    }
+}
+/// 操作ボタンの塗り
+private struct FilledActionStyle: ButtonStyle {
+    let color: Color
+    var foreground: Color = .white
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(foreground)
+            .background(color, in: RoundedRectangle(cornerRadius: Design.cornerRadius, style: .continuous))
+            .opacity(configuration.isPressed ? 0.75 : 1)
     }
 }
 #endif

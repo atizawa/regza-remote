@@ -169,6 +169,13 @@ struct GuideGridView: View {
         await model.loadGuidePrograms()
         // 予約した番組に印を付けるため
         try? await model.loadReservations()
+        #if DEBUG
+        // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
+        if SampleData.isEnabled, UserDefaults.standard.bool(forKey: "SampleDetail"),
+           let column = columns.first, let program = column.programs.first(where: { $0.isOnAir() }) {
+            selection = GuideSelection(program: program, channel: column.channel)
+        }
+        #endif
         if !bands.contains(band), let first = bands.first { band = first }
     }
 
