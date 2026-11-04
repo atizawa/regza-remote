@@ -136,6 +136,7 @@ private struct ProgressIcon: View {
 /// ミニプレーヤーを押したときの詳細。録画ならシークもできる
 private struct NowPlayingDetailView: View {
     @Environment(RemoteViewModel.self) private var model
+    @State private var isShowingPlayer = false
 
     var body: some View {
         NavigationStack {
@@ -147,6 +148,16 @@ private struct NowPlayingDetailView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 4)
+                    }
+                    if model.canStream, model.nowPlaying?.kind == .broadcast, model.nowPlayingChannel != nil {
+                        Button {
+                            isShowingPlayer = true
+                        } label: {
+                            Label("iPhone で見る", systemImage: "iphone")
+                                .font(.body.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
+                        }
+                        .buttonStyle(RemoteButtonStyle())
                     }
                     if model.canStartOverNowPlaying {
                         Button {
@@ -167,7 +178,16 @@ private struct NowPlayingDetailView: View {
             .background(Surface.background)
             .navigationTitle("視聴中")
             .navigationBarTitleDisplayMode(.inline)
-            .task { await model.loadTimeshiftSettings() }
+            .task {
+                await model.loadTimeshiftSettings()
+                // いま映っているチャンネルを知るため
+                try? await model.loadChannels()
+            }
+            .fullScreenCover(isPresented: $isShowingPlayer) {
+                if let server = model.streamServer(), let channel = model.nowPlayingChannel {
+                    LivePlayerView(server: server, channel: channel, programName: model.nowPlaying?.title)
+                }
+            }
         }
     }
 }

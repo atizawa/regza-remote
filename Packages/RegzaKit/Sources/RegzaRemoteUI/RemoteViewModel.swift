@@ -176,6 +176,28 @@ public final class RemoteViewModel {
         }
     }
 
+    // MARK: - iPhone で見る (EPGStation)
+
+    /// EPGStation のアドレス。未設定なら空
+    public private(set) var streamHost = RegzaRemoteService.store.streamHost
+    public var canStream: Bool { !streamHost.isEmpty && !isSampleMode }
+
+    public func saveStreamHost(_ host: String) {
+        let host = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        RegzaRemoteService.store.streamHost = host
+        streamHost = host
+    }
+
+    func streamServer() -> EPGStation? {
+        canStream ? EPGStation(host: streamHost) : nil
+    }
+
+    /// いま映っている放送のチャンネル
+    var nowPlayingChannel: RegzaChannel? {
+        guard let code = nowPlaying?.channelCode, !code.isEmpty else { return nil }
+        return channels.first { $0.code == code }
+    }
+
     // MARK: - 最初から見る (タイムシフトマシン)
 
     /// タイムシフトマシンの設定。録画している局と時間帯で「最初から見る」を出すか決める

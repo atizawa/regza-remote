@@ -28,4 +28,6 @@ public protocol RegzaConnectionStore: Sendable {
     func pairingUserID() -> String
     /// 番組表を読む Mirakurun のアドレス。未設定なら空
     var guideHost: String { get nonmutating set }
+    /// iPhone で番組を見るための EPGStation のアドレス。未設定なら空
+    var streamHost: String { get nonmutating set }
 }

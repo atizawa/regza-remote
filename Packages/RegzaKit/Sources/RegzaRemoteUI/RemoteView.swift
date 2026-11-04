@@ -59,12 +59,35 @@ public struct RemoteView: View {
         .sheet(isPresented: $isShowingSettings) {
             SettingsView()
         }
+        #if DEBUG
+        // 開発用: 起動引数 -LiveHost <EPGStation> -LiveChannel <チャンネルの ID> で、すぐ再生画面を開く
+        .fullScreenCover(isPresented: .constant(DebugLive.channel != nil)) {
+            if let host = DebugLive.host, let channel = DebugLive.channel {
+                LivePlayerView(server: EPGStation(host: host), channel: channel)
+            }
+        }
+        #endif
         .environment(model)
         // チャンネルを切り替えたら、リモコンのタブに戻って再生状況を見せる
         .environment(\.showRemote, ShowRemoteAction { tab = .remote })
         .environment(\.showSettings, ShowSettingsAction { isShowingSettings = true })
         .tint(AppTheme.accent)
         .sensoryFeedback(.impact(weight: .light), trigger: model.tapCount)
+        .task {
+            // 前回、強制終了などで止められずに残った「iPhone で見る」の配信を止める
+            if let server = model.streamServer() { await LiveStreams.cleanUp(server) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
+            // 終了するときも止めてみる (届かなければ次に開いたときに止める)
+            if let server = model.streamServer() {
+                let semaphore = DispatchSemaphore(value: 0)
+                Task.detached {
+                    await LiveStreams.cleanUp(server)
+                    semaphore.signal()
+                }
+                _ = semaphore.wait(timeout: .now() + 2)
+            }
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active {
                 model.startPolling()
@@ -285,4 +308,14 @@ private struct RemotePanel: View {
         .multiScreen, .broadband, .newsNow, .pageUp, .pageDown, .threeD,
     ]
 }
+#if DEBUG
+private enum DebugLive {
+    static var host: String? { UserDefaults.standard.string(forKey: "LiveHost") }
+    static var channel: RegzaChannel? {
+        guard let code = UserDefaults.standard.string(forKey: "LiveChannel") else { return nil }
+        let json = #"[{"channel":"\#(code)","name":"確認用","channel_number":1}]"#
+        return (try? JSONDecoder().decode([RegzaChannel].self, from: Data(json.utf8)))?.first
+    }
+}
+#endif
 #endif

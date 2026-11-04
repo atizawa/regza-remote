@@ -29,7 +29,7 @@ cd Packages/RegzaKit && swift test        # コアのテスト
 open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を設定して実機へ
 ```
 
-テレビや Mirakurun につながずに画面を確かめるときは、Debug ビルドを起動引数 `-SampleData YES` で起動すると見本データ（架空のチャンネルと番組）を表示する。`-SampleKind recorded` で録画再生中、`-InitialTab guide` / `channels` / `reservations` で最初に開くタブを選べる。`-InitialTab guide -SampleDetail YES` で放送中の番組の詳細を開く。
+テレビや Mirakurun につながずに画面を確かめるときは、Debug ビルドを起動引数 `-SampleData YES` で起動すると見本データ（架空のチャンネルと番組）を表示する。`-SampleKind recorded` で録画再生中、`-InitialTab guide` / `channels` / `reservations` で最初に開くタブを選べる。`-InitialTab guide -SampleDetail YES` で放送中の番組の詳細を開く。`-LiveHost <EPGStation のアドレス> -LiveChannel <チャンネルの ID>` で、すぐ「iPhone で見る」の再生画面を開く（実際に配信を頼むので、確かめたら EPGStation で配信を止める）。
 
 ```sh
 xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab guide
@@ -79,6 +79,19 @@ xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab g
   - 番組表の画面は横に局、縦に時刻（今の正時から 24 時間）を並べ、ジャンルごとに色を分ける。同じリモコン番号のサブチャンネルは代表の局だけ出す
   - チャンネル一覧のカレンダーのボタンからは、その局だけの番組表（`?networkId=&serviceId=`、8 日分ほど）を開ける
 - Mirakurun が受信していない放送（CS など）は番組名が出ない
+
+## iPhone で見る（EPGStation）
+
+EPGStation が設定されていれば、放送中の番組を iPhone で見られる（番組の詳細と視聴中の画面の「iPhone で見る」）。家の Wi-Fi の中だけで使う。
+
+- `GET /api/streams/live/:channelId/hls?mode=0` で配信を頼み、`/streamfiles/stream{番号}.m3u8` に映像の部分（.ts）が載ったら iOS 標準のプレーヤー（AVPlayerViewController。ピクチャインピクチャ・AirPlay 対応）で再生する。映像は H.264、音声は AAC で届く
+- チャンネル ID は Mirakurun のサービス ID と同じ（`network_id × 100000 + service_id`）
+- 見ている間は `PUT /api/streams/:id/keep` を 10 秒ごとに送り、閉じたら `DELETE /api/streams/:id` で止めてチューナーを空ける
+- EPGStation は keep が途切れても配信を自動では止めない（160 秒待っても残った）。そのため、アプリが頼んだ配信の番号を覚えておき、強制終了などで止められなかったものは、次にアプリを開いたとき・次に配信を頼むときに止める。終了するときも止めてみる
+- 配信が始まらなかったときは、利用者が選んだ場合だけ、準備できないまま残っている配信（ほかの端末のものも含む）を止めてからもう一度頼む
+- 頼んでから再生できるまで 20 秒ほどかかる。同時に変換できる数に上限がある構成では、ほかで見ている配信があると始まらないことがある
+- 画質は EPGStation の設定の最初のもの（mode 0）だけを使う
+- EPGStation で録画する機能は入れていない（録画先がテレビと EPGStation の 2 つになり、予約の画面が分かりにくくなるため）
 
 ## 録画
 

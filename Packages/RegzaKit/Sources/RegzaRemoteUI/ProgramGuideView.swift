@@ -143,6 +143,8 @@ struct ProgramDetailView: View {
     }
     /// 予約・取り消しが終わったときの触覚フィードバック用
     @State private var reserveFeedback = 0
+    /// iPhone で見ている配信の再生画面
+    @State private var isShowingPlayer = false
 
     var body: some View {
         ScrollView {
@@ -162,6 +164,11 @@ struct ProgramDetailView: View {
         .background(Surface.background)
         .navigationTitle("番組の詳細")
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $isShowingPlayer) {
+            if let server = model.streamServer() {
+                LivePlayerView(server: server, channel: channel, programName: program.name)
+            }
+        }
         .sensoryFeedback(.success, trigger: reserveFeedback)
         .animation(.default, value: model.isReserved(program))
         .task {
@@ -232,6 +239,14 @@ struct ProgramDetailView: View {
                 if program.end > Date() {
                     reserveMenu
                 }
+            }
+            if program.isOnAir(), model.canStream {
+                Button {
+                    isShowingPlayer = true
+                } label: {
+                    actionLabel("iPhone で見る", systemImage: "iphone", isBusy: false)
+                }
+                .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
             }
             if program.isOnAir(), model.canStartOver(channelCode: program.channelCode, programStart: program.start) {
                 Button {

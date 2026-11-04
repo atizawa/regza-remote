@@ -31,6 +31,12 @@ struct SettingsView: View {
     @State private var isScanningGuide = false
     @State private var guideMessage: String?
 
+    /// iPhone で見る (EPGStation) のアドレス
+    @State private var streamHost = ""
+    @State private var streamHosts: [String] = []
+    @State private var isScanningStream = false
+    @State private var streamMessage: String?
+
     var body: some View {
         NavigationStack {
             Form {
@@ -89,6 +95,8 @@ struct SettingsView: View {
 
                 guideSection
 
+                streamSection
+
                 Section {
                     DisclosureGroup("ユーザー名とパスワードを入力", isExpanded: $isShowingManualEntry) {
                         TextField("ユーザー名", text: $draft.user)
@@ -128,6 +136,7 @@ struct SettingsView: View {
                     Button("保存") {
                         Task {
                             await model.saveGuideHost(guideHost)
+                            model.saveStreamHost(streamHost)
                             await model.save(draft)
                             dismiss()
                         }
@@ -139,6 +148,7 @@ struct SettingsView: View {
                 draft = model.connection
                 pairingUserID = model.pairingUserID()
                 guideHost = model.guideHost
+                streamHost = model.streamHost
             }
             .task {
                 // 未設定なら開いたときに探し始める
@@ -242,6 +252,62 @@ struct SettingsView: View {
             Text("番組表 (Mirakurun)")
         } footer: {
             Text("Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。")
+        }
+    }
+
+    @ViewBuilder
+    private var streamSection: some View {
+        Section {
+            TextField("IPアドレス (例: 192.168.0.2)", text: $streamHost)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            ForEach(streamHosts, id: \.self) { host in
+                Button {
+                    streamHost = host
+                } label: {
+                    HStack {
+                        Text(host).monospacedDigit()
+                        Spacer()
+                        if streamHost == host {
+                            Image(systemName: "checkmark").foregroundStyle(.tint)
+                        }
+                    }
+                }
+                .tint(.primary)
+            }
+            Button {
+                Task { await scanStream() }
+            } label: {
+                HStack {
+                    Label(isScanningStream ? "EPGStation を探しています…" : "EPGStation を探す", systemImage: "magnifyingglass")
+                    Spacer()
+                    if isScanningStream { ProgressView() }
+                }
+            }
+            .disabled(isScanningStream)
+            if let streamMessage {
+                Text(streamMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("iPhone で見る (EPGStation)")
+        } footer: {
+            Text("EPGStation を動かしている場合に設定すると、放送中の番組を iPhone で見られます。家の Wi-Fi の中だけで使えます。")
+        }
+    }
+
+    private func scanStream() async {
+        isScanningStream = true
+        defer { isScanningStream = false }
+        streamMessage = nil
+        streamHosts = await EPGStation.find()
+        if let first = streamHosts.first, streamHost.trimmingCharacters(in: .whitespaces).isEmpty {
+            streamHost = first
+        }
+        if streamHosts.isEmpty {
+            streamMessage = "見つかりませんでした。EPGStation が動いているか、ポート \(EPGStation.defaultPort) で待ち受けているか確認してください。"
         }
     }
 
