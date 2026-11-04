@@ -15,6 +15,8 @@ struct ReservationsView: View {
         NavigationStack {
             content
                 .navigationTitle("録画予約")
+                // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
+                .navigationBarTitleDisplayMode(.inline)
                 .task { await load() }
                 .refreshable { await load() }
                 .confirmationDialog(

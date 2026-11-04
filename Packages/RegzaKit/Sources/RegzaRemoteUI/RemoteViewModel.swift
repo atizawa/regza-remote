@@ -79,6 +79,17 @@ public final class RemoteViewModel {
 
     // MARK: - チャンネル
 
+    /// 番組表とチャンネル一覧で選んでいる放送の種類 (地デジ・BS・CS)。タブを行き来しても同じものを出す。未選択なら nil
+    public var selectedBand: RegzaChannel.Band?
+
+    /// 放送の種類を選んでいなければ、いま見ている放送の種類、それもなければ一覧の最初のものにする
+    func band(among bands: [RegzaChannel.Band]) -> RegzaChannel.Band? {
+        if let selectedBand, bands.contains(selectedBand) { return selectedBand }
+        let current = channels.first { $0.code == nowPlaying?.channelCode }?.band
+        if let current, bands.contains(current) { return current }
+        return bands.first
+    }
+
     /// テレビに登録されているチャンネル。取得前は空
     public private(set) var channels: [RegzaChannel] = []
 

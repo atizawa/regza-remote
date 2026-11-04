@@ -8,7 +8,6 @@ struct GuideGridView: View {
     @Environment(RemoteViewModel.self) private var model
     @Environment(\.showRemote) private var showRemote
     @Environment(\.showSettings) private var showSettings
-    @State private var band: RegzaChannel.Band = .terrestrial
     @State private var hasLoaded = false
     @State private var selection: GuideSelection?
     /// 表の左上がスクロールでどれだけずれたか (固定する局名の行と時刻の列を合わせる)
@@ -26,17 +25,6 @@ struct GuideGridView: View {
             content
                 .navigationTitle("番組表")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    if bands.count > 1 {
-                        ToolbarItem(placement: .principal) {
-                            Picker("放送", selection: $band) {
-                                ForEach(bands, id: \.self) { Text($0.label).tag($0) }
-                            }
-                            .pickerStyle(.segmented)
-                            .fixedSize()
-                        }
-                    }
-                }
                 .navigationDestination(item: $selection) { selection in
                     ProgramDetailView(program: selection.program, channel: selection.channel) {
                         self.selection = nil
@@ -70,8 +58,13 @@ struct GuideGridView: View {
                 Button("もう一度試す") { Task { await load() } }
             }
         } else {
-            TimelineView(.periodic(from: .now, by: 60)) { context in
-                grid(now: context.date)
+            VStack(spacing: 0) {
+                if bands.count > 1 {
+                    BandPicker(bands: bands)
+                }
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    grid(now: context.date)
+                }
             }
         }
     }
@@ -145,6 +138,7 @@ struct GuideGridView: View {
     /// 選んだ放送の局。サブチャンネル (同じリモコン番号の局) は代表のものだけにする
     private var columns: [Column] {
         var seenRemoteNumbers: Set<Int> = []
+        let band = model.band(among: bands)
         let candidates = model.channels.filter { $0.band == band && model.guidePrograms[$0.code] != nil }
         // 代表チャンネルを先に見て、同じリモコン番号のサブチャンネルを除く
         let representatives = Set(candidates.filter(\.isRepresentative).map(\.remoteNumber))
@@ -176,7 +170,6 @@ struct GuideGridView: View {
             selection = GuideSelection(program: program, channel: column.channel)
         }
         #endif
-        if !bands.contains(band), let first = bands.first { band = first }
     }
 
     // MARK: - 位置の計算

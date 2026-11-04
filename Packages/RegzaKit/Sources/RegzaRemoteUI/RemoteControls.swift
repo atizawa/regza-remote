@@ -263,6 +263,25 @@ struct DirectionPad: View {
     }
 }
 
+/// 番組表とチャンネル一覧の見出しのすぐ下に置く、放送の種類の切り替え。
+/// 見出しの場所には置かず、画面の名前を残す
+struct BandPicker: View {
+    @Environment(RemoteViewModel.self) private var model
+    let bands: [RegzaChannel.Band]
+
+    var body: some View {
+        Picker("放送", selection: Binding(
+            get: { model.band(among: bands) ?? .terrestrial },
+            set: { model.selectedBand = $0 }
+        )) {
+            ForEach(bands, id: \.self) { Text($0.label).tag($0) }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, Design.outer)
+        .padding(.vertical, 8)
+    }
+}
+
 /// 見出し付きのまとまり
 struct RemoteSection<Content: View>: View {
     let title: String

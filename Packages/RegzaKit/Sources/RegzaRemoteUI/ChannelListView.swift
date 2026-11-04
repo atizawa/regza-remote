@@ -7,7 +7,6 @@ import SwiftUI
 struct ChannelListView: View {
     @Environment(RemoteViewModel.self) private var model
     @Environment(\.showRemote) private var showRemote
-    @State private var band: RegzaChannel.Band = .terrestrial
     @State private var isLoading = false
     @State private var loadError: RegzaError?
     @State private var tuneError: String?
@@ -20,6 +19,8 @@ struct ChannelListView: View {
         NavigationStack {
             content
                 .navigationTitle("チャンネル")
+                // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
@@ -58,26 +59,26 @@ struct ChannelListView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List {
+            VStack(spacing: 0) {
                 if bands.count > 1 {
-                    Picker("放送", selection: $band) {
-                        ForEach(bands, id: \.self) { band in
-                            Text(band.label).tag(band)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                    BandPicker(bands: bands)
                 }
-                if let tuneError {
-                    Text(tuneError)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                }
-                Section {
-                    ForEach(model.channels.filter { $0.band == band }) { channel in
-                        row(channel)
-                    }
+                list
+            }
+        }
+    }
+
+    private var list: some View {
+        List {
+            if let tuneError {
+                Text(tuneError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+            Section {
+                let band = model.band(among: bands)
+                ForEach(model.channels.filter { $0.band == band }) { channel in
+                    row(channel)
                 }
             }
         }
@@ -150,12 +151,7 @@ struct ChannelListView: View {
         } catch {
             loadError = error
         }
-        // 開いたときは、いま映っているチャンネルの種類を選んでおく
-        if let current = model.channels.first(where: { $0.code == model.nowPlaying?.channelCode }) {
-            band = current.band
-        } else if !bands.contains(band), let first = bands.first {
-            band = first
-        }
+        // 放送の種類を選んでいなければ RemoteViewModel.band(among:) がいま見ている種類を選ぶ
     }
 
     private func tune(to channel: RegzaChannel) async {
