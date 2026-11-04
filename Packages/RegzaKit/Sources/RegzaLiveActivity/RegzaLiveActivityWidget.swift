@@ -66,10 +66,11 @@ public struct RegzaLiveActivityWidget: Widget {
         }
     }
 
-    /// コンパクト表示の右側: 番組名 → チャンネル名 → REGZA の順に出す
+    /// コンパクト表示の右側。番組名は数文字で切れて読めないので、短くした局名 (`NHK総合`。収まらなければ `4ch` `BS181`) を出す。
+    /// 録画の再生中は「録画」
     private func compactTitle(_ state: RegzaActivityAttributes.ContentState) -> String {
-        if !state.title.isEmpty { return state.title.compactProgramTitle }
-        if !state.channelName.isEmpty { return state.channelName }
+        if state.isRecordingPlayback { return "録画" }
+        if let shortChannel = state.shortChannel, !shortChannel.isEmpty { return shortChannel }
         return "REGZA"
     }
 }
@@ -95,23 +96,6 @@ private extension RegzaActivityAttributes.ContentState {
     /// 見出しの上の小さなラベル。見出しと同じチャンネル名を重ねて出さない
     func headerName(tvName: String) -> String {
         channelName.isEmpty || showsChannelAsTitle ? tvName : channelName
-    }
-}
-
-private extension String {
-    /// 狭い場所向けに `＜新＞` `【字】` などの括弧書きと空白を取り除いた番組名
-    var compactProgramTitle: String {
-        var result = ""
-        var depth = 0
-        for character in self {
-            switch character {
-            case "＜", "<", "【": depth += 1
-            case "＞", ">", "】": depth = max(0, depth - 1)
-            case " ", "　": continue
-            default: if depth == 0 { result.append(character) }
-            }
-        }
-        return result.isEmpty ? self : result
     }
 }
 

@@ -36,13 +36,15 @@ public struct RegzaNowPlaying: Equatable, Sendable {
     public var nextTitle: String
     /// 放送中の番組のジャンル (「ニュース」など)。番組名が返らない機種でも、何の番組かの手がかりになる
     public var genre: String
+    /// 狭い場所向けのチャンネルの表記。短くした局名 (`NHK総合` `BSフジ`)、収まらなければ番号 (`4ch` `BS181`)
+    public var shortChannel: String
     public var updatedAt: Date
 
     public init(
         kind: Kind = .unknown, channelName: String = "", channelCode: String = "", title: String = "", description: String = "",
         chapterName: String = "", position: Int = 0, duration: Int = 0, isAdvancing: Bool = false,
         nextProgramStart: Date? = nil, nextProgramDuration: Int = 0, nextTitle: String = "", genre: String = "",
-        updatedAt: Date = Date()
+        shortChannel: String = "", updatedAt: Date = Date()
     ) {
         self.kind = kind
         self.channelName = channelName
@@ -57,6 +59,7 @@ public struct RegzaNowPlaying: Equatable, Sendable {
         self.nextProgramDuration = nextProgramDuration
         self.nextTitle = nextTitle
         self.genre = genre
+        self.shortChannel = shortChannel
         self.updatedAt = updatedAt
     }
 
@@ -96,6 +99,7 @@ public struct RegzaNowPlaying: Equatable, Sendable {
                 nextProgramStart: playStatus.nextProgram?.startTime.map { Date(timeIntervalSince1970: TimeInterval($0)) },
                 nextProgramDuration: playStatus.nextProgram?.duration ?? 0,
                 genre: program?.genre?.first.flatMap(Self.genreName(code:)) ?? "",
+                shortChannel: program.map { Self.shortChannelName($0.channelName ?? "") ?? Self.shortChannel(of: $0) } ?? "",
                 updatedAt: now
             )
         case "recorded":
@@ -132,6 +136,52 @@ public struct RegzaNowPlaying: Equatable, Sendable {
 
     public var progress: Double {
         duration > 0 ? min(1, Double(position) / Double(duration)) : 0
+    }
+
+    /// 局名を狭い場所 (Dynamic Island の小さい表示) 向けに短くする。収まりそうになければ nil。
+    /// `ＮＨＫ総合１・東京` → `NHK総合`、`ＢＳフジ・１８１` → `BSフジ`、`ＮＨＫＥテレ１東京` → `NHKEテレ`
+    static func shortChannelName(_ name: String) -> String? {
+        // 全角の英数字と空白を半角にする (カタカナはそのまま)
+        var text = String(String.UnicodeScalarView(name.unicodeScalars.map { scalar in
+            switch scalar.value {
+            case 0xFF01...0xFF5E: Unicode.Scalar(scalar.value - 0xFEE0) ?? scalar
+            case 0x3000: " "
+            default: scalar
+            }
+        }))
+        let regions = ["東京", "大阪", "名古屋", "札幌", "仙台", "広島", "福岡"]
+        // 「・東京」「・181」のように、中黒の後ろが地域名か番号のときだけ取り除く (「ザ・シネマ」は残す)
+        if let dot = text.firstIndex(where: { $0 == "・" || $0 == "･" }) {
+            let rest = text[text.index(after: dot)...].trimmingCharacters(in: .whitespaces)
+            if regions.contains(rest) || (!rest.isEmpty && rest.allSatisfy(\.isNumber)) { text = String(text[..<dot]) }
+        }
+        text = text.trimmingCharacters(in: .whitespaces)
+        // 末尾の地域名 (「Eテレ1東京」の「東京」) を取り除く
+        for region in regions where text.hasSuffix(region) {
+            text = String(text.dropLast(region.count))
+        }
+        // 末尾の 1 桁の番号 (「日テレ1」の「1」) を取り除く。「NEWS24」のような 2 桁は名前の一部なので残す
+        let chars = Array(text)
+        if chars.count >= 2, chars[chars.count - 1].isNumber, !chars[chars.count - 2].isNumber {
+            text.removeLast()
+        }
+        text = text.trimmingCharacters(in: .whitespaces)
+        // 幅の目安: 漢字・かなは 2、英数字は 1 として 10 まで
+        let width = text.reduce(0) { $0 + ($1.isASCII ? 1 : 2) }
+        return text.count < 2 || width > 10 ? nil : text
+    }
+
+    /// 地デジはリモコンの番号 (`4ch`)、BS・CS は 3 桁の番号 (`BS181`)。種類は network_id で見分ける (BS は 4、CS は 6・7)
+    static func shortChannel(of program: RegzaPlayStatus.Program) -> String {
+        let networkId = program.channel.flatMap(Mirakurun.ids(channelCode:))?.networkId
+        let number = program.channelNumber.map { String(format: "%03d", $0) } ?? ""
+        switch networkId {
+        case 4: return number.isEmpty ? "BS" : "BS\(number)"
+        case 6, 7: return number.isEmpty ? "CS" : "CS\(number)"
+        default:
+            if let remote = program.remoteNumber, remote > 0 { return "\(remote)ch" }
+            return number
+        }
     }
 
     /// テレビの ARIB のジャンル (`00a8` なら 3 桁目の `a` が大分類) を名前にする

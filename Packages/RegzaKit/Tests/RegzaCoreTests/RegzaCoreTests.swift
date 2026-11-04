@@ -189,6 +189,8 @@ import Testing
         #expect(nowPlaying.nextProgramDuration == 600)
         // "0022" の大分類 2 は情報/ワイドショー
         #expect(nowPlaying.genre == "情報")
+        // 局名が短くなれば局名を出す
+        #expect(nowPlaying.shortChannel == "日テレ")
         #expect(nowPlaying.programEnd == Date(timeIntervalSince1970: 1_793_664_000 + 7800))
     }
 
@@ -202,6 +204,27 @@ import Testing
         #expect(nowPlaying.isAdvancing)
         #expect(!nowPlaying.description.isEmpty)
         #expect(nowPlaying.programEnd == nil)
+    }
+
+    @Test func shortChannelNames() {
+        #expect(RegzaNowPlaying.shortChannelName("ＮＨＫ総合１・東京") == "NHK総合")
+        #expect(RegzaNowPlaying.shortChannelName("ＮＨＫＥテレ１東京") == "NHKEテレ")
+        #expect(RegzaNowPlaying.shortChannelName("ＴＢＳ１") == "TBS")
+        #expect(RegzaNowPlaying.shortChannelName("ＴＯＫＹＯ　ＭＸ１") == "TOKYO MX")
+        #expect(RegzaNowPlaying.shortChannelName("ＢＳフジ・１８１") == "BSフジ")
+        #expect(RegzaNowPlaying.shortChannelName("テレビ朝日") == "テレビ朝日")
+        #expect(RegzaNowPlaying.shortChannelName("ザ・シネマ") == "ザ・シネマ")
+        #expect(RegzaNowPlaying.shortChannelName("ＮＥＷＳ２４") == "NEWS24")
+        #expect(RegzaNowPlaying.shortChannelName("−") == nil)
+        // 収まらない長さなら nil (番号で出す)
+        #expect(RegzaNowPlaying.shortChannelName("とても長い放送局の名前") == nil)
+    }
+
+    @Test func shortChannelForSatellite() throws {
+        let bs = #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G000400b5","channel_number":181,"rcu_channel_number":8,"start_time":1700000000,"duration":600}}"#
+        #expect(RegzaNowPlaying(playStatus: try decode(bs)).shortChannel == "BS181")
+        let cs = #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G00070037","channel_number":55,"start_time":1700000000,"duration":600}}"#
+        #expect(RegzaNowPlaying(playStatus: try decode(cs)).shortChannel == "CS055")
     }
 
     @Test func otherKinds() throws {

@@ -33,9 +33,15 @@ public struct RegzaPlayStatus: Decodable, Equatable, Sendable {
         public var duration: Int?
         /// ARIB のジャンル (`00a8` のような 4 桁の 16 進。3 桁目が大分類)
         public var genre: [String]?
+        /// 3 桁のチャンネル番号 (地デジ 041、BS 181 など)
+        public var channelNumber: Int?
+        /// リモコンの番号ボタンの番号 (地デジの 4 など)
+        public var remoteNumber: Int?
 
         enum CodingKeys: String, CodingKey {
             case channel, title, description, duration, genre
+            case channelNumber = "channel_number"
+            case remoteNumber = "rcu_channel_number"
             case channelName = "channel_name"
             case epgContentID = "epg_content_id"
             case startTime = "start_time"

@@ -21,6 +21,8 @@ public struct RegzaActivityAttributes: ActivityAttributes {
         public var nextTitle: String?
         /// 放送中の番組のジャンル。番組名が取れないときに添える (前のバージョンの状態にはない)
         public var genre: String?
+        /// Dynamic Island の狭い場所に出すチャンネル (`NHK総合`、収まらなければ `4ch` `BS181`)
+        public var shortChannel: String?
         /// `displayed(isStale:)` で次の番組の表示に切り替えたもの (アプリからは送らない)。
         /// 前のバージョンの状態も読めるよう optional にしている
         public var hasPredictedNextProgram: Bool?
@@ -42,6 +44,7 @@ public struct RegzaActivityAttributes: ActivityAttributes {
             nextProgramDuration = nowPlaying?.nextProgramDuration
             nextTitle = nowPlaying?.nextTitle
             genre = nowPlaying?.genre
+            shortChannel = nowPlaying?.shortChannel
             self.lastCommand = lastCommand?.label
             self.isConnected = isConnected
         }
