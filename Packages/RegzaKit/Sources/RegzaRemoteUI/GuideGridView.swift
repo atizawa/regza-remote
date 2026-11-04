@@ -8,13 +8,13 @@ struct GuideGridView: View {
     @Environment(RemoteViewModel.self) private var model
     @Environment(\.showSettings) private var showSettings
     @State private var hasLoaded = false
-    @State private var selection: GuideSelection?
+    /// 開いている画面 (検索 → 番組の詳細と重ねたとき、戻ると 1 つ前の画面に戻れるよう順番を持つ)
+    @State private var path: [GuideRoute] = []
     /// 選んでいる日 (その日の朝 4 時)。nil なら今日 (今の時刻から 24 時間)
     @State private var day: Date?
     /// 表の左上がスクロールでどれだけずれたか (固定する局名の行と時刻の列を合わせる)
     @State private var scrollOrigin = ScrollOrigin()
     @State private var search = GuideSearch()
-    @State private var isSearching = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// 今の時刻の正時から 24 時間分
@@ -25,7 +25,7 @@ struct GuideGridView: View {
     private var metrics: GuideMetrics { GuideMetrics(dynamicTypeSize: min(dynamicTypeSize, Self.maximumDynamicTypeSize)) }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             content
                 .navigationTitle("番組表")
                 .navigationBarTitleDisplayMode(.inline)
@@ -33,17 +33,19 @@ struct GuideGridView: View {
                     // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
                     if model.hasGuide, hasLoaded, !columns.isEmpty {
                         ToolbarItem(placement: .topBarTrailing) {
-                            Button("番組を探す", systemImage: "magnifyingglass") { isSearching = true }
+                            Button("番組を探す", systemImage: "magnifyingglass") { path.append(.search) }
                         }
                     }
                 }
-                .navigationDestination(isPresented: $isSearching) {
-                    GuideSearchScreen(search: search) { program, channel in
-                        selection = GuideSelection(program: program, channel: channel)
+                .navigationDestination(for: GuideRoute.self) { route in
+                    switch route {
+                    case .search:
+                        GuideSearchScreen(search: search) { program, channel in
+                            path.append(.detail(program, channel))
+                        }
+                    case .detail(let program, let channel):
+                        ProgramDetailView(program: program, channel: channel)
                     }
-                }
-                .navigationDestination(item: $selection) { selection in
-                    ProgramDetailView(program: selection.program, channel: selection.channel)
                 }
                 .task { await load() }
         }
@@ -98,7 +100,7 @@ struct GuideGridView: View {
             HStack(alignment: .top, spacing: 0) {
                 ForEach(columns, id: \.channel) { column in
                     ProgramColumn(channel: column.channel, programs: column.programs, window: window, metrics: metrics) { program in
-                        selection = GuideSelection(program: program, channel: column.channel)
+                        path.append(.detail(program, column.channel))
                     }
                 }
             }
@@ -196,10 +198,10 @@ struct GuideGridView: View {
         // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
         if SampleData.isEnabled, UserDefaults.standard.bool(forKey: "SampleDetail"),
            let column = columns.first, let program = column.programs.first(where: { $0.isOnAir() }) {
-            selection = GuideSelection(program: program, channel: column.channel)
+            path = [.detail(program, column.channel)]
         }
         if SampleData.isEnabled, let text = UserDefaults.standard.string(forKey: "SampleSearch") {
-            isSearching = true
+            path = [.search]
             search.text = text
         }
         #endif
@@ -303,9 +305,10 @@ private struct PinnedHeader: View {
     }
 }
 
-private struct GuideSelection: Hashable {
-    var program: MirakurunProgram
-    var channel: RegzaChannel
+/// 番組表から開く画面
+private enum GuideRoute: Hashable {
+    case search
+    case detail(MirakurunProgram, RegzaChannel)
 }
 
 /// 左端の時刻 (正時ごと)
