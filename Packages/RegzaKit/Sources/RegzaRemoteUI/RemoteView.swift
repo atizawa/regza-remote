@@ -86,15 +86,8 @@ public struct RemoteView: View {
 
     @ToolbarContentBuilder
     private var remoteToolbar: some ToolbarContent {
+        // Live Activity のオン・オフはアイコンだけでは分かりにくいので、視聴中の画面と設定画面のスイッチにしている
         ToolbarItemGroup(placement: .topBarTrailing) {
-            if model.connection.isConfigured {
-                Button {
-                    Task { await model.setLiveActivity(!model.isLiveActivityOn) }
-                } label: {
-                    Image(systemName: model.isLiveActivityOn ? "capsule.fill" : "capsule")
-                }
-                .accessibilityLabel(model.isLiveActivityOn ? "Dynamic Island 表示を終了" : "Dynamic Island に表示")
-            }
             Button {
                 isShowingSettings = true
             } label: {

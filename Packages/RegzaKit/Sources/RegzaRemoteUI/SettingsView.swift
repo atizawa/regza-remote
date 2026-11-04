@@ -83,6 +83,10 @@ struct SettingsView: View {
 
                 pairingSection
 
+                Section("表示") {
+                    LiveActivityToggle()
+                }
+
                 guideSection
 
                 Section {

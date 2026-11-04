@@ -148,6 +148,9 @@ private struct NowPlayingDetailView: View {
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 4)
                     }
+                    LiveActivityToggle()
+                        .padding(Design.outer)
+                        .background(Surface.button, in: RoundedRectangle(cornerRadius: Design.cornerRadius, style: .continuous))
                 }
                 .padding(Design.outer)
             }
