@@ -54,7 +54,10 @@ struct SettingsView: View {
             Form {
                 Section("テレビ") {
                     NavigationLink(value: Page.tv) {
-                        LabeledContent("REGZA", value: tvStatus)
+                        LabeledContent("REGZA") {
+                            Text(tvStatus.text)
+                                .foregroundStyle(tvStatus.needsAttention ? Color.orange : .secondary)
+                        }
                     }
                 }
 
@@ -286,10 +289,13 @@ struct SettingsView: View {
         streamMessage = "Mirakurun と同じサーバーで EPGStation が見つかりました。よければ「保存」を押してください。"
     }
 
-    private var tvStatus: String {
+    /// 一覧に出すテレビの状態。操作できるときはアドレスだけ、注意が要るときだけオレンジで知らせる
+    private var tvStatus: (text: String, needsAttention: Bool) {
         let host = draft.host.trimmingCharacters(in: .whitespaces)
-        if host.isEmpty { return "未設定" }
-        return isRegistered ? "\(host)・登録済み" : host
+        if host.isEmpty { return ("未設定", true) }
+        // PIN の登録でも手入力でも、パスワードがなければ操作できない
+        if draft.password.isEmpty { return ("PIN の登録が必要", true) }
+        return (host, false)
     }
 
     private func status(of host: String) -> String {
