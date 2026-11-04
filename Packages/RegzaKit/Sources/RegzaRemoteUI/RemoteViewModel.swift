@@ -108,11 +108,6 @@ public final class RemoteViewModel {
         }
     }
 
-    /// 録画済み番組の一覧を読む DLNA サーバー
-    public func mediaServer() -> RegzaMediaServer {
-        RegzaMediaServer(host: connection.host)
-    }
-
     // MARK: - 状態の定期取得
 
     public func startPolling(interval: Duration = .seconds(2)) {

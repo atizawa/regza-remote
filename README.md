@@ -58,10 +58,9 @@ open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を�
 ## 録画
 
 - 録画予約: `GET /v2/remote/pvr/reserves/list`。連ドラ予約は次の回が番組表に載ると `start_time` と `title` がその回に更新され、それまでは最後に録画した回のまま残るので、「予定」と「次の回を待っている」に分けて出す
-- 録画番組: v2 API には一覧がないので、テレビの DLNA サーバー（ポート 20003 の `ContentDirectory` の `Browse`、認証不要）を使う
-  - テレビ側のフォルダ（ハードディスクごとの「すべて」「未視聴」「ジャンル別」など）をそのままたどれる。番組名・説明・ジャンル・長さ・未視聴（`regza:playbackState` が `0`）が取れる
-  - 映像は DTCP-IP で保護されているのでアプリでは再生できない。DLNA の番組 ID は v2 API の再生用 ID（`rec_content_id`）と対応しないため、テレビでの再生も指定できず、録画リストを開くキーを送るだけにしている
-  - ポートは固定で使っている（機種によって違う場合は SSDP で `MediaServer` の `LOCATION` を調べる必要がある）
+- 録画番組の一覧は表示しない（リモコンの「録画リスト」キーでテレビの一覧を開く）
+  - v2 API には一覧がない。テレビの DLNA サーバー（ポート 20003 の `ContentDirectory`）からは一覧を取れるが、映像は DTCP-IP で保護されているのでアプリでは再生できない
+  - テレビで番組を指定して再生する `POST /v2/remote/pvr/play/list/:rec_storage_id/:rec_content_id` はあるが、DLNA の番組 ID（独自の `X_Toshiba_REGZA_Browse` も含む）から `rec_content_id` を求められなかった
 - 番組表 `GET /v2/remote/epg/:channel_code?time=<Unix 秒>` は番組名・説明が空で返るため使っていない
 
 ## 制限
