@@ -63,7 +63,9 @@ open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を�
   - チャンネル: テレビの `JP-G` + network_id + service_id（16 進 4 桁ずつ）。例: `JP-G7fe00400`
   - 番組: テレビの `epg_content_id`（`JP-0000` + network_id + service_id + event_id）→ Mirakurun の番組 ID `network_id × 10^10 + service_id × 10^5 + event_id`
 - 放送中の番組名が空のときは `GET /api/programs/:id` で補い、アプリと Live Activity に出す。同じ番組は問い合わせ直さない
-- チャンネル一覧では `GET /api/programs`（全チャンネル分で数 MB）を 30 分に 1 回読み、各局の今の番組名を添える。カレンダーのボタンからその局の番組表（`?networkId=&serviceId=`）を開ける
+- `GET /api/programs`（全チャンネル分で数 MB）は 30 分に 1 回まで読み、チャンネル一覧の各局の今の番組名と、番組表の画面に使う
+  - 番組表の画面は横に局、縦に時刻（今の正時から 24 時間）を並べ、ジャンルごとに色を分ける。同じリモコン番号のサブチャンネルは代表の局だけ出す
+  - チャンネル一覧のカレンダーのボタンからは、その局だけの番組表（`?networkId=&serviceId=`、8 日分ほど）を開ける
 - Mirakurun が受信していない放送（CS など）は番組名が出ない
 
 ## 録画

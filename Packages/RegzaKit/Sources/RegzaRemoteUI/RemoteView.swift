@@ -66,6 +66,7 @@ public struct RemoteView: View {
 
 private struct RemotePanel: View {
     @State private var isShowingChannels = false
+    @State private var isShowingGuide = false
     @State private var isShowingReservations = false
 
     var body: some View {
@@ -93,6 +94,15 @@ private struct RemotePanel: View {
                     .buttonStyle(RemoteButtonStyle())
                     .accessibilityLabel("チャンネル一覧")
                 }
+
+                Button {
+                    isShowingGuide = true
+                } label: {
+                    Label("番組表", systemImage: "calendar")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(RemoteButtonStyle())
 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
                     ForEach(RegzaKey.numbers) { key in
@@ -168,6 +178,9 @@ private struct RemotePanel: View {
         }
         .sheet(isPresented: $isShowingChannels) {
             ChannelListView()
+        }
+        .fullScreenCover(isPresented: $isShowingGuide) {
+            GuideGridView()
         }
         .sheet(isPresented: $isShowingReservations) {
             ReservationsView()
