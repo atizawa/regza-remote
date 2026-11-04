@@ -1,6 +1,8 @@
 .DS_Store
 
 # Xcode
+# 自分でビルドするときのバンドル ID と署名のチーム (iOS/Config/Signing.xcconfig を参照)
+Local.xcconfig
 xcuserdata/
 DerivedData/
 

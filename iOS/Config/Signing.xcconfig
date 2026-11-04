@@ -1,0 +1,10 @@
+// バンドル ID と署名のチーム。
+// 自分でビルドするときは、このファイルは変えずに、同じフォルダに Local.xcconfig を作って上書きする
+// (Local.xcconfig は Git に入れない)。例:
+//   BUNDLE_ID_PREFIX = com.yourname
+//   DEVELOPMENT_TEAM = ABCDE12345
+// アプリは $(BUNDLE_ID_PREFIX).RegzaRemote、ウィジェットは $(BUNDLE_ID_PREFIX).RegzaRemote.Widget になる
+BUNDLE_ID_PREFIX = com.example
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"
