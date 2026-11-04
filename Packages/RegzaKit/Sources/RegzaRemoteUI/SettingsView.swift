@@ -104,12 +104,13 @@ struct SettingsView: View {
                     .task { await suggestStreamHost() }
                 }
             }
+            // iOS 26 の標準に合わせ、キャンセルは ×、保存は ✓ (強調色) のボタンにする
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("キャンセル") { dismiss() }
+                    Button(role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
+                    Button(role: .confirm) {
                         Task {
                             await model.saveGuideHost(guideHost)
                             model.saveStreamHost(streamHost)
