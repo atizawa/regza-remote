@@ -255,9 +255,10 @@ private struct ProgressStyleModifier: ViewModifier {
 private struct ActivityButtons: View {
     let state: RegzaActivityAttributes.ContentState
 
-    /// 押しやすいよう数を絞る。録画は再生操作、放送はチャンネルと音量
+    /// 押しやすいよう数を絞る。待機中は電源だけ、録画は再生操作、放送はチャンネルと音量
     private var keys: [RegzaKey] {
-        state.isRecordingPlayback
+        if state.kind == .standby { return [.power] }
+        return state.isRecordingPlayback
             ? [.skipBackward, state.isAdvancing ? .pause : .play, .skipForward]
             : [.channelDown, .channelUp, .volumeDown, .volumeUp]
     }
@@ -270,6 +271,8 @@ private struct ActivityButtons: View {
                         switch key {
                         case .channelUp: Text("CH＋")
                         case .channelDown: Text("CH−")
+                        // 待機中に出す唯一のボタンなので、何をするか文字で添える
+                        case .power: Label("電源を入れる", systemImage: "power")
                         default: Image(systemName: key.systemImage ?? "circle")
                         }
                     }
