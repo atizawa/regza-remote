@@ -6,7 +6,6 @@ import SwiftUI
 /// 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる
 struct GuideGridView: View {
     @Environment(RemoteViewModel.self) private var model
-    @Environment(\.showRemote) private var showRemote
     @Environment(\.showSettings) private var showSettings
     @State private var hasLoaded = false
     @State private var selection: GuideSelection?
@@ -26,10 +25,7 @@ struct GuideGridView: View {
                 .navigationTitle("番組表")
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(item: $selection) { selection in
-                    ProgramDetailView(program: selection.program, channel: selection.channel) {
-                        self.selection = nil
-                        showRemote()
-                    }
+                    ProgramDetailView(program: selection.program, channel: selection.channel)
                 }
                 .task { await load() }
         }

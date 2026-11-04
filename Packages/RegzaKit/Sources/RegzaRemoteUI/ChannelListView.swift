@@ -6,7 +6,6 @@ import SwiftUI
 /// テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える
 struct ChannelListView: View {
     @Environment(RemoteViewModel.self) private var model
-    @Environment(\.showRemote) private var showRemote
     @State private var isLoading = false
     @State private var loadError: RegzaError?
     @State private var tuneError: String?
@@ -33,10 +32,7 @@ struct ChannelListView: View {
                     }
                 }
                 .navigationDestination(item: $guideChannel) { channel in
-                    ChannelProgramsView(channel: channel) {
-                        guideChannel = nil
-                        showRemote()
-                    }
+                    ChannelProgramsView(channel: channel)
                 }
                 .task {
                     await load(force: false)
@@ -159,8 +155,8 @@ struct ChannelListView: View {
         defer { tuning = nil }
         tuneError = nil
         do {
+            // タブは移らない。切り替えたことはチェックの印とミニプレーヤーで分かる
             try await model.tune(to: channel)
-            showRemote()
         } catch .commandRejected {
             tuneError = "\(channel.name) に切り替えられませんでした。テレビの電源が入っているか確認してください。"
         } catch {

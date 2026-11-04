@@ -7,8 +7,6 @@ import SwiftUI
 struct ChannelProgramsView: View {
     @Environment(RemoteViewModel.self) private var model
     let channel: RegzaChannel
-    /// 番組の詳細からチャンネルを切り替えたとき
-    var onTune: () -> Void
 
     @State private var programs: [MirakurunProgram]?
     @State private var loadError: RegzaError?
@@ -18,7 +16,7 @@ struct ChannelProgramsView: View {
             .navigationTitle(channel.name)
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: MirakurunProgram.self) { program in
-                ProgramDetailView(program: program, channel: channel, onTune: onTune)
+                ProgramDetailView(program: program, channel: channel)
             }
             .task {
                 if programs == nil { await load() }
@@ -130,10 +128,10 @@ struct ProgramDetailView: View {
     @Environment(RemoteViewModel.self) private var model
     let program: MirakurunProgram
     let channel: RegzaChannel
-    var onTune: () -> Void
 
     @State private var isTuning = false
-    @State private var tuneError: String?
+    /// 切り替えた結果 (切り替えてもタブは移らないので、ここに出す)
+    @State private var tuneMessage: String?
     /// 予約・取り消しの途中のもの
     @State private var isReserving: Reserving?
     @State private var reserveMessage: String?
@@ -151,7 +149,7 @@ struct ProgramDetailView: View {
             VStack(alignment: .leading, spacing: Design.group) {
                 header
                 actions
-                if let message = reserveMessage ?? tuneError {
+                if let message = reserveMessage ?? tuneMessage {
                     Text(message)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -370,12 +368,13 @@ struct ProgramDetailView: View {
         do {
             if startOver {
                 try await model.tuneAndStartOver(channel)
+                tuneMessage = "テレビを\(channel.name)に切り替えて、最初から再生しました。"
             } else {
                 try await model.tune(to: channel)
+                tuneMessage = "テレビを\(channel.name)に切り替えました。"
             }
-            onTune()
         } catch {
-            tuneError = error.localizedDescription
+            tuneMessage = error.localizedDescription
         }
     }
 }

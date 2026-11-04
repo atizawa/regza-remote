@@ -72,8 +72,6 @@ public struct RemoteView: View {
         }
         #endif
         .environment(model)
-        // チャンネルを切り替えたら、リモコンのタブに戻って再生状況を見せる
-        .environment(\.showRemote, ShowRemoteAction { tab = .remote })
         .environment(\.showSettings, ShowSettingsAction { isShowingSettings = true })
         .tint(AppTheme.accent)
         .sensoryFeedback(.impact(weight: .light), trigger: model.tapCount)
@@ -138,12 +136,6 @@ enum AppTab: Hashable {
     case remote, guide, channels, reservations
 }
 
-/// リモコンのタブを開く
-struct ShowRemoteAction {
-    let action: @MainActor () -> Void
-    @MainActor func callAsFunction() { action() }
-}
-
 /// 設定画面を開く
 struct ShowSettingsAction {
     let action: @MainActor () -> Void
@@ -151,7 +143,6 @@ struct ShowSettingsAction {
 }
 
 extension EnvironmentValues {
-    @Entry var showRemote = ShowRemoteAction {}
     @Entry var showSettings = ShowSettingsAction {}
 }
 
