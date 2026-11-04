@@ -11,6 +11,13 @@ public actor RegzaRemote {
     private var supportsPlayStatus: Bool?
     /// 放送中の番組名を補う番組表。未設定なら nil
     public private(set) var guide: Mirakurun?
+    /// この時刻までは視聴状況を問い合わせない。
+    /// 録画の再生を始めるときなど、テレビの映像が切り替わっている最中に `play/status` を問い合わせると、
+    /// テレビが再起動する機種がある (決定キーの 0.4 秒後の問い合わせで再起動することを実機で確認)
+    private var quietUntil: Date?
+    /// 映像の切り替えが落ち着くまで待つ時間。危ない時間は測っていないので余裕を持たせている
+    static let switchingQuietPeriod: TimeInterval = 6
+
     /// 番組名を毎回問い合わせないよう、調べた番組を覚えておく (取れなかったときは 1 分後に調べ直す)
     private var programCache: [Int: (program: MirakurunProgram?, checkedAt: Date)] = [:]
 
@@ -33,6 +40,9 @@ public actor RegzaRemote {
     public func send(_ key: RegzaKey) async throws {
         try await client.send(key)
         lastCommand = key
+        if key.mayStartContentSwitch {
+            quietUntil = Date().addingTimeInterval(Self.switchingQuietPeriod)
+        }
     }
 
     public func tune(to channel: RegzaChannel) async throws {
@@ -46,15 +56,23 @@ public actor RegzaRemote {
 
     /// 視聴状況を取得して更新する。
     /// v2 API を優先し、未対応の機種では旧 API (`status.htm`) を使う
+    /// 映像が切り替わるキーを送った直後は、落ち着くまで待ってから問い合わせる
     @discardableResult
     public func refresh() async throws -> RegzaNowPlaying {
+        if let quietUntil {
+            let wait = quietUntil.timeIntervalSinceNow
+            if wait > 0 { try await Task.sleep(for: .seconds(wait)) }
+            self.quietUntil = nil
+        }
         let updated: RegzaNowPlaying
         if supportsPlayStatus != false {
             do {
                 let status = try await client.playStatus()
                 supportsPlayStatus = true
                 updated = await withProgramName(RegzaNowPlaying(playStatus: status), status: status)
-            } catch RegzaError.httpStatus(404), RegzaError.unsupported {
+            } catch let error as RegzaError where error == .httpStatus(404) || error == .unsupported {
+                // 一度でも v2 API で取れたテレビなら、切り替え中などの一時的な失敗として扱い、旧 API に切り替えない
+                guard supportsPlayStatus == nil else { throw error }
                 supportsPlayStatus = false
                 updated = try await legacyStatus()
             }
