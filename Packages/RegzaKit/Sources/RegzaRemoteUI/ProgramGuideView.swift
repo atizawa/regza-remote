@@ -166,7 +166,7 @@ struct ProgramDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $isShowingPlayer) {
             if let server = model.streamServer() {
-                LivePlayerView(server: server, channel: channel, programName: program.name)
+                LivePlayerView(server: server, channel: channel)
             }
         }
         .sensoryFeedback(.success, trigger: reserveFeedback)

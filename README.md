@@ -84,6 +84,8 @@ xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab g
 
 EPGStation が設定されていれば、放送中の番組を iPhone で見られる（番組の詳細と視聴中の画面の「iPhone で見る」）。家の Wi-Fi の中だけで使う。
 
+再生画面は縦向きでは映像の下に今の番組の情報（Mirakurun の番組表から。30 秒ごとに更新）と局の一覧を出し、局を押すと前の配信を止めてその局の配信を頼み直す。局の一覧は Mirakurun が受信している局（＝ EPGStation で見られる局）の代表チャンネルだけで、地デジ/BS/CS の選択は番組表・チャンネルのタブと共有する。横向きでは映像だけを出す。映像の部分は iOS 標準のプレーヤーなので、全画面・ピクチャインピクチャ・AirPlay のボタンはそのまま使える。
+
 - `GET /api/streams/live/:channelId/hls?mode=0` で配信を頼み、`/streamfiles/stream{番号}.m3u8` に映像の部分（.ts）が載ったら iOS 標準のプレーヤー（AVPlayerViewController。ピクチャインピクチャ・AirPlay 対応）で再生する。映像は H.264、音声は AAC で届く
 - チャンネル ID は Mirakurun のサービス ID と同じ（`network_id × 100000 + service_id`）
 - 見ている間は `PUT /api/streams/:id/keep` を 10 秒ごとに送り、閉じたら `DELETE /api/streams/:id` で止めてチューナーを空ける

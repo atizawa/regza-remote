@@ -136,6 +136,7 @@ private struct ProgressIcon: View {
 /// ミニプレーヤーを押したときの詳細。録画ならシークもできる
 private struct NowPlayingDetailView: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
     @State private var isShowingPlayer = false
 
     var body: some View {
@@ -178,6 +179,12 @@ private struct NowPlayingDetailView: View {
             .background(Surface.background)
             .navigationTitle("視聴中")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // 閉じるだけの画面は、iOS 標準の × のボタンにそろえる
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .close) { dismiss() }
+                }
+            }
             .task {
                 await model.loadTimeshiftSettings()
                 // いま映っているチャンネルを知るため
@@ -185,7 +192,7 @@ private struct NowPlayingDetailView: View {
             }
             .fullScreenCover(isPresented: $isShowingPlayer) {
                 if let server = model.streamServer(), let channel = model.nowPlayingChannel {
-                    LivePlayerView(server: server, channel: channel, programName: model.nowPlaying?.title)
+                    LivePlayerView(server: server, channel: channel)
                 }
             }
         }
