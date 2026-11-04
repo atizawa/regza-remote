@@ -3,6 +3,8 @@
 REGZA の HTTP リモコン API（[参考](https://misomayo.info/on/2012/04/10)）を使う iOS アプリ。
 録画番組の再生中は、番組名・再生位置を Dynamic Island / ロック画面の Live Activity に表示し、そこから音量・チャンネル・再生操作もできる。
 
+iOS 26 以上が対象。
+
 ## 構成
 
 ```

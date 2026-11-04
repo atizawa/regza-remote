@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "RegzaKit",
     defaultLocalization: "ja",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS("26.0"), .macOS(.v14)],
     products: [
         .library(name: "RegzaCore", targets: ["RegzaCore"]),
         .library(name: "RegzaAppleStorage", targets: ["RegzaAppleStorage"]),
