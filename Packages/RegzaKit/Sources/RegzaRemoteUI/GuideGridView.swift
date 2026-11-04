@@ -9,6 +9,8 @@ struct GuideGridView: View {
     @Environment(\.showSettings) private var showSettings
     @State private var hasLoaded = false
     @State private var selection: GuideSelection?
+    /// 選んでいる日 (その日の朝 4 時)。nil なら今日 (今の時刻から 24 時間)
+    @State private var day: Date?
     /// 表の左上がスクロールでどれだけずれたか (固定する局名の行と時刻の列を合わせる)
     @State private var scrollOrigin = ScrollOrigin()
 
@@ -62,6 +64,7 @@ struct GuideGridView: View {
                 if bands.count > 1 {
                     BandPicker(bands: bands)
                 }
+                DayPicker(days: days, selection: $day)
                 TimelineView(.periodic(from: .now, by: 60)) { context in
                     grid(now: context.date)
                 }
@@ -70,7 +73,7 @@ struct GuideGridView: View {
     }
 
     private func grid(now: Date) -> some View {
-        let window = Self.window(now: now)
+        let window = Self.window(now: now, day: day)
         let height = CGFloat(Self.hours * 60) * Self.pointsPerMinute
         // 縦横を 1 つのスクロールにまとめ、局名の行と時刻の列はスクロール量に合わせてずらして重ねる
         return ScrollView([.horizontal, .vertical]) {
@@ -83,12 +86,14 @@ struct GuideGridView: View {
             }
             .frame(height: height, alignment: .top)
             .overlay(alignment: .topLeading) {
-                // 今の時刻の線
-                Rectangle()
-                    .fill(.red)
-                    .frame(height: 1)
-                    .offset(y: Self.offset(of: now, in: window))
-                    .allowsHitTesting(false)
+                // 今の時刻の線 (今日を見ているときだけ)
+                if day == nil {
+                    Rectangle()
+                        .fill(.red)
+                        .frame(height: 1)
+                        .offset(y: Self.offset(of: now, in: window))
+                        .allowsHitTesting(false)
+                }
             }
             .padding(.leading, Self.timeColumnWidth)
             .padding(.top, Self.headerHeight)
@@ -174,9 +179,35 @@ struct GuideGridView: View {
 
     // MARK: - 位置の計算
 
-    static func window(now: Date) -> ClosedRange<Date> {
-        let start = Calendar.current.dateInterval(of: .hour, for: now)?.start ?? now
+    /// 表に出す時間。今日は今の時刻の正時から 24 時間、ほかの日はその日の朝 4 時から次の日の朝 4 時まで
+    static func window(now: Date, day: Date? = nil) -> ClosedRange<Date> {
+        let start = day ?? Calendar.current.dateInterval(of: .hour, for: now)?.start ?? now
         return start...start.addingTimeInterval(TimeInterval(hours * 3600))
+    }
+
+    /// 番組表の 1 日の始まり (朝 4 時)。深夜番組 (〜28 時) は前の日の続きとして扱う
+    static let dayStartHour = 4
+
+    /// その時刻が入る、番組表の 1 日の始まり (その日か前の日の朝 4 時)
+    static func broadcastDayStart(of date: Date) -> Date {
+        let calendar = Calendar.current
+        let shifted = date.addingTimeInterval(-TimeInterval(dayStartHour * 3600))
+        let midnight = calendar.startOfDay(for: shifted)
+        return midnight.addingTimeInterval(TimeInterval(dayStartHour * 3600))
+    }
+
+    /// 明日から、Mirakurun が番組表を持っている最後の日まで (今日は nil で表す)
+    private var days: [Date] {
+        let today = Self.broadcastDayStart(of: Date())
+        guard let last = model.guidePrograms.values.compactMap({ $0.last?.start }).max() else { return [] }
+        let lastDay = Self.broadcastDayStart(of: last)
+        var result: [Date] = []
+        var day = Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today
+        while day <= lastDay {
+            result.append(day)
+            day = Calendar.current.date(byAdding: .day, value: 1, to: day) ?? lastDay.addingTimeInterval(1)
+        }
+        return result
     }
 
     static func offset(of date: Date, in window: ClosedRange<Date>) -> CGFloat {
@@ -245,11 +276,17 @@ private struct GuideSelection: Hashable {
 private struct TimeColumn: View {
     let window: ClosedRange<Date>
 
+    /// 番組表と同じく、朝 4 時より前は前の日の続きとして 24〜27 時と書く
+    static func hourLabel(_ date: Date) -> Int {
+        let hour = Calendar.current.component(.hour, from: date)
+        return hour < GuideGridView.dayStartHour ? hour + 24 : hour
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             ForEach(0..<GuideGridView.hours, id: \.self) { hour in
                 let date = window.lowerBound.addingTimeInterval(TimeInterval(hour * 3600))
-                Text("\(Calendar.current.component(.hour, from: date))")
+                Text("\(Self.hourLabel(date))")
                     .font(.caption2.monospacedDigit().weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: GuideGridView.timeColumnWidth, height: 60 * GuideGridView.pointsPerMinute, alignment: .top)
@@ -348,6 +385,57 @@ private struct ProgramCell: View {
         case 9: .indigo
         case 10: .mint
         default: .gray
+        }
+    }
+}
+/// 日付の選択。今日・明日・6(金) … を横に並べ、土曜は青、日曜は赤にする (テレビ欄と同じ)
+private struct DayPicker: View {
+    let days: [Date]
+    @Binding var selection: Date?
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                chip(nil)
+                ForEach(days, id: \.self) { chip($0) }
+            }
+            .padding(.horizontal, Design.outer)
+            .padding(.bottom, 8)
+        }
+    }
+
+    private func chip(_ day: Date?) -> some View {
+        let isSelected = selection == day
+        return Button {
+            selection = day
+        } label: {
+            Text(label(day))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isSelected ? Color.white : color(day))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? AnyShapeStyle(AppTheme.accent) : AnyShapeStyle(.fill.tertiary), in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func label(_ day: Date?) -> String {
+        guard let day else { return "今日" }
+        let calendar = Calendar.current
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: GuideGridView.broadcastDayStart(of: Date()))
+        if day == tomorrow { return "明日" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateFormat = "d(E)"
+        return formatter.string(from: day)
+    }
+
+    private func color(_ day: Date?) -> Color {
+        guard let day else { return .primary }
+        switch Calendar.current.component(.weekday, from: day) {
+        case 7: return .blue
+        case 1: return .red
+        default: return .primary
         }
     }
 }
