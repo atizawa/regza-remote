@@ -5,7 +5,6 @@ import SwiftUI
 /// テレビの録画予約の一覧
 struct ReservationsView: View {
     @Environment(RemoteViewModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
     @State private var loadError: RegzaError?
     @State private var hasLoaded = false
     /// 取り消すか確かめている予約
@@ -16,12 +15,6 @@ struct ReservationsView: View {
         NavigationStack {
             content
                 .navigationTitle("録画予約")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("閉じる") { dismiss() }
-                    }
-                }
                 .task { await load() }
                 .refreshable { await load() }
                 .confirmationDialog(

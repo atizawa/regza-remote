@@ -1,5 +1,6 @@
 #if os(iOS)
 import RegzaCore
+import RegzaLiveActivity
 import SwiftUI
 
 /// テレビから取得した視聴状況。録画再生中はシークできる
@@ -10,53 +11,57 @@ struct NowPlayingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if model.isSearchingTV {
-                Label("テレビが見つからないため、探しています…", systemImage: "magnifyingglass")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                status("テレビが見つからないため、探しています…", systemImage: "magnifyingglass")
             } else if let error = model.lastError {
-                Label(error.localizedDescription, systemImage: "exclamationmark.triangle.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(.orange)
+                status(error.localizedDescription, systemImage: "exclamationmark.triangle.fill", isWarning: true)
             } else if let nowPlaying = model.nowPlaying {
                 switch nowPlaying.kind {
                 case .recorded: playback(nowPlaying)
                 case .broadcast: broadcast(nowPlaying)
-                case .external: Label("外部入力", systemImage: "cable.connector").font(.headline)
-                case .standby: Label("待機中", systemImage: "moon.zzz").font(.headline)
-                case .unknown:
-                    Label("接続済み", systemImage: "tv")
-                        .font(.headline)
-                    Text("録画番組の再生中は、番組名と再生位置がここと Dynamic Island に表示されます")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                case .external: status("外部入力", systemImage: "cable.connector")
+                case .standby: status("待機中", systemImage: "moon.zzz")
+                case .unknown: status("接続済み", systemImage: "tv")
                 }
             } else {
-                Label("接続中…", systemImage: "tv")
-                    .font(.headline)
+                status("接続中…", systemImage: "tv")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(Design.outer)
+        .background {
+            RoundedRectangle(cornerRadius: Design.cornerRadius + 4, style: .continuous)
+                .fill(Surface.button)
+                .overlay {
+                    RoundedRectangle(cornerRadius: Design.cornerRadius + 4, style: .continuous)
+                        .stroke(Color(.separator).opacity(0.5), lineWidth: 0.5)
+                }
+        }
     }
 
-    @ViewBuilder
-    private func broadcast(_ nowPlaying: RegzaNowPlaying) -> some View {
-        Label(nowPlaying.channelName.isEmpty ? "放送" : nowPlaying.channelName, systemImage: "antenna.radiowaves.left.and.right")
-            .font(.headline)
-            .foregroundStyle(.tint)
-        if !nowPlaying.title.isEmpty {
-            Text(nowPlaying.title)
-                .font(.headline)
-                .lineLimit(2)
-        }
-        if nowPlaying.hasTimeline {
-            let start = nowPlaying.updatedAt.addingTimeInterval(-TimeInterval(nowPlaying.position))
-            ProgressView(value: nowPlaying.progress)
+    private func status(_ text: String, systemImage: String, isWarning: Bool = false) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(isWarning ? Color.orange : .secondary)
+            .lineLimit(2)
+    }
+
+    /// `● みどりテレビ` のような見出し。緑の点は「いま映っている」の印
+    private func sourceLabel(_ text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(AppTheme.accent)
+            .lineLimit(1)
+    }
+
+    /// 進捗バーと、その両端の時刻
+    private func timeline(progress: Double, leading: Text, trailing: Text) -> some View {
+        VStack(spacing: 4) {
+            ProgressView(value: progress)
+                .tint(AppTheme.accent)
             HStack {
-                Text(start, style: .time)
+                leading
                 Spacer()
-                Text(start.addingTimeInterval(TimeInterval(nowPlaying.duration)), style: .time)
+                trailing
             }
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
@@ -64,12 +69,28 @@ struct NowPlayingCard: View {
     }
 
     @ViewBuilder
-    private func playback(_ nowPlaying: RegzaNowPlaying) -> some View {
-        if !nowPlaying.channelName.isEmpty {
-            Label(nowPlaying.channelName, systemImage: "tv")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tint)
+    private func broadcast(_ nowPlaying: RegzaNowPlaying) -> some View {
+        sourceLabel(nowPlaying.channelName.isEmpty ? "放送" : nowPlaying.channelName,
+                    systemImage: "antenna.radiowaves.left.and.right")
+        if !nowPlaying.title.isEmpty {
+            Text(nowPlaying.title)
+                .font(.headline)
+                .lineLimit(2)
         }
+        if nowPlaying.hasTimeline {
+            let start = nowPlaying.updatedAt.addingTimeInterval(-TimeInterval(nowPlaying.position))
+            timeline(
+                progress: nowPlaying.progress,
+                leading: Text(start, style: .time),
+                trailing: Text(start.addingTimeInterval(TimeInterval(nowPlaying.duration)), style: .time)
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func playback(_ nowPlaying: RegzaNowPlaying) -> some View {
+        sourceLabel(nowPlaying.channelName.isEmpty ? "録画番組" : "録画 · \(nowPlaying.channelName)",
+                    systemImage: "play.rectangle")
         Text(nowPlaying.title)
             .font(.headline)
             .lineLimit(2)

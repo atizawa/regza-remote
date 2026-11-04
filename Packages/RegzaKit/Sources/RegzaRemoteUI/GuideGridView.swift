@@ -1,11 +1,13 @@
 #if os(iOS)
 import RegzaCore
+import RegzaLiveActivity
 import SwiftUI
 
 /// 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる
 struct GuideGridView: View {
     @Environment(RemoteViewModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.showRemote) private var showRemote
+    @Environment(\.showSettings) private var showSettings
     @State private var band: RegzaChannel.Band = .terrestrial
     @State private var hasLoaded = false
     @State private var selection: GuideSelection?
@@ -18,7 +20,6 @@ struct GuideGridView: View {
     static let pointsPerMinute: CGFloat = 2.4
     static let timeColumnWidth: CGFloat = 28
     static let headerHeight: CGFloat = 36
-    static let scrollSpace = "guideScroll"
 
     var body: some View {
         NavigationStack {
@@ -26,9 +27,6 @@ struct GuideGridView: View {
                 .navigationTitle("番組表")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("閉じる") { dismiss() }
-                    }
                     if bands.count > 1 {
                         ToolbarItem(placement: .principal) {
                             Picker("放送", selection: $band) {
@@ -40,7 +38,10 @@ struct GuideGridView: View {
                     }
                 }
                 .navigationDestination(item: $selection) { selection in
-                    ProgramDetailView(program: selection.program, channel: selection.channel) { dismiss() }
+                    ProgramDetailView(program: selection.program, channel: selection.channel) {
+                        self.selection = nil
+                        showRemote()
+                    }
                 }
                 .task { await load() }
         }
@@ -49,10 +50,14 @@ struct GuideGridView: View {
     @ViewBuilder
     private var content: some View {
         if !model.hasGuide {
-            ContentUnavailableView(
-                "番組表が設定されていません", systemImage: "calendar",
-                description: Text("設定画面の「番組表 (Mirakurun)」で Mirakurun のアドレスを設定してください。")
-            )
+            ContentUnavailableView {
+                Label("番組表が設定されていません", systemImage: "calendar")
+            } description: {
+                Text("番組表は録画サーバー Mirakurun から読みます。設定画面の「番組表 (Mirakurun)」でアドレスを設定してください。")
+            } actions: {
+                Button("設定を開く") { showSettings() }
+                    .buttonStyle(.borderedProminent)
+            }
         } else if !hasLoaded {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -94,15 +99,16 @@ struct GuideGridView: View {
             }
             .padding(.leading, Self.timeColumnWidth)
             .padding(.top, Self.headerHeight)
-            .background {
-                // iOS 17 向け: 中身の位置を測る
-                GeometryReader { geometry in
-                    Color.clear.preference(key: ScrollOriginKey.self, value: geometry.frame(in: .named(Self.scrollSpace)).origin)
-                }
-            }
         }
-        .coordinateSpace(.named(Self.scrollSpace))
-        .modifier(TrackScrollOrigin(origin: scrollOrigin))
+        .onScrollGeometryChange(for: CGPoint.self) { geometry in
+            // 余白 (ナビゲーションバーの下など) を除いた、中身の左上の位置
+            CGPoint(
+                x: -(geometry.contentOffset.x + geometry.contentInsets.leading),
+                y: -(geometry.contentOffset.y + geometry.contentInsets.top)
+            )
+        } action: { _, value in
+            scrollOrigin.value = value
+        }
         .overlay(alignment: .topLeading) {
             PinnedTimeColumn(window: window, height: height, origin: scrollOrigin)
                 // 表示している範囲で切る (列そのものは 24 時間分の高さがある)
@@ -230,36 +236,6 @@ private struct PinnedHeader: View {
     }
 }
 
-/// スクロール量を `ScrollOrigin` に入れる。
-/// 中身の位置を GeometryReader で測る方法では実機でスクロール中に更新されなかったので、
-/// iOS 18 以降はスクロールビューの通知を使う
-private struct TrackScrollOrigin: ViewModifier {
-    let origin: ScrollOrigin
-
-    func body(content: Content) -> some View {
-        if #available(iOS 18, *) {
-            content.onScrollGeometryChange(for: CGPoint.self) { geometry in
-                // 余白 (ナビゲーションバーの下など) を除いた、中身の左上の位置
-                CGPoint(
-                    x: -(geometry.contentOffset.x + geometry.contentInsets.leading),
-                    y: -(geometry.contentOffset.y + geometry.contentInsets.top)
-                )
-            } action: { _, value in
-                origin.value = value
-            }
-        } else {
-            content.onPreferenceChange(ScrollOriginKey.self) { value in
-                MainActor.assumeIsolated { origin.value = value }
-            }
-        }
-    }
-}
-
-private struct ScrollOriginKey: PreferenceKey {
-    static let defaultValue: CGPoint = .zero
-    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) { value = nextValue() }
-}
-
 private struct GuideSelection: Hashable {
     var program: MirakurunProgram
     var channel: RegzaChannel
@@ -324,11 +300,12 @@ private struct ProgramCell: View {
     let program: MirakurunProgram
 
     var body: some View {
+        let isOnAir = program.isOnAir()
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 3) {
                 Text(program.start, format: .dateTime.hour().minute())
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .font(.caption2.monospacedDigit().weight(isOnAir ? .semibold : .regular))
+                    .foregroundStyle(isOnAir ? AppTheme.accent : .secondary)
                 if model.isReserved(program) {
                     Image(systemName: "record.circle.fill")
                         .font(.caption2)
@@ -341,10 +318,18 @@ private struct ProgramCell: View {
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
+        .padding(.leading, 7)
+        .padding(.trailing, 4)
+        .padding(.vertical, 3)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(genreColor.opacity(0.18))
+        // 枠は無地にし、ジャンルは左端の細い線、放送中は緑で示す
+        .background {
+            Surface.button
+                .overlay { if isOnAir { AppTheme.accent.opacity(0.14) } }
+        }
+        .overlay(alignment: .leading) {
+            Rectangle().fill(genreColor.opacity(0.8)).frame(width: 3)
+        }
         .overlay(alignment: .top) { GridLine(axis: .horizontal) }
     }
 

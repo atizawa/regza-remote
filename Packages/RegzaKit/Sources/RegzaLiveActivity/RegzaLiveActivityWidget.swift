@@ -12,7 +12,7 @@ public struct RegzaLiveActivityWidget: Widget {
     public var body: some WidgetConfiguration {
         ActivityConfiguration(for: RegzaActivityAttributes.self) { context in
             LockScreenView(context: context)
-                .activityBackgroundTint(Color.black.opacity(0.75))
+                .activityBackgroundTint(AppTheme.activityBackground.opacity(0.85))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             // 番組が終わる時刻にシステムが stale として描き直すので、そこで次の番組の表示に切り替わる
@@ -26,7 +26,7 @@ public struct RegzaLiveActivityWidget: Widget {
                         Image(systemName: "tv")
                     }
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(AppTheme.accentOnDark)
                     // 左上は角丸で削られるので内側に寄せる
                     .padding(.leading, 8)
                     .padding(.top, 4)
@@ -46,7 +46,7 @@ public struct RegzaLiveActivityWidget: Widget {
                 }
             } compactLeading: {
                 Image(systemName: "tv")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(AppTheme.accentOnDark)
             } compactTrailing: {
                 // コンパクト表示の幅はシステムに制限されるので、少し縮小して文字数を稼ぐ
                 Text(compactTitle(state))
@@ -59,10 +59,10 @@ public struct RegzaLiveActivityWidget: Widget {
                     PlaybackProgress(state: state, circular: true)
                 } else {
                     Image(systemName: "tv")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(AppTheme.accentOnDark)
                 }
             }
-            .keylineTint(.orange)
+            .keylineTint(AppTheme.accentOnDark)
         }
     }
 
@@ -123,7 +123,7 @@ private struct LockScreenView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label(state.headerName(tvName: context.attributes.tvName), systemImage: "tv")
             .font(.caption.weight(.semibold))
-            .foregroundStyle(.orange)
+            .foregroundStyle(AppTheme.accentOnDark)
             TitleText(state: state, isStale: context.isStale)
                 .font(.headline)
                 .foregroundStyle(.white)
@@ -167,7 +167,8 @@ private struct TitleText: View {
                 // 直前の情報を出しているときは、つながっていないことを小さく添える
                 Label("テレビに接続できません", systemImage: "wifi.exclamationmark")
                     .font(.caption2)
-                    .foregroundStyle(.orange)
+                    // 警告なのでテーマの色ではなく黄色にする
+                    .foregroundStyle(.yellow)
             }
             if state.hasProgramEnded(isStale: isStale) {
                 // 次の番組が分からなかったとき
@@ -245,7 +246,7 @@ private struct PlaybackProgress: View {
             }
         }
         .modifier(ProgressStyleModifier(circular: circular))
-        .tint(.orange)
+        .tint(AppTheme.accentOnDark)
     }
 }
 
@@ -264,10 +265,11 @@ private struct ProgressStyleModifier: ViewModifier {
 private struct ActivityButtons: View {
     let state: RegzaActivityAttributes.ContentState
 
+    /// 押しやすいよう数を絞る。録画は再生操作、放送はチャンネルと音量
     private var keys: [RegzaKey] {
         state.isRecordingPlayback
-            ? [.skipBackward, state.isAdvancing ? .pause : .play, .skipForward, .volumeDown, .volumeUp]
-            : [.channelDown, .channelUp, .volumeDown, .volumeUp, .mute]
+            ? [.skipBackward, state.isAdvancing ? .pause : .play, .skipForward]
+            : [.channelDown, .channelUp, .volumeDown, .volumeUp]
     }
 
     var body: some View {
@@ -282,7 +284,7 @@ private struct ActivityButtons: View {
                         }
                     }
                     .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 36)
+                    .frame(maxWidth: .infinity, minHeight: 40)
                 }
                 .buttonStyle(.plain)
                 .background(.white.opacity(0.15), in: Capsule())

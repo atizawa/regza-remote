@@ -1,11 +1,12 @@
 #if os(iOS)
 import RegzaCore
+import RegzaLiveActivity
 import SwiftUI
 
 /// テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える
 struct ChannelListView: View {
     @Environment(RemoteViewModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.showRemote) private var showRemote
     @State private var band: RegzaChannel.Band = .terrestrial
     @State private var isLoading = false
     @State private var loadError: RegzaError?
@@ -19,11 +20,7 @@ struct ChannelListView: View {
         NavigationStack {
             content
                 .navigationTitle("チャンネル")
-                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("閉じる") { dismiss() }
-                    }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             Task { await load(force: true) }
@@ -35,7 +32,10 @@ struct ChannelListView: View {
                     }
                 }
                 .navigationDestination(item: $guideChannel) { channel in
-                    ChannelProgramsView(channel: channel) { dismiss() }
+                    ChannelProgramsView(channel: channel) {
+                        guideChannel = nil
+                        showRemote()
+                    }
                 }
                 .task {
                     await load(force: false)
@@ -108,7 +108,10 @@ struct ChannelListView: View {
                     if tuning == channel {
                         ProgressView()
                     } else if channel.code == model.nowPlaying?.channelCode {
-                        Image(systemName: "checkmark").foregroundStyle(.tint)
+                        Image(systemName: "checkmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                            .accessibilityLabel("視聴中")
                     }
                 }
                 .contentShape(Rectangle())
@@ -122,6 +125,10 @@ struct ChannelListView: View {
                     guideChannel = channel
                 } label: {
                     Image(systemName: "calendar")
+                        // ボタンの色 (緑) が混ざらないよう、灰色に固定する
+                        .foregroundStyle(Color(.secondaryLabel))
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("\(channel.name) の番組表")
@@ -157,7 +164,7 @@ struct ChannelListView: View {
         tuneError = nil
         do {
             try await model.tune(to: channel)
-            dismiss()
+            showRemote()
         } catch .commandRejected {
             tuneError = "\(channel.name) に切り替えられませんでした。テレビの電源が入っているか確認してください。"
         } catch {

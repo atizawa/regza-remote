@@ -5,6 +5,8 @@ REGZA の HTTP リモコン API（[参考](https://misomayo.info/on/2012/04/10)�
 
 iOS 26 以上が対象。
 
+画面は「リモコン」（テレビを操作するボタン）と、見るための「番組表」「チャンネル」「録画予約」のタブに分けている。テレビで映っているものは、どのタブでもタブバーの上のミニプレーヤー（`tabViewBottomAccessory`）に出し、押すと番組の詳細（録画ならシーク）を開く。色は REGZA の公式サイトで使われている深い緑（`#00442D`、ダークモードと Live Activity では明るめの `#1D866F`）を基調にしている（`AppTheme`）。ロゴはまねしない。
+
 ## 構成
 
 ```
@@ -26,6 +28,14 @@ iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュ�
 cd Packages/RegzaKit && swift test        # コアのテスト
 open iOS/RegzaRemote.xcodeproj            # Signing の Team と Bundle ID を設定して実機へ
 ```
+
+テレビや Mirakurun につながずに画面を確かめるときは、Debug ビルドを起動引数 `-SampleData YES` で起動すると見本データ（架空のチャンネルと番組）を表示する。`-SampleKind recorded` で録画再生中、`-InitialTab guide` / `channels` / `reservations` で最初に開くタブを選べる。
+
+```sh
+xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab guide
+```
+
+画面の余白・ボタンの高さ・色は `Design`（`RemoteControls.swift`）と `AppTheme` にまとめている。余白は 16 / 12 / 24、ボタンの高さは 56 / 48 / 40 の 3 段階だけを使い、色は選択中・進行中（緑）と電源・録画（赤）だけに使う。リモコンのタブは、テレビ付属のリモコンの写真から測った色に合わせ、ライトモードでもグレーの本体に、十字キーのあたりだけ黒い帯、黒いボタンに白い文字、銀色の決定、赤い電源ボタンの配色（`RemoteBody`）にしている。
 
 ## テレビ側の準備
 

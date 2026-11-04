@@ -1,5 +1,6 @@
 #if os(iOS)
 import RegzaCore
+import RegzaLiveActivity
 import SwiftUI
 
 /// 1 チャンネルの番組表 (Mirakurun)。放送中の番組から日ごとに並べる
@@ -102,7 +103,7 @@ private struct ProgramRow: View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(program.start, format: .dateTime.hour().minute())
                 .font(.subheadline.monospacedDigit())
-                .foregroundStyle(program.isOnAir() ? Color.orange : .secondary)
+                .foregroundStyle(program.isOnAir() ? AppTheme.accent : .secondary)
                 .frame(width: 48, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 Text(program.name)
@@ -112,7 +113,7 @@ private struct ProgramRow: View {
                         ReservedBadge(compact: true)
                     }
                     if program.isOnAir() {
-                        Text("放送中").foregroundStyle(.orange)
+                        Text("放送中").foregroundStyle(AppTheme.accent)
                     }
                     if let genre = program.genreName {
                         Text(genre)

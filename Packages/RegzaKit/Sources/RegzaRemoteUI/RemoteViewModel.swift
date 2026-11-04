@@ -21,15 +21,36 @@ public final class RemoteViewModel {
     /// テレビの電源が切れているだけのこともあるので、探し直す間隔を空ける
     private static let searchInterval: TimeInterval = 180
 
+    /// 開発用の見本データを表示している (テレビにはつながない)
+    private(set) var isSampleMode = false
+
     public init() {
         connection = RegzaRemoteService.store.load()
         isLiveActivityOn = LiveActivityController.isActive
+        #if DEBUG
+        if SampleData.isEnabled { loadSampleData() }
+        #endif
     }
+
+    #if DEBUG
+    private func loadSampleData() {
+        isSampleMode = true
+        connection = RegzaConnection(host: "192.0.2.1")
+        nowPlaying = SampleData.nowPlaying()
+        channels = SampleData.channels()
+        let programs = SampleData.programs()
+        guideHost = "192.0.2.2"
+        guidePrograms = Dictionary(grouping: programs, by: \.channelCode).mapValues { $0.sorted { $0.start < $1.start } }
+        guideProgramsLoadedAt = .distantFuture
+        reservations = SampleData.reservations(programs: programs)
+    }
+    #endif
 
     // MARK: - リモコン
 
     public func send(_ key: RegzaKey) {
         tapCount += 1
+        guard !isSampleMode else { return }
         Task {
             do {
                 try await RegzaRemoteService.send(key)
@@ -63,7 +84,7 @@ public final class RemoteViewModel {
 
     /// チャンネル一覧を取得する。チャンネルの登録はあまり変わらないので、取得済みなら使い回す
     public func loadChannels(force: Bool = false) async throws(RegzaError) {
-        guard force || channels.isEmpty else { return }
+        guard !isSampleMode, force || channels.isEmpty else { return }
         do {
             channels = try await RegzaRemoteService.remote.client.channels()
         } catch let error as RegzaError {
@@ -132,6 +153,7 @@ public final class RemoteViewModel {
 
     /// 1 チャンネルの番組表 (放送中の番組から)
     public func programs(for channel: RegzaChannel) async throws(RegzaError) -> [MirakurunProgram] {
+        if isSampleMode { return (guidePrograms[channel.code] ?? []).filter { $0.end > Date() } }
         guard let guide = guideClient() else { throw .notConfigured }
         do {
             let now = Date()
@@ -149,6 +171,7 @@ public final class RemoteViewModel {
     public private(set) var reservations: [RegzaReservation] = []
 
     public func loadReservations() async throws(RegzaError) {
+        guard !isSampleMode else { return }
         let list: [RegzaReservation]
         do {
             list = try await RegzaRemoteService.remote.client.reservations()
@@ -206,7 +229,7 @@ public final class RemoteViewModel {
     // MARK: - 状態の定期取得
 
     public func startPolling(interval: Duration = .seconds(2)) {
-        guard pollingTask == nil, connection.isConfigured else { return }
+        guard pollingTask == nil, connection.isConfigured, !isSampleMode else { return }
         pollingTask = Task {
             while !Task.isCancelled {
                 await refresh()
