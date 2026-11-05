@@ -11,13 +11,13 @@ struct ChannelListView: View {
     @State private var tuneError: String?
     /// 切り替え中のチャンネル
     @State private var tuning: RegzaChannel?
-    /// 番組表を開いているチャンネル
-    @State private var guideChannel: RegzaChannel?
+    /// 開いている画面 (チャンネルの番組表 → 番組の詳細)。番組の詳細は値で開くので、番組表も同じ順番に積む
+    @State private var path = NavigationPath()
     /// アプリで見ているチャンネル
     @State private var playerChannel: RegzaChannel?
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             content
                 .navigationTitle("チャンネル")
                 // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
@@ -33,7 +33,7 @@ struct ChannelListView: View {
                         .disabled(isLoading)
                     }
                 }
-                .navigationDestination(item: $guideChannel) { channel in
+                .navigationDestination(for: RegzaChannel.self) { channel in
                     ChannelProgramsView(channel: channel)
                 }
                 .fullScreenCover(item: $playerChannel) { channel in
@@ -128,7 +128,7 @@ struct ChannelListView: View {
             .disabled(tuning != nil)
             if model.hasGuide, model.guidePrograms[channel.code] != nil {
                 Button {
-                    guideChannel = channel
+                    path.append(channel)
                 } label: {
                     Image(systemName: "calendar")
                         // ボタンの色 (緑) が混ざらないよう、灰色に固定する
@@ -162,7 +162,7 @@ struct ChannelListView: View {
         }
         if model.hasGuide, model.guidePrograms[channel.code] != nil {
             Button("番組表", systemImage: "calendar") {
-                guideChannel = channel
+                path.append(channel)
             }
         }
     }
