@@ -153,6 +153,17 @@ private struct NowPlayingDetailView: View {
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 4)
                     }
+                    // 開いている間はミニプレーヤーの電源ボタンが隠れるので、ここでも入れられるようにする
+                    if model.nowPlaying?.kind == .standby, model.lastError == nil {
+                        Button {
+                            model.send(.power)
+                        } label: {
+                            Label("電源を入れる", systemImage: "power")
+                                .font(.body.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
+                        }
+                        .buttonStyle(RemoteButtonStyle())
+                    }
                     if model.canStream, model.nowPlaying?.kind == .broadcast, model.nowPlayingChannel != nil {
                         Button {
                             isShowingPlayer = true
