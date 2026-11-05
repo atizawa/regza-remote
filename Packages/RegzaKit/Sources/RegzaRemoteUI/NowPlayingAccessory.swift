@@ -36,7 +36,7 @@ struct NowPlayingAccessory: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(key.label)
+                .accessibilityLabel(key == .power ? "電源を入れる" : key.label)
             }
         }
         .padding(.horizontal, Design.outer)
@@ -101,12 +101,13 @@ struct NowPlayingAccessory: View {
         return nowPlaying.progress
     }
 
-    /// 右端のボタン: 録画は再生/一時停止、放送は消音
+    /// 右端のボタン: 録画は再生/一時停止、放送は消音、待機中は電源
     private var trailingKey: RegzaKey? {
         guard let nowPlaying, model.lastError == nil else { return nil }
         switch nowPlaying.kind {
         case .recorded: return nowPlaying.isAdvancing ? .pause : .play
         case .broadcast: return .mute
+        case .standby: return .power
         default: return nil
         }
     }
