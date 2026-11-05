@@ -191,7 +191,7 @@ private struct NowPlayingDetailView: View {
                 .padding(Design.outer)
             }
             .background(Surface.background)
-            .navigationTitle("視聴中")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // 閉じるだけの画面は、iOS 標準の × のボタンにそろえる
@@ -209,6 +209,15 @@ private struct NowPlayingDetailView: View {
                     LivePlayerView(server: server, channel: channel)
                 }
             }
+        }
+    }
+
+    /// 番組を映しているときだけ「視聴中」にする。待機中などはカードに状態が出るので、見出しはテレビとだけ書く
+    private var title: String {
+        guard !model.isSearchingTV, model.lastError == nil else { return "テレビ" }
+        switch model.nowPlaying?.kind {
+        case .broadcast, .recorded: return "視聴中"
+        default: return "テレビ"
         }
     }
 }
