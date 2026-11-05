@@ -73,7 +73,7 @@ struct ChannelListView: View {
             }
             Section {
                 let band = model.band(among: bands)
-                ForEach(model.channels.filter { $0.band == band }) { channel in
+                ForEach(channels(in: band)) { channel in
                     row(channel)
                 }
             }
@@ -130,6 +130,30 @@ struct ChannelListView: View {
                 .buttonStyle(.borderless)
                 .accessibilityLabel("\(channel.name) の番組表")
             }
+        }
+    }
+
+    /// 一覧に出すチャンネル。同じ局のサブチャンネルはふだん同じ番組なので、番組表と同じく局ごとにまとめ、
+    /// 代表と違う番組を流しているときと、いま見ているときだけ出す
+    private func channels(in band: RegzaChannel.Band?) -> [RegzaChannel] {
+        let channels = model.channels.filter { $0.band == band }
+        // CS はテレビから代表の印が来ないので、すべて出す
+        guard band != .cs else { return channels }
+        // リモコン番号ごとの代表。印のあるものを先に見て、なければ最初のもの
+        var representatives: [Int: RegzaChannel] = [:]
+        for channel in channels.filter(\.isRepresentative) + channels.filter({ !$0.isRepresentative })
+        where channel.remoteNumber > 0 && representatives[channel.remoteNumber] == nil {
+            representatives[channel.remoteNumber] = channel
+        }
+        return channels.filter { channel in
+            guard channel.remoteNumber > 0, let representative = representatives[channel.remoteNumber],
+                  representative != channel, channel.code != model.nowPlaying?.channelCode
+            else { return true }
+            // 番組名が分からなければ (Mirakurun が未設定など)、代表だけを出す
+            guard let program = model.currentProgram(for: channel)?.name,
+                  let representativeProgram = model.currentProgram(for: representative)?.name
+            else { return false }
+            return program != representativeProgram
         }
     }
 
