@@ -46,6 +46,8 @@ public struct RemoteView: View {
                 .tabViewBottomAccessory {
                     NowPlayingAccessory()
                 }
+                // 番組表や一覧を広く見せるため、下へスクロールしたらタブバーを小さくする
+                .tabBarMinimizeBehavior(.onScrollDown)
             } else {
                 NavigationStack {
                     ContentUnavailableView {

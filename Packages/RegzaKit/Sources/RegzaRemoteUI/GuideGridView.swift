@@ -78,15 +78,18 @@ struct GuideGridView: View {
                 Button("もう一度試す") { Task { await load() } }
             }
         } else {
-            VStack(spacing: 0) {
-                if bands.count > 1 {
-                    BandPicker(bands: bands)
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                grid(now: context.date)
+            }
+            .dynamicTypeSize(...Self.maximumDynamicTypeSize)
+            // 上に積むと日付の横スクロールが先に見つかり、下へスクロールしてもタブバーが小さくならないので、表の上に重ねる
+            .safeAreaBar(edge: .top, spacing: 0) {
+                VStack(spacing: 0) {
+                    if bands.count > 1 {
+                        BandPicker(bands: bands)
+                    }
+                    DayPicker(days: days, selection: $day)
                 }
-                DayPicker(days: days, selection: $day)
-                TimelineView(.periodic(from: .now, by: 60)) { context in
-                    grid(now: context.date)
-                }
-                .dynamicTypeSize(...Self.maximumDynamicTypeSize)
             }
         }
     }
