@@ -13,6 +13,8 @@ struct ChannelListView: View {
     @State private var tuning: RegzaChannel?
     /// 番組表を開いているチャンネル
     @State private var guideChannel: RegzaChannel?
+    /// アプリで見ているチャンネル
+    @State private var playerChannel: RegzaChannel?
 
     var body: some View {
         NavigationStack {
@@ -34,9 +36,16 @@ struct ChannelListView: View {
                 .navigationDestination(item: $guideChannel) { channel in
                     ChannelProgramsView(channel: channel)
                 }
+                .fullScreenCover(item: $playerChannel) { channel in
+                    if let server = model.streamServer() {
+                        LivePlayerView(server: server, channel: channel)
+                    }
+                }
                 .task {
                     await load(force: false)
                     await model.loadGuidePrograms()
+                    // 長押しのメニューに「最初から見る」を出すかを決めるため
+                    await model.loadTimeshiftSettings()
                 }
         }
     }
@@ -131,6 +140,31 @@ struct ChannelListView: View {
                 .accessibilityLabel("\(channel.name) の番組表")
             }
         }
+        // 押すとすぐ切り替わるので、切り替え以外は長押しのメニューにまとめる
+        .contextMenu { menu(for: channel) }
+    }
+
+    @ViewBuilder
+    private func menu(for channel: RegzaChannel) -> some View {
+        Button("切り替える", systemImage: "play.fill") {
+            Task { await tune(to: channel) }
+        }
+        if model.canStream {
+            Button("アプリで見る", systemImage: "play.tv") {
+                playerChannel = channel
+            }
+        }
+        if let program = model.currentProgram(for: channel),
+           model.canStartOver(channelCode: channel.code, programStart: program.start) {
+            Button("最初から見る", systemImage: "backward.end.alt") {
+                Task { await tune(to: channel, startOver: true) }
+            }
+        }
+        if model.hasGuide, model.guidePrograms[channel.code] != nil {
+            Button("番組表", systemImage: "calendar") {
+                guideChannel = channel
+            }
+        }
     }
 
     /// 一覧に出すチャンネル。同じ局のサブチャンネルはふだん同じ番組なので、番組表と同じく局ごとにまとめ、
@@ -174,13 +208,19 @@ struct ChannelListView: View {
         // 放送の種類を選んでいなければ RemoteViewModel.band(among:) がいま見ている種類を選ぶ
     }
 
-    private func tune(to channel: RegzaChannel) async {
+    private func tune(to channel: RegzaChannel, startOver: Bool = false) async {
         tuning = channel
         defer { tuning = nil }
         tuneError = nil
         do {
             // タブは移らない。切り替えたことはチェックの印とミニプレーヤーで分かる
-            try await model.tune(to: channel)
+            if !startOver {
+                try await model.tune(to: channel)
+            } else if channel.code == model.nowPlaying?.channelCode {
+                model.startOver()
+            } else {
+                try await model.tuneAndStartOver(channel)
+            }
         } catch .commandRejected {
             tuneError = "\(channel.name) に切り替えられませんでした。テレビの電源が入っているか確認してください。"
         } catch {
