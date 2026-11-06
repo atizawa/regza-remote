@@ -170,18 +170,11 @@ struct GuideGridView: View {
 
     /// 選んだ放送の局。サブチャンネル (同じリモコン番号の局) は代表のものだけにする
     private var columns: [Column] {
-        var seenRemoteNumbers: Set<Int> = []
         let band = model.band(among: bands)
-        let candidates = model.channels.filter { $0.band == band && model.guidePrograms[$0.code] != nil }
-        // 代表チャンネルを先に見て、同じリモコン番号のサブチャンネルを除く
-        let representatives = Set(candidates.filter(\.isRepresentative).map(\.remoteNumber))
-        return candidates.compactMap { channel in
-            if channel.remoteNumber > 0 {
-                if representatives.contains(channel.remoteNumber), !channel.isRepresentative { return nil }
-                guard seenRemoteNumbers.insert(channel.remoteNumber).inserted else { return nil }
-            }
-            return Column(channel: channel, programs: model.guidePrograms[channel.code] ?? [])
-        }
+        return model.channels
+            .filter { $0.band == band && model.guidePrograms[$0.code] != nil }
+            .groupingSubchannels()
+            .map { Column(channel: $0, programs: model.guidePrograms[$0.code] ?? []) }
     }
 
     private var bands: [RegzaChannel.Band] {

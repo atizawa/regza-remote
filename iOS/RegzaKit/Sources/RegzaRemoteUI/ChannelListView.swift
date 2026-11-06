@@ -173,18 +173,10 @@ struct ChannelListView: View {
         let channels = model.channels.filter { $0.band == band }
         // CS はテレビから代表の印が来ないので、すべて出す
         guard band != .cs else { return channels }
-        // リモコン番号ごとの代表。印のあるものを先に見て、なければ最初のもの
-        var representatives: [Int: RegzaChannel] = [:]
-        for channel in channels.filter(\.isRepresentative) + channels.filter({ !$0.isRepresentative })
-        where channel.remoteNumber > 0 && representatives[channel.remoteNumber] == nil {
-            representatives[channel.remoteNumber] = channel
-        }
-        return channels.filter { channel in
-            guard channel.remoteNumber > 0, let representative = representatives[channel.remoteNumber],
-                  representative != channel, channel.code != model.nowPlaying?.channelCode
-            else { return true }
+        return channels.groupingSubchannels { subchannel, representative in
+            if subchannel.code == model.nowPlaying?.channelCode { return true }
             // 番組名が分からなければ (Mirakurun が未設定など)、代表だけを出す
-            guard let program = model.currentProgram(for: channel)?.name,
+            guard let program = model.currentProgram(for: subchannel)?.name,
                   let representativeProgram = model.currentProgram(for: representative)?.name
             else { return false }
             return program != representativeProgram

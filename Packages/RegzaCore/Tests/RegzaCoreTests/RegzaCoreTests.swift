@@ -253,6 +253,41 @@ import Testing
     }
 }
 
+@Suite struct SubchannelGroupingTests {
+    /// テスト用のチャンネル (値はダミー)。remote はリモコン番号、representative は代表の印
+    private func channel(_ number: Int, remote: Int, representative: Bool = false) -> RegzaChannel {
+        let json = """
+            {"channel":"JP-G\(number)","channel_number":\(number),"rcu_channel_number":\(remote),"name":"局\(number)",\
+            "ex_channel_number":"DUV_\(number)","show_setting":"\(representative ? "SHOW_REPRESENT" : "SHOW")"}
+            """
+        return try! JSONDecoder().decode(RegzaChannel.self, from: Data(json.utf8))
+    }
+
+    @Test func keepsRepresentativeEvenIfNotFirst() {
+        let channels = [channel(12, remote: 1), channel(11, remote: 1, representative: true), channel(21, remote: 2)]
+        #expect(channels.groupingSubchannels().map(\.number) == [11, 21])
+    }
+
+    @Test func keepsFirstWhenNoRepresentative() {
+        let channels = [channel(11, remote: 1), channel(12, remote: 1), channel(13, remote: 1)]
+        #expect(channels.groupingSubchannels().map(\.number) == [11])
+    }
+
+    @Test func keepsChannelsWithoutRemoteNumber() {
+        let channels = [channel(55, remote: 0), channel(56, remote: 0)]
+        #expect(channels.groupingSubchannels().map(\.number) == [55, 56])
+    }
+
+    @Test func showsSubchannelsTheCallerAsksFor() {
+        let channels = [channel(11, remote: 1, representative: true), channel(12, remote: 1), channel(13, remote: 1)]
+        let shown = channels.groupingSubchannels { subchannel, representative in
+            #expect(representative.number == 11)
+            return subchannel.number == 13
+        }
+        #expect(shown.map(\.number) == [11, 13])
+    }
+}
+
 @Suite struct ReservationTests {
     @Test func decodesReservations() throws {
         let json = """
