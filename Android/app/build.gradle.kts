@@ -6,9 +6,8 @@ plugins {
 android {
     namespace = "com.example.regzaremote"
     compileSdk = 37
-    // NDK の版はここだけで決める。Android Gradle Plugin が Android SDK の ndk/<版> から探し、なければ入れる。
-    // Swift の .so のビルド (buildSwift) にも、ここで決まった NDK の場所を渡す。
-    // Swift SDK for Android が求める版 (r30) にする
+    // NDK の版はここだけで決める。Swift の .so のビルド (buildSwift) に渡し、Android SDK の ndk/<版> になければ
+    // build-swift が入れる。Swift SDK for Android が求める版 (r30) にする
     ndkVersion = "30.0.16248370"
 
     defaultConfig {
@@ -22,6 +21,15 @@ android {
     }
 
     buildFeatures { compose = true }
+
+    buildTypes {
+        release {
+            // Java のコードを縮める (Compose などのライブラリのうち、使っていない部分を外す)
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
 
     // swift-java が作る Java のコードは Java 17 の書き方を使う (swift-java.config の javaSourceLevel)
     compileOptions {

@@ -106,11 +106,26 @@ rm -rf "$generated" .build/swift/regzacore-java && mkdir -p "$generated" .build/
 swift build --package-path RegzaAndroid --scratch-path .build/swift --product RegzaAndroid -c release \
   --swift-sdk "$sdk" --triple "$triple"
 
+# 入れる候補: libRegzaAndroid.so と swift-java の libSwiftJava.so、SDK の Swift の .so、NDK の libc++_shared.so
+candidates=.build/swift/android-libs
+rm -rf "$candidates" && mkdir -p "$candidates"
+cp .build/swift/out/Products/Release-android-aarch64/*.so "$runtime"/*.so "$libcxx" "$candidates/"
+
+# 候補のうち、実際に使われるものだけを入れる (FoundationXML やテスト用のものなど、使っていないものはアプリを大きくするだけ)。
+# Java から名前で読み込むもの (RegzaAndroid・SwiftJava・swiftCore) から始めて、各 .so が使う (NEEDED) ものをたどる
+readelf=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin/llvm-readelf | head -1)
 rm -rf "$out" && mkdir -p "$out"
-# libRegzaAndroid.so と、swift-java の libSwiftJava.so
-cp .build/swift/out/Products/Release-android-aarch64/*.so "$out/"
-# テスト用のもの (Testing・XCTest) はアプリに要らない
-find "$runtime" -maxdepth 1 -name '*.so' ! -name '*Testing*' ! -name '*XCTest*' -exec cp {} "$out/" \;
-cp "$libcxx" "$out/"
+cp "$candidates"/libRegzaAndroid.so "$candidates"/libSwiftJava.so "$candidates"/libswiftCore.so "$out/"
+while :; do
+  added=0
+  for needed in $(for lib in "$out"/*.so; do "$readelf" -d "$lib"; done | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p' | sort -u); do
+    # libc.so などは Android に入っているので候補にない
+    if [ -f "$candidates/$needed" ] && [ ! -f "$out/$needed" ]; then
+      cp "$candidates/$needed" "$out/"
+      added=1
+    fi
+  done
+  [ "$added" = 1 ] || break
+done
 echo "$(ls "$out" | wc -l | tr -d ' ') 個の .so を $out に入れました。"
 '''
