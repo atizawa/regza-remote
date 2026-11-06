@@ -3,43 +3,17 @@ import RegzaCore
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(RemoteViewModel.self) private var model
-    @Environment(GuideViewModel.self) private var guide
-    @Environment(StreamViewModel.self) private var stream
+    @State private var tv: TVSetupViewModel
+    @State private var servers: ServerSetupViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var draft = RegzaConnection()
-    @State private var testResult: String?
-    @State private var isTesting = false
-
-    /// PIN 登録中 (テレビに PIN が表示されている間) のセッション
-    @State private var pairing: RegzaPairing?
-    @State private var pin = ""
-    @State private var isPairing = false
-    @State private var pairingMessage: String?
-    @State private var isShowingManualEntry = false
     @FocusState private var isPINFocused: Bool
-    /// このアプリ用のユーザー ID。手入力のユーザー名は他のツールと共有している
-    /// かもしれないので使い回さない (同じ ID で登録し直すと、前のパスワードが無効になる)
-    @State private var pairingUserID = ""
-
-    /// 自動検出で見つかったテレビ
-    @State private var devices: [RegzaDevice] = []
-    @State private var isScanning = false
-    @State private var scanMessage: String?
-
-    /// 番組表 (Mirakurun) のアドレス
-    @State private var guideHost = ""
-    @State private var guideHosts: [String] = []
-    @State private var isScanningGuide = false
-    @State private var guideMessage: String?
-
-    /// ライブ視聴 (EPGStation) のアドレス
-    @State private var streamHost = ""
-    @State private var streamHosts: [String] = []
-    @State private var isScanningStream = false
-    @State private var streamMessage: String?
     /// 連携を解除するか確かめている設定
-    @State private var unlinking: Page?
+    @State private var unlinking: ServerSetupViewModel.Server?
+
+    init(tv: TVSetupViewModel, servers: ServerSetupViewModel) {
+        _tv = State(initialValue: tv)
+        _servers = State(initialValue: servers)
+    }
 
     /// 設定の画面。テレビの設定と、録画サーバー (Mirakurun・EPGStation) の設定を別の画面に分ける
     private enum Page: Hashable {
@@ -48,8 +22,8 @@ struct SettingsView: View {
 
     /// 最初はテレビが未設定なら、テレビの設定の画面を開いておく
     @State private var path: [Page] = []
-    /// 保存済みの値を読み込んだか
-    @State private var hasLoaded = false
+    /// 最初に開いたときだけ、テレビの設定の画面を開く
+    @State private var hasOpened = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -57,8 +31,8 @@ struct SettingsView: View {
                 Section("テレビ") {
                     NavigationLink(value: Page.tv) {
                         LabeledContent("REGZA") {
-                            Text(tvStatus.text)
-                                .foregroundStyle(tvStatus.needsAttention ? Color.orange : .secondary)
+                            Text(tv.status.text)
+                                .foregroundStyle(tv.status.needsAttention ? Color.orange : .secondary)
                         }
                     }
                 }
@@ -69,14 +43,14 @@ struct SettingsView: View {
 
                 Section {
                     NavigationLink(value: Page.guide) {
-                        LabeledContent("番組表（Mirakurun）", value: status(of: guideHost))
+                        LabeledContent("番組表（Mirakurun）", value: servers.status(of: .guide))
                     }
                     // EPGStation は Mirakurun から放送を受け取るので、Mirakurun を設定してから設定できるようにする
                     NavigationLink(value: Page.stream) {
                         LabeledContent("ライブ視聴（EPGStation）",
-                                       value: hasGuideDraft ? status(of: streamHost) : "先に番組表を設定")
+                                       value: servers.hasGuideDraft ? servers.status(of: .stream) : "先に番組表を設定")
                     }
-                    .disabled(!hasGuideDraft)
+                    .disabled(!servers.hasGuideDraft)
                 } header: {
                     Text("録画サーバーとの連携")
                 } footer: {
@@ -95,18 +69,18 @@ struct SettingsView: View {
                 case .guide:
                     Form {
                         guideSection
-                        if !guide.guideHost.isEmpty { unlinkSection(.guide) }
+                        if servers.isLinked(.guide) { unlinkSection(.guide) }
                     }
                     .navigationTitle("番組表（Mirakurun）")
                     .navigationBarTitleDisplayMode(.inline)
                 case .stream:
                     Form {
                         streamSection
-                        if !stream.streamHost.isEmpty { unlinkSection(.stream) }
+                        if servers.isLinked(.stream) { unlinkSection(.stream) }
                     }
                     .navigationTitle("ライブ視聴（EPGStation）")
                     .navigationBarTitleDisplayMode(.inline)
-                    .task { await suggestStreamHost() }
+                    .task { await servers.suggestStreamHost() }
                 }
             }
             // iOS 26 の標準に合わせ、キャンセルは ×、保存は ✓ (強調色) のボタンにする
@@ -117,30 +91,24 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) {
                         Task {
-                            await guide.saveGuideHost(ServerAddress(guideHost).saved)
-                            stream.saveStreamHost(ServerAddress(streamHost).saved)
-                            await model.save(draft)
+                            await servers.save()
+                            await tv.save()
                             dismiss()
                         }
                     }
-                    .disabled(!draft.isConfigured || pairing != nil
-                              || !ServerAddress(guideHost).isValid || !ServerAddress(streamHost).isValid)
+                    .disabled(!tv.canSave || !servers.isValid)
                 }
             }
             .onAppear {
-                // 各設定の画面から一覧に戻ったときにも呼ばれるので、読み込むのは最初の 1 回だけにする
-                // (毎回読み込むと、入力したアドレスが保存済みの値に戻ってしまう)
-                guard !hasLoaded else { return }
-                hasLoaded = true
-                draft = model.connection
-                pairingUserID = model.pairingUserID()
-                guideHost = guide.guideHost
-                streamHost = stream.streamHost
-                if !model.connection.isConfigured, path.isEmpty { path = [.tv] }
+                // 各設定の画面から一覧に戻ったときにも呼ばれるので、最初の 1 回だけにする
+                guard !hasOpened else { return }
+                hasOpened = true
+                if !tv.remote.connection.isConfigured, path.isEmpty { path = [.tv] }
             }
-            .onDisappear {
-                // PIN を入れずに閉じたら、テレビの PIN 表示を消しておく
-                if let pairing { Task { await pairing.cancel() } }
+            .onDisappear { tv.close() }
+            // テレビに PIN が出たら、すぐ打てるようにする
+            .onChange(of: tv.isWaitingForPIN) { _, isWaiting in
+                if isWaiting { isPINFocused = true }
             }
         }
     }
@@ -149,14 +117,14 @@ struct SettingsView: View {
     private var tvPage: some View {
         Form {
             Section {
-                TextField("IPアドレス (例: 192.168.0.10)", text: $draft.host)
+                TextField("IPアドレス (例: 192.168.0.10)", text: $tv.draft.host)
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .disabled(pairing != nil)
-                ForEach(devices) { device in
+                    .disabled(tv.isWaitingForPIN)
+                ForEach(tv.devices) { device in
                     Button {
-                        Task { await select(device) }
+                        Task { await tv.select(device) }
                     } label: {
                         HStack {
                             VStack(alignment: .leading) {
@@ -166,25 +134,25 @@ struct SettingsView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if draft.host == device.host {
+                            if tv.isSelected(device) {
                                 Image(systemName: "checkmark").foregroundStyle(.tint)
                             }
                         }
                     }
                     .tint(.primary)
-                    .disabled(pairing != nil)
+                    .disabled(tv.isWaitingForPIN)
                 }
                 Button {
-                    Task { await scan() }
+                    Task { await tv.scan() }
                 } label: {
                     HStack {
-                        Label(isScanning ? "テレビを探しています…" : "テレビを探す", systemImage: "magnifyingglass")
+                        Label(tv.isScanning ? "テレビを探しています…" : "テレビを探す", systemImage: "magnifyingglass")
                         Spacer()
-                        if isScanning { ProgressView() }
+                        if tv.isScanning { ProgressView() }
                     }
                 }
-                .disabled(isScanning || pairing != nil)
-                if let scanMessage {
+                .disabled(tv.isScanning || tv.isWaitingForPIN)
+                if let scanMessage = tv.scanMessage {
                     Text(scanMessage)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -199,11 +167,11 @@ struct SettingsView: View {
             pairingSection
 
             Section {
-                DisclosureGroup("ユーザー名とパスワードを入力", isExpanded: $isShowingManualEntry) {
-                    TextField("ユーザー名", text: $draft.user)
+                DisclosureGroup("ユーザー名とパスワードを入力", isExpanded: $tv.isShowingManualEntry) {
+                    TextField("ユーザー名", text: $tv.draft.user)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    SecureField("パスワード", text: $draft.password)
+                    SecureField("パスワード", text: $tv.draft.password)
                 }
             } footer: {
                 Text("PIN 登録に対応していない古い機種では、テレビの「外部連携設定」で設定したユーザー名とパスワードを入力してください。")
@@ -211,16 +179,16 @@ struct SettingsView: View {
 
             Section {
                 Button {
-                    Task { await test() }
+                    Task { await tv.test() }
                 } label: {
                     HStack {
                         Text("接続テスト")
                         Spacer()
-                        if isTesting { ProgressView() }
+                        if tv.isTesting { ProgressView() }
                     }
                 }
-                .disabled(!draft.isConfigured || isTesting)
-                if let testResult {
+                .disabled(!tv.draft.isConfigured || tv.isTesting)
+                if let testResult = tv.testResult {
                     Text(testResult)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -231,116 +199,70 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             // 未設定なら開いたときに探し始める
-            if !model.connection.isConfigured, devices.isEmpty { await scan() }
+            if tv.shouldScanOnOpen { await tv.scan() }
         }
     }
 
     /// 録画サーバーとの連携をやめる。確かめたうえで、すぐにアドレスを消して反映する
-    private func unlinkSection(_ page: Page) -> some View {
-        Section {
-            Button("連携を解除", role: .destructive) { unlinking = page }
+    private func unlinkSection(_ server: ServerSetupViewModel.Server) -> some View {
+        let question = servers.unlinkQuestion(server)
+        return Section {
+            Button("連携を解除", role: .destructive) { unlinking = server }
                 .confirmationDialog(
-                    page == .guide ? "Mirakurun との連携を解除しますか？" : "EPGStation との連携を解除しますか？",
-                    isPresented: Binding(get: { unlinking == page }, set: { if !$0 { unlinking = nil } }),
+                    question.title,
+                    isPresented: Binding(get: { unlinking == server }, set: { if !$0 { unlinking = nil } }),
                     titleVisibility: .visible
                 ) {
                     Button("連携を解除", role: .destructive) {
-                        Task { await unlink(page) }
+                        Task {
+                            await servers.unlink(server)
+                            path.removeAll { $0 == (server == .guide ? .guide : .stream) }
+                        }
                     }
                 } message: {
-                    Text(page == .guide
-                         ? "番組名・番組表・番組表からの録画予約が使えなくなります。ライブ視聴（EPGStation）の連携も解除されます。"
-                         : "アプリでのライブ視聴が使えなくなります。")
+                    Text(question.message)
                 }
         }
-    }
-
-    private func unlink(_ page: Page) async {
-        switch page {
-        case .guide:
-            guideHost = ""
-            guideHosts = []
-            await guide.saveGuideHost("")
-            // EPGStation だけでは使えないので、一緒に解除する
-            streamHost = ""
-            streamHosts = []
-            stream.saveStreamHost("")
-        case .stream:
-            streamHost = ""
-            streamHosts = []
-            stream.saveStreamHost("")
-        case .tv:
-            return
-        }
-        path.removeAll { $0 == page }
-    }
-
-    /// Mirakurun のアドレスが入っているか (保存前の入力も含む)
-    private var hasGuideDraft: Bool {
-        !ServerAddress(guideHost).saved.isEmpty
-    }
-
-    /// Mirakurun と同じサーバーで EPGStation が動いていれば、候補として出す
-    private func suggestStreamHost() async {
-        guard streamHost.trimmingCharacters(in: .whitespaces).isEmpty, streamHosts.isEmpty else { return }
-        // Mirakurun のアドレスからポートを除いたもの
-        let server = ServerAddress(guideHost).address
-        guard !server.isEmpty, await EPGStation(host: server, timeout: 3).isAvailable() else { return }
-        streamHosts = [server]
-        streamHost = server
-        streamMessage = "Mirakurun と同じサーバーで EPGStation が見つかりました。よければ「保存」を押してください。"
-    }
-
-    /// 一覧に出すテレビの状態。操作できるときはアドレスだけ、注意が要るときだけオレンジで知らせる
-    private var tvStatus: (text: String, needsAttention: Bool) {
-        let host = draft.host.trimmingCharacters(in: .whitespaces)
-        if host.isEmpty { return ("未設定", true) }
-        // PIN の登録でも手入力でも、パスワードがなければ操作できない
-        if draft.password.isEmpty { return ("PIN の登録が必要", true) }
-        return (host, false)
-    }
-
-    private func status(of host: String) -> String {
-        let host = ServerAddress(host).saved
-        return host.isEmpty ? "未設定" : host
     }
 
     @ViewBuilder
     private var pairingSection: some View {
         Section {
-            if pairing == nil {
+            if !tv.isWaitingForPIN {
                 Button {
-                    Task { await startPairing() }
+                    Task { await tv.startPairing() }
                 } label: {
                     HStack {
-                        Label(isRegistered ? "もう一度登録する" : "テレビに PIN を表示", systemImage: "number.square")
+                        Label(tv.isRegistered ? "もう一度登録する" : "テレビに PIN を表示", systemImage: "number.square")
                         Spacer()
-                        if isPairing { ProgressView() }
+                        if tv.isPairing { ProgressView() }
                     }
                 }
-                .disabled(!draft.isConfigured || isPairing)
+                .disabled(!tv.draft.isConfigured || tv.isPairing)
             } else {
-                TextField("テレビに表示された PIN", text: $pin)
+                TextField("テレビに表示された PIN", text: $tv.pin)
                     .keyboardType(.numberPad)
                     .textContentType(.oneTimeCode)
                     .font(.title3.monospacedDigit())
                     .focused($isPINFocused)
                 Button {
-                    Task { await confirmPairing() }
+                    Task {
+                        if await tv.confirmPairing() { dismiss() }
+                    }
                 } label: {
                     HStack {
                         Text("登録")
                         Spacer()
-                        if isPairing { ProgressView() }
+                        if tv.isPairing { ProgressView() }
                     }
                 }
-                .disabled(pin.isEmpty || isPairing)
+                .disabled(tv.pin.isEmpty || tv.isPairing)
                 Button("やめる", role: .cancel) {
-                    Task { await cancelPairing() }
+                    Task { await tv.cancelPairing() }
                 }
-                .disabled(isPairing)
+                .disabled(tv.isPairing)
             }
-            if let pairingMessage {
+            if let pairingMessage = tv.pairingMessage {
                 Text(pairingMessage)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -348,7 +270,7 @@ struct SettingsView: View {
         } header: {
             Text("PIN で登録")
         } footer: {
-            if pairing == nil {
+            if !tv.isWaitingForPIN {
                 Text("テレビの電源を入れてからボタンを押すと、テレビの画面に PIN が表示されます。")
             } else {
                 Text("テレビの画面に表示されている PIN を入力してください。")
@@ -359,15 +281,15 @@ struct SettingsView: View {
     @ViewBuilder
     private var guideSection: some View {
         Section {
-            ServerAddressField(host: $guideHost, defaultPort: Mirakurun.defaultPort)
-            ForEach(guideHosts, id: \.self) { host in
+            ServerAddressField(host: $servers.guideHost, defaultPort: Mirakurun.defaultPort)
+            ForEach(servers.guideHosts, id: \.self) { host in
                 Button {
-                    guideHost = host
+                    servers.guideHost = host
                 } label: {
                     HStack {
                         Text(host).monospacedDigit()
                         Spacer()
-                        if guideHost == host {
+                        if servers.guideHost == host {
                             Image(systemName: "checkmark").foregroundStyle(.tint)
                         }
                     }
@@ -375,16 +297,16 @@ struct SettingsView: View {
                 .tint(.primary)
             }
             Button {
-                Task { await scanGuide() }
+                Task { await servers.scanGuide() }
             } label: {
                 HStack {
-                    Label(isScanningGuide ? "Mirakurun を探しています…" : "Mirakurun を探す", systemImage: "magnifyingglass")
+                    Label(servers.isScanningGuide ? "Mirakurun を探しています…" : "Mirakurun を探す", systemImage: "magnifyingglass")
                     Spacer()
-                    if isScanningGuide { ProgressView() }
+                    if servers.isScanningGuide { ProgressView() }
                 }
             }
-            .disabled(isScanningGuide)
-            if let guideMessage {
+            .disabled(servers.isScanningGuide)
+            if let guideMessage = servers.guideMessage {
                 Text(guideMessage)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -399,15 +321,15 @@ struct SettingsView: View {
     @ViewBuilder
     private var streamSection: some View {
         Section {
-            ServerAddressField(host: $streamHost, defaultPort: EPGStation.defaultPort)
-            ForEach(streamHosts, id: \.self) { host in
+            ServerAddressField(host: $servers.streamHost, defaultPort: EPGStation.defaultPort)
+            ForEach(servers.streamHosts, id: \.self) { host in
                 Button {
-                    streamHost = host
+                    servers.streamHost = host
                 } label: {
                     HStack {
                         Text(host).monospacedDigit()
                         Spacer()
-                        if streamHost == host {
+                        if servers.streamHost == host {
                             Image(systemName: "checkmark").foregroundStyle(.tint)
                         }
                     }
@@ -415,16 +337,16 @@ struct SettingsView: View {
                 .tint(.primary)
             }
             Button {
-                Task { await scanStream() }
+                Task { await servers.scanStream() }
             } label: {
                 HStack {
-                    Label(isScanningStream ? "EPGStation を探しています…" : "EPGStation を探す", systemImage: "magnifyingglass")
+                    Label(servers.isScanningStream ? "EPGStation を探しています…" : "EPGStation を探す", systemImage: "magnifyingglass")
                     Spacer()
-                    if isScanningStream { ProgressView() }
+                    if servers.isScanningStream { ProgressView() }
                 }
             }
-            .disabled(isScanningStream)
-            if let streamMessage {
+            .disabled(servers.isScanningStream)
+            if let streamMessage = servers.streamMessage {
                 Text(streamMessage)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -434,155 +356,6 @@ struct SettingsView: View {
         } footer: {
             Text("EPGStation を動かしている場合に設定すると、放送中の番組を iPhone で見られます。家の Wi-Fi の中だけで使えます。")
         }
-    }
-
-    private func scanStream() async {
-        isScanningStream = true
-        defer { isScanningStream = false }
-        streamMessage = nil
-        streamHosts = await EPGStation.find()
-        if let first = streamHosts.first, streamHost.trimmingCharacters(in: .whitespaces).isEmpty {
-            streamHost = first
-        }
-        if streamHosts.isEmpty {
-            streamMessage = "見つかりませんでした。EPGStation が動いているか、ポート \(EPGStation.defaultPort) で待ち受けているか確認してください。"
-        }
-    }
-
-    private func scanGuide() async {
-        isScanningGuide = true
-        defer { isScanningGuide = false }
-        guideMessage = nil
-        guideHosts = await Mirakurun.find()
-        if let first = guideHosts.first, guideHost.trimmingCharacters(in: .whitespaces).isEmpty {
-            guideHost = first
-        }
-        if guideHosts.isEmpty {
-            guideMessage = "見つかりませんでした。Mirakurun が動いているか、ポート \(Mirakurun.defaultPort) で待ち受けているか確認してください。"
-        }
-    }
-
-    private func scan() async {
-        isScanning = true
-        defer { isScanning = false }
-        scanMessage = nil
-        devices = []
-        for await device in RegzaDiscovery.devices() {
-            devices.append(device)
-            // 1 台目は選んでおく。登録は利用者がボタンを押してから
-            if devices.count == 1, draft.host.trimmingCharacters(in: .whitespaces).isEmpty {
-                draft.host = device.host
-            }
-        }
-        if devices.isEmpty {
-            scanMessage = "見つかりませんでした。テレビの電源が入っているか、iPhone の「設定」→「プライバシーとセキュリティ」→「ローカルネットワーク」でこのアプリが許可されているか確認してください。"
-        }
-    }
-
-    /// 未登録なら、選んだテレビにそのまま PIN を表示させる。
-    /// 登録済みなら IP アドレスだけ変える (DHCP でアドレスが変わった場合など)
-    private func select(_ device: RegzaDevice) async {
-        draft.host = device.host
-        if device.supportsPIN, !isRegistered { await startPairing() }
-    }
-
-    private var isRegistered: Bool {
-        !pairingUserID.isEmpty && draft.user == pairingUserID && !draft.password.isEmpty
-    }
-
-    private func startPairing() async {
-        isPairing = true
-        defer { isPairing = false }
-        pairingMessage = nil
-        // 登録し直すときはアプリの ID を使い回し、テレビの登録機器が増えないようにする
-        let session = RegzaPairing(host: draft.host, user: pairingUserID)
-        do {
-            try await session.start()
-            pairing = session
-            pin = ""
-            isPINFocused = true
-        } catch RegzaError.unsupported, RegzaError.httpStatus(404) {
-            pairingMessage = "この機種は PIN 登録に対応していません。下の「ユーザー名とパスワードを入力」から設定してください。"
-            isShowingManualEntry = true
-        } catch {
-            pairingMessage = error.localizedDescription
-        }
-    }
-
-    private func confirmPairing() async {
-        guard let pairing else { return }
-        isPairing = true
-        defer { isPairing = false }
-        do {
-            draft = try await pairing.confirm(pin: pin)
-            self.pairing = nil
-            await model.save(draft)
-            dismiss()
-        } catch {
-            // PIN の打ち間違いはそのまま入力し直せるようにする
-            pairingMessage = error.localizedDescription
-        }
-    }
-
-    private func cancelPairing() async {
-        await pairing?.cancel()
-        pairing = nil
-        pin = ""
-        pairingMessage = nil
-    }
-
-    private func test() async {
-        isTesting = true
-        defer { isTesting = false }
-        switch await model.testConnection(draft) {
-        case .success(let nowPlaying):
-            let detail = nowPlaying.title.isEmpty ? nowPlaying.channelName : nowPlaying.title
-            testResult = detail.isEmpty ? "接続できました" : "接続できました: \(detail)"
-        case .failure(let error):
-            testResult = error.localizedDescription
-        }
-    }
-}
-/// 録画サーバーのアドレス。保存するときは `192.168.0.2` か `192.168.0.2:40780` の 1 つの文字列にする
-struct ServerAddress: Equatable {
-    var address: String
-    /// 空なら標準のポート
-    var port: String
-
-    init(address: String, port: String) {
-        self.address = address
-        self.port = port
-    }
-
-    /// `host` か `host:port` を分ける
-    init(_ text: String) {
-        let text = text.trimmingCharacters(in: .whitespaces)
-        if let colon = text.lastIndex(of: ":"), text[text.index(after: colon)...].allSatisfy(\.isNumber) {
-            address = String(text[..<colon])
-            port = String(text[text.index(after: colon)...])
-        } else {
-            address = text
-            port = ""
-        }
-    }
-
-    var combined: String {
-        let address = address.trimmingCharacters(in: .whitespaces)
-        let port = port.trimmingCharacters(in: .whitespaces)
-        // アドレスより先にポートを入れても消えないよう、アドレスが空でもポートは残す
-        return port.isEmpty ? address : "\(address):\(port)"
-    }
-
-    /// 保存する値。アドレスが空なら連携しない (ポートだけ入っていても空にする)
-    var saved: String {
-        address.trimmingCharacters(in: .whitespaces).isEmpty ? "" : combined
-    }
-
-    /// ポートが空か 1〜65535 の数字
-    var isValid: Bool {
-        let port = port.trimmingCharacters(in: .whitespaces)
-        guard !port.isEmpty else { return true }
-        return Int(port).map { (1...65535).contains($0) } ?? false
     }
 }
 

@@ -353,6 +353,74 @@ import Testing
     }
 }
 
+/// 設定の ViewModel
+@MainActor
+@Suite struct SetupViewModelTests {
+    let screens = ScreenViewModelTests()
+
+    @Test func serverAddressSplitsPort() {
+        #expect(ServerAddress(" 192.0.2.2:40772 ") == ServerAddress(address: "192.0.2.2", port: "40772"))
+        #expect(ServerAddress("192.0.2.2").saved == "192.0.2.2")
+        // アドレスが空ならポートだけ入っていても連携しない
+        #expect(ServerAddress(address: "", port: "8888").saved == "")
+        #expect(ServerAddress(address: "", port: "8888").combined == ":8888")
+        #expect(!ServerAddress("192.0.2.2:70000").isValid)
+        #expect(ServerAddress("192.0.2.2:").isValid)
+    }
+
+    @Test func tvStatusAsksForPIN() {
+        let (remote, _, _, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        let tv = TVSetupViewModel(remote: remote)
+        // 保存済みの接続から始める
+        #expect(tv.draft == remote.connection)
+        #expect(tv.status.text == "192.0.2.10")
+        #expect(!tv.status.needsAttention)
+        // このアプリの ID で登録していないので、登録済みではない
+        #expect(!tv.isRegistered)
+
+        tv.draft.password = ""
+        #expect(tv.status == ("PIN の登録が必要", true))
+        tv.draft.host = " "
+        #expect(tv.status == ("未設定", true))
+        #expect(!tv.canSave)
+    }
+
+    @Test func unlinkingGuideAlsoUnlinksStream() async {
+        let (remote, _, _, stream) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        remote.store.guideHost = "192.0.2.2"
+        stream.saveStreamHost("192.0.2.2:8888")
+        // 番組表の ViewModel は、作ったときに保存済みのアドレスを読む
+        let servers = ServerSetupViewModel(guide: GuideViewModel(remote: remote), stream: stream)
+        #expect(servers.status(of: .guide) == "192.0.2.2")
+        #expect(servers.isLinked(.stream))
+
+        await servers.unlink(.guide)
+
+        // EPGStation は Mirakurun から放送を受け取るので、一緒に外す
+        #expect(servers.status(of: .guide) == "未設定")
+        #expect(servers.status(of: .stream) == "未設定")
+        #expect(remote.store.guideHost == "")
+        #expect(remote.store.streamHost == "")
+    }
+
+    @Test func suggestsEPGStationOnMirakurunServer() async {
+        let (remote, guide, _, stream) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        let servers = ServerSetupViewModel(guide: guide, stream: stream)
+        servers.guideHost = "192.0.2.2:40772"
+        let transport = FakeTransport { request in
+            request.url.path == "/api/version" ? ScreenViewModelTests.status(200, #"{"version":"2.0.0"}"#) : ScreenViewModelTests.status(404)
+        }
+
+        await servers.suggestStreamHost(transport: transport)
+
+        #expect(servers.streamHost == "192.0.2.2")
+        #expect(servers.streamHosts == ["192.0.2.2"])
+        #expect(servers.streamMessage != nil)
+        // 保存するまでは入れない
+        #expect(remote.store.streamHost == "")
+    }
+}
+
 /// 決めた返事を返し、届いた問い合わせを覚えておく
 final class FakeTransport: HTTPTransport, @unchecked Sendable {
     private let respond: @Sendable (HTTPRequest) -> HTTPResponse

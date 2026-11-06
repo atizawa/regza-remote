@@ -82,7 +82,10 @@ public struct RemoteView: View {
             }
         }
         .sheet(isPresented: $isShowingSettings) {
-            SettingsView()
+            SettingsView(
+                tv: TVSetupViewModel(remote: model),
+                servers: ServerSetupViewModel(guide: guide, stream: stream)
+            )
         }
         #if DEBUG
         // 開発用: 起動引数 -LiveHost <EPGStation> -LiveChannel <チャンネルの ID> で、すぐ再生画面を開く
