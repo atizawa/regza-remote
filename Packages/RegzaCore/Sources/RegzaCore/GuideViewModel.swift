@@ -110,7 +110,7 @@ public final class GuideViewModel {
 
     /// いま映っている番組を最初から再生する (リモコンの「始めにジャンプ」)
     public func startOver() {
-        remote.send(.jumpToStart)
+        remote.send(.press(.jumpToStart))
     }
 
     /// チャンネルを切り替えてから、その番組を最初から再生する
@@ -118,6 +118,6 @@ public final class GuideViewModel {
         try await remote.tune(to: channel)
         // 選局が落ち着くのを待ってから送る
         try? await Task.sleep(for: .seconds(3))
-        remote.send(.jumpToStart)
+        remote.send(.press(.jumpToStart))
     }
 }

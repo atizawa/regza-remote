@@ -28,7 +28,7 @@ struct NowPlayingAccessory: View {
             Spacer(minLength: 0)
             if let key = trailingKey {
                 Button {
-                    model.send(key)
+                    model.send(.press(key))
                 } label: {
                     Image(systemName: key.systemImage ?? "circle")
                         .font(.body.weight(.semibold))
@@ -53,7 +53,7 @@ struct NowPlayingAccessory: View {
 
     // MARK: - 表示する内容
 
-    private var nowPlaying: RegzaNowPlaying? { model.nowPlaying }
+    private var nowPlaying: RegzaNowPlaying? { model.state.nowPlaying }
 
     private var icon: String {
         switch nowPlaying?.kind {
@@ -66,25 +66,25 @@ struct NowPlayingAccessory: View {
 
     /// 上の小さな行: チャンネル名や「録画」 (文言は Android と同じ RegzaNowPlaying.captionText)
     private var caption: String? {
-        if model.isSearchingTV || model.lastError != nil { return nil }
+        if model.state.isSearchingTV || model.state.lastError != nil { return nil }
         return nowPlaying?.captionText
     }
 
     /// 下の大きな行: 番組名や状態 (文言は Android と同じ RegzaNowPlaying.headlineText)
     private var headline: String {
-        if model.isSearchingTV { return "テレビを探しています…" }
-        if model.lastError != nil { return "テレビに接続できません" }
+        if model.state.isSearchingTV { return "テレビを探しています…" }
+        if model.state.lastError != nil { return "テレビに接続できません" }
         return nowPlaying?.headlineText ?? "接続中…"
     }
 
     private var progress: Double? {
-        guard let nowPlaying, nowPlaying.hasTimeline, model.lastError == nil else { return nil }
+        guard let nowPlaying, nowPlaying.hasTimeline, model.state.lastError == nil else { return nil }
         return nowPlaying.progress
     }
 
     /// 右端のボタン: 録画は再生/一時停止、放送は消音、待機中は電源
     private var trailingKey: RegzaKey? {
-        guard let nowPlaying, model.lastError == nil else { return nil }
+        guard let nowPlaying, model.state.lastError == nil else { return nil }
         switch nowPlaying.kind {
         case .recorded: return nowPlaying.isAdvancing ? .pause : .play
         case .broadcast: return .mute
@@ -130,16 +130,16 @@ private struct NowPlayingDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Design.group) {
                     NowPlayingCard()
-                    if let description = model.nowPlaying?.description, !description.isEmpty {
+                    if let description = model.state.nowPlaying?.description, !description.isEmpty {
                         Text(description)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 4)
                     }
                     // 開いている間はミニプレーヤーの電源ボタンが隠れるので、ここでも入れられるようにする
-                    if model.nowPlaying?.kind == .standby, model.lastError == nil {
+                    if model.state.nowPlaying?.kind == .standby, model.state.lastError == nil {
                         Button {
-                            model.send(.power)
+                            model.send(.press(.power))
                         } label: {
                             Label("電源を入れる", systemImage: "power")
                                 .font(.body.weight(.semibold))
@@ -147,9 +147,9 @@ private struct NowPlayingDetailView: View {
                         }
                         .buttonStyle(RemoteButtonStyle())
                     }
-                    if stream.canStream, model.nowPlaying?.kind == .broadcast, model.nowPlayingChannel != nil {
+                    if stream.canStream, model.state.nowPlaying?.kind == .broadcast, model.state.nowPlayingChannel != nil {
                         Button {
-                            if let channel = model.nowPlayingChannel { app.send(.play(channel)) }
+                            if let channel = model.state.nowPlayingChannel { app.send(.play(channel)) }
                         } label: {
                             Label("アプリで見る", systemImage: "play.tv")
                                 .font(.body.weight(.semibold))
@@ -185,7 +185,7 @@ private struct NowPlayingDetailView: View {
             .task {
                 await guide.loadTimeshiftSettings()
                 // いま映っているチャンネルを知るため
-                try? await model.loadChannels()
+                model.send(.loadChannels(force: false))
             }
             // このシートを開いている間は、アプリで見る画面をシートの上から出す
             .fullScreenCover(isPresented: Binding(
@@ -201,8 +201,8 @@ private struct NowPlayingDetailView: View {
 
     /// 番組を映しているときだけ「視聴中」にする。待機中などはカードに状態が出るので、見出しはテレビとだけ書く
     private var title: String {
-        guard !model.isSearchingTV, model.lastError == nil else { return "テレビ" }
-        switch model.nowPlaying?.kind {
+        guard !model.state.isSearchingTV, model.state.lastError == nil else { return "テレビ" }
+        switch model.state.nowPlaying?.kind {
         case .broadcast, .recorded: return "視聴中"
         default: return "テレビ"
         }

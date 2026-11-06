@@ -31,7 +31,7 @@ public struct RemoteView: View {
 
     public var body: some View {
         Group {
-            if model.connection.isConfigured {
+            if model.state.connection.isConfigured {
                 TabView(selection: Binding(get: { app.state.tab }, set: { app.send(.selectTab($0)) })) {
                     NavigationStack {
                         RemotePanel()
@@ -111,7 +111,7 @@ public struct RemoteView: View {
         .environment(liveActivity)
         .environment(\.showSettings, ShowSettingsAction { app.send(.showSettings) })
         .tint(AppTheme.accent)
-        .sensoryFeedback(.impact(weight: .light), trigger: model.tapCount)
+        .sensoryFeedback(.impact(weight: .light), trigger: model.state.tapCount)
         .task {
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
             await stream.cleanUp()
@@ -130,9 +130,9 @@ public struct RemoteView: View {
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active {
-                model.startPolling()
+                model.send(.startPolling)
             } else {
-                model.stopPolling()
+                model.send(.stopPolling)
                 // 閉じている間も Live Activity を更新できるよう、iOS に起こしてもらう時刻を予約する
                 if phase == .background { liveActivity.scheduleBackgroundRefresh() }
             }
@@ -262,7 +262,7 @@ private struct RemotePanel: View {
             HStack(spacing: Design.item) {
                 KeyButton(key: .previousChapter, size: .primary)
                 KeyButton(key: .skipBackward, size: .primary)
-                KeyButton(key: model.nowPlaying?.isAdvancing == true ? .pause : .play, size: .primary)
+                KeyButton(key: model.state.nowPlaying?.isAdvancing == true ? .pause : .play, size: .primary)
                 KeyButton(key: .skipForward, size: .primary)
                 KeyButton(key: .nextChapter, size: .primary)
             }
@@ -311,8 +311,8 @@ private struct RemotePanel: View {
 
     /// いま見ている放送の種類 (チャンネル一覧から分かるときだけ)
     private var currentBand: RegzaChannel.Band? {
-        guard let code = model.nowPlaying?.channelCode, !code.isEmpty else { return nil }
-        return model.channels.first { $0.code == code }?.band
+        guard let code = model.state.nowPlaying?.channelCode, !code.isEmpty else { return nil }
+        return model.state.channels.first { $0.code == code }?.band
     }
 
     private func band(for key: RegzaKey) -> RegzaChannel.Band? {

@@ -10,11 +10,11 @@ struct NowPlayingCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if model.isSearchingTV {
+            if model.state.isSearchingTV {
                 status("テレビが見つからないため、探しています…", systemImage: "magnifyingglass")
-            } else if let error = model.lastError {
+            } else if let error = model.state.lastError {
                 status(error.localizedDescription, systemImage: "exclamationmark.triangle.fill", isWarning: true)
-            } else if let nowPlaying = model.nowPlaying {
+            } else if let nowPlaying = model.state.nowPlaying {
                 switch nowPlaying.kind {
                 case .recorded: playback(nowPlaying)
                 case .broadcast: broadcast(nowPlaying)
@@ -110,7 +110,7 @@ struct NowPlayingCard: View {
                 in: 0...Double(nowPlaying.duration)
             ) { editing in
                 if !editing, let seekPosition {
-                    model.seek(to: Int(seekPosition))
+                    model.send(.seek(Int(seekPosition)))
                     self.seekPosition = nil
                 }
             }

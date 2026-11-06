@@ -44,7 +44,7 @@ struct ChannelListView: View {
             } actions: {
                 Button("もう一度試す") { Task { await viewModel.load(force: true) } }
             }
-        } else if viewModel.remote.channels.isEmpty {
+        } else if viewModel.remote.state.channels.isEmpty {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {

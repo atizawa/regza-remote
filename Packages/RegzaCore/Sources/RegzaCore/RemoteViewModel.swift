@@ -13,7 +13,7 @@ public protocol RemoteViewModelObserver: AnyObject {
 
 /// アプリ全体で 1 つの ViewModel (iOS と Android で共有)。
 /// テレビへの接続・いま映っているもの・リモコンの操作・チャンネルと選局を受け持つ。
-/// 番組表 (GuideViewModel)・録画 (ReservationsViewModel)・配信 (StreamViewModel) はこれを参照する
+/// 画面は `state` を読み、`send` で操作する。番組表や録画などのほかの ViewModel は、結果を待てる関数 (internal) も使う
 @MainActor
 @Observable
 public final class RemoteViewModel {
@@ -22,36 +22,73 @@ public final class RemoteViewModel {
     public let remote: RegzaRemote
     @ObservationIgnored public weak var observer: (any RemoteViewModelObserver)?
 
-    public private(set) var connection: RegzaConnection
-    public private(set) var nowPlaying: RegzaNowPlaying?
-    public private(set) var lastError: RegzaError?
-    /// ボタンを押したときの触覚フィードバック用
-    public private(set) var tapCount = 0
-    /// つながらないので、IP アドレスが変わっていないかテレビを探している
-    public private(set) var isSearchingTV = false
+    public struct State: Equatable, Sendable {
+        public var connection: RegzaConnection
+        public var nowPlaying: RegzaNowPlaying?
+        public var lastError: RegzaError?
+        /// ボタンを押した回数 (触覚フィードバックの合図)
+        public var tapCount = 0
+        /// つながらないので、IP アドレスが変わっていないかテレビを探している
+        public var isSearchingTV = false
+        /// 開発用の見本データを表示している (テレビにはつながない)
+        public var isSampleMode = false
+        /// 番組表とチャンネル一覧で選んでいる放送の種類 (地デジ・BS・CS)。タブを行き来しても同じものを出す。未選択なら nil
+        public var selectedBand: RegzaChannel.Band?
+        /// テレビに登録されているチャンネル。取得前は空
+        public var channels: [RegzaChannel] = []
+
+        /// いま映っている放送のチャンネル
+        public var nowPlayingChannel: RegzaChannel? {
+            guard let code = nowPlaying?.channelCode, !code.isEmpty else { return nil }
+            return channels.first { $0.code == code }
+        }
+
+        /// 放送の種類を選んでいなければ、いま見ている放送の種類、それもなければ一覧の最初のものにする
+        public func band(among bands: [RegzaChannel.Band]) -> RegzaChannel.Band? {
+            .preferred(among: bands, selected: selectedBand, nowPlaying: nowPlayingChannel?.band)
+        }
+    }
+
+    public enum Action: Sendable {
+        /// リモコンのボタンを押す
+        case press(RegzaKey)
+        /// 録画の再生位置を移す (秒)
+        case seek(Int)
+        case selectBand(RegzaChannel.Band?)
+        case loadChannels(force: Bool)
+        case tune(RegzaChannel)
+        /// いま映っているものを取り直す
+        case refresh
+        /// 画面が見えている間、2 秒ごとに取り直す
+        case startPolling
+        case stopPolling
+        /// テレビとのやり取りの外で起きたエラーを出す (iOS の Live Activity を始められなかったときなど)
+        case report(RegzaError)
+    }
+
+    public private(set) var state: State
 
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
     @ObservationIgnored private var lastSearch: Date?
+    /// 操作から始めて、まだ終わっていない処理の数 (Introspection の isBusy)
+    @ObservationIgnored private var running = 0
     /// テレビの電源が切れているだけのこともあるので、探し直す間隔を空ける
     private static let searchInterval: TimeInterval = 180
-
-    /// 開発用の見本データを表示している (テレビにはつながない)
-    public private(set) var isSampleMode = false
 
     /// - Parameter remote: 渡さなければ、保存されている接続と番組表のアドレスで作る
     public init(store: any RegzaConnectionStore, remote: RegzaRemote? = nil) {
         self.store = store
         let connection = store.load()
-        self.connection = connection
+        state = State(connection: connection)
         self.remote = remote ?? RegzaRemote(connection: connection, guide: Self.makeGuide(host: store.guideHost))
     }
 
     /// 開発用の見本データを出す (テレビにはつながない)
     public func showSample(connection: RegzaConnection, nowPlaying: RegzaNowPlaying?, channels: [RegzaChannel]) {
-        isSampleMode = true
-        self.connection = connection
-        self.nowPlaying = nowPlaying
-        self.channels = channels
+        state.isSampleMode = true
+        state.connection = connection
+        state.nowPlaying = nowPlaying
+        state.channels = channels
     }
 
     /// 番組名を補う番組表 (Mirakurun)。視聴状況を 2 秒ごとに取るので、応答しないときに待たされないよう短めにする
@@ -59,68 +96,72 @@ public final class RemoteViewModel {
         host.isEmpty ? nil : Mirakurun(host: host, timeout: 3)
     }
 
+    public func send(_ action: Action) {
+        switch action {
+        case .press(let key): press(key)
+        case .seek(let seconds): run { await self.seek(to: seconds) }
+        case .selectBand(let band): state.selectedBand = band
+        case .loadChannels(let force): run { try? await self.loadChannels(force: force) }
+        case .tune(let channel): run { try? await self.tune(to: channel) }
+        case .refresh: run { await self.refresh() }
+        case .startPolling: startPolling()
+        case .stopPolling: stopPolling()
+        case .report(let error): state.lastError = error
+        }
+    }
+
+    /// 操作から始める処理。終わるまで isBusy にする
+    private func run(_ operation: @escaping @MainActor () async -> Void) {
+        running += 1
+        Task {
+            await operation()
+            running -= 1
+        }
+    }
+
     // MARK: - リモコン
 
-    public func send(_ key: RegzaKey) {
-        tapCount += 1
-        guard !isSampleMode else { return }
-        Task {
+    private func press(_ key: RegzaKey) {
+        state.tapCount += 1
+        guard !state.isSampleMode else { return }
+        run {
             do {
-                try await remote.send(key)
+                try await self.remote.send(key)
                 // テレビ側の状態が変わるのを少し待ってから反映する
                 try? await Task.sleep(for: .milliseconds(400))
-                _ = await fetch()
-                lastError = nil
-                nowPlaying = await remote.nowPlaying
+                _ = await self.fetch()
+                self.state.lastError = nil
+                self.state.nowPlaying = await self.remote.nowPlaying
             } catch {
-                lastError = RegzaError(error)
+                self.state.lastError = RegzaError(error)
             }
         }
     }
 
-    public func seek(to seconds: Int) {
-        Task {
-            do {
-                try await remote.seek(to: seconds)
-                _ = await fetch()
-                nowPlaying = await remote.nowPlaying
-            } catch {
-                lastError = RegzaError(error)
-            }
+    private func seek(to seconds: Int) async {
+        do {
+            try await remote.seek(to: seconds)
+            _ = await fetch()
+            state.nowPlaying = await remote.nowPlaying
+        } catch {
+            state.lastError = RegzaError(error)
         }
     }
 
-    // MARK: - チャンネル
-
-    /// 番組表とチャンネル一覧で選んでいる放送の種類 (地デジ・BS・CS)。タブを行き来しても同じものを出す。未選択なら nil
-    public var selectedBand: RegzaChannel.Band?
-
-    /// 放送の種類を選んでいなければ、いま見ている放送の種類、それもなければ一覧の最初のものにする
-    public func band(among bands: [RegzaChannel.Band]) -> RegzaChannel.Band? {
-        .preferred(among: bands, selected: selectedBand, nowPlaying: nowPlayingChannel?.band)
-    }
-
-    /// テレビに登録されているチャンネル。取得前は空
-    public private(set) var channels: [RegzaChannel] = []
-
-    /// いま映っている放送のチャンネル
-    public var nowPlayingChannel: RegzaChannel? {
-        guard let code = nowPlaying?.channelCode, !code.isEmpty else { return nil }
-        return channels.first { $0.code == code }
-    }
+    // MARK: - チャンネル (ほかの ViewModel も結果を待って使う)
 
     /// チャンネル一覧を取得する。チャンネルの登録はあまり変わらないので、取得済みなら使い回す
-    public func loadChannels(force: Bool = false) async throws(RegzaError) {
-        guard !isSampleMode, force || channels.isEmpty else { return }
+    func loadChannels(force: Bool = false) async throws(RegzaError) {
+        guard !state.isSampleMode, force || state.channels.isEmpty else { return }
         do {
-            channels = try await remote.client.channels()
+            state.channels = try await remote.client.channels()
         } catch {
             throw RegzaError(error)
         }
     }
 
-    public func tune(to channel: RegzaChannel) async throws(RegzaError) {
-        tapCount += 1
+    func tune(to channel: RegzaChannel) async throws(RegzaError) {
+        state.tapCount += 1
         do {
             try await remote.tune(to: channel)
         } catch {
@@ -128,16 +169,16 @@ public final class RemoteViewModel {
         }
         // 切り替えの最中は play/status を問い合わせない (RegzaRemote) ので、取り直さずに、
         // 選んだチャンネルに切り替わったものとして出す。番組名などは定期の取得で落ち着いてから反映する
-        lastError = nil
-        nowPlaying = await remote.nowPlaying
-        await observer?.remoteViewModel(self, didUpdate: nowPlaying, isConnected: true)
+        state.lastError = nil
+        state.nowPlaying = await remote.nowPlaying
+        await observer?.remoteViewModel(self, didUpdate: state.nowPlaying, isConnected: true)
         await observer?.remoteViewModelDidTune(self)
     }
 
     // MARK: - 状態の定期取得
 
-    public func startPolling(interval: Duration = .seconds(2)) {
-        guard pollingTask == nil, connection.isConfigured, !isSampleMode else { return }
+    private func startPolling(interval: Duration = .seconds(2)) {
+        guard pollingTask == nil, state.connection.isConfigured, !state.isSampleMode else { return }
         pollingTask = Task {
             while !Task.isCancelled {
                 await refresh()
@@ -146,19 +187,19 @@ public final class RemoteViewModel {
         }
     }
 
-    public func stopPolling() {
+    private func stopPolling() {
         pollingTask?.cancel()
         pollingTask = nil
     }
 
-    public func refresh() async {
+    func refresh() async {
         switch await fetch() {
         case .success(let value):
-            nowPlaying = value
-            lastError = nil
+            state.nowPlaying = value
+            state.lastError = nil
             lastSearch = nil
         case .failure(let error):
-            lastError = error
+            state.lastError = error
             if case .network = error { await searchForMovedTV() }
         }
     }
@@ -181,28 +222,28 @@ public final class RemoteViewModel {
     private func searchForMovedTV() async {
         if let lastSearch, Date().timeIntervalSince(lastSearch) < Self.searchInterval { return }
         lastSearch = Date()
-        isSearchingTV = true
-        defer { isSearchingTV = false }
-        let original = connection
+        state.isSearchingTV = true
+        defer { state.isSearchingTV = false }
+        let original = state.connection
         guard let host = await RegzaDiscovery.locate(original),
               // 探している間に設定画面で接続先が変えられていたら、そちらを優先する
-              !Task.isCancelled, connection == original
+              !Task.isCancelled, state.connection == original
         else { return }
         var moved = original
         moved.host = host
         store.save(moved)
-        connection = moved
+        state.connection = moved
         await remote.update(connection: store.load())
         await refresh()
     }
 
-    // MARK: - 設定
+    // MARK: - 設定 (設定の ViewModel から使う)
 
-    public func save(_ connection: RegzaConnection) async {
+    func save(_ connection: RegzaConnection) async {
         store.save(connection)
-        self.connection = connection
-        nowPlaying = nil
-        channels = []
+        state.connection = connection
+        state.nowPlaying = nil
+        state.channels = []
         lastSearch = nil
         await remote.update(connection: store.load())
         stopPolling()
@@ -216,29 +257,79 @@ public final class RemoteViewModel {
         await refresh()
     }
 
-    /// テレビとのやり取りの外で起きたエラーを出す (iOS の Live Activity を始められなかったときなど)
-    public func report(_ error: RegzaError) {
-        lastError = error
-    }
-
     /// PIN 登録に使うこのアプリ用のユーザー ID
-    public func pairingUserID() -> String {
+    func pairingUserID() -> String {
         store.pairingUserID()
     }
 
     /// 保存前の接続情報で視聴状況を取得してみる (普段と同じく v2 API を優先し、無ければ旧 API)
-    public func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError> {
+    func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError> {
         do {
             return .success(try await RegzaRemote(connection: connection).refresh())
         } catch {
             return .failure(RegzaError(error))
         }
     }
+
+    // MARK: - ほかの ViewModel が読むもの (画面は state を読む)
+
+    var connection: RegzaConnection { state.connection }
+    var nowPlaying: RegzaNowPlaying? { state.nowPlaying }
+    var channels: [RegzaChannel] { state.channels }
+    var isSampleMode: Bool { state.isSampleMode }
+    var nowPlayingChannel: RegzaChannel? { state.nowPlayingChannel }
+    func band(among bands: [RegzaChannel.Band]) -> RegzaChannel.Band? { state.band(among: bands) }
 }
 
 extension RegzaError {
     /// RegzaError 以外のエラーは通信のエラーとして扱う
     init(_ error: any Error) {
         self = error as? RegzaError ?? .network(error.localizedDescription)
+    }
+}
+
+// MARK: - Introspection
+
+extension RemoteViewModel: Introspectable {
+    public var introspectionName: String { "remote" }
+    public var introspectionValue: Any { state }
+    public var isBusy: Bool { running > 0 }
+
+    public var introspectionActions: [ActionDescription] {
+        [
+            ActionDescription("press", "リモコンのボタンを押す", parameters: ["key": RegzaKey.allCases.map { "\($0)" }.joined(separator: " | ")]),
+            ActionDescription("seek", "録画の再生位置を移す", parameters: ["seconds": "秒"]),
+            ActionDescription("selectBand", "放送の種類を選ぶ (省くと選ばない)", parameters: ["band": RegzaChannel.Band.allCases.map(\.rawValue).joined(separator: " | ")]),
+            ActionDescription("loadChannels", "チャンネル一覧を読む", parameters: ["force": "true なら読み直す"]),
+            ActionDescription("tune", "選局する", parameters: ["channel": "チャンネルの code"]),
+            ActionDescription("refresh", "いま映っているものを取り直す"),
+            ActionDescription("startPolling", "2 秒ごとに取り直す"),
+            ActionDescription("stopPolling", "取り直しをやめる"),
+        ]
+    }
+
+    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+        switch action {
+        case "press":
+            let name = try arguments.string("key")
+            guard let key = RegzaKey.allCases.first(where: { "\($0)" == name }) else { throw IntrospectionError.invalidArgument("key") }
+            send(.press(key))
+        case "seek": send(.seek(try arguments.int("seconds")))
+        case "selectBand":
+            guard arguments["band"] != nil else { return send(.selectBand(nil)) }
+            guard let band = RegzaChannel.Band(rawValue: try arguments.string("band")) else { throw IntrospectionError.invalidArgument("band") }
+            send(.selectBand(band))
+        case "loadChannels": send(.loadChannels(force: try arguments.bool("force")))
+        case "tune":
+            let code = try arguments.string("channel")
+            guard let channel = state.channels.first(where: { $0.code == code }) else {
+                throw IntrospectionError.unavailable("チャンネル \(code) はテレビに登録されていません")
+            }
+            send(.tune(channel))
+        case "refresh": send(.refresh)
+        case "startPolling": send(.startPolling)
+        case "stopPolling": send(.stopPolling)
+        default: throw IntrospectionError.unknownAction(action)
+        }
     }
 }

@@ -21,12 +21,12 @@ final class LiveActivityModel: RemoteViewModelObserver {
         do {
             if enabled {
                 try await LiveActivityController.start()
-                await remote.refresh()
+                remote.send(.refresh)
             } else {
                 await LiveActivityController.end()
             }
         } catch {
-            remote.report(.network("Live Activity を開始できませんでした: \(error.localizedDescription)"))
+            remote.send(.report(.network("Live Activity を開始できませんでした: \(error.localizedDescription)")))
         }
         isOn = LiveActivityController.isActive
         await BackgroundRefresh.schedule()

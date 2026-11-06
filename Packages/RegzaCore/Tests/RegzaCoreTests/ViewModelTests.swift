@@ -40,8 +40,8 @@ import Testing
         // テレビに問い合わせ直さずに、選んだチャンネルに切り替わったものとして出す
         #expect(model.nowPlaying?.channelCode == channel.code)
         #expect(model.nowPlayingChannel == channel)
-        #expect(model.lastError == nil)
-        #expect(model.tapCount == 1)
+        #expect(model.state.lastError == nil)
+        #expect(model.state.tapCount == 1)
         #expect(transport.paths.last == "/v2/remote/status/channel")
         #expect(observer.events == ["update \(channel.code) connected", "tune"])
     }
@@ -53,7 +53,7 @@ import Testing
 
         await model.refresh()
 
-        #expect(model.lastError == .httpStatus(500))
+        #expect(model.state.lastError == .httpStatus(500))
         #expect(model.nowPlaying == nil)
         #expect(observer.events == ["update - disconnected"])
     }
@@ -74,7 +74,7 @@ import Testing
 
         let other = RegzaConnection(host: "192.0.2.20", user: "user", password: "password")
         await model.save(other)
-        model.stopPolling()
+        model.send(.stopPolling)
 
         #expect(store.load() == other)
         #expect(model.connection == other)
@@ -102,10 +102,25 @@ import Testing
     @Test func sampleModeDoesNotTalkToTV() async {
         let (model, transport, _) = makeModel { _ in Self.ok("") }
         model.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: [])
-        model.send(.power)
+        model.send(.press(.power))
         try? await model.loadChannels(force: true)
-        #expect(model.tapCount == 1)
+        #expect(model.state.tapCount == 1)
         #expect(transport.paths.isEmpty)
+    }
+
+    @Test func introspectionPressesKeys() async throws {
+        let (model, transport, _) = makeModel { request in
+            request.url.path == "/remote/remote.htm" ? Self.ok("0") : HTTPResponse(statusCode: 500, headers: [:], body: Data())
+        }
+        let introspector = Introspector(root: model)
+        try introspector.perform("remote", "press", ["key": .string("power")])
+        #expect(model.isBusy)
+        #expect(await introspector.waitUntilIdle())
+        #expect(transport.paths.first == "/remote/remote.htm")
+        #expect(model.state.tapCount == 1)
+        #expect(throws: IntrospectionError.invalidArgument("key")) {
+            try introspector.perform("remote", "press", ["key": .string("nothing")])
+        }
     }
 }
 

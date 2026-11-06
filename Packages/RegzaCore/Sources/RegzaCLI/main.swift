@@ -22,7 +22,8 @@ func main() async {
     let introspector = Introspector(root: app)
     if !options.host.isEmpty {
         // チャンネル一覧などを使う操作のため、先に読んでおく
-        try? await app.remote.loadChannels()
+        app.remote.send(.loadChannels(force: false))
+        _ = await introspector.waitUntilIdle()
     }
 
     print(#"{"ready":true}"#)

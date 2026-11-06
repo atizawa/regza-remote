@@ -50,7 +50,7 @@ struct KeyButton: View {
 
     var body: some View {
         Button {
-            model.send(key)
+            model.send(.press(key))
         } label: {
             VStack(spacing: 2) {
                 if showsIcon, let image = key.systemImage {
@@ -184,7 +184,7 @@ struct ColorKeyButton: View {
 
     var body: some View {
         Button {
-            model.send(key)
+            model.send(.press(key))
         } label: {
             Capsule()
                 .fill(color)
@@ -225,7 +225,7 @@ struct RockerControl: View {
 
     private func rockerButton(_ key: RegzaKey, image: String) -> some View {
         Button {
-            model.send(key)
+            model.send(.press(key))
         } label: {
             Image(systemName: image)
                 .font(.title2.weight(.semibold))
@@ -258,7 +258,7 @@ struct DirectionPad: View {
             }
             // 実物のリモコンと同じく、真ん中だけ銀色の一段浮いたボタンにする
             Button {
-                model.send(.enter)
+                model.send(.press(.enter))
             } label: {
                 Text("決定")
                     .font(.headline)
@@ -280,7 +280,7 @@ struct DirectionPad: View {
 
     private func arrow(_ key: RegzaKey) -> some View {
         Button {
-            model.send(key)
+            model.send(.press(key))
         } label: {
             Image(systemName: key.systemImage ?? "circle")
                 .font(.title2.weight(.semibold))
@@ -300,8 +300,8 @@ struct BandPicker: View {
 
     var body: some View {
         Picker("放送", selection: Binding(
-            get: { model.band(among: bands) ?? .terrestrial },
-            set: { model.selectedBand = $0 }
+            get: { model.state.band(among: bands) ?? .terrestrial },
+            set: { model.send(.selectBand($0)) }
         )) {
             ForEach(bands, id: \.self) { Text($0.label).tag($0) }
         }

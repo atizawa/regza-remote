@@ -166,6 +166,7 @@ public final class AppViewModel {
 extension AppViewModel: Introspectable {
     public var introspectionName: String { "app" }
     public var introspectionValue: Any { state }
+    public var introspectionChildren: [any Introspectable] { [remote] }
 
     public var introspectionActions: [ActionDescription] {
         [
