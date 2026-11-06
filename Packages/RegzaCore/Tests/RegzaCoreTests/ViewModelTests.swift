@@ -283,6 +283,76 @@ import Testing
     }
 }
 
+/// ライブ視聴の ViewModel
+@MainActor
+@Suite struct LivePlayerViewModelTests {
+    let screens = ScreenViewModelTests()
+
+    func makePlayer(channelCode: String, _ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
+        throws -> (LivePlayerViewModel, FakeTransport, RemoteViewModel) {
+        let (remote, guide, _, stream) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        let transport = FakeTransport(respond)
+        let server = EPGStation(host: "192.0.2.30", transport: transport)
+        let player = LivePlayerViewModel(
+            remote: remote, guide: guide, stream: stream, server: server, channel: try screens.channel(code: channelCode)
+        )
+        return (player, transport, remote)
+    }
+
+    /// 条件を満たすまで待つ (配信の準備は別の Task で進む)
+    func wait(_ condition: () -> Bool) async {
+        for _ in 0..<100 where !condition() {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    @Test func playsThenStopsTheStream() async throws {
+        let (player, transport, remote) = try makePlayer(channelCode: "JP-G00000001") { request in
+            switch (request.method, request.url.path) {
+            case ("GET", let path) where path.hasPrefix("/api/streams/live/"):
+                ScreenViewModelTests.status(200, #"{"streamId":5}"#)
+            case ("GET", "/streamfiles/stream5.m3u8"):
+                ScreenViewModelTests.status(200, "#EXTM3U\nsegment0.ts\n")
+            default:
+                ScreenViewModelTests.status(200, "{}")
+            }
+        }
+        player.start()
+        await wait { if case .ready = player.phase { true } else { false } }
+
+        #expect(player.phase == .ready(try #require(URL(string: "http://192.0.2.30:8888/streamfiles/stream5.m3u8"))))
+        // 止められずに残ったときに次に開いて止められるよう、頼んだ配信を覚えておく
+        #expect(remote.store.ownStreamIDs == [5])
+
+        player.end()
+        #expect(player.phase == .preparing)
+        await wait { remote.store.ownStreamIDs.isEmpty }
+        #expect(remote.store.ownStreamIDs.isEmpty)
+        #expect(transport.paths.contains("/api/streams/5"))
+    }
+
+    @Test func explainsWhenStreamDoesNotStart() async throws {
+        let (player, _, remote) = try makePlayer(channelCode: "JP-G00000001") { _ in ScreenViewModelTests.status(500) }
+        player.start()
+        await wait { if case .failed = player.phase { true } else { false } }
+        guard case .failed(let message, let canRetry) = player.phase else {
+            Issue.record("失敗にならなかった: \(player.phase)")
+            return
+        }
+        #expect(message.hasPrefix("再生できませんでした。"))
+        #expect(canRetry)
+        #expect(remote.store.ownStreamIDs.isEmpty)
+    }
+
+    @Test func refusesChannelThatEPGStationDoesNotKnow() async throws {
+        let (player, transport, _) = try makePlayer(channelCode: "unknown") { _ in ScreenViewModelTests.status(200, "{}") }
+        player.start()
+        await wait { player.phase != .preparing }
+        #expect(player.phase == .failed("このチャンネルは EPGStation で見られません。", canRetry: false))
+        #expect(transport.paths.isEmpty)
+    }
+}
+
 /// 決めた返事を返し、届いた問い合わせを覚えておく
 final class FakeTransport: HTTPTransport, @unchecked Sendable {
     private let respond: @Sendable (HTTPRequest) -> HTTPResponse

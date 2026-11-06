@@ -39,8 +39,8 @@ struct ChannelListView: View {
                     ))
                 }
                 .fullScreenCover(item: $playerChannel) { channel in
-                    if let server = viewModel.stream.streamServer() {
-                        LivePlayerView(server: server, channel: channel)
+                    if let player = viewModel.stream.livePlayer(for: channel) {
+                        LivePlayerView(viewModel: player)
                     }
                 }
                 .task { await viewModel.appear() }

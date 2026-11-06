@@ -13,10 +13,12 @@ public final class EPGStation: Sendable {
     /// `192.168.0.2` か `192.168.0.2:8888`
     public let host: String
     private let timeout: TimeInterval
+    private let transport: any HTTPTransport
 
-    public init(host: String, timeout: TimeInterval = 10) {
+    public init(host: String, timeout: TimeInterval = 10, transport: any HTTPTransport = RegzaHTTP.transport) {
         self.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         self.timeout = timeout
+        self.transport = transport
     }
 
     /// EPGStation のチャンネル ID (Mirakurun のサービス ID と同じ)。テレビのチャンネルの ID から求める
@@ -117,7 +119,7 @@ public final class EPGStation: Sendable {
     private func request(_ method: String, _ path: String, query: String? = nil) async throws -> Data {
         guard !host.isEmpty else { throw RegzaError.notConfigured }
         guard let url = url(path, query: query) else { throw RegzaError.invalidHost }
-        let response = try await RegzaHTTP.transport.send(HTTPRequest(method: method, url: url, timeout: timeout))
+        let response = try await transport.send(HTTPRequest(method: method, url: url, timeout: timeout))
         guard (200..<300).contains(response.statusCode) else { throw RegzaError.httpStatus(response.statusCode) }
         return response.body
     }

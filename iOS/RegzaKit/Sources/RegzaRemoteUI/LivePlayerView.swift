@@ -8,29 +8,14 @@ import SwiftUI
 /// 縦向きでは映像の下に今の番組の情報と局の一覧を出し、局を押すとその局の配信に切り替える。横向きでは映像だけを出す。
 /// 閉じたり局を切り替えたりしたら、前の配信を止めてチューナーを空ける
 struct LivePlayerView: View {
-    @Environment(RemoteViewModel.self) private var model
-    @Environment(GuideViewModel.self) private var guide
-    @Environment(StreamViewModel.self) private var stream
+    @State private var viewModel: LivePlayerViewModel
+    /// 再生しているもの (ViewModel が出した URL の配信)
+    @State private var player: AVPlayer?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.verticalSizeClass) private var verticalSizeClass
-    let server: EPGStation
 
-    /// いま見ている局
-    @State private var channel: RegzaChannel
-    @State private var phase = Phase.preparing
-    @State private var streamID: Int?
-    /// 配信を頼んでから見終わるまでの処理 (局を切り替えたら止めて頼み直す)
-    @State private var session: Task<Void, Never>?
-
-    private enum Phase {
-        case preparing
-        case playing(AVPlayer)
-        case failed(String, canRetry: Bool)
-    }
-
-    init(server: EPGStation, channel: RegzaChannel) {
-        self.server = server
-        _channel = State(initialValue: channel)
+    init(viewModel: LivePlayerViewModel) {
+        _viewModel = State(initialValue: viewModel)
     }
 
     /// 横向き (高さが狭い) なら映像だけにする
@@ -49,8 +34,8 @@ struct LivePlayerView: View {
                             .aspectRatio(16 / 9, contentMode: .fit)
                         ScrollView {
                             VStack(alignment: .leading, spacing: Design.group) {
-                                ProgramInfo(channel: channel)
-                                ChannelPicker(current: channel) { switchChannel(to: $0) }
+                                ProgramInfo(viewModel: viewModel)
+                                ChannelPicker(viewModel: viewModel)
                             }
                             .padding(.vertical, Design.outer)
                         }
@@ -67,31 +52,41 @@ struct LivePlayerView: View {
                 }
             }
         }
-        .task {
-            try? await model.loadChannels()
-            await guide.loadGuidePrograms()
+        .task { await viewModel.appear() }
+        .onAppear { viewModel.start() }
+        .onDisappear { viewModel.end() }
+        .onChange(of: viewModel.phase, initial: true) { _, phase in
+            // 局を切り替えたり閉じたりしたら、前の配信の再生をやめる
+            player?.pause()
+            player = nil
+            if case .ready(let url) = phase {
+                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
+                let player = AVPlayer(url: url)
+                player.play()
+                self.player = player
+            }
         }
-        .onAppear { startSession() }
-        .onDisappear { endSession() }
     }
 
     private var video: some View {
         ZStack {
             Color.black
-            switch phase {
+            switch viewModel.phase {
             case .preparing:
                 VStack(spacing: 12) {
                     ProgressView()
                         .controlSize(.large)
                         .tint(.white)
-                    Text("\(channel.name) の配信を準備しています…（20 秒ほど）")
+                    Text(viewModel.preparingMessage)
                         .font(.footnote)
                         .foregroundStyle(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                 }
-            case .playing(let player):
-                PlayerController(player: player)
+            case .ready:
+                if let player {
+                    PlayerController(player: player)
+                }
             case .failed(let message, let canRetry):
                 VStack(spacing: 12) {
                     Text(message)
@@ -100,10 +95,7 @@ struct LivePlayerView: View {
                         .multilineTextAlignment(.center)
                     if canRetry {
                         Button("準備できていない配信を止めて、もう一度試す") {
-                            Task {
-                                await stream.stopStalled()
-                                startSession()
-                            }
+                            Task { await viewModel.retryAfterStoppingStalled() }
                         }
                         .buttonStyle(.borderedProminent)
                     }
@@ -115,87 +107,17 @@ struct LivePlayerView: View {
             }
         }
     }
-
-    // MARK: - 配信
-
-    private func startSession() {
-        session?.cancel()
-        let channel = channel
-        session = Task { await run(channel) }
-    }
-
-    /// 前の配信を止めて、選んだ局の配信を頼み直す
-    private func switchChannel(to newChannel: RegzaChannel) {
-        guard newChannel != channel else { return }
-        endSession()
-        channel = newChannel
-        startSession()
-    }
-
-    private func endSession() {
-        session?.cancel()
-        session = nil
-        if case .playing(let player) = phase { player.pause() }
-        phase = .preparing
-        if let streamID {
-            self.streamID = nil
-            let server = server
-            Task {
-                if (try? await server.stop(streamID: streamID)) != nil { stream.stopped(streamID) }
-            }
-        }
-    }
-
-    private func run(_ channel: RegzaChannel) async {
-        phase = .preparing
-        guard let channelID = EPGStation.channelID(channelCode: channel.code) else {
-            phase = .failed("このチャンネルは EPGStation で見られません。", canRetry: false)
-            return
-        }
-        var requested: Int?
-        do {
-            // 前に止められずに残った、このアプリの配信を先に止める
-            await stream.cleanUp()
-            let streamID = try await server.startLiveStream(channelID: channelID)
-            requested = streamID
-            self.streamID = streamID
-            stream.started(streamID)
-            try await server.waitUntilReady(streamID: streamID)
-            guard let url = server.playlistURL(streamID: streamID) else { throw RegzaError.invalidHost }
-            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
-            let player = AVPlayer(url: url)
-            player.play()
-            phase = .playing(player)
-            // 見ていることを知らせ続ける (知らせないと EPGStation が配信を止める)
-            while !Task.isCancelled {
-                try await Task.sleep(for: .seconds(10))
-                try? await server.keep(streamID: streamID)
-            }
-        } catch is CancellationError {
-            return
-        } catch {
-            // 始まらなかった配信は残さない
-            if let requested, streamID == requested {
-                self.streamID = nil
-                if (try? await server.stop(streamID: requested)) != nil { stream.stopped(requested) }
-            }
-            phase = .failed("""
-                再生できませんでした。\(error.localizedDescription)
-                EPGStation で同時に変換できる数の上限に達していると始まりません。ほかの画面で見ている配信を閉じるか、準備できないまま残っている配信を止めてから試してください。
-                """, canRetry: true)
-        }
-    }
 }
 
 /// 見ている局の今の番組 (Mirakurun の番組表から)
 private struct ProgramInfo: View {
-    @Environment(GuideViewModel.self) private var guide
-    let channel: RegzaChannel
+    let viewModel: LivePlayerViewModel
 
     var body: some View {
         // 番組が変わったら表示も変える
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            let program = guide.currentProgram(for: channel, at: context.date)
+            let channel = viewModel.channel
+            let program = viewModel.currentProgram(for: channel, at: context.date)
             VStack(alignment: .leading, spacing: 6) {
                 Text(channel.name + (program == nil ? "" : " · 放送中"))
                     .font(.subheadline.weight(.semibold))
@@ -233,32 +155,16 @@ private struct ProgramInfo: View {
 
 /// iPhone で見られる局の一覧。押すとその局に切り替える
 private struct ChannelPicker: View {
-    @Environment(RemoteViewModel.self) private var model
-    @Environment(GuideViewModel.self) private var guide
-    let current: RegzaChannel
-    var onSelect: (RegzaChannel) -> Void
-
-    /// EPGStation で見られる局 (Mirakurun が受信している局。番組表がまだなければ CS 以外)。サブチャンネルは代表だけ
-    private var watchable: [RegzaChannel] {
-        model.channels.filter { channel in
-            guard channel.isRepresentative || channel.band == .cs else { return false }
-            return guide.guidePrograms.isEmpty ? channel.band != .cs : guide.guidePrograms[channel.code] != nil
-        }
-    }
-
-    private var bands: [RegzaChannel.Band] {
-        RegzaChannel.Band.allCases.filter { band in watchable.contains { $0.band == band } }
-    }
+    let viewModel: LivePlayerViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if bands.count > 1 {
-                BandPicker(bands: bands)
+            if viewModel.bands.count > 1 {
+                BandPicker(bands: viewModel.bands)
             }
-            let band = model.band(among: bands)
-            ForEach(watchable.filter { $0.band == band }) { channel in
+            ForEach(viewModel.listedChannels) { channel in
                 Button {
-                    onSelect(channel)
+                    viewModel.switchChannel(to: channel)
                 } label: {
                     HStack(spacing: 12) {
                         Text(channel.formattedNumber)
@@ -267,7 +173,7 @@ private struct ChannelPicker: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(channel.name)
                                 .lineLimit(1)
-                            if let program = guide.currentProgram(for: channel) {
+                            if let program = viewModel.currentProgram(for: channel) {
                                 Text(program.name)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -275,7 +181,7 @@ private struct ChannelPicker: View {
                             }
                         }
                         Spacer()
-                        if channel == current {
+                        if channel == viewModel.channel {
                             Image(systemName: "play.fill")
                                 .foregroundStyle(AppTheme.accent)
                                 .accessibilityLabel("再生中")

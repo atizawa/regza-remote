@@ -140,8 +140,8 @@ struct ProgramDetailView: View {
         .navigationTitle("番組の詳細")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $isShowingPlayer) {
-            if let server = viewModel.stream.streamServer() {
-                LivePlayerView(server: server, channel: channel)
+            if let player = viewModel.stream.livePlayer(for: channel) {
+                LivePlayerView(viewModel: player)
             }
         }
         .sensoryFeedback(.success, trigger: viewModel.reserveCount)

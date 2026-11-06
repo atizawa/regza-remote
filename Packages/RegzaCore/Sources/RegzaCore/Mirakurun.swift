@@ -78,10 +78,12 @@ public final class Mirakurun: Sendable {
     /// `192.168.0.2` か `192.168.0.2:40772`
     public let host: String
     private let timeout: TimeInterval
+    private let transport: any HTTPTransport
 
-    public init(host: String, timeout: TimeInterval = 10) {
+    public init(host: String, timeout: TimeInterval = 10, transport: any HTTPTransport = RegzaHTTP.transport) {
         self.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         self.timeout = timeout
+        self.transport = transport
     }
 
     /// 1 番組。テレビの `epg_content_id` から `programID(epgContentID:)` で求めた ID を渡す
@@ -115,7 +117,7 @@ public final class Mirakurun: Sendable {
         guard let url = URL(string: "http://\(authority)\(path)" + (query.map { "?\($0)" } ?? "")) else {
             throw RegzaError.invalidHost
         }
-        let response = try await RegzaHTTP.transport.send(HTTPRequest(url: url, timeout: timeout))
+        let response = try await transport.send(HTTPRequest(url: url, timeout: timeout))
         guard (200..<300).contains(response.statusCode) else { throw RegzaError.httpStatus(response.statusCode) }
         return response.body
     }

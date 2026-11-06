@@ -188,8 +188,8 @@ private struct NowPlayingDetailView: View {
                 try? await model.loadChannels()
             }
             .fullScreenCover(isPresented: $isShowingPlayer) {
-                if let server = stream.streamServer(), let channel = model.nowPlayingChannel {
-                    LivePlayerView(server: server, channel: channel)
+                if let channel = model.nowPlayingChannel, let player = stream.livePlayer(for: channel) {
+                    LivePlayerView(viewModel: player)
                 }
             }
         }

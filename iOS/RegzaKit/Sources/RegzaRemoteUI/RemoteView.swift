@@ -88,7 +88,9 @@ public struct RemoteView: View {
         // 開発用: 起動引数 -LiveHost <EPGStation> -LiveChannel <チャンネルの ID> で、すぐ再生画面を開く
         .fullScreenCover(isPresented: .constant(DebugLive.channel != nil)) {
             if let host = DebugLive.host, let channel = DebugLive.channel {
-                LivePlayerView(server: EPGStation(host: host), channel: channel)
+                LivePlayerView(viewModel: LivePlayerViewModel(
+                    remote: model, guide: guide, stream: stream, server: EPGStation(host: host), channel: channel
+                ))
             }
         }
         #endif
