@@ -64,36 +64,17 @@ struct NowPlayingAccessory: View {
         }
     }
 
-    /// 上の小さな行: チャンネル名や「録画」
+    /// 上の小さな行: チャンネル名や「録画」 (文言は Android と同じ RegzaNowPlaying.captionText)
     private var caption: String? {
         if model.isSearchingTV || model.lastError != nil { return nil }
-        guard let nowPlaying else { return nil }
-        switch nowPlaying.kind {
-        case .broadcast:
-            // 番組名が取れないときは、局名を大きく出し、上にジャンルを添える
-            if nowPlaying.title.isEmpty { return nowPlaying.genre.isEmpty ? nil : nowPlaying.genre }
-            return nowPlaying.channelName
-        case .recorded:
-            return nowPlaying.channelName.isEmpty ? "録画" : "録画 · \(nowPlaying.channelName)"
-        default:
-            return nil
-        }
+        return nowPlaying?.captionText
     }
 
-    /// 下の大きな行: 番組名や状態
+    /// 下の大きな行: 番組名や状態 (文言は Android と同じ RegzaNowPlaying.headlineText)
     private var headline: String {
         if model.isSearchingTV { return "テレビを探しています…" }
         if model.lastError != nil { return "テレビに接続できません" }
-        guard let nowPlaying else { return "接続中…" }
-        switch nowPlaying.kind {
-        case .broadcast:
-            if !nowPlaying.title.isEmpty { return nowPlaying.title }
-            return nowPlaying.channelName.isEmpty ? "放送" : nowPlaying.channelName
-        case .recorded: return nowPlaying.title
-        case .external: return "外部入力"
-        case .standby: return "待機中"
-        case .unknown: return "接続済み"
-        }
+        return nowPlaying?.headlineText ?? "接続中…"
     }
 
     private var progress: Double? {

@@ -18,9 +18,9 @@ struct NowPlayingCard: View {
                 switch nowPlaying.kind {
                 case .recorded: playback(nowPlaying)
                 case .broadcast: broadcast(nowPlaying)
-                case .external: status("外部入力", systemImage: "cable.connector")
-                case .standby: status("待機中", systemImage: "moon.zzz")
-                case .unknown: status("接続済み", systemImage: "tv")
+                case .external: status(nowPlaying.statusText ?? "", systemImage: "cable.connector")
+                case .standby: status(nowPlaying.statusText ?? "", systemImage: "moon.zzz")
+                case .unknown: status(nowPlaying.statusText ?? "", systemImage: "tv")
                 }
             } else {
                 status("接続中…", systemImage: "tv")

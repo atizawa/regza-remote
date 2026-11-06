@@ -121,20 +121,10 @@ fun RemoteScreen(model: RegzaViewModel) {
 private fun NowPlayingCard(nowPlaying: RegzaNowPlaying?) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            val (caption, headline) = when (nowPlaying?.kind?.rawValue) {
-                null -> "" to "接続中…"
-                // 番組名が取れないとき (Mirakurun が未設定など) は局名を大きく出し、同じ局名を上に重ねない
-                "broadcast" -> if (nowPlaying.title.isEmpty()) {
-                    "" to nowPlaying.channelName.ifEmpty { "放送" }
-                } else {
-                    nowPlaying.channelName to nowPlaying.title
-                }
-                "recorded" -> "録画" to nowPlaying.title
-                "external" -> "" to "外部入力"
-                "standby" -> "" to "待機中"
-                else -> "" to "接続済み"
-            }
-            if (caption.isNotEmpty()) Text(caption, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            // 文言は iOS のミニプレーヤーと同じ (RegzaCore の RegzaNowPlaying)
+            val caption = nowPlaying?.captionText?.orElse(null)
+            val headline = nowPlaying?.headlineText ?: "接続中…"
+            if (caption != null) Text(caption, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Text(headline, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (nowPlaying != null && nowPlaying.duration > 0) {
                 Text("${clock(nowPlaying.position)} / ${clock(nowPlaying.duration)}", style = MaterialTheme.typography.bodySmall)

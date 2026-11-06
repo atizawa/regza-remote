@@ -138,6 +138,43 @@ public struct RegzaNowPlaying: Equatable, Sendable {
         duration > 0 ? min(1, Double(position) / Double(duration)) : 0
     }
 
+    // MARK: - 画面に出す文言 (iOS と Android で同じにする)
+
+    /// 2 行で出すときの上の小さな行。局名や「録画」。なければ nil
+    public var captionText: String? {
+        switch kind {
+        case .broadcast:
+            // 番組名が取れないときは局名を大きく出すので、同じ局名は重ねず、ジャンルを添える
+            if title.isEmpty { return genre.isEmpty ? nil : genre }
+            return channelName.isEmpty ? nil : channelName
+        case .recorded:
+            return channelName.isEmpty ? "録画" : "録画 · \(channelName)"
+        default:
+            return nil
+        }
+    }
+
+    /// 2 行で出すときの下の大きな行。番組名や状態
+    public var headlineText: String {
+        switch kind {
+        case .broadcast:
+            if !title.isEmpty { return title }
+            return channelName.isEmpty ? "放送" : channelName
+        case .recorded: return title
+        default: return statusText ?? ""
+        }
+    }
+
+    /// 番組を映していないときの状態。放送と録画の再生のときは nil
+    public var statusText: String? {
+        switch kind {
+        case .broadcast, .recorded: nil
+        case .external: "外部入力"
+        case .standby: "待機中"
+        case .unknown: "接続済み"
+        }
+    }
+
     /// 局名を狭い場所 (Dynamic Island の小さい表示) 向けに短くする。収まりそうになければ nil。
     /// `ＮＨＫ総合１・東京` → `NHK総合`、`ＢＳフジ・１８１` → `BSフジ`、`ＮＨＫＥテレ１東京` → `NHKEテレ`
     static func shortChannelName(_ name: String) -> String? {
