@@ -31,6 +31,8 @@ android {
     // swift-java が RegzaAndroid の Swift から作った Java のクラス (mise run build-swift で作られる)
     sourceSets.getByName("main").java.srcDirs(
         "../.build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java",
+        // RegzaCore の型 (RegzaKey など) の Java のクラス
+        "../.build/swift/regzacore-java",
     )
 }
 

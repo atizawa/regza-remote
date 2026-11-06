@@ -6,18 +6,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.regzaremote.core.RegzaAndroidNowPlaying
 import com.example.regzaremote.core.RegzaAndroidPairing
 import com.example.regzaremote.core.RegzaAndroidRemote
+import com.example.regzaremote.core.RegzaKey
+import com.example.regzaremote.core.RegzaNowPlaying
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
-import org.swift.swiftkit.core.SwiftArena
 import org.swift.swiftkit.core.SwiftError
-
-/** Swift の値の片付けはガベージコレクションに任せる */
-internal val arena = SwiftArena.ofAuto()
 
 /**
  * アプリの状態 (iOS 版の RemoteViewModel に当たる)。
@@ -36,7 +33,7 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
      */
     private var remote: RegzaAndroidRemote? = connection?.let(::makeRemote)
 
-    var nowPlaying by mutableStateOf<RegzaAndroidNowPlaying?>(null)
+    var nowPlaying by mutableStateOf<RegzaNowPlaying?>(null)
         private set
 
     /** テレビに PIN を表示させて、入力を待っている登録 (テレビから受け取った暗号化パスワードを持っている) */
@@ -56,14 +53,14 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
     // MARK: PIN 登録
 
     fun startPairing(host: String) = run {
-        val session = RegzaAndroidPairing.init(host, store.pairingUserID(), arena)
+        val session = RegzaAndroidPairing.init(host, store.pairingUserID())
         session.start().await()
         pairing = session
         message = ""
     }
 
     fun confirmPairing(pin: String) = run {
-        val confirmed = pairing?.confirm(pin, arena)?.await() ?: return@run
+        val confirmed = pairing?.confirm(pin)?.await() ?: return@run
         val saved = Connection(confirmed.host, confirmed.user, confirmed.password)
         store.save(saved)
         pairing = null
@@ -88,7 +85,7 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
 
     // MARK: リモコン
 
-    fun send(key: String) {
+    fun send(key: RegzaKey) {
         val remote = remote ?: return
         viewModelScope.launch {
             try {
@@ -107,7 +104,7 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
         polling = viewModelScope.launch {
             while (true) {
                 try {
-                    nowPlaying = remote.refresh(arena).await()
+                    nowPlaying = remote.refresh().await()
                 } catch (e: SwiftError) {
                     nowPlaying = null
                     message = e.message ?: "テレビに接続できません"
@@ -133,7 +130,7 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun makeRemote(connection: Connection) =
-        RegzaAndroidRemote.init(connection.host, connection.user, connection.password, arena)
+        RegzaAndroidRemote.init(connection.host, connection.user, connection.password)
 
     /** 押している間はほかのボタンを押せなくし、失敗したら説明を出す */
     private fun run(action: suspend () -> Unit) {

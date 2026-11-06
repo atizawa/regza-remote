@@ -26,8 +26,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
-import com.example.regzaremote.core.RegzaAndroid
-import com.example.regzaremote.core.RegzaAndroidNowPlaying
+import com.example.regzaremote.core.RegzaKey
+import com.example.regzaremote.core.RegzaNowPlaying
 
 /**
  * リモコンの画面。並びは iOS 版と同じく、実物のリモコンの
@@ -43,7 +43,7 @@ fun RemoteScreen(model: RegzaViewModel) {
     }
     val nowPlaying = model.nowPlaying
     val message = model.message
-    val send: (String) -> Unit = model::send
+    val send: (RegzaKey) -> Unit = model::send
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
@@ -54,64 +54,63 @@ fun RemoteScreen(model: RegzaViewModel) {
 
         // 電源は誤って押さないよう左端に離し、入力切替・消音と並べる
         KeyRow {
-            KeyButton("power", send, Modifier.weight(1f), color = Color(0xFFC71F24))
+            KeyButton(Keys.power, send, Modifier.weight(1f), color = Color(0xFFC71F24))
             Spacer(Modifier.weight(1f))
-            KeyButton("input", send, Modifier.weight(1f))
-            KeyButton("mute", send, Modifier.weight(1f))
+            KeyButton(Keys.input, send, Modifier.weight(1f))
+            KeyButton(Keys.mute, send, Modifier.weight(1f))
         }
 
         // 地デジ・BS・CS と 1〜12。テレビのリモコンと同じ 3 列
-        KeyRow { listOf("terrestrial", "bs", "cs").forEach { KeyButton(it, send, Modifier.weight(1f)) } }
-        (1..12).chunked(3).forEach { row ->
-            KeyRow { row.forEach { KeyButton("num$it", send, Modifier.weight(1f)) } }
+        KeyRow { listOf(Keys.terrestrial, Keys.bs, Keys.cs).forEach { KeyButton(it, send, Modifier.weight(1f)) } }
+        Keys.numbers.chunked(3).forEach { row ->
+            KeyRow { row.forEach { KeyButton(it, send, Modifier.weight(1f)) } }
         }
 
         // 音量・十字キー・チャンネル
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                KeyButton("volumeUp", send, Modifier.fillMaxWidth())
-                KeyButton("volumeDown", send, Modifier.fillMaxWidth())
+                KeyButton(Keys.volumeUp, send, Modifier.fillMaxWidth())
+                KeyButton(Keys.volumeDown, send, Modifier.fillMaxWidth())
             }
             Column(Modifier.weight(1.6f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                KeyRow { Spacer(Modifier.weight(1f)); KeyButton("up", send, Modifier.weight(1f)); Spacer(Modifier.weight(1f)) }
+                KeyRow { Spacer(Modifier.weight(1f)); KeyButton(Keys.up, send, Modifier.weight(1f)); Spacer(Modifier.weight(1f)) }
                 KeyRow {
-                    KeyButton("left", send, Modifier.weight(1f))
-                    KeyButton(
-                        "enter", send, Modifier.weight(1f),
+                    KeyButton(Keys.left, send, Modifier.weight(1f))
+                    KeyButton(Keys.enter, send, Modifier.weight(1f),
                         color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary,
                     )
-                    KeyButton("right", send, Modifier.weight(1f))
+                    KeyButton(Keys.right, send, Modifier.weight(1f))
                 }
-                KeyRow { Spacer(Modifier.weight(1f)); KeyButton("down", send, Modifier.weight(1f)); Spacer(Modifier.weight(1f)) }
+                KeyRow { Spacer(Modifier.weight(1f)); KeyButton(Keys.down, send, Modifier.weight(1f)); Spacer(Modifier.weight(1f)) }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                KeyButton("channelUp", send, Modifier.fillMaxWidth())
-                KeyButton("channelDown", send, Modifier.fillMaxWidth())
+                KeyButton(Keys.channelUp, send, Modifier.fillMaxWidth())
+                KeyButton(Keys.channelDown, send, Modifier.fillMaxWidth())
             }
         }
-        KeyRow { listOf("back", "guide", "programInfo", "exit").forEach { KeyButton(it, send, Modifier.weight(1f)) } }
+        KeyRow { listOf(Keys.back, Keys.guide, Keys.programInfo, Keys.exit).forEach { KeyButton(it, send, Modifier.weight(1f)) } }
         KeyRow {
-            KeyButton("blue", send, Modifier.weight(1f), color = Color(0xFF1E5BD8))
-            KeyButton("red", send, Modifier.weight(1f), color = Color(0xFFD32F2F))
-            KeyButton("green", send, Modifier.weight(1f), color = Color(0xFF2E7D32))
-            KeyButton("yellow", send, Modifier.weight(1f), color = Color(0xFFF9A825))
+            KeyButton(Keys.blue, send, Modifier.weight(1f), color = Color(0xFF1E5BD8))
+            KeyButton(Keys.red, send, Modifier.weight(1f), color = Color(0xFFD32F2F))
+            KeyButton(Keys.green, send, Modifier.weight(1f), color = Color(0xFF2E7D32))
+            KeyButton(Keys.yellow, send, Modifier.weight(1f), color = Color(0xFFF9A825))
         }
 
         // 録画の再生
         KeyRow {
-            KeyButton("previousChapter", send, Modifier.weight(1f))
-            KeyButton("skipBackward", send, Modifier.weight(1f))
-            KeyButton(if (nowPlaying?.isAdvancing == true) "pause" else "play", send, Modifier.weight(1f))
-            KeyButton("skipForward", send, Modifier.weight(1f))
-            KeyButton("nextChapter", send, Modifier.weight(1f))
+            KeyButton(Keys.previousChapter, send, Modifier.weight(1f))
+            KeyButton(Keys.skipBackward, send, Modifier.weight(1f))
+            KeyButton(if (nowPlaying?.isAdvancing == true) Keys.pause else Keys.play, send, Modifier.weight(1f))
+            KeyButton(Keys.skipForward, send, Modifier.weight(1f))
+            KeyButton(Keys.nextChapter, send, Modifier.weight(1f))
         }
         KeyRow {
-            KeyButton("rewind", send, Modifier.weight(1f))
-            KeyButton("stop", send, Modifier.weight(1f))
-            KeyButton("fastForward", send, Modifier.weight(1f))
-            KeyButton("record", send, Modifier.weight(1f), color = Color(0xFFD32F2F))
+            KeyButton(Keys.rewind, send, Modifier.weight(1f))
+            KeyButton(Keys.stop, send, Modifier.weight(1f))
+            KeyButton(Keys.fastForward, send, Modifier.weight(1f))
+            KeyButton(Keys.record, send, Modifier.weight(1f), color = Color(0xFFD32F2F))
         }
-        KeyRow { listOf("recordedList", "timeShift", "jumpToStart").forEach { KeyButton(it, send, Modifier.weight(1f)) } }
+        KeyRow { listOf(Keys.recordedList, Keys.timeShift, Keys.jumpToStart).forEach { KeyButton(it, send, Modifier.weight(1f)) } }
 
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = model::reregister) { Text("テレビを登録し直す") }
@@ -119,10 +118,10 @@ fun RemoteScreen(model: RegzaViewModel) {
 }
 
 @Composable
-private fun NowPlayingCard(nowPlaying: RegzaAndroidNowPlaying?) {
+private fun NowPlayingCard(nowPlaying: RegzaNowPlaying?) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            val (caption, headline) = when (nowPlaying?.kind) {
+            val (caption, headline) = when (nowPlaying?.kind?.rawValue) {
                 null -> "" to "接続中…"
                 // 番組名が取れないとき (Mirakurun が未設定など) は局名を大きく出し、同じ局名を上に重ねない
                 "broadcast" -> if (nowPlaying.title.isEmpty()) {
@@ -151,16 +150,16 @@ private fun KeyRow(content: @Composable RowScope.() -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(), content = content)
 }
 
-/** key は RegzaKey の名前。ボタンの文字は iOS 版と同じものを Swift 側から取る */
+/** ボタンの文字は iOS 版と同じ RegzaKey.label */
 @Composable
 private fun KeyButton(
-    key: String,
-    send: (String) -> Unit,
+    key: RegzaKey,
+    send: (RegzaKey) -> Unit,
     modifier: Modifier = Modifier,
     color: Color? = null,
     contentColor: Color = Color.White,
 ) {
-    val label = remember(key) { RegzaAndroid.regzaKeyLabel(key) }
+    val label = remember(key.rawValue) { key.label }
     // 「チャンネル＋」「10秒戻し」などが切れないよう、左右の余白を詰め、入りきらなければ 2 行にする
     val padding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
     val text = @Composable {
@@ -174,4 +173,48 @@ private fun KeyButton(
     } else {
         FilledTonalButton(onClick = { send(key) }, modifier = modifier, contentPadding = padding) { text() }
     }
+}
+
+/** 画面で使うキー。RegzaKey は Swift の値なので、描き直すたびに作らず、ここで 1 度だけ作る */
+private object Keys {
+    val power = RegzaKey.power()
+    val input = RegzaKey.input()
+    val mute = RegzaKey.mute()
+    val terrestrial = RegzaKey.terrestrial()
+    val bs = RegzaKey.bs()
+    val cs = RegzaKey.cs()
+    val numbers = listOf(
+        RegzaKey.num1(), RegzaKey.num2(), RegzaKey.num3(), RegzaKey.num4(), RegzaKey.num5(), RegzaKey.num6(),
+        RegzaKey.num7(), RegzaKey.num8(), RegzaKey.num9(), RegzaKey.num10(), RegzaKey.num11(), RegzaKey.num12(),
+    )
+    val volumeUp = RegzaKey.volumeUp()
+    val volumeDown = RegzaKey.volumeDown()
+    val channelUp = RegzaKey.channelUp()
+    val channelDown = RegzaKey.channelDown()
+    val up = RegzaKey.up()
+    val down = RegzaKey.down()
+    val left = RegzaKey.left()
+    val right = RegzaKey.right()
+    val enter = RegzaKey.enter()
+    val back = RegzaKey.back()
+    val guide = RegzaKey.guide()
+    val programInfo = RegzaKey.programInfo()
+    val exit = RegzaKey.exit()
+    val blue = RegzaKey.blue()
+    val red = RegzaKey.red()
+    val green = RegzaKey.green()
+    val yellow = RegzaKey.yellow()
+    val previousChapter = RegzaKey.previousChapter()
+    val skipBackward = RegzaKey.skipBackward()
+    val play = RegzaKey.play()
+    val pause = RegzaKey.pause()
+    val skipForward = RegzaKey.skipForward()
+    val nextChapter = RegzaKey.nextChapter()
+    val rewind = RegzaKey.rewind()
+    val stop = RegzaKey.stop()
+    val fastForward = RegzaKey.fastForward()
+    val record = RegzaKey.record()
+    val recordedList = RegzaKey.recordedList()
+    val timeShift = RegzaKey.timeShift()
+    val jumpToStart = RegzaKey.jumpToStart()
 }

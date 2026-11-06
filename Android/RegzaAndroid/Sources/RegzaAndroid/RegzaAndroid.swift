@@ -1,7 +1,8 @@
 import RegzaCore
 
 // Android アプリに見せる API。swift-java がここの public な型と関数から Java のクラスを作る
-// (Java のパッケージは com.example.regzaremote.core)。
+// (Java のパッケージは com.example.regzaremote.core)。RegzaKey・RegzaNowPlaying・RegzaConnection は
+// RegzaCore の型をそのまま使う (Java のクラスは RegzaCoreJava で作る)。
 // async の関数は Java の Future、throws の関数は Java の例外になる。
 // 例外のメッセージは String(describing:) になるので、画面に出せる説明を持った RegzaAndroidError に包んで投げる
 
@@ -15,19 +16,6 @@ public struct RegzaAndroidError: Error, CustomStringConvertible {
 
     init(message: String) {
         description = message
-    }
-}
-
-/// テレビに登録した接続情報 (RegzaConnection と同じ中身)
-public struct RegzaAndroidConnection {
-    public var host: String
-    public var user: String
-    public var password: String
-
-    public init(host: String, user: String, password: String) {
-        self.host = host
-        self.user = user
-        self.password = password
     }
 }
 
@@ -85,10 +73,9 @@ public final class RegzaAndroidPairing {
     }
 
     /// PIN で登録を確定し、保存すべき接続情報を返す。PIN を打ち間違えたら、そのまま入力し直せる
-    public func confirm(pin: String) async throws -> RegzaAndroidConnection {
+    public func confirm(pin: String) async throws -> RegzaConnection {
         do {
-            let connection = try await session.confirm(pin: pin)
-            return RegzaAndroidConnection(host: connection.host, user: connection.user, password: connection.password)
+            return try await session.confirm(pin: pin)
         } catch {
             throw RegzaAndroidError(error)
         }
@@ -102,20 +89,6 @@ public final class RegzaAndroidPairing {
 
 // MARK: - リモコン
 
-/// いま映っているもの (RegzaNowPlaying のうち画面に出すもの)
-public struct RegzaAndroidNowPlaying {
-    /// "broadcast" (放送)・"recorded" (録画の再生)・"external" (外部入力)・"standby" (待機中)・"unknown"
-    public var kind: String
-    public var channelName: String
-    public var title: String
-    /// 再生位置・放送開始からの経過 (秒)
-    public var position: Int
-    /// 番組の長さ (秒)
-    public var duration: Int
-    /// 再生位置が進んでいるか (再生中なら一時停止のボタンを出す)
-    public var isAdvancing: Bool
-}
-
 /// 1 台のテレビのリモコン (RegzaRemote)。
 /// 切り替えの最中に play/status を問い合わせないしくみは RegzaRemote の中にあるので、テレビごとに 1 つを使い回す
 public final class RegzaAndroidRemote {
@@ -125,39 +98,20 @@ public final class RegzaAndroidRemote {
         remote = RegzaRemote(connection: RegzaConnection(host: host, user: user, password: password))
     }
 
-    /// - Parameter key: RegzaKey の名前 ("power"・"volumeUp" など)
-    public func send(key: String) async throws {
-        guard let regzaKey = RegzaKey(name: key) else { throw RegzaAndroidError(message: "知らないキーです: \(key)") }
+    public func send(key: RegzaKey) async throws {
         do {
-            try await remote.send(regzaKey)
+            try await remote.send(key)
         } catch {
             throw RegzaAndroidError(error)
         }
     }
 
     /// いま映っているものを取り直す。アプリを開いている間は 2 秒ごとに呼ぶ (iOS 版と同じ)
-    public func refresh() async throws -> RegzaAndroidNowPlaying {
+    public func refresh() async throws -> RegzaNowPlaying {
         do {
-            let nowPlaying = try await remote.refresh()
-            return RegzaAndroidNowPlaying(
-                kind: nowPlaying.kind.rawValue, channelName: nowPlaying.channelName, title: nowPlaying.title,
-                position: nowPlaying.position, duration: nowPlaying.duration, isAdvancing: nowPlaying.isAdvancing
-            )
+            return try await remote.refresh()
         } catch {
             throw RegzaAndroidError(error)
         }
-    }
-}
-
-/// ボタンに出す名前 (iOS 版と同じ)。知らないキーなら名前をそのまま返す
-public func regzaKeyLabel(key: String) -> String {
-    RegzaKey(name: key)?.label ?? key
-}
-
-extension RegzaKey {
-    /// "power" のような名前から探す
-    init?(name: String) {
-        guard let key = Self.allCases.first(where: { String(describing: $0) == name }) else { return nil }
-        self = key
     }
 }

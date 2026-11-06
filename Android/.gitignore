@@ -7,3 +7,6 @@ local.properties
 # mise run build-swift で作る Swift のビルドと .so
 .build/
 app/src/main/jniLibs/
+
+# mise run build-swift が作る RegzaCore の Java のつなぎ
+RegzaAndroid/Sources/RegzaCoreJava/Generated/
