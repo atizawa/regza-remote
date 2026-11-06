@@ -12,15 +12,12 @@ sourceSets.main {
     resources.srcDir("$swiftJava/resources")
 }
 
-java {
-    toolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
-}
-
-// ソースとリソースは buildSwift (mise run build-swift) が SwiftPM で取ってくる
-tasks.named("processResources") { dependsOn(":buildSwift") }
+// ソースとリソースは app の buildSwift (mise run build-swift) が SwiftPM で取ってくる
+tasks.named("processResources") { dependsOn(":app:buildSwift") }
 
 tasks.withType<JavaCompile>().configureEach {
-    dependsOn(":buildSwift")
-    // swift-java の設定と同じく Java 11 で使えるようにする
+    dependsOn(":app:buildSwift")
+    // swift-java の設定と同じく Java 11 で使えるようにする。JDK は決め打ちせず、Gradle を動かしている JDK を使う
+    // (コマンドラインでは mise の JDK 21、Android Studio では付いてくる JDK)
     options.release.set(11)
 }

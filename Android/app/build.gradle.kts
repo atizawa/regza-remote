@@ -6,9 +6,10 @@ plugins {
 android {
     namespace = "com.example.regzaremote"
     compileSdk = 37
-    // .so からデバッグ情報を取り除くのに NDK を使う (場所は mise.toml の ANDROID_NDK_HOME)
-    ndkPath = providers.environmentVariable("ANDROID_NDK_HOME").get()
-    ndkVersion = "30.0.16248370" // r30
+    // NDK の版はここだけで決める。Android Gradle Plugin が Android SDK の ndk/<版> から探し、なければ入れる。
+    // Swift の .so のビルド (buildSwift) にも、ここで決まった NDK の場所を渡す。
+    // Swift SDK for Android が求める版 (r30) にする
+    ndkVersion = "30.0.16248370"
 
     defaultConfig {
         applicationId = "com.example.regzaremote"
@@ -36,8 +37,32 @@ android {
     )
 }
 
-// Swift の .so と Java のクラスを先に作る (Android/build.gradle.kts の buildSwift)
-tasks.named("preBuild") { dependsOn(":buildSwift") }
+// Swift の .so と、swift-java が作る Java のクラスを作る (mise run build-swift)。
+// app と swiftkit-core (swift-java のソースを使う) のビルドの前に動く。Swift のソースや設定が変わったときだけ動く
+val buildSwift = tasks.register<Exec>("buildSwift") {
+    description = "mise run build-swift で、Swift の .so と swift-java の Java のクラスを作る"
+    val androidDir = rootDir
+    workingDir = androidDir
+    // Android Studio から動かすと PATH に mise がないことがあるので、よく入っている場所から探す
+    val mise = listOf("/opt/homebrew/bin/mise", "/usr/local/bin/mise", "${System.getProperty("user.home")}/.local/bin/mise")
+        .firstOrNull { File(it).canExecute() } ?: "mise"
+    commandLine(mise, "run", "build-swift")
+    // Gradle と同じ SDK の場所と ndkVersion を渡す。Android Gradle Plugin は場所を聞くだけでは NDK を入れないので、
+    // なければ build-swift が入れる
+    val sdk = androidComponents.sdkComponents.sdkDirectory
+    environment("NDK_VERSION", android.ndkVersion)
+    doFirst { environment("ANDROID_HOME", sdk.get().asFile.path) }
+
+    inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**") })
+    inputs.files(fileTree(androidDir.resolve("RegzaAndroid")) { exclude("Sources/RegzaCoreJava/Generated/**") })
+    inputs.file(androidDir.resolve("mise.toml"))
+    inputs.property("ndkVersion", android.ndkVersion)
+    outputs.dir("src/main/jniLibs")
+    outputs.dir(androidDir.resolve(".build/swift/regzacore-java"))
+    outputs.dir(androidDir.resolve(".build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java"))
+    outputs.dir(androidDir.resolve(".build/swift/checkouts/swift-java/SwiftKitCore/src/main"))
+}
+tasks.named("preBuild") { dependsOn(buildSwift) }
 
 dependencies {
     // swift-java が作ったクラスが使う Java 側

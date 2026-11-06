@@ -1,38 +1,92 @@
-# Android 版の開発に使う道具。このフォルダの中でだけ Swift を 6.4.2 にする
+# Android 版の開発に使う道具。このフォルダの中でだけ Swift を swift.org 版にする
 # (iOS の作業では Xcode の Swift を使うので、リポジトリ全体には置かない)
 #
 #   cd Android
-#   mise install                        # Swift 6.4.2 のツールチェーン (swift.org 版)
-#   mise run install-android-swift-sdk  # Swift SDK for Android (ツールチェーンと同じ版でないと使えない)
+#   mise install                        # Swift のツールチェーン・JDK・Android CLI
+#   mise run setup-android-sdk          # 初回だけ: Android SDK を用意し、ライセンスに同意する
+#   mise run install-android-swift-sdk  # 初回だけ: Swift SDK for Android
+#   ./gradlew :app:assembleDebug        # 残りの部品 (platform・build-tools・NDK) は Gradle が入れる
 #
-# Android NDK r30 は mise では入れられないので、ANDROID_NDK_HOME の場所に置く:
-#   https://dl.google.com/android/repository/android-ndk-r30-Darwin.zip
+# 版を決めている場所:
+# - Swift と Swift SDK for Android: 下の [vars]
+# - JDK: gradle/gradle-daemon-jvm.properties (mise もここから読む)
+# - Android NDK: app/build.gradle.kts の ndkVersion (Swift SDK for Android は版 27 以上が要る)
+
+[vars]
+# Swift のツールチェーンと Swift SDK for Android は、同じ版でないと使えない。
+# 版を上げるときは、https://www.swift.org/install の Android の SDK のチェックサムも一緒に変える
+swift = "6.4.2"
+swift_android_sdk_checksum = "4d6ad63ea74becd58e123ff58b1b48c3be5ec0db0dff0ea5abe37ac007dd3233"
 
 [tools]
-swift = "6.4.2"
-java = "temurin-21"
+swift = "{{ vars.swift }}"
+# Gradle を動かす JDK と同じ版 (./gradlew の起動にも使う)
+java = "temurin-{{ exec(command='sed -n s/^toolchainVersion=//p gradle/gradle-daemon-jvm.properties') }}"
+# Android SDK を用意する Android CLI (android) を使うためだけに入れる (SDK そのものは ANDROID_HOME に置く)
+android-sdk = "23.0"
 # Gradle wrapper (gradlew) を作るときだけ使う。ふだんのビルドは ./gradlew で行う
 gradle = "9.8.2"
 
 [env]
-ANDROID_HOME = "{{env.HOME}}/Library/Android/sdk"
-ANDROID_NDK_HOME = "{{env.HOME}}/Library/Android/sdk/ndk/android-ndk-r30"
-_.path = ["{{env.HOME}}/Library/Android/sdk/platform-tools"]
+# Android SDK の場所。設定されていなければ Android Studio と同じ標準の場所にする
+# (android-sdk のツールは自分の置き場を設定するので、ここで上書きする)
+ANDROID_HOME = "{{ get_env(name='ANDROID_HOME', default=env.HOME ~ '/Library/Android/sdk') }}"
+ANDROID_SDK_ROOT = "{{ get_env(name='ANDROID_HOME', default=env.HOME ~ '/Library/Android/sdk') }}"
+# adb を使えるようにする
+_.path = ["{{ get_env(name='ANDROID_HOME', default=env.HOME ~ '/Library/Android/sdk') }}/platform-tools"]
+
+[tasks.setup-android-sdk]
+description = "ANDROID_HOME に Android SDK を用意し、ライセンスに同意する (Android Studio がなくてもビルドできるようにする)"
+# 同意するかをその場で聞くので、入力をつなぐ
+raw = true
+run = '''
+set -euo pipefail
+# 新しい Android CLI (sdkmanager はその古い呼び方) は、部品を入れるとライセンスに同意したことになり、
+# 同意の確認を出さない (sdkmanager --licenses も何もしない)。そこで、入れる前に自分で確かめて同意してもらう
+echo "Android SDK を $ANDROID_HOME に用意します。"
+echo "SDK の部品を入れると、次のライセンスに同意したものとみなされます (このあと Gradle が入れる platform・build-tools・NDK も含みます)。"
+echo "  https://developer.android.com/studio/terms"
+[ -t 0 ] || { echo "同意の入力が必要です。ターミナルから実行してください。" >&2; exit 1; }
+read -r -p "ライセンスを読んで同意する場合は yes と入力してください: " answer
+[ "$answer" = yes ] || { echo "中止しました。"; exit 1; }
+mkdir -p "$ANDROID_HOME"
+android --no-metrics --sdk="$ANDROID_HOME" sdk install platform-tools
+echo "Android SDK を用意しました: $ANDROID_HOME"
+'''
 
 [tasks.install-android-swift-sdk]
-description = "Swift SDK for Android を入れる (ツールチェーンと同じ 6.4.2)"
-run = "swift sdk install https://download.swift.org/swift-6.4.2-release/android-sdk/swift-6.4.2-RELEASE/swift-6.4.2-RELEASE_android.artifactbundle.tar.gz --checksum 4d6ad63ea74becd58e123ff58b1b48c3be5ec0db0dff0ea5abe37ac007dd3233"
+description = "Swift SDK for Android を入れる (ツールチェーンと同じ版)"
+run = "swift sdk install https://download.swift.org/swift-{{ vars.swift }}-release/android-sdk/swift-{{ vars.swift }}-RELEASE/swift-{{ vars.swift }}-RELEASE_android.artifactbundle.tar.gz --checksum {{ vars.swift_android_sdk_checksum }}"
 
 [tasks.build-swift]
 description = "RegzaAndroid を arm64 向けにビルドし (swift-java が Java のクラスも作る)、Swift の実行に要る .so と一緒に app の jniLibs に入れる"
 run = '''
 set -euo pipefail
+# NDK の版は Gradle の buildSwift が app/build.gradle.kts の ndkVersion を渡す
+: "${NDK_VERSION:?このタスクは ./gradlew から実行してください (NDK の版は Gradle が渡します)}"
+export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
+if [ ! -d "$ANDROID_NDK_HOME" ]; then
+  # Android CLI は入れるとライセンスに同意したことになるので、同意済みのときだけ入れる
+  [ -s "$ANDROID_HOME/licenses/android-sdk-license" ] || {
+    echo "Android SDK のライセンスに同意していません。先に mise run setup-android-sdk を実行してください。" >&2
+    exit 1
+  }
+  android --no-metrics --sdk="$ANDROID_HOME" sdk install "ndk/$NDK_VERSION"
+fi
+# Swift SDK for Android は NDK 27 以上が要る (SDK に付いてくる setup-android-sdk.sh と同じ確かめ方)
+ndk_major=$(sed -n 's/^Pkg.Revision = \([0-9]*\).*/\1/p' "$ANDROID_NDK_HOME/source.properties")
+if [ "${ndk_major:-0}" -lt 27 ]; then
+  echo "NDK $ndk_major は古いため使えません。app/build.gradle.kts の ndkVersion を 27 以上にしてください。" >&2
+  exit 1
+fi
+
 triple=aarch64-unknown-linux-android28
-sdk=swift-6.4.2-RELEASE_android
+sdk=swift-{{ vars.swift }}-RELEASE_android
 out=app/src/main/jniLibs/arm64-v8a
-# Swift の実行に要る .so は SDK に入っているもの、libc++_shared.so は NDK のもの
-runtime="$HOME/Library/org.swift.swiftpm/swift-sdks/$sdk.artifactbundle/swift-android/swift-resources/usr/lib/swift-aarch64/android"
-libcxx="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so"
+# Swift の実行に要る .so は SDK に入っているもの (場所は SwiftPM に聞く)、libc++_shared.so は NDK のもの
+resources=$(swift sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftResourcesPath: //p')
+runtime="$resources/android"
+libcxx=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so | head -1)
 
 # swift-java のプラグインは、Swift から消した型の Java のクラスを消さないので、毎回作り直す
 rm -rf .build/swift/plugins/outputs/regzaandroid
@@ -58,5 +112,5 @@ cp .build/swift/out/Products/Release-android-aarch64/*.so "$out/"
 # テスト用のもの (Testing・XCTest) はアプリに要らない
 find "$runtime" -maxdepth 1 -name '*.so' ! -name '*Testing*' ! -name '*XCTest*' -exec cp {} "$out/" \;
 cp "$libcxx" "$out/"
-echo "$(ls "$out" | wc -l | tr -d ' ') 個の .so を $out に入れた"
+echo "$(ls "$out" | wc -l | tr -d ' ') 個の .so を $out に入れました。"
 '''

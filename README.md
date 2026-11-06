@@ -22,7 +22,7 @@ iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュ�
 Android/                      Android 版（Kotlin・Jetpack Compose）
   RegzaAndroid/               Android に見せる Swift の API。swift-java が Java のクラスを作る
   app/                        Kotlin・Compose のアプリ
-  mise.toml                   道具の版（Swift 6.4.2・JDK・Gradle）と、Swift の .so を作る mise run build-swift
+  mise.toml                   Swift 6.4.2 のツールチェーンと、Swift の .so を作る mise run build-swift
 ```
 
 - Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装している（Android の FoundationNetworking でも同じコードで動かすため）
@@ -35,9 +35,11 @@ Android/                      Android 版（Kotlin・Jetpack Compose）
 cd Packages/RegzaCore && swift test       # 共有部分のテスト
 open iOS/RegzaRemote.xcodeproj            # 実機へ入れるときは下の Local.xcconfig を作る
 
-cd Android                                # Android 版
-mise install && mise run install-android-swift-sdk   # 初回だけ（NDK r30 は mise.toml の場所に置く）
-./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (mise run build-swift を呼ぶ)
+cd Android                                # Android 版（Android Studio はなくてもよい）
+mise install                              # Swift のツールチェーン・JDK・Android CLI
+mise run setup-android-sdk                # 初回だけ。Android SDK のライセンスを確かめて同意する（Android Studio で SDK を入れていれば要らない）
+mise run install-android-swift-sdk        # 初回だけ。Swift SDK for Android（platform・build-tools・NDK は Gradle が入れる）
+./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (buildSwift が mise run build-swift を呼ぶ)
 ```
 
 バンドル ID（`com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`）と署名のチームは `iOS/Config/Signing.xcconfig` にまとめている。自分でビルドして実機に入れるときは、このファイルは変えずに、同じフォルダに `Local.xcconfig` を作って自分の値で上書きする（Git には入れない）。
