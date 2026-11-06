@@ -1,0 +1,160 @@
+import Android
+import CBoringSSL
+import Foundation
+import RegzaCore
+
+/// Android では RegzaCore の通信をソケットで送る。Android の URLSession (FoundationNetworking) は、
+/// 送り終えたあとも書き込みの見張りを外さず、返事を待つ間 CPU を使い続けるため。
+/// HTTPS は SDK に入っている BoringSSL で暗号化する。
+/// RegzaCore を使う入り口 (下の public な関数と init) の最初で読み、1 回だけ差し替える
+let useSocketTransport: Void = {
+    RegzaHTTP.transport = SocketTransport(tls: BoringSSLProvider())
+}()
+
+/// BoringSSL で TLS の接続を作る。証明書は Android が信頼している認証局で確かめる
+/// (テレビの HTTPS は自己署名なので、SocketTransport が確かめないように頼む)
+final class BoringSSLProvider: TLSProvider, @unchecked Sendable {
+    /// 接続ごとの SSL を作る元。BoringSSL の SSL_CTX は複数のスレッドから使える
+    private let unverified: OpaquePointer?
+    private let lock = NSLock()
+    /// 認証局の証明書を読み込んだもの。読み込みに時間がかかるので、初めて使うときに作る
+    private var verifying: OpaquePointer?
+
+    init() {
+        unverified = Self.makeContext(verifies: false)
+    }
+
+    deinit {
+        SSL_CTX_free(unverified)
+        if let verifying { SSL_CTX_free(verifying) }
+    }
+
+    func wrap(_ socket: SocketStream, host: String, verifiesCertificate: Bool) throws -> any ByteStream {
+        let context = verifiesCertificate ? verifyingContext() : unverified
+        guard let ssl = SSL_new(context) else { throw RegzaError.network("暗号化の準備ができません") }
+        let stream = TLSStream(ssl: ssl, socket: socket)
+        do {
+            guard SSL_set_fd(ssl, socket.descriptor) == 1 else { throw RegzaError.network("暗号化の準備ができません") }
+            if verifiesCertificate {
+                // URL の host は IPv6 なら [ ] で囲まれていることがある
+                let name = host.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+                if Self.isIPAddress(name) {
+                    // アドレスで接続するときは、証明書にそのアドレスが載っているかを確かめる
+                    guard X509_VERIFY_PARAM_set1_ip_asc(SSL_get0_param(ssl), name) == 1 else {
+                        throw RegzaError.network("暗号化の準備ができません")
+                    }
+                } else {
+                    // 名前で接続するときは、名前を伝え (SNI)、証明書がその名前のものかを確かめる
+                    guard SSL_set_tlsext_host_name(ssl, name) == 1, SSL_set1_host(ssl, name) == 1 else {
+                        throw RegzaError.network("暗号化の準備ができません")
+                    }
+                }
+            }
+            do {
+                // 確かめる設定 (SSL_VERIFY_PEER) なら、証明書が確かめられないと SSL_connect が失敗する
+                try stream.retrying { SSL_connect(ssl) }
+            } catch {
+                if verifiesCertificate, SSL_get_verify_result(ssl) != X509_V_OK {
+                    throw RegzaError.network("\(host) の証明書を確かめられませんでした")
+                }
+                throw error
+            }
+        } catch {
+            stream.close()
+            throw error
+        }
+        return stream
+    }
+
+    private func verifyingContext() -> OpaquePointer? {
+        lock.lock(); defer { lock.unlock() }
+        if verifying == nil { verifying = Self.makeContext(verifies: true) }
+        return verifying
+    }
+
+    private static func makeContext(verifies: Bool) -> OpaquePointer? {
+        let context = SSL_CTX_new(TLS_client_method())
+        _ = SSL_CTX_set_min_proto_version(context, UInt16(TLS1_2_VERSION))
+        SSL_CTX_set_verify(context, verifies ? SSL_VERIFY_PEER : SSL_VERIFY_NONE, nil)
+        if verifies {
+            for path in trustedCertificatePaths() {
+                _ = SSL_CTX_load_verify_locations(context, path, nil)
+            }
+        }
+        return context
+    }
+
+    /// Android が信頼している認証局の証明書のファイル。Android 14 からは更新できる場所 (APEX) にある。
+    /// 利用者が設定で無効にしたものは除く (アプリは既定で利用者が足した認証局を信頼しないので、足したものは読まない)
+    static func trustedCertificatePaths() -> [String] {
+        let files = FileManager.default
+        let directory = ["/apex/com.android.conscrypt/cacerts", "/system/etc/security/cacerts"]
+            .first { (try? files.contentsOfDirectory(atPath: $0).isEmpty) == false }
+        guard let directory, let names = try? files.contentsOfDirectory(atPath: directory) else { return [] }
+        let user = getuid() / 100_000
+        let removed = Set((try? files.contentsOfDirectory(atPath: "/data/misc/user/\(user)/cacerts-removed")) ?? [])
+        return names.filter { !removed.contains($0) }.sorted().map { "\(directory)/\($0)" }
+    }
+
+    static func isIPAddress(_ host: String) -> Bool {
+        var address = in6_addr()
+        return inet_pton(AF_INET, host, &address) == 1 || inet_pton(AF_INET6, host, &address) == 1
+    }
+}
+
+/// 暗号化した読み書き。ソケットはブロックしないので、BoringSSL が待ちを求めたら SocketStream で待つ
+final class TLSStream: ByteStream {
+    private let ssl: OpaquePointer
+    private let socket: SocketStream
+    private var isClosed = false
+
+    init(ssl: OpaquePointer, socket: SocketStream) {
+        self.ssl = ssl
+        self.socket = socket
+    }
+
+    deinit { close() }
+
+    /// 読み書きの準備ができるまで待ちながら繰り返す。成功したら結果 (正の数) を返す。相手が閉じたら 0
+    @discardableResult
+    func retrying(_ operation: () -> Int32) throws -> Int {
+        while true {
+            let result = operation()
+            if result > 0 { return Int(result) }
+            switch SSL_get_error(ssl, result) {
+            case SSL_ERROR_WANT_READ: try socket.wait(for: .read)
+            case SSL_ERROR_WANT_WRITE: try socket.wait(for: .write)
+            // 相手が TLS の終わりを送ってきた、または TLS の終わりなしに接続を閉じた
+            case SSL_ERROR_ZERO_RETURN: return 0
+            case SSL_ERROR_SYSCALL where result == 0: return 0
+            default: throw RegzaError.network("暗号化した通信に失敗しました")
+            }
+        }
+    }
+
+    func write(_ bytes: [UInt8]) throws {
+        var offset = 0
+        while offset < bytes.count {
+            let written = try bytes[offset...].withUnsafeBytes { chunk in
+                try retrying { SSL_write(ssl, chunk.baseAddress, Int32(chunk.count)) }
+            }
+            guard written > 0 else { throw RegzaError.network("送れませんでした") }
+            offset += written
+        }
+    }
+
+    func read(into buffer: inout [UInt8]) throws -> Int {
+        try buffer.withUnsafeMutableBytes { target in
+            try retrying { SSL_read(ssl, target.baseAddress, Int32(target.count)) }
+        }
+    }
+
+    func close() {
+        guard !isClosed else { return }
+        isClosed = true
+        // 待たずに TLS の終わりを送るだけにする (返事は待たない)
+        _ = SSL_shutdown(ssl)
+        SSL_free(ssl)
+        socket.close()
+    }
+}

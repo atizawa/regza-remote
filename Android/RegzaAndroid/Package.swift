@@ -30,9 +30,15 @@ let package = Package(
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // SDK に入っている BoringSSL の関数の宣言 (HTTPS で使う)。ライブラリの場所は build-swift がリンカーに渡す
+        .target(
+            name: "CBoringSSL",
+            linkerSettings: [.linkedLibrary("ssl"), .linkedLibrary("crypto")]
+        ),
         .target(
             name: "RegzaAndroid",
             dependencies: [
+                "CBoringSSL",
                 "RegzaCoreJava",
                 .product(name: "RegzaCore", package: "RegzaCore"),
                 .product(name: "SwiftJava", package: "swift-java"),

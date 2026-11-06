@@ -31,6 +31,7 @@ public struct RegzaAndroidProbeResult {
 
 /// user と password が空なら、認証を求められるところまでを確かめる
 public func regzaProbe(host: String, user: String, password: String) async -> RegzaAndroidProbeResult {
+    _ = useSocketTransport
     let device = await RegzaDiscovery.probe(host: host)
     let status: String
     do {
@@ -58,6 +59,7 @@ public final class RegzaAndroidPairing {
 
     /// - Parameter user: このアプリ用のユーザー ID。登録し直すときも同じものを使い、テレビの登録が増えないようにする
     public init(host: String, user: String) {
+        _ = useSocketTransport
         session = RegzaPairing(host: host, user: user)
     }
 
@@ -95,6 +97,7 @@ public final class RegzaAndroidRemote {
     private let remote: RegzaRemote
 
     public init(host: String, user: String, password: String) {
+        _ = useSocketTransport
         remote = RegzaRemote(connection: RegzaConnection(host: host, user: user, password: password))
     }
 

@@ -102,9 +102,11 @@ rm -rf "$generated" .build/swift/regzacore-java && mkdir -p "$generated" .build/
   --input-swift ../Packages/RegzaCore/Sources/RegzaCore \
   --output-swift "$generated" --output-java .build/swift/regzacore-java
 
-# Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)
+# Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)。
+# HTTPS に使う BoringSSL は、SDK の静的ライブラリ (libssl.a・libcrypto.a) を RegzaAndroid に埋め込む
+static_libs=$(swift sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftStaticResourcesPath: //p')/android
 swift build --package-path RegzaAndroid --scratch-path .build/swift --product RegzaAndroid -c release \
-  --swift-sdk "$sdk" --triple "$triple"
+  --swift-sdk "$sdk" --triple "$triple" -Xlinker -L"$static_libs"
 
 # 入れる候補: libRegzaAndroid.so と swift-java の libSwiftJava.so、SDK の Swift の .so、NDK の libc++_shared.so
 candidates=.build/swift/android-libs
