@@ -1,0 +1,21 @@
+# Android 版の開発に使う道具。このフォルダの中でだけ Swift を 6.4.2 にする
+# (iOS の作業では Xcode の Swift を使うので、リポジトリ全体には置かない)
+#
+#   cd Android
+#   mise install                        # Swift 6.4.2 のツールチェーン (swift.org 版)
+#   mise run install-android-swift-sdk  # Swift SDK for Android (ツールチェーンと同じ版でないと使えない)
+#
+# Android NDK r30 は mise では入れられないので、ANDROID_NDK_HOME の場所に置く:
+#   https://dl.google.com/android/repository/android-ndk-r30-Darwin.zip
+
+[tools]
+swift = "6.4.2"
+
+[env]
+ANDROID_HOME = "{{env.HOME}}/Library/Android/sdk"
+ANDROID_NDK_HOME = "{{env.HOME}}/Library/Android/sdk/ndk/android-ndk-r30"
+_.path = ["{{env.HOME}}/Library/Android/sdk/platform-tools"]
+
+[tasks.install-android-swift-sdk]
+description = "Swift SDK for Android を入れる (ツールチェーンと同じ 6.4.2)"
+run = "swift sdk install https://download.swift.org/swift-6.4.2-release/android-sdk/swift-6.4.2-RELEASE/swift-6.4.2-RELEASE_android.artifactbundle.tar.gz --checksum 4d6ad63ea74becd58e123ff58b1b48c3be5ec0db0dff0ea5abe37ac007dd3233"
