@@ -35,9 +35,15 @@ let package = Package(
             name: "CBoringSSL",
             linkerSettings: [.linkedLibrary("ssl"), .linkedLibrary("crypto")]
         ),
+        // Android のメインスレッドの Looper で MainActor を動かすための宣言 (NDK の Looper と libdispatch)
+        .target(
+            name: "CAndroidMainLoop",
+            linkerSettings: [.linkedLibrary("android")]
+        ),
         .target(
             name: "RegzaAndroid",
             dependencies: [
+                "CAndroidMainLoop",
                 "CBoringSSL",
                 "RegzaCoreJava",
                 .product(name: "RegzaCore", package: "RegzaCore"),
