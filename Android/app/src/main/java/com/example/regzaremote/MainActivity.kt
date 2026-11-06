@@ -4,13 +4,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -25,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 /** 登録していなければ PIN で登録する画面、登録していればリモコンの画面 */
@@ -36,7 +45,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val model: RegzaViewModel = viewModel()
-                    if (model.connection != null) RemoteScreen(model) else RegistrationScreen(model)
+                    if (model.connection != null) AppScreen(model) else RegistrationScreen(model)
                 }
             }
         }
@@ -81,3 +90,38 @@ private fun RegistrationScreen(model: RegzaViewModel) {
         if (model.message.isNotEmpty()) Text(model.message)
     }
 }
+
+/** 登録したあとの画面。iOS 版と同じく、下のタブでリモコンとチャンネルを切り替える */
+@Composable
+private fun AppScreen(model: RegzaViewModel) {
+    // 画面が見えている間だけ、いま映っているものを取り直す (チャンネルのタブでも、いま見ている局の印に使う)。
+    // 裏に回ったらテレビに問い合わせない
+    LifecycleStartEffect(model) {
+        model.startPolling()
+        onStopOrDispose { model.stopPolling() }
+    }
+    var tab by rememberSaveable { mutableStateOf(Tab.Remote) }
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = tab == Tab.Remote, onClick = { tab = Tab.Remote },
+                    icon = { Icon(Icons.Filled.Home, contentDescription = null) }, label = { Text("リモコン") },
+                )
+                NavigationBarItem(
+                    selected = tab == Tab.Channels, onClick = { tab = Tab.Channels },
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, label = { Text("チャンネル") },
+                )
+            }
+        },
+    ) { padding ->
+        Box(Modifier.padding(padding)) {
+            when (tab) {
+                Tab.Remote -> RemoteScreen(model)
+                Tab.Channels -> ChannelScreen(model)
+            }
+        }
+    }
+}
+
+private enum class Tab { Remote, Channels }

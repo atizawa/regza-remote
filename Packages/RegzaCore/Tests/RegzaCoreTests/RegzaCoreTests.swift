@@ -311,6 +311,23 @@ import Testing
         #expect(channels.groupingSubchannels().map(\.number) == [55, 56])
     }
 
+    @Test func channelListShowsWatchedSubchannelAndDifferentProgram() {
+        let channels = [channel(11, remote: 1, representative: true), channel(12, remote: 1), channel(13, remote: 1)]
+        let watching = RegzaChannel.channelList(channels, in: .terrestrial, nowPlayingChannelCode: "JP-G12")
+        #expect(watching.map(\.number) == [11, 12])
+        let programs = [11: "ニュース", 12: "ニュース", 13: "野球中継"]
+        let different = RegzaChannel.channelList(channels, in: .terrestrial, nowPlayingChannelCode: nil) { programs[$0.number] }
+        #expect(different.map(\.number) == [11, 13])
+    }
+
+    @Test func preferredBand() {
+        let bands: [RegzaChannel.Band] = [.terrestrial, .bs]
+        #expect(RegzaChannel.Band.preferred(among: bands, selected: .bs, nowPlaying: .terrestrial) == .bs)
+        #expect(RegzaChannel.Band.preferred(among: bands, selected: nil, nowPlaying: .bs) == .bs)
+        // 選んでいたものがなければ、いま見ているもの、それもなければ最初のもの
+        #expect(RegzaChannel.Band.preferred(among: bands, selected: .cs, nowPlaying: nil) == .terrestrial)
+    }
+
     @Test func showsSubchannelsTheCallerAsksFor() {
         let channels = [channel(11, remote: 1, representative: true), channel(12, remote: 1), channel(13, remote: 1)]
         let shown = channels.groupingSubchannels { subchannel, representative in

@@ -167,25 +167,16 @@ struct ChannelListView: View {
         }
     }
 
-    /// 一覧に出すチャンネル。同じ局のサブチャンネルはふだん同じ番組なので、番組表と同じく局ごとにまとめ、
-    /// 代表と違う番組を流しているときと、いま見ているときだけ出す
+    /// 一覧に出すチャンネル (決まりは Android と同じ RegzaChannel.channelList)
     private func channels(in band: RegzaChannel.Band?) -> [RegzaChannel] {
-        let channels = model.channels.filter { $0.band == band }
-        // CS はテレビから代表の印が来ないので、すべて出す
-        guard band != .cs else { return channels }
-        return channels.groupingSubchannels { subchannel, representative in
-            if subchannel.code == model.nowPlaying?.channelCode { return true }
-            // 番組名が分からなければ (Mirakurun が未設定など)、代表だけを出す
-            guard let program = model.currentProgram(for: subchannel)?.name,
-                  let representativeProgram = model.currentProgram(for: representative)?.name
-            else { return false }
-            return program != representativeProgram
+        RegzaChannel.channelList(model.channels, in: band, nowPlayingChannelCode: model.nowPlaying?.channelCode) {
+            model.currentProgram(for: $0)?.name
         }
     }
 
     /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
     private var bands: [RegzaChannel.Band] {
-        RegzaChannel.Band.allCases.filter { band in model.channels.contains { $0.band == band } }
+        RegzaChannel.bands(in: model.channels)
     }
 
     private func load(force: Bool) async {

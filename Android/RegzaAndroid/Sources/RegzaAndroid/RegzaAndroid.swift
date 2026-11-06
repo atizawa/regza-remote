@@ -106,6 +106,26 @@ public final class RegzaAndroidRemote {
         }
     }
 
+    /// テレビに登録されているチャンネル
+    public func channels() async throws -> [RegzaChannel] {
+        do {
+            return try await remote.client.channels()
+        } catch {
+            throw RegzaAndroidError(error)
+        }
+    }
+
+    /// 選局して、選んだチャンネルに切り替わったものとしての「いま映っているもの」を返す
+    /// (切り替えの最中は問い合わせないので、番組名などは落ち着いてから refresh で取り直す)
+    public func tune(channel: RegzaChannel) async throws -> RegzaNowPlaying {
+        do {
+            try await remote.tune(to: channel)
+            return await remote.nowPlaying ?? RegzaNowPlaying(kind: .broadcast, channelName: channel.name, channelCode: channel.code)
+        } catch {
+            throw RegzaAndroidError(error)
+        }
+    }
+
     /// いま映っているものを取り直す。アプリを開いている間は 2 秒ごとに呼ぶ (iOS 版と同じ)
     public func refresh() async throws -> RegzaNowPlaying {
         do {
@@ -114,4 +134,12 @@ public final class RegzaAndroidRemote {
             throw RegzaAndroidError(error)
         }
     }
+}
+
+// MARK: - チャンネル一覧
+
+/// チャンネル一覧に出すチャンネル (RegzaChannel.channelList)。
+/// 番組名を返す関数を引数に取る形は Java のクラスにならないので、ここから呼ぶ。Android はまだ番組表がないので番組名は渡さない
+public func regzaChannelList(_ channels: [RegzaChannel], band: RegzaChannel.Band?, nowPlayingChannelCode: String) -> [RegzaChannel] {
+    RegzaChannel.channelList(channels, in: band, nowPlayingChannelCode: nowPlayingChannelCode)
 }

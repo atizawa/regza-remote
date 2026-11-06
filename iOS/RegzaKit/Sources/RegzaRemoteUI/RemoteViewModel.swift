@@ -86,10 +86,7 @@ public final class RemoteViewModel {
 
     /// 放送の種類を選んでいなければ、いま見ている放送の種類、それもなければ一覧の最初のものにする
     func band(among bands: [RegzaChannel.Band]) -> RegzaChannel.Band? {
-        if let selectedBand, bands.contains(selectedBand) { return selectedBand }
-        let current = channels.first { $0.code == nowPlaying?.channelCode }?.band
-        if let current, bands.contains(current) { return current }
-        return bands.first
+        .preferred(among: bands, selected: selectedBand, nowPlaying: nowPlayingChannel?.band)
     }
 
     /// テレビに登録されているチャンネル。取得前は空

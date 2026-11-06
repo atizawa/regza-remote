@@ -63,6 +63,41 @@ public struct RegzaChannel: Decodable, Hashable, Sendable, Identifiable {
     }
 }
 
+extension RegzaChannel {
+    /// チャンネルの中にある放送の種類 (地デジ・BS・CS の順)
+    public static func bands(in channels: [RegzaChannel]) -> [Band] {
+        Band.allCases.filter { band in channels.contains { $0.band == band } }
+    }
+
+    /// チャンネル一覧に出すチャンネル。同じ局のサブチャンネルはふだん同じ番組なので、番組表と同じく局ごとにまとめ、
+    /// いま見ているときと、代表と違う番組を流しているときだけ出す。
+    /// CS はテレビから代表の印が来ないので、すべて出す
+    /// - Parameter programName: そのチャンネルでいま放送中の番組名。分からなければ nil (サブチャンネルは代表だけにする)
+    public static func channelList(
+        _ channels: [RegzaChannel], in band: Band?, nowPlayingChannelCode: String?,
+        programName: (RegzaChannel) -> String? = { _ in nil }
+    ) -> [RegzaChannel] {
+        let channels = channels.filter { $0.band == band }
+        guard band != .cs else { return channels }
+        return channels.groupingSubchannels { subchannel, representative in
+            if subchannel.code == nowPlayingChannelCode { return true }
+            guard let program = programName(subchannel), let representativeProgram = programName(representative) else { return false }
+            return program != representativeProgram
+        }
+    }
+}
+
+extension RegzaChannel.Band {
+    /// 出す放送の種類。選んでいればそれ、なければいま見ている放送の種類、それもなければ最初のもの
+    public static func preferred(
+        among bands: [RegzaChannel.Band], selected: RegzaChannel.Band?, nowPlaying: RegzaChannel.Band?
+    ) -> RegzaChannel.Band? {
+        if let selected, bands.contains(selected) { return selected }
+        if let nowPlaying, bands.contains(nowPlaying) { return nowPlaying }
+        return bands.first
+    }
+}
+
 extension Sequence where Element == RegzaChannel {
     /// 同じ放送局のサブチャンネル (リモコン番号が同じチャンネル) をまとめる。番組表とチャンネル一覧で同じ局の並びにする。
     /// リモコン番号ごとに代表 (`SHOW_REPRESENT` の印のあるもの、なければ最初のもの) を残し、

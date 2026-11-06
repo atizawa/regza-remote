@@ -6,14 +6,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.regzaremote.core.RegzaAndroid
 import com.example.regzaremote.core.RegzaAndroidPairing
 import com.example.regzaremote.core.RegzaAndroidRemote
+import com.example.regzaremote.core.RegzaChannel
 import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RegzaNowPlaying
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
+import java.util.Optional
 import org.swift.swiftkit.core.SwiftError
 
 /**
@@ -44,11 +47,76 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
     var isBusy by mutableStateOf(false)
         private set
 
-    /** 画面に出す説明 (失敗したときなど) */
+    /** 画面に出す説明 (ボタンの操作が失敗したときなど) */
     var message by mutableStateOf("")
         private set
 
+    /** いま映っているものを取れなかったときの説明。次に取れたら消す (iOS 版の lastError と同じ) */
+    var connectionError by mutableStateOf<String?>(null)
+        private set
+
     private var polling: Job? = null
+
+    // MARK: チャンネル
+
+    /** テレビに登録されているチャンネル。取得前は空 */
+    var channels by mutableStateOf<List<RegzaChannel>>(emptyList())
+        private set
+
+    /** 選んでいる放送の種類 (地デジ・BS・CS)。未選択なら null で、いま見ている種類を出す */
+    var selectedBand by mutableStateOf<RegzaChannel.Band?>(null)
+
+    /** 切り替え中のチャンネルのコード */
+    var tuningChannelCode by mutableStateOf<String?>(null)
+        private set
+
+    /** チャンネルにある放送の種類 (地デジ・BS・CS の順) */
+    val bands: List<RegzaChannel.Band> get() = RegzaChannel.bands(channels.toTypedArray()).toList()
+
+    /** 出す放送の種類 (決まりは iOS と同じ RegzaChannel.Band.preferred) */
+    val band: RegzaChannel.Band?
+        get() = RegzaChannel.Band.preferred(
+            bands.toTypedArray(), Optional.ofNullable(selectedBand), Optional.ofNullable(nowPlayingChannel?.band),
+        ).orElse(null)
+
+    /** 一覧に出すチャンネル (決まりは iOS と同じ RegzaChannel.channelList) */
+    val listedChannels: List<RegzaChannel>
+        get() = RegzaAndroid.regzaChannelList(
+            channels.toTypedArray(), Optional.ofNullable(band), nowPlaying?.channelCode ?: "",
+        ).toList()
+
+    /** いま映っている放送のチャンネル */
+    val nowPlayingChannel: RegzaChannel?
+        get() = nowPlaying?.channelCode?.takeIf { it.isNotEmpty() }?.let { code -> channels.firstOrNull { it.code == code } }
+
+    /** チャンネル一覧を取得する。チャンネルの登録はあまり変わらないので、取得済みなら使い回す */
+    fun loadChannels(force: Boolean = false) {
+        val remote = remote ?: return
+        if (!force && channels.isNotEmpty()) return
+        viewModelScope.launch {
+            try {
+                channels = remote.channels().await().toList()
+            } catch (e: SwiftError) {
+                message = e.message ?: "チャンネルを取得できません"
+            }
+        }
+    }
+
+    fun tune(channel: RegzaChannel) {
+        val remote = remote ?: return
+        viewModelScope.launch {
+            tuningChannelCode = channel.code
+            try {
+                // 切り替わったものとして先に出す (チェックの印をすぐ付ける)。番組名などは落ち着いてから取り直す
+                nowPlaying = remote.tune(channel).await()
+                message = ""
+            } catch (e: SwiftError) {
+                message = e.message ?: "切り替えられませんでした"
+            } finally {
+                tuningChannelCode = null
+            }
+        }
+    }
 
     // MARK: PIN 登録
 
@@ -80,6 +148,9 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
         connection = null
         remote = null
         nowPlaying = null
+        connectionError = null
+        channels = emptyList()
+        selectedBand = null
         message = ""
     }
 
@@ -105,9 +176,10 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
             while (true) {
                 try {
                     nowPlaying = remote.refresh().await()
+                    connectionError = null
                 } catch (e: SwiftError) {
                     nowPlaying = null
-                    message = e.message ?: "テレビに接続できません"
+                    connectionError = e.message ?: "テレビに接続できません"
                 }
                 delay(2_000)
             }

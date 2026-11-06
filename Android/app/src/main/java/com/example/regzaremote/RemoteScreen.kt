@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleStartEffect
 import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RegzaNowPlaying
 
@@ -36,13 +35,8 @@ import com.example.regzaremote.core.RegzaNowPlaying
  */
 @Composable
 fun RemoteScreen(model: RegzaViewModel) {
-    // 画面が見えている間だけ取り直す。裏に回ったらテレビに問い合わせない
-    LifecycleStartEffect(model) {
-        model.startPolling()
-        onStopOrDispose { model.stopPolling() }
-    }
     val nowPlaying = model.nowPlaying
-    val message = model.message
+    val message = model.connectionError ?: model.message
     val send: (RegzaKey) -> Unit = model::send
 
     Column(

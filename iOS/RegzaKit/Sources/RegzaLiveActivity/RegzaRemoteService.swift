@@ -39,8 +39,9 @@ public enum RegzaRemoteService {
 
     public static func tune(to channel: RegzaChannel) async throws {
         try await remote.tune(to: channel)
-        try? await Task.sleep(for: .milliseconds(400))
-        _ = await refresh()
+        // 切り替えの最中は play/status を問い合わせない (RegzaRemote) ので、取り直さずに、
+        // 選んだチャンネルに切り替わったものとして出す。番組名などは定期の取得で落ち着いてから反映する
+        await updateLiveActivity(nowPlaying: await remote.nowPlaying, isConnected: true)
         // 番組の終了時刻が変わるので、起こしてもらう時刻を予約し直す
         await BackgroundRefresh.schedule()
     }
@@ -57,13 +58,17 @@ public enum RegzaRemoteService {
         }
         // 一時的な失敗で番組情報が消えないよう、失敗したときは直前の情報を「接続できません」付きで出す
         let previous = await remote.nowPlaying
+        await updateLiveActivity(nowPlaying: (try? result.get()) ?? previous, isConnected: (try? result.get()) != nil)
+        return result
+    }
+
+    private static func updateLiveActivity(nowPlaying: RegzaNowPlaying?, isConnected: Bool) async {
         let state = RegzaActivityAttributes.ContentState(
-            nowPlaying: (try? result.get()) ?? previous,
+            nowPlaying: nowPlaying,
             lastCommand: await remote.lastCommand,
-            isConnected: (try? result.get()) != nil
+            isConnected: isConnected
         )
         await LiveActivityController.update(state)
-        return result
     }
 }
 

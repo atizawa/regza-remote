@@ -79,6 +79,14 @@ public actor RegzaRemote {
         try await client.tune(to: channel.code)
         lastCommand = nil
         needsPlayStatus = true
+        // 映像が切り替わるので、キーと同じく落ち着くまで play/status は問い合わせない
+        // (切り替えの最中に問い合わせると status 1 が返ることを実機で確認)
+        quietUntil = Date().addingTimeInterval(Self.switchingQuietPeriod)
+        // 切り替わるのは分かっているので、選局の前に見張っていた値は捨てる
+        // (残すと、待ったあとに status.htm の値が変わったとしてもう一度待ち、番組名が出るまで倍かかる)
+        lastProbe = nil
+        // 待つ間も選んだチャンネルが分かるよう、切り替わったものとして先に出す。番組名などは落ち着いてから取り直す
+        nowPlaying = RegzaNowPlaying(kind: .broadcast, channelName: channel.name, channelCode: channel.code)
     }
 
     public func seek(to seconds: Int) async throws {
