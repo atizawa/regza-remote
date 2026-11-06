@@ -5,41 +5,41 @@ import SwiftUI
 
 /// 1 チャンネルの番組表 (Mirakurun)。放送中の番組から日ごとに並べる
 struct ChannelProgramsView: View {
-    @Environment(GuideViewModel.self) private var guide
-    @Environment(ReservationsViewModel.self) private var recording
-    let channel: RegzaChannel
+    @State private var viewModel: ProgramListViewModel
+    @Environment(RemoteViewModel.self) private var model
+    @Environment(StreamViewModel.self) private var stream
 
-    @State private var programs: [MirakurunProgram]?
-    @State private var loadError: RegzaError?
+    init(viewModel: ProgramListViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
 
     var body: some View {
         content
-            .navigationTitle(channel.name)
+            .navigationTitle(viewModel.channel.name)
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: MirakurunProgram.self) { program in
-                ProgramDetailView(program: program, channel: channel)
+                ProgramDetailView(viewModel: ProgramDetailViewModel(
+                    remote: model, guide: viewModel.guide, recording: viewModel.recording, stream: stream,
+                    program: program, channel: viewModel.channel
+                ))
             }
-            .task {
-                if programs == nil { await load() }
-                // 予約した番組に印を付けるため
-                if recording.reservations.isEmpty { try? await recording.loadReservations() }
-            }
-            .refreshable { await load() }
+            .task { await viewModel.appear() }
+            .refreshable { await viewModel.load() }
     }
 
     @ViewBuilder
     private var content: some View {
-        if let programs {
+        if let programs = viewModel.programs {
             if programs.isEmpty {
                 ContentUnavailableView("番組表がありません", systemImage: "calendar",
                                        description: Text("Mirakurun がこのチャンネルの番組表を持っていません。"))
             } else {
                 List {
-                    ForEach(days(programs), id: \.day) { group in
+                    ForEach(viewModel.days, id: \.day) { group in
                         Section {
                             ForEach(group.programs) { program in
                                 NavigationLink(value: program) {
-                                    ProgramRow(program: program)
+                                    ProgramRow(program: program, isReserved: viewModel.isReserved(program))
                                 }
                             }
                         } header: {
@@ -48,33 +48,17 @@ struct ChannelProgramsView: View {
                     }
                 }
             }
-        } else if let loadError {
+        } else if let loadError = viewModel.loadError {
             ContentUnavailableView {
                 Label("番組表を取得できません", systemImage: "calendar.badge.exclamationmark")
             } description: {
                 Text(loadError.localizedDescription)
             } actions: {
-                Button("もう一度試す") { Task { await load() } }
+                Button("もう一度試す") { Task { await viewModel.load() } }
             }
         } else {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-
-    private func days(_ programs: [MirakurunProgram]) -> [(day: Date, programs: [MirakurunProgram])] {
-        let calendar = Calendar.current
-        return Dictionary(grouping: programs) { calendar.startOfDay(for: $0.start) }
-            .map { (day: $0.key, programs: $0.value) }
-            .sorted { $0.day < $1.day }
-    }
-
-    private func load() async {
-        do {
-            programs = try await guide.programs(for: channel)
-            loadError = nil
-        } catch {
-            loadError = error
         }
     }
 }
@@ -95,8 +79,8 @@ struct ReservedBadge: View {
 }
 
 private struct ProgramRow: View {
-    @Environment(ReservationsViewModel.self) private var recording
     let program: MirakurunProgram
+    let isReserved: Bool
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -108,7 +92,7 @@ private struct ProgramRow: View {
                 Text(program.name)
                     .lineLimit(2)
                 HStack(spacing: 6) {
-                    if recording.isReserved(program) {
+                    if isReserved {
                         ReservedBadge(compact: true)
                     }
                     if program.isOnAir() {
@@ -126,34 +110,23 @@ private struct ProgramRow: View {
 }
 
 struct ProgramDetailView: View {
-    @Environment(RemoteViewModel.self) private var model
-    @Environment(GuideViewModel.self) private var guide
-    @Environment(ReservationsViewModel.self) private var recording
-    @Environment(StreamViewModel.self) private var stream
-    let program: MirakurunProgram
-    let channel: RegzaChannel
-
-    @State private var isTuning = false
-    /// 切り替えた結果 (切り替えてもタブは移らないので、ここに出す)
-    @State private var tuneMessage: String?
-    /// 予約・取り消しの途中のもの
-    @State private var isReserving: Reserving?
-    @State private var reserveMessage: String?
-
-    private enum Reserving {
-        case single, series, cancel
-    }
-    /// 予約・取り消しが終わったときの触覚フィードバック用
-    @State private var reserveFeedback = 0
+    @State private var viewModel: ProgramDetailViewModel
     /// iPhone で見ている配信の再生画面
     @State private var isShowingPlayer = false
+
+    init(viewModel: ProgramDetailViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
+    private var program: MirakurunProgram { viewModel.program }
+    private var channel: RegzaChannel { viewModel.channel }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Design.group) {
                 header
                 actions
-                if let message = reserveMessage ?? tuneMessage {
+                if let message = viewModel.message {
                     Text(message)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -167,17 +140,13 @@ struct ProgramDetailView: View {
         .navigationTitle("番組の詳細")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $isShowingPlayer) {
-            if let server = stream.streamServer() {
+            if let server = viewModel.stream.streamServer() {
                 LivePlayerView(server: server, channel: channel)
             }
         }
-        .sensoryFeedback(.success, trigger: reserveFeedback)
-        .animation(.default, value: recording.isReserved(program))
-        .task {
-            // 予約済みか、最初から見られるかを出すため
-            if recording.reservations.isEmpty { try? await recording.loadReservations() }
-            await guide.loadTimeshiftSettings()
-        }
+        .sensoryFeedback(.success, trigger: viewModel.reserveCount)
+        .animation(.default, value: viewModel.isReserved)
+        .task { await viewModel.appear() }
     }
 
     /// 局名・番組名・時刻。番組名をいちばん大きくする
@@ -216,8 +185,8 @@ struct ProgramDetailView: View {
                 .padding(.top, 4)
             }
 
-            if let reservation = recording.reservation(for: program) {
-                Label(reservedText(reservation), systemImage: "record.circle.fill")
+            if let reservedText = viewModel.reservedText {
+                Label(reservedText, systemImage: "record.circle.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.red)
                     .padding(.top, 4)
@@ -229,20 +198,20 @@ struct ProgramDetailView: View {
     private var actions: some View {
         VStack(spacing: Design.item) {
             HStack(spacing: Design.item) {
-                if program.isOnAir() {
+                if viewModel.canTune {
                     Button {
-                        Task { await tune(startOver: false) }
+                        Task { await viewModel.tune(startOver: false) }
                     } label: {
-                        actionLabel("切り替えて見る", systemImage: "play.fill", isBusy: isTuning)
+                        actionLabel("切り替えて見る", systemImage: "play.fill", isBusy: viewModel.isTuning)
                     }
                     .buttonStyle(FilledActionStyle(color: AppTheme.accent))
-                    .disabled(isTuning)
+                    .disabled(viewModel.isTuning)
                 }
-                if program.end > Date() {
+                if viewModel.canReserve {
                     reserveMenu
                 }
             }
-            if program.isOnAir(), stream.canStream {
+            if viewModel.canStream {
                 Button {
                     isShowingPlayer = true
                 } label: {
@@ -250,14 +219,14 @@ struct ProgramDetailView: View {
                 }
                 .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
             }
-            if program.isOnAir(), guide.canStartOver(channelCode: program.channelCode, programStart: program.start) {
+            if viewModel.canStartOver {
                 Button {
-                    Task { await tune(startOver: true) }
+                    Task { await viewModel.tune(startOver: true) }
                 } label: {
                     actionLabel("最初から見る", systemImage: "backward.end.alt", isBusy: false)
                 }
                 .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
-                .disabled(isTuning)
+                .disabled(viewModel.isTuning)
             }
         }
     }
@@ -265,35 +234,35 @@ struct ProgramDetailView: View {
     /// 「録画予約」を押すと、この回だけか連ドラ予約かを選ぶ。予約済みならメニューから取り消す
     @ViewBuilder
     private var reserveMenu: some View {
-        if let reservation = recording.reservation(for: program) {
+        if let reservation = viewModel.reservation {
             Menu {
                 Button(role: .destructive) {
-                    Task { await cancel(reservation) }
+                    Task { await viewModel.cancelReservation() }
                 } label: {
                     Label(reservation.isSeries ? "連ドラ予約を取り消す" : "予約を取り消す", systemImage: "xmark.circle")
                 }
             } label: {
-                actionLabel("予約済み", systemImage: "checkmark", isBusy: isReserving != nil)
+                actionLabel("予約済み", systemImage: "checkmark", isBusy: viewModel.reserving != nil)
             }
             .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .red))
-            .disabled(isReserving != nil)
+            .disabled(viewModel.reserving != nil)
         } else {
             Menu {
                 Button {
-                    Task { await reserve(series: false) }
+                    Task { await viewModel.reserve(series: false) }
                 } label: {
                     Label("この回だけ録画", systemImage: "record.circle")
                 }
                 Button {
-                    Task { await reserve(series: true) }
+                    Task { await viewModel.reserve(series: true) }
                 } label: {
                     Label("連ドラ予約（毎回録画）", systemImage: "repeat")
                 }
             } label: {
-                actionLabel("録画予約", systemImage: "record.circle", isBusy: isReserving != nil)
+                actionLabel("録画予約", systemImage: "record.circle", isBusy: viewModel.reserving != nil)
             }
             .buttonStyle(FilledActionStyle(color: .red))
-            .disabled(isReserving != nil)
+            .disabled(viewModel.reserving != nil)
         }
     }
 
@@ -327,58 +296,6 @@ struct ProgramDetailView: View {
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
             }
-        }
-    }
-
-    private func reservedText(_ reservation: RegzaReservation) -> String {
-        guard reservation.isSeries else { return "録画予約済み" }
-        return reservation.repeatLabel.map { "連ドラ予約済み（\($0)）" } ?? "連ドラ予約済み"
-    }
-
-    private func reserve(series: Bool) async {
-        isReserving = series ? .series : .single
-        defer { isReserving = nil }
-        reserveMessage = nil
-        do {
-            try await recording.reserve(program, series: series)
-            reserveFeedback += 1
-            if !recording.isReserved(program) {
-                // テレビの一覧にまだ反映されていない
-                reserveMessage = "予約しました。テレビの予約一覧に反映されるまで少しかかることがあります。"
-            }
-        } catch .commandRejected(let code) {
-            // 重なる予約が多い、ハードディスクがないなど
-            reserveMessage = "テレビが予約を受け付けませんでした (\(code))。テレビの予約一覧や録画機器を確認してください。"
-        } catch {
-            reserveMessage = error.localizedDescription
-        }
-    }
-
-    private func cancel(_ reservation: RegzaReservation) async {
-        isReserving = .cancel
-        defer { isReserving = nil }
-        reserveMessage = nil
-        do {
-            try await recording.cancel(reservation)
-            reserveFeedback += 1
-        } catch {
-            reserveMessage = "予約を取り消せませんでした: \(error.localizedDescription)"
-        }
-    }
-
-    private func tune(startOver: Bool) async {
-        isTuning = true
-        defer { isTuning = false }
-        do {
-            if startOver {
-                try await guide.tuneAndStartOver(channel)
-                tuneMessage = "テレビを\(channel.name)に切り替えて、最初から再生しました。"
-            } else {
-                try await model.tune(to: channel)
-                tuneMessage = "テレビを\(channel.name)に切り替えました。"
-            }
-        } catch {
-            tuneMessage = error.localizedDescription
         }
     }
 }

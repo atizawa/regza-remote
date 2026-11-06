@@ -4,13 +4,13 @@ import SwiftUI
 
 /// テレビの録画予約の一覧
 struct ReservationsView: View {
-    @Environment(RemoteViewModel.self) private var model
-    @Environment(ReservationsViewModel.self) private var recording
-    @State private var loadError: RegzaError?
-    @State private var hasLoaded = false
+    @State private var viewModel: ReservationListViewModel
     /// 取り消すか確かめている予約
     @State private var canceling: RegzaReservation?
-    @State private var cancelError: String?
+
+    init(viewModel: ReservationListViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
 
     var body: some View {
         NavigationStack {
@@ -18,8 +18,8 @@ struct ReservationsView: View {
                 .navigationTitle("録画予約")
                 // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
                 .navigationBarTitleDisplayMode(.inline)
-                .task { await load() }
-                .refreshable { await load() }
+                .task { await viewModel.load() }
+                .refreshable { await viewModel.load() }
                 .confirmationDialog(
                     canceling.map { "「\($0.title)」の予約を取り消しますか？" } ?? "",
                     isPresented: Binding(get: { canceling != nil }, set: { if !$0 { canceling = nil } }),
@@ -27,7 +27,7 @@ struct ReservationsView: View {
                     presenting: canceling
                 ) { reservation in
                     Button(reservation.isSeries ? "連ドラ予約を取り消す" : "予約を取り消す", role: .destructive) {
-                        Task { await cancel(reservation) }
+                        Task { await viewModel.cancel(reservation) }
                     }
                 } message: { reservation in
                     if reservation.isSeries {
@@ -40,24 +40,24 @@ struct ReservationsView: View {
     @ViewBuilder
     private var content: some View {
         let now = Date()
-        let scheduled = recording.reservations.filter { $0.isScheduled(now: now) }
-        let waiting = recording.reservations.filter { !$0.isScheduled(now: now) }
-        if let loadError, recording.reservations.isEmpty {
+        let scheduled = viewModel.scheduled(now: now)
+        let waiting = viewModel.waiting(now: now)
+        if let message = viewModel.loadErrorMessage {
             ContentUnavailableView {
                 Label("録画予約を取得できません", systemImage: "calendar.badge.exclamationmark")
             } description: {
-                Text(loadError.recordingMessage)
+                Text(message)
             } actions: {
-                Button("もう一度試す") { Task { await load() } }
+                Button("もう一度試す") { Task { await viewModel.load() } }
             }
-        } else if !hasLoaded {
+        } else if !viewModel.hasLoaded {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if recording.reservations.isEmpty {
+        } else if viewModel.isEmpty {
             ContentUnavailableView("録画予約はありません", systemImage: "calendar")
         } else {
             List {
-                if let cancelError {
+                if let cancelError = viewModel.cancelError {
                     Text(cancelError)
                         .font(.footnote)
                         .foregroundStyle(.red)
@@ -108,42 +108,11 @@ struct ReservationsView: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
-            if let channel = model.channels.first(where: { $0.code == reservation.channelCode }) {
-                Text(channel.name)
+            if let channelName = viewModel.channelName(of: reservation) {
+                Text(channelName)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-        }
-    }
-
-    private func cancel(_ reservation: RegzaReservation) async {
-        cancelError = nil
-        do {
-            try await recording.cancel(reservation)
-        } catch {
-            cancelError = "「\(reservation.title)」の予約を取り消せませんでした: \(error.localizedDescription)"
-        }
-    }
-
-    private func load() async {
-        defer { hasLoaded = true }
-        // 局名を出すためにチャンネル一覧も読む (取れなくても予約は出す)
-        try? await model.loadChannels()
-        do {
-            try await recording.loadReservations()
-            loadError = nil
-        } catch {
-            loadError = error
-        }
-    }
-}
-
-extension RegzaError {
-    /// 録画まわりの画面に出すメッセージ
-    var recordingMessage: String {
-        switch self {
-        case .httpStatus(404), .unsupported: "この機種は対応していません。"
-        default: localizedDescription
         }
     }
 }

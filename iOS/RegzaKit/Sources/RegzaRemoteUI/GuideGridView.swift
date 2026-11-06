@@ -8,6 +8,7 @@ struct GuideGridView: View {
     @Environment(RemoteViewModel.self) private var model
     @Environment(GuideViewModel.self) private var guide
     @Environment(ReservationsViewModel.self) private var recording
+    @Environment(StreamViewModel.self) private var stream
     @Environment(\.showSettings) private var showSettings
     @State private var hasLoaded = false
     /// 開いている画面 (検索 → 番組の詳細と重ねたとき、戻ると 1 つ前の画面に戻れるよう順番を持つ)
@@ -46,7 +47,10 @@ struct GuideGridView: View {
                             path.append(.detail(program, channel))
                         }
                     case .detail(let program, let channel):
-                        ProgramDetailView(program: program, channel: channel)
+                        ProgramDetailView(viewModel: ProgramDetailViewModel(
+                            remote: model, guide: guide, recording: recording, stream: stream,
+                            program: program, channel: channel
+                        ))
                     }
                 }
                 .task { await load() }

@@ -53,11 +53,11 @@ public struct RemoteView: View {
                         .tabItem { Label("番組表", systemImage: "calendar") }
                         .tag(AppTab.guide)
 
-                    ChannelListView()
+                    ChannelListView(viewModel: ChannelListViewModel(remote: model, guide: guide, stream: stream))
                         .tabItem { Label("チャンネル", systemImage: "list.bullet") }
                         .tag(AppTab.channels)
 
-                    ReservationsView()
+                    ReservationsView(viewModel: ReservationListViewModel(remote: model, recording: recording))
                         .tabItem { Label("録画予約", systemImage: "record.circle") }
                         .tag(AppTab.reservations)
                 }
