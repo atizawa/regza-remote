@@ -145,8 +145,9 @@ public enum RegzaDiscovery {
         for pointer in sequence(first: first, next: { $0.pointee.ifa_next }) {
             let interface = pointer.pointee
             let flags = Int32(bitPattern: UInt32(interface.ifa_flags))
-            let name = String(cString: interface.ifa_name)
-            guard flags & Int32(IFF_UP) != 0, flags & Int32(IFF_LOOPBACK) == 0,
+            // Android では ifa_name が Optional になっている
+            let name = interface.ifa_name.map { String(cString: $0) } ?? ""
+            guard flags & interfaceUp != 0, flags & interfaceLoopback == 0,
                   ["en", "wlan", "eth"].contains(where: name.hasPrefix),
                   let address = interface.ifa_addr, let netmask = interface.ifa_netmask,
                   address.pointee.sa_family == sa_family_t(AF_INET)
@@ -156,6 +157,15 @@ public enum RegzaDiscovery {
         }
         return networks
     }
+
+    // Android では IFF_UP などが数値ではなく net_device_flags の値になっている
+    #if canImport(Android)
+    private static let interfaceUp = Int32(truncatingIfNeeded: IFF_UP.rawValue)
+    private static let interfaceLoopback = Int32(truncatingIfNeeded: IFF_LOOPBACK.rawValue)
+    #else
+    private static let interfaceUp = Int32(IFF_UP)
+    private static let interfaceLoopback = Int32(IFF_LOOPBACK)
+    #endif
 
     private static func ipv4(_ pointer: UnsafeMutablePointer<sockaddr>) -> UInt32 {
         pointer.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { UInt32(bigEndian: $0.pointee.sin_addr.s_addr) }
