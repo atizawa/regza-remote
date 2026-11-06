@@ -215,7 +215,7 @@ private struct ConditionChips: View {
 }
 
 private struct SearchResultRow: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(ReservationsViewModel.self) private var recording
     let result: ProgramSearchResult
     let channel: RegzaChannel
 
@@ -230,7 +230,7 @@ private struct SearchResultRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                if model.isReserved(program) {
+                if recording.isReserved(program) {
                     Image(systemName: "record.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.red)

@@ -10,6 +10,7 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
     private static let userKey = "regza.user"
     private static let guideHostKey = "mirakurun.host"
     private static let streamHostKey = "epgstation.host"
+    private static let ownStreamsKey = "epgstation.ownStreams"
     private static let passwordAccount = "regza.password"
     private static let pairingUserIDAccount = "regza.pairingUserID"
     private static let service = "RegzaRemote"
@@ -44,6 +45,11 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
         nonmutating set {
             UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: Self.streamHostKey)
         }
+    }
+
+    public var ownStreamIDs: [Int] {
+        get { UserDefaults.standard.array(forKey: Self.ownStreamsKey) as? [Int] ?? [] }
+        nonmutating set { UserDefaults.standard.set(newValue, forKey: Self.ownStreamsKey) }
     }
 
     public func pairingUserID() -> String {

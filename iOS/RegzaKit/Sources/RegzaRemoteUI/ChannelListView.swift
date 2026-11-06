@@ -6,6 +6,8 @@ import SwiftUI
 /// テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える
 struct ChannelListView: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(GuideViewModel.self) private var guide
+    @Environment(StreamViewModel.self) private var stream
     @State private var isLoading = false
     @State private var loadError: RegzaError?
     @State private var tuneError: String?
@@ -37,15 +39,15 @@ struct ChannelListView: View {
                     ChannelProgramsView(channel: channel)
                 }
                 .fullScreenCover(item: $playerChannel) { channel in
-                    if let server = model.streamServer() {
+                    if let server = stream.streamServer() {
                         LivePlayerView(server: server, channel: channel)
                     }
                 }
                 .task {
                     await load(force: false)
-                    await model.loadGuidePrograms()
+                    await guide.loadGuidePrograms()
                     // 長押しのメニューに「最初から見る」を出すかを決めるため
-                    await model.loadTimeshiftSettings()
+                    await guide.loadTimeshiftSettings()
                 }
         }
     }
@@ -103,7 +105,7 @@ struct ChannelListView: View {
                             // 同じ放送局のサブチャンネルは控えめに出す
                             .foregroundStyle(channel.isRepresentative || channel.band == .cs ? .primary : .secondary)
                             .lineLimit(1)
-                        if let program = model.currentProgram(for: channel) {
+                        if let program = guide.currentProgram(for: channel) {
                             Text(program.name)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -126,7 +128,7 @@ struct ChannelListView: View {
             .buttonStyle(.borderless)
             .tint(.primary)
             .disabled(tuning != nil)
-            if model.hasGuide, model.guidePrograms[channel.code] != nil {
+            if guide.hasGuide, guide.guidePrograms[channel.code] != nil {
                 Button {
                     path.append(channel)
                 } label: {
@@ -149,18 +151,18 @@ struct ChannelListView: View {
         Button("切り替える", systemImage: "play.fill") {
             Task { await tune(to: channel) }
         }
-        if model.canStream {
+        if stream.canStream {
             Button("アプリで見る", systemImage: "play.tv") {
                 playerChannel = channel
             }
         }
-        if let program = model.currentProgram(for: channel),
-           model.canStartOver(channelCode: channel.code, programStart: program.start) {
+        if let program = guide.currentProgram(for: channel),
+           guide.canStartOver(channelCode: channel.code, programStart: program.start) {
             Button("最初から見る", systemImage: "backward.end.alt") {
                 Task { await tune(to: channel, startOver: true) }
             }
         }
-        if model.hasGuide, model.guidePrograms[channel.code] != nil {
+        if guide.hasGuide, guide.guidePrograms[channel.code] != nil {
             Button("番組表", systemImage: "calendar") {
                 path.append(channel)
             }
@@ -170,7 +172,7 @@ struct ChannelListView: View {
     /// 一覧に出すチャンネル (決まりは Android と同じ RegzaChannel.channelList)
     private func channels(in band: RegzaChannel.Band?) -> [RegzaChannel] {
         RegzaChannel.channelList(model.channels, in: band, nowPlayingChannelCode: model.nowPlaying?.channelCode) {
-            model.currentProgram(for: $0)?.name
+            guide.currentProgram(for: $0)?.name
         }
     }
 
@@ -200,9 +202,9 @@ struct ChannelListView: View {
             if !startOver {
                 try await model.tune(to: channel)
             } else if channel.code == model.nowPlaying?.channelCode {
-                model.startOver()
+                guide.startOver()
             } else {
-                try await model.tuneAndStartOver(channel)
+                try await guide.tuneAndStartOver(channel)
             }
         } catch .commandRejected {
             tuneError = "\(channel.name) に切り替えられませんでした。テレビの電源が入っているか確認してください。"

@@ -6,6 +6,8 @@ import SwiftUI
 /// 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる
 struct GuideGridView: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(GuideViewModel.self) private var guide
+    @Environment(ReservationsViewModel.self) private var recording
     @Environment(\.showSettings) private var showSettings
     @State private var hasLoaded = false
     /// 開いている画面 (検索 → 番組の詳細と重ねたとき、戻ると 1 つ前の画面に戻れるよう順番を持つ)
@@ -31,7 +33,7 @@ struct GuideGridView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
-                    if model.hasGuide, hasLoaded, !columns.isEmpty {
+                    if guide.hasGuide, hasLoaded, !columns.isEmpty {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("番組を探す", systemImage: "magnifyingglass") { path.append(.search) }
                         }
@@ -53,7 +55,7 @@ struct GuideGridView: View {
 
     @ViewBuilder
     private var content: some View {
-        if !model.hasGuide {
+        if !guide.hasGuide {
             // Mirakurun がなくてもタブは消さず (HIG)、何ができるかと設定のしかたを案内する
             ContentUnavailableView {
                 Label("番組表を使うには", systemImage: "calendar")
@@ -172,24 +174,24 @@ struct GuideGridView: View {
     private var columns: [Column] {
         let band = model.band(among: bands)
         return model.channels
-            .filter { $0.band == band && model.guidePrograms[$0.code] != nil }
+            .filter { $0.band == band && guide.guidePrograms[$0.code] != nil }
             .groupingSubchannels()
-            .map { Column(channel: $0, programs: model.guidePrograms[$0.code] ?? []) }
+            .map { Column(channel: $0, programs: guide.guidePrograms[$0.code] ?? []) }
     }
 
     private var bands: [RegzaChannel.Band] {
         RegzaChannel.Band.allCases.filter { band in
-            model.channels.contains { $0.band == band && model.guidePrograms[$0.code] != nil }
+            model.channels.contains { $0.band == band && guide.guidePrograms[$0.code] != nil }
         }
     }
 
     private func load() async {
         defer { hasLoaded = true }
         try? await model.loadChannels()
-        await model.loadGuidePrograms()
-        search.updateIndex(model.guidePrograms, loadedAt: model.guideProgramsLoadedAt)
+        await guide.loadGuidePrograms()
+        search.updateIndex(guide.guidePrograms, loadedAt: guide.guideProgramsLoadedAt)
         // 予約した番組に印を付けるため
-        try? await model.loadReservations()
+        try? await recording.loadReservations()
         #if DEBUG
         // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
         if SampleData.isEnabled, UserDefaults.standard.bool(forKey: "SampleDetail"),
@@ -214,7 +216,7 @@ struct GuideGridView: View {
     /// 明日から、Mirakurun が番組表を持っている最後の日まで (今日は nil で表す)
     private var days: [Date] {
         let today = BroadcastDay.start(of: Date())
-        guard let last = model.guidePrograms.values.compactMap({ $0.last?.start }).max() else { return [] }
+        guard let last = guide.guidePrograms.values.compactMap({ $0.last?.start }).max() else { return [] }
         let lastDay = BroadcastDay.start(of: last)
         var result: [Date] = []
         var day = Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today
@@ -373,7 +375,7 @@ private struct ProgramColumn: View {
 }
 
 private struct ProgramCell: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(ReservationsViewModel.self) private var recording
     let program: MirakurunProgram
     let channelName: String
 
@@ -384,7 +386,7 @@ private struct ProgramCell: View {
                 Text(program.start, format: .dateTime.hour().minute())
                     .font(.caption2.monospacedDigit().weight(isOnAir ? .semibold : .regular))
                     .foregroundStyle(isOnAir ? AppTheme.accent : .secondary)
-                if model.isReserved(program) {
+                if recording.isReserved(program) {
                     Image(systemName: "record.circle.fill")
                         .font(.caption2)
                         .foregroundStyle(.red)
@@ -418,7 +420,7 @@ private struct ProgramCell: View {
         let time = "\(program.start.formatted(date: .omitted, time: .shortened))から\(program.end.formatted(date: .omitted, time: .shortened))"
         var parts = [isOnAir ? "放送中、\(time)" : time, program.name, channelName]
         if let genre = program.genreName { parts.append(genre) }
-        if model.isReserved(program) { parts.append("録画予約済み") }
+        if recording.isReserved(program) { parts.append("録画予約済み") }
         return parts.joined(separator: "、")
     }
 

@@ -5,7 +5,8 @@ import SwiftUI
 
 /// 1 チャンネルの番組表 (Mirakurun)。放送中の番組から日ごとに並べる
 struct ChannelProgramsView: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(GuideViewModel.self) private var guide
+    @Environment(ReservationsViewModel.self) private var recording
     let channel: RegzaChannel
 
     @State private var programs: [MirakurunProgram]?
@@ -21,7 +22,7 @@ struct ChannelProgramsView: View {
             .task {
                 if programs == nil { await load() }
                 // 予約した番組に印を付けるため
-                if model.reservations.isEmpty { try? await model.loadReservations() }
+                if recording.reservations.isEmpty { try? await recording.loadReservations() }
             }
             .refreshable { await load() }
     }
@@ -70,7 +71,7 @@ struct ChannelProgramsView: View {
 
     private func load() async {
         do {
-            programs = try await model.programs(for: channel)
+            programs = try await guide.programs(for: channel)
             loadError = nil
         } catch {
             loadError = error
@@ -94,7 +95,7 @@ struct ReservedBadge: View {
 }
 
 private struct ProgramRow: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(ReservationsViewModel.self) private var recording
     let program: MirakurunProgram
 
     var body: some View {
@@ -107,7 +108,7 @@ private struct ProgramRow: View {
                 Text(program.name)
                     .lineLimit(2)
                 HStack(spacing: 6) {
-                    if model.isReserved(program) {
+                    if recording.isReserved(program) {
                         ReservedBadge(compact: true)
                     }
                     if program.isOnAir() {
@@ -126,6 +127,9 @@ private struct ProgramRow: View {
 
 struct ProgramDetailView: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(GuideViewModel.self) private var guide
+    @Environment(ReservationsViewModel.self) private var recording
+    @Environment(StreamViewModel.self) private var stream
     let program: MirakurunProgram
     let channel: RegzaChannel
 
@@ -163,16 +167,16 @@ struct ProgramDetailView: View {
         .navigationTitle("番組の詳細")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $isShowingPlayer) {
-            if let server = model.streamServer() {
+            if let server = stream.streamServer() {
                 LivePlayerView(server: server, channel: channel)
             }
         }
         .sensoryFeedback(.success, trigger: reserveFeedback)
-        .animation(.default, value: model.isReserved(program))
+        .animation(.default, value: recording.isReserved(program))
         .task {
             // 予約済みか、最初から見られるかを出すため
-            if model.reservations.isEmpty { try? await model.loadReservations() }
-            await model.loadTimeshiftSettings()
+            if recording.reservations.isEmpty { try? await recording.loadReservations() }
+            await guide.loadTimeshiftSettings()
         }
     }
 
@@ -212,7 +216,7 @@ struct ProgramDetailView: View {
                 .padding(.top, 4)
             }
 
-            if let reservation = model.reservation(for: program) {
+            if let reservation = recording.reservation(for: program) {
                 Label(reservedText(reservation), systemImage: "record.circle.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.red)
@@ -238,7 +242,7 @@ struct ProgramDetailView: View {
                     reserveMenu
                 }
             }
-            if program.isOnAir(), model.canStream {
+            if program.isOnAir(), stream.canStream {
                 Button {
                     isShowingPlayer = true
                 } label: {
@@ -246,7 +250,7 @@ struct ProgramDetailView: View {
                 }
                 .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
             }
-            if program.isOnAir(), model.canStartOver(channelCode: program.channelCode, programStart: program.start) {
+            if program.isOnAir(), guide.canStartOver(channelCode: program.channelCode, programStart: program.start) {
                 Button {
                     Task { await tune(startOver: true) }
                 } label: {
@@ -261,7 +265,7 @@ struct ProgramDetailView: View {
     /// 「録画予約」を押すと、この回だけか連ドラ予約かを選ぶ。予約済みならメニューから取り消す
     @ViewBuilder
     private var reserveMenu: some View {
-        if let reservation = model.reservation(for: program) {
+        if let reservation = recording.reservation(for: program) {
             Menu {
                 Button(role: .destructive) {
                     Task { await cancel(reservation) }
@@ -336,9 +340,9 @@ struct ProgramDetailView: View {
         defer { isReserving = nil }
         reserveMessage = nil
         do {
-            try await model.reserve(program, series: series)
+            try await recording.reserve(program, series: series)
             reserveFeedback += 1
-            if !model.isReserved(program) {
+            if !recording.isReserved(program) {
                 // テレビの一覧にまだ反映されていない
                 reserveMessage = "予約しました。テレビの予約一覧に反映されるまで少しかかることがあります。"
             }
@@ -355,7 +359,7 @@ struct ProgramDetailView: View {
         defer { isReserving = nil }
         reserveMessage = nil
         do {
-            try await model.cancel(reservation)
+            try await recording.cancel(reservation)
             reserveFeedback += 1
         } catch {
             reserveMessage = "予約を取り消せませんでした: \(error.localizedDescription)"
@@ -367,7 +371,7 @@ struct ProgramDetailView: View {
         defer { isTuning = false }
         do {
             if startOver {
-                try await model.tuneAndStartOver(channel)
+                try await guide.tuneAndStartOver(channel)
                 tuneMessage = "テレビを\(channel.name)に切り替えて、最初から再生しました。"
             } else {
                 try await model.tune(to: channel)

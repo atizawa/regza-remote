@@ -4,6 +4,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(GuideViewModel.self) private var guide
+    @Environment(StreamViewModel.self) private var stream
     @Environment(\.dismiss) private var dismiss
     @State private var draft = RegzaConnection()
     @State private var testResult: String?
@@ -93,14 +95,14 @@ struct SettingsView: View {
                 case .guide:
                     Form {
                         guideSection
-                        if !model.guideHost.isEmpty { unlinkSection(.guide) }
+                        if !guide.guideHost.isEmpty { unlinkSection(.guide) }
                     }
                     .navigationTitle("番組表（Mirakurun）")
                     .navigationBarTitleDisplayMode(.inline)
                 case .stream:
                     Form {
                         streamSection
-                        if !model.streamHost.isEmpty { unlinkSection(.stream) }
+                        if !stream.streamHost.isEmpty { unlinkSection(.stream) }
                     }
                     .navigationTitle("ライブ視聴（EPGStation）")
                     .navigationBarTitleDisplayMode(.inline)
@@ -115,8 +117,8 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) {
                         Task {
-                            await model.saveGuideHost(ServerAddress(guideHost).saved)
-                            model.saveStreamHost(ServerAddress(streamHost).saved)
+                            await guide.saveGuideHost(ServerAddress(guideHost).saved)
+                            stream.saveStreamHost(ServerAddress(streamHost).saved)
                             await model.save(draft)
                             dismiss()
                         }
@@ -132,8 +134,8 @@ struct SettingsView: View {
                 hasLoaded = true
                 draft = model.connection
                 pairingUserID = model.pairingUserID()
-                guideHost = model.guideHost
-                streamHost = model.streamHost
+                guideHost = guide.guideHost
+                streamHost = stream.streamHost
                 if !model.connection.isConfigured, path.isEmpty { path = [.tv] }
             }
             .onDisappear {
@@ -258,15 +260,15 @@ struct SettingsView: View {
         case .guide:
             guideHost = ""
             guideHosts = []
-            await model.saveGuideHost("")
+            await guide.saveGuideHost("")
             // EPGStation だけでは使えないので、一緒に解除する
             streamHost = ""
             streamHosts = []
-            model.saveStreamHost("")
+            stream.saveStreamHost("")
         case .stream:
             streamHost = ""
             streamHosts = []
-            model.saveStreamHost("")
+            stream.saveStreamHost("")
         case .tv:
             return
         }

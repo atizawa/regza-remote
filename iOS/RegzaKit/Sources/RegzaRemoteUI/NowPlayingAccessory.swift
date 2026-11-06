@@ -120,6 +120,8 @@ private struct ProgressIcon: View {
 /// ミニプレーヤーを押したときの詳細。録画ならシークもできる
 private struct NowPlayingDetailView: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(GuideViewModel.self) private var guide
+    @Environment(StreamViewModel.self) private var stream
     @Environment(\.dismiss) private var dismiss
     @State private var isShowingPlayer = false
 
@@ -145,7 +147,7 @@ private struct NowPlayingDetailView: View {
                         }
                         .buttonStyle(RemoteButtonStyle())
                     }
-                    if model.canStream, model.nowPlaying?.kind == .broadcast, model.nowPlayingChannel != nil {
+                    if stream.canStream, model.nowPlaying?.kind == .broadcast, model.nowPlayingChannel != nil {
                         Button {
                             isShowingPlayer = true
                         } label: {
@@ -155,9 +157,9 @@ private struct NowPlayingDetailView: View {
                         }
                         .buttonStyle(RemoteButtonStyle())
                     }
-                    if model.canStartOverNowPlaying {
+                    if guide.canStartOverNowPlaying {
                         Button {
-                            model.startOver()
+                            guide.startOver()
                         } label: {
                             Label("この番組を最初から見る", systemImage: "backward.end.alt")
                                 .font(.body.weight(.semibold))
@@ -181,12 +183,12 @@ private struct NowPlayingDetailView: View {
                 }
             }
             .task {
-                await model.loadTimeshiftSettings()
+                await guide.loadTimeshiftSettings()
                 // いま映っているチャンネルを知るため
                 try? await model.loadChannels()
             }
             .fullScreenCover(isPresented: $isShowingPlayer) {
-                if let server = model.streamServer(), let channel = model.nowPlayingChannel {
+                if let server = stream.streamServer(), let channel = model.nowPlayingChannel {
                     LivePlayerView(server: server, channel: channel)
                 }
             }

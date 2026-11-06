@@ -10,6 +10,17 @@ import RegzaCore
 enum SampleData {
     static var isEnabled: Bool { UserDefaults.standard.bool(forKey: "SampleData") }
 
+    /// ViewModel に見本データを出させる
+    @MainActor
+    static func show(remote: RemoteViewModel, guide: GuideViewModel, recording: ReservationsViewModel) {
+        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nowPlaying(), channels: channels())
+        // -SampleNoGuide YES で Mirakurun が未設定のときの画面を確かめる
+        guard !UserDefaults.standard.bool(forKey: "SampleNoGuide") else { return }
+        let programs = programs()
+        guide.showSample(guideHost: "192.0.2.2", programs: programs)
+        recording.showSample(reservations(programs: programs))
+    }
+
     static var initialTab: AppTab? {
         switch UserDefaults.standard.string(forKey: "InitialTab") {
         case "guide": .guide

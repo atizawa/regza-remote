@@ -30,4 +30,6 @@ public protocol RegzaConnectionStore: Sendable {
     var guideHost: String { get nonmutating set }
     /// iPhone で番組を見るための EPGStation のアドレス。未設定なら空
     var streamHost: String { get nonmutating set }
+    /// このアプリが EPGStation に頼んで、まだ止めていない配信の番号 (StreamViewModel)
+    var ownStreamIDs: [Int] { get nonmutating set }
 }

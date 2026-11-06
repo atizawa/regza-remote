@@ -48,8 +48,8 @@ public actor RegzaRemote {
     /// 番組名を毎回問い合わせないよう、調べた番組を覚えておく (取れなかったときは 1 分後に調べ直す)
     private var programCache: [Int: (program: MirakurunProgram?, checkedAt: Date)] = [:]
 
-    public init(connection: RegzaConnection, guide: Mirakurun? = nil) {
-        client = RegzaClient(connection: connection)
+    public init(connection: RegzaConnection, guide: Mirakurun? = nil, transport: any HTTPTransport = RegzaHTTP.transport) {
+        client = RegzaClient(connection: connection, transport: transport)
         self.guide = guide
     }
 

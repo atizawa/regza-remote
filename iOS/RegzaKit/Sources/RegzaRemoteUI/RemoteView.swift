@@ -5,12 +5,31 @@ import SwiftUI
 
 /// アプリのルート画面。テレビを操作する「リモコン」と、見るための一覧 (番組表・チャンネル・録画予約) をタブで分ける
 public struct RemoteView: View {
-    @State private var model = RemoteViewModel()
+    @State private var model: RemoteViewModel
+    @State private var guide: GuideViewModel
+    @State private var recording: ReservationsViewModel
+    @State private var stream: StreamViewModel
+    @State private var liveActivity: LiveActivityModel
     @State private var isShowingSettings = Self.showsSettingsAtLaunch
     @State private var tab = Self.initialTab
     @Environment(\.scenePhase) private var scenePhase
 
-    public init() {}
+    public init() {
+        // Live Activity のボタン (App Intents) と同じ保存先とリモコンを使う
+        let model = RemoteViewModel(store: RegzaRemoteService.store, remote: RegzaRemoteService.remote)
+        let guide = GuideViewModel(remote: model)
+        let recording = ReservationsViewModel(remote: model)
+        let liveActivity = LiveActivityModel(remote: model)
+        model.observer = liveActivity
+        #if DEBUG
+        if SampleData.isEnabled { SampleData.show(remote: model, guide: guide, recording: recording) }
+        #endif
+        _model = State(initialValue: model)
+        _guide = State(initialValue: guide)
+        _recording = State(initialValue: recording)
+        _stream = State(initialValue: StreamViewModel(remote: model, guide: guide))
+        _liveActivity = State(initialValue: liveActivity)
+    }
 
     public var body: some View {
         Group {
@@ -74,19 +93,24 @@ public struct RemoteView: View {
         }
         #endif
         .environment(model)
+        .environment(guide)
+        .environment(recording)
+        .environment(stream)
+        .environment(liveActivity)
         .environment(\.showSettings, ShowSettingsAction { isShowingSettings = true })
         .tint(AppTheme.accent)
         .sensoryFeedback(.impact(weight: .light), trigger: model.tapCount)
         .task {
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
-            if let server = model.streamServer() { await LiveStreams.cleanUp(server) }
+            await stream.cleanUp()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
             // 終了するときも止めてみる (届かなければ次に開いたときに止める)
-            if let server = model.streamServer() {
+            if let server = stream.streamServer() {
+                let store = model.store
                 let semaphore = DispatchSemaphore(value: 0)
                 Task.detached {
-                    await LiveStreams.cleanUp(server)
+                    await StreamViewModel.cleanUp(server, store: store)
                     semaphore.signal()
                 }
                 _ = semaphore.wait(timeout: .now() + 2)
@@ -98,7 +122,7 @@ public struct RemoteView: View {
             } else {
                 model.stopPolling()
                 // 閉じている間も Live Activity を更新できるよう、iOS に起こしてもらう時刻を予約する
-                if phase == .background { model.scheduleBackgroundRefresh() }
+                if phase == .background { liveActivity.scheduleBackgroundRefresh() }
             }
         }
     }

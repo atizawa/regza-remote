@@ -5,6 +5,7 @@ import SwiftUI
 /// テレビの録画予約の一覧
 struct ReservationsView: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(ReservationsViewModel.self) private var recording
     @State private var loadError: RegzaError?
     @State private var hasLoaded = false
     /// 取り消すか確かめている予約
@@ -39,9 +40,9 @@ struct ReservationsView: View {
     @ViewBuilder
     private var content: some View {
         let now = Date()
-        let scheduled = model.reservations.filter { $0.isScheduled(now: now) }
-        let waiting = model.reservations.filter { !$0.isScheduled(now: now) }
-        if let loadError, model.reservations.isEmpty {
+        let scheduled = recording.reservations.filter { $0.isScheduled(now: now) }
+        let waiting = recording.reservations.filter { !$0.isScheduled(now: now) }
+        if let loadError, recording.reservations.isEmpty {
             ContentUnavailableView {
                 Label("録画予約を取得できません", systemImage: "calendar.badge.exclamationmark")
             } description: {
@@ -52,7 +53,7 @@ struct ReservationsView: View {
         } else if !hasLoaded {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if model.reservations.isEmpty {
+        } else if recording.reservations.isEmpty {
             ContentUnavailableView("録画予約はありません", systemImage: "calendar")
         } else {
             List {
@@ -118,7 +119,7 @@ struct ReservationsView: View {
     private func cancel(_ reservation: RegzaReservation) async {
         cancelError = nil
         do {
-            try await model.cancel(reservation)
+            try await recording.cancel(reservation)
         } catch {
             cancelError = "「\(reservation.title)」の予約を取り消せませんでした: \(error.localizedDescription)"
         }
@@ -129,7 +130,7 @@ struct ReservationsView: View {
         // 局名を出すためにチャンネル一覧も読む (取れなくても予約は出す)
         try? await model.loadChannels()
         do {
-            try await model.loadReservations()
+            try await recording.loadReservations()
             loadError = nil
         } catch {
             loadError = error

@@ -4,13 +4,13 @@ import SwiftUI
 
 /// ロック画面と Dynamic Island に表示するかのスイッチ (Live Activity)
 struct LiveActivityToggle: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(LiveActivityModel.self) private var liveActivity
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Toggle(isOn: Binding(
-                get: { model.isLiveActivityOn },
-                set: { isOn in Task { await model.setLiveActivity(isOn) } }
+                get: { liveActivity.isOn },
+                set: { isOn in Task { await liveActivity.set(isOn) } }
             )) {
                 Label("ロック画面と Dynamic Island に表示", systemImage: "platter.filled.top.iphone")
             }

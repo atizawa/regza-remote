@@ -9,6 +9,8 @@ import SwiftUI
 /// 閉じたり局を切り替えたりしたら、前の配信を止めてチューナーを空ける
 struct LivePlayerView: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(GuideViewModel.self) private var guide
+    @Environment(StreamViewModel.self) private var stream
     @Environment(\.dismiss) private var dismiss
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     let server: EPGStation
@@ -67,7 +69,7 @@ struct LivePlayerView: View {
         }
         .task {
             try? await model.loadChannels()
-            await model.loadGuidePrograms()
+            await guide.loadGuidePrograms()
         }
         .onAppear { startSession() }
         .onDisappear { endSession() }
@@ -99,7 +101,7 @@ struct LivePlayerView: View {
                     if canRetry {
                         Button("準備できていない配信を止めて、もう一度試す") {
                             Task {
-                                await LiveStreams.stopStalled(server)
+                                await stream.stopStalled()
                                 startSession()
                             }
                         }
@@ -139,7 +141,7 @@ struct LivePlayerView: View {
             self.streamID = nil
             let server = server
             Task {
-                if (try? await server.stop(streamID: streamID)) != nil { LiveStreams.stopped(streamID) }
+                if (try? await server.stop(streamID: streamID)) != nil { stream.stopped(streamID) }
             }
         }
     }
@@ -153,11 +155,11 @@ struct LivePlayerView: View {
         var requested: Int?
         do {
             // 前に止められずに残った、このアプリの配信を先に止める
-            await LiveStreams.cleanUp(server)
+            await stream.cleanUp()
             let streamID = try await server.startLiveStream(channelID: channelID)
             requested = streamID
             self.streamID = streamID
-            LiveStreams.started(streamID)
+            stream.started(streamID)
             try await server.waitUntilReady(streamID: streamID)
             guard let url = server.playlistURL(streamID: streamID) else { throw RegzaError.invalidHost }
             try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
@@ -175,7 +177,7 @@ struct LivePlayerView: View {
             // 始まらなかった配信は残さない
             if let requested, streamID == requested {
                 self.streamID = nil
-                if (try? await server.stop(streamID: requested)) != nil { LiveStreams.stopped(requested) }
+                if (try? await server.stop(streamID: requested)) != nil { stream.stopped(requested) }
             }
             phase = .failed("""
                 再生できませんでした。\(error.localizedDescription)
@@ -187,13 +189,13 @@ struct LivePlayerView: View {
 
 /// 見ている局の今の番組 (Mirakurun の番組表から)
 private struct ProgramInfo: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(GuideViewModel.self) private var guide
     let channel: RegzaChannel
 
     var body: some View {
         // 番組が変わったら表示も変える
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            let program = model.currentProgram(for: channel, at: context.date)
+            let program = guide.currentProgram(for: channel, at: context.date)
             VStack(alignment: .leading, spacing: 6) {
                 Text(channel.name + (program == nil ? "" : " · 放送中"))
                     .font(.subheadline.weight(.semibold))
@@ -232,6 +234,7 @@ private struct ProgramInfo: View {
 /// iPhone で見られる局の一覧。押すとその局に切り替える
 private struct ChannelPicker: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(GuideViewModel.self) private var guide
     let current: RegzaChannel
     var onSelect: (RegzaChannel) -> Void
 
@@ -239,7 +242,7 @@ private struct ChannelPicker: View {
     private var watchable: [RegzaChannel] {
         model.channels.filter { channel in
             guard channel.isRepresentative || channel.band == .cs else { return false }
-            return model.guidePrograms.isEmpty ? channel.band != .cs : model.guidePrograms[channel.code] != nil
+            return guide.guidePrograms.isEmpty ? channel.band != .cs : guide.guidePrograms[channel.code] != nil
         }
     }
 
@@ -264,7 +267,7 @@ private struct ChannelPicker: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(channel.name)
                                 .lineLimit(1)
-                            if let program = model.currentProgram(for: channel) {
+                            if let program = guide.currentProgram(for: channel) {
                                 Text(program.name)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
