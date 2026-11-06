@@ -99,3 +99,65 @@ public final class RegzaAndroidPairing {
         await session.cancel()
     }
 }
+
+// MARK: - リモコン
+
+/// いま映っているもの (RegzaNowPlaying のうち画面に出すもの)
+public struct RegzaAndroidNowPlaying {
+    /// "broadcast" (放送)・"recorded" (録画の再生)・"external" (外部入力)・"standby" (待機中)・"unknown"
+    public var kind: String
+    public var channelName: String
+    public var title: String
+    /// 再生位置・放送開始からの経過 (秒)
+    public var position: Int
+    /// 番組の長さ (秒)
+    public var duration: Int
+    /// 再生位置が進んでいるか (再生中なら一時停止のボタンを出す)
+    public var isAdvancing: Bool
+}
+
+/// 1 台のテレビのリモコン (RegzaRemote)。
+/// 切り替えの最中に play/status を問い合わせないしくみは RegzaRemote の中にあるので、テレビごとに 1 つを使い回す
+public final class RegzaAndroidRemote {
+    private let remote: RegzaRemote
+
+    public init(host: String, user: String, password: String) {
+        remote = RegzaRemote(connection: RegzaConnection(host: host, user: user, password: password))
+    }
+
+    /// - Parameter key: RegzaKey の名前 ("power"・"volumeUp" など)
+    public func send(key: String) async throws {
+        guard let regzaKey = RegzaKey(name: key) else { throw RegzaAndroidError(message: "知らないキーです: \(key)") }
+        do {
+            try await remote.send(regzaKey)
+        } catch {
+            throw RegzaAndroidError(error)
+        }
+    }
+
+    /// いま映っているものを取り直す。アプリを開いている間は 2 秒ごとに呼ぶ (iOS 版と同じ)
+    public func refresh() async throws -> RegzaAndroidNowPlaying {
+        do {
+            let nowPlaying = try await remote.refresh()
+            return RegzaAndroidNowPlaying(
+                kind: nowPlaying.kind.rawValue, channelName: nowPlaying.channelName, title: nowPlaying.title,
+                position: nowPlaying.position, duration: nowPlaying.duration, isAdvancing: nowPlaying.isAdvancing
+            )
+        } catch {
+            throw RegzaAndroidError(error)
+        }
+    }
+}
+
+/// ボタンに出す名前 (iOS 版と同じ)。知らないキーなら名前をそのまま返す
+public func regzaKeyLabel(key: String) -> String {
+    RegzaKey(name: key)?.label ?? key
+}
+
+extension RegzaKey {
+    /// "power" のような名前から探す
+    init?(name: String) {
+        guard let key = Self.allCases.first(where: { String(describing: $0) == name }) else { return nil }
+        self = key
+    }
+}
