@@ -421,6 +421,93 @@ import Testing
     }
 }
 
+/// 画面の移り変わりと Introspection
+@MainActor
+@Suite struct AppViewModelTests {
+    let guideScreens = GuideScreenViewModelTests()
+
+    func makeApp(configured: Bool = true) throws -> AppViewModel {
+        let store = MemoryStore(connection: RegzaConnection(host: configured ? "192.0.2.10" : ""))
+        let transport = FakeTransport { _ in ScreenViewModelTests.status(500) }
+        let app = AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport))
+        app.remote.showSample(connection: store.load(), nowPlaying: nil, channels: try guideScreens.channels())
+        return app
+    }
+
+    @Test func opensAndClosesScreensPerTab() throws {
+        let app = try makeApp()
+        let channel = try #require(app.remote.channels.first)
+        app.send(.selectTab(.channels))
+        app.send(.open(.channelPrograms(channel)))
+        let list = app.programList(for: channel)
+        // 戻る道にある間は同じ ViewModel を使う
+        #expect(app.programList(for: channel) === list)
+        #expect(app.state.path(of: .channels) == [.channelPrograms(channel)])
+        // ほかのタブの戻る道には入らない
+        #expect(app.state.path(of: .guide).isEmpty)
+
+        app.send(.back)
+        #expect(app.state.path(of: .channels).isEmpty)
+        // 閉じた画面の ViewModel は捨て、開き直すと作り直す
+        #expect(app.programList(for: channel) !== list)
+    }
+
+    @Test func settingsStartFromTVWhenNotConfigured() throws {
+        let app = try makeApp(configured: false)
+        app.send(.showSettings)
+        #expect(app.state.isShowingSettings)
+        #expect(app.state.settingsPath == [.tv])
+        #expect(app.settings != nil)
+        app.send(.closeSettings)
+        #expect(!app.state.isShowingSettings)
+        #expect(app.settings == nil)
+    }
+
+    @Test func playNeedsStreamServer() throws {
+        let app = try makeApp()
+        let channel = try #require(app.remote.channels.first)
+        // EPGStation が設定されていないので開かない
+        app.send(.play(channel))
+        #expect(app.state.playingChannel == nil)
+        #expect(app.player == nil)
+    }
+
+    @Test func introspectionShowsStateAndActions() throws {
+        let app = try makeApp()
+        let introspector = Introspector(root: app)
+        try introspector.perform("app", "selectTab", ["tab": .string("guide")])
+        let node = try introspector.node("app")
+        #expect(node.path == "app")
+        guard case .object(let state) = node.state else {
+            Issue.record("状態が JSON のオブジェクトになっていない: \(node.state)")
+            return
+        }
+        #expect(state["tab"] == .string("guide"))
+        #expect(state["isShowingSettings"] == .bool(false))
+        #expect(node.actions.contains { $0.name == "openPrograms" })
+
+        #expect(throws: IntrospectionError.unknownAction("fly")) { try introspector.perform("app", "fly") }
+        #expect(throws: IntrospectionError.unknownPath("app/nothing")) { try introspector.node("app/nothing") }
+        #expect(throws: IntrospectionError.unavailable("チャンネル none はテレビに登録されていません")) {
+            try introspector.perform("app", "openPrograms", ["channel": .string("none")])
+        }
+    }
+
+    @Test func reflectsValuesIntoJSON() throws {
+        let channel = try #require(try guideScreens.channels().first)
+        guard case .object(let object) = JSONValue(reflecting: channel) else {
+            Issue.record("チャンネルが JSON のオブジェクトにならない")
+            return
+        }
+        #expect(object["name"] == .string("テスト局１"))
+        // 保存しているプロパティだけを出す (band のように計算で出すものは出さない)
+        #expect(object["code"] == .string(channel.code))
+        #expect(JSONValue(reflecting: AppViewModel.Route.search) == .string("search"))
+        #expect(JSONValue(reflecting: Optional<Int>.none) == .null)
+        #expect(JSONValue(reflecting: [1, 2]) == .array([.number(1), .number(2)]))
+    }
+}
+
 /// 決めた返事を返し、届いた問い合わせを覚えておく
 final class FakeTransport: HTTPTransport, @unchecked Sendable {
     private let respond: @Sendable (HTTPRequest) -> HTTPResponse

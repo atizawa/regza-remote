@@ -6,8 +6,6 @@ import SwiftUI
 /// 1 チャンネルの番組表 (Mirakurun)。放送中の番組から日ごとに並べる
 struct ChannelProgramsView: View {
     @State private var viewModel: ProgramListViewModel
-    @Environment(RemoteViewModel.self) private var model
-    @Environment(StreamViewModel.self) private var stream
 
     init(viewModel: ProgramListViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -17,12 +15,6 @@ struct ChannelProgramsView: View {
         content
             .navigationTitle(viewModel.channel.name)
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: MirakurunProgram.self) { program in
-                ProgramDetailView(viewModel: ProgramDetailViewModel(
-                    remote: model, guide: viewModel.guide, recording: viewModel.recording, stream: stream,
-                    program: program, channel: viewModel.channel
-                ))
-            }
             .task { await viewModel.appear() }
             .refreshable { await viewModel.load() }
     }
@@ -38,7 +30,7 @@ struct ChannelProgramsView: View {
                     ForEach(viewModel.days, id: \.day) { group in
                         Section {
                             ForEach(group.programs) { program in
-                                NavigationLink(value: program) {
+                                NavigationLink(value: AppViewModel.Route.programDetail(program, viewModel.channel)) {
                                     ProgramRow(program: program, isReserved: viewModel.isReserved(program))
                                 }
                             }
@@ -111,8 +103,7 @@ private struct ProgramRow: View {
 
 struct ProgramDetailView: View {
     @State private var viewModel: ProgramDetailViewModel
-    /// iPhone で見ている配信の再生画面
-    @State private var isShowingPlayer = false
+    @Environment(AppViewModel.self) private var app
 
     init(viewModel: ProgramDetailViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -139,11 +130,6 @@ struct ProgramDetailView: View {
         .background(Surface.background)
         .navigationTitle("番組の詳細")
         .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: $isShowingPlayer) {
-            if let player = viewModel.stream.livePlayer(for: channel) {
-                LivePlayerView(viewModel: player)
-            }
-        }
         .sensoryFeedback(.success, trigger: viewModel.reserveCount)
         .animation(.default, value: viewModel.isReserved)
         .task { await viewModel.appear() }
@@ -213,7 +199,7 @@ struct ProgramDetailView: View {
             }
             if viewModel.canStream {
                 Button {
-                    isShowingPlayer = true
+                    app.send(.play(channel))
                 } label: {
                     actionLabel("アプリで見る", systemImage: "play.tv", isBusy: false)
                 }

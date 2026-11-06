@@ -21,7 +21,7 @@ enum SampleData {
         recording.showSample(reservations(programs: programs))
     }
 
-    static var initialTab: AppTab? {
+    static var initialTab: AppViewModel.Tab? {
         switch UserDefaults.standard.string(forKey: "InitialTab") {
         case "guide": .guide
         case "channels": .channels

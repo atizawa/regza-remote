@@ -5,36 +5,34 @@ import SwiftUI
 
 /// アプリのルート画面。テレビを操作する「リモコン」と、見るための一覧 (番組表・チャンネル・録画予約) をタブで分ける
 public struct RemoteView: View {
-    @State private var model: RemoteViewModel
-    @State private var guide: GuideViewModel
-    @State private var recording: ReservationsViewModel
-    @State private var stream: StreamViewModel
+    @State private var app: AppViewModel
     @State private var liveActivity: LiveActivityModel
-    @State private var isShowingSettings = Self.showsSettingsAtLaunch
-    @State private var tab = Self.initialTab
     @Environment(\.scenePhase) private var scenePhase
 
     public init() {
         // Live Activity のボタン (App Intents) と同じ保存先とリモコンを使う
-        let model = RemoteViewModel(store: RegzaRemoteService.store, remote: RegzaRemoteService.remote)
-        let guide = GuideViewModel(remote: model)
-        let recording = ReservationsViewModel(remote: model)
-        let liveActivity = LiveActivityModel(remote: model)
-        model.observer = liveActivity
+        let app = AppViewModel(store: RegzaRemoteService.store, remote: RegzaRemoteService.remote)
+        let liveActivity = LiveActivityModel(remote: app.remote)
+        app.remote.observer = liveActivity
         #if DEBUG
-        if SampleData.isEnabled { SampleData.show(remote: model, guide: guide, recording: recording) }
+        if SampleData.isEnabled { SampleData.show(remote: app.remote, guide: app.guide, recording: app.recording) }
+        if let tab = SampleData.initialTab { app.send(.selectTab(tab)) }
+        // 開発用: 起動引数 -ShowSettings YES で設定画面を開いておく
+        if UserDefaults.standard.bool(forKey: "ShowSettings") { app.send(.showSettings) }
         #endif
-        _model = State(initialValue: model)
-        _guide = State(initialValue: guide)
-        _recording = State(initialValue: recording)
-        _stream = State(initialValue: StreamViewModel(remote: model, guide: guide))
+        _app = State(initialValue: app)
         _liveActivity = State(initialValue: liveActivity)
     }
+
+    private var model: RemoteViewModel { app.remote }
+    private var guide: GuideViewModel { app.guide }
+    private var recording: ReservationsViewModel { app.recording }
+    private var stream: StreamViewModel { app.stream }
 
     public var body: some View {
         Group {
             if model.connection.isConfigured {
-                TabView(selection: $tab) {
+                TabView(selection: Binding(get: { app.state.tab }, set: { app.send(.selectTab($0)) })) {
                     NavigationStack {
                         RemotePanel()
                             .navigationTitle("リモコン")
@@ -47,19 +45,19 @@ public struct RemoteView: View {
                     // 本体が明るいグレーなので、右上のボタンなども明るい背景用の色にする
                     .environment(\.colorScheme, .light)
                     .tabItem { Label("リモコン", systemImage: "appletvremote.gen4.fill") }
-                    .tag(AppTab.remote)
+                    .tag(AppViewModel.Tab.remote)
 
-                    GuideGridView(viewModel: GuideGridViewModel(remote: model, guide: guide, recording: recording))
+                    GuideGridView(viewModel: app.guideGrid)
                         .tabItem { Label("番組表", systemImage: "calendar") }
-                        .tag(AppTab.guide)
+                        .tag(AppViewModel.Tab.guide)
 
-                    ChannelListView(viewModel: ChannelListViewModel(remote: model, guide: guide, stream: stream))
+                    ChannelListView(viewModel: app.channelList)
                         .tabItem { Label("チャンネル", systemImage: "list.bullet") }
-                        .tag(AppTab.channels)
+                        .tag(AppViewModel.Tab.channels)
 
-                    ReservationsView(viewModel: ReservationListViewModel(remote: model, recording: recording))
+                    ReservationsView(viewModel: app.reservationList)
                         .tabItem { Label("録画予約", systemImage: "record.circle") }
-                        .tag(AppTab.reservations)
+                        .tag(AppViewModel.Tab.reservations)
                 }
                 // どのタブでも、テレビで映っているものをミニプレーヤーで出す
                 .tabViewBottomAccessory {
@@ -74,18 +72,26 @@ public struct RemoteView: View {
                     } description: {
                         Text("同じ Wi-Fi のテレビを探して、テレビに表示される PIN で登録してください")
                     } actions: {
-                        Button("設定する") { isShowingSettings = true }
+                        Button("設定する") { app.send(.showSettings) }
                             .buttonStyle(.borderedProminent)
                     }
                     .toolbar { remoteToolbar }
                 }
             }
         }
-        .sheet(isPresented: $isShowingSettings) {
-            SettingsView(
-                tv: TVSetupViewModel(remote: model),
-                servers: ServerSetupViewModel(guide: guide, stream: stream)
-            )
+        .sheet(isPresented: Binding(get: { app.state.isShowingSettings }, set: { if !$0 { app.send(.closeSettings) } })) {
+            if let settings = app.settings {
+                SettingsView(tv: settings.tv, servers: settings.servers)
+            }
+        }
+        // アプリで見る (ライブ視聴)。いま映っているものの詳細を開いているときは、そのシートの上から出す
+        .fullScreenCover(isPresented: Binding(
+            get: { app.state.playingChannel != nil && !app.state.isShowingNowPlaying },
+            set: { if !$0 { app.send(.closePlayer) } }
+        )) {
+            if let player = app.player {
+                LivePlayerView(viewModel: player)
+            }
         }
         #if DEBUG
         // 開発用: 起動引数 -LiveHost <EPGStation> -LiveChannel <チャンネルの ID> で、すぐ再生画面を開く
@@ -97,12 +103,13 @@ public struct RemoteView: View {
             }
         }
         #endif
+        .environment(app)
         .environment(model)
         .environment(guide)
         .environment(recording)
         .environment(stream)
         .environment(liveActivity)
-        .environment(\.showSettings, ShowSettingsAction { isShowingSettings = true })
+        .environment(\.showSettings, ShowSettingsAction { app.send(.showSettings) })
         .tint(AppTheme.accent)
         .sensoryFeedback(.impact(weight: .light), trigger: model.tapCount)
         .task {
@@ -132,39 +139,18 @@ public struct RemoteView: View {
         }
     }
 
-    /// 開発用: 起動引数 -ShowSettings YES で設定画面を開いておく
-    private static var showsSettingsAtLaunch: Bool {
-        #if DEBUG
-        UserDefaults.standard.bool(forKey: "ShowSettings")
-        #else
-        false
-        #endif
-    }
-
-    private static var initialTab: AppTab {
-        #if DEBUG
-        SampleData.initialTab ?? .remote
-        #else
-        .remote
-        #endif
-    }
-
     @ToolbarContentBuilder
     private var remoteToolbar: some ToolbarContent {
         // Live Activity のオン・オフはアイコンだけでは分かりにくいので、視聴中の画面と設定画面のスイッチにしている
         ToolbarItemGroup(placement: .topBarTrailing) {
             Button {
-                isShowingSettings = true
+                app.send(.showSettings)
             } label: {
                 Image(systemName: "gearshape")
             }
             .accessibilityLabel("設定")
         }
     }
-}
-
-enum AppTab: Hashable {
-    case remote, guide, channels, reservations
 }
 
 /// 設定画面を開く

@@ -6,10 +6,8 @@ import SwiftUI
 /// 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる
 struct GuideGridView: View {
     @State private var viewModel: GuideGridViewModel
-    @Environment(StreamViewModel.self) private var stream
+    @Environment(AppViewModel.self) private var app
     @Environment(\.showSettings) private var showSettings
-    /// 開いている画面 (検索 → 番組の詳細と重ねたとき、戻ると 1 つ前の画面に戻れるよう順番を持つ)
-    @State private var path: [GuideRoute] = []
     /// 表の左上がスクロールでどれだけずれたか (固定する局名の行と時刻の列を合わせる)
     @State private var scrollOrigin = ScrollOrigin()
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -26,7 +24,7 @@ struct GuideGridView: View {
     private var metrics: GuideMetrics { GuideMetrics(dynamicTypeSize: min(dynamicTypeSize, Self.maximumDynamicTypeSize)) }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack(path: app.path(of: .guide)) {
             content
                 .navigationTitle("番組表")
                 .navigationBarTitleDisplayMode(.inline)
@@ -34,23 +32,11 @@ struct GuideGridView: View {
                     // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
                     if viewModel.canSearch {
                         ToolbarItem(placement: .topBarTrailing) {
-                            Button("番組を探す", systemImage: "magnifyingglass") { path.append(.search) }
+                            Button("番組を探す", systemImage: "magnifyingglass") { app.send(.open(.search)) }
                         }
                     }
                 }
-                .navigationDestination(for: GuideRoute.self) { route in
-                    switch route {
-                    case .search:
-                        GuideSearchScreen(search: viewModel.search) { program, channel in
-                            path.append(.detail(program, channel))
-                        }
-                    case .detail(let program, let channel):
-                        ProgramDetailView(viewModel: ProgramDetailViewModel(
-                            remote: viewModel.remote, guide: viewModel.guide, recording: viewModel.recording, stream: stream,
-                            program: program, channel: channel
-                        ))
-                    }
-                }
+                .appRoutes()
                 .task { await load() }
         }
     }
@@ -111,7 +97,7 @@ struct GuideGridView: View {
                         channel: column.channel, programs: column.programs, window: window, metrics: metrics,
                         isReserved: viewModel.isReserved
                     ) { program in
-                        path.append(.detail(program, column.channel))
+                        app.send(.open(.programDetail(program, column.channel)))
                     }
                 }
             }
@@ -175,10 +161,10 @@ struct GuideGridView: View {
         // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
         if SampleData.isEnabled, UserDefaults.standard.bool(forKey: "SampleDetail"),
            let column = viewModel.columns.first, let program = column.programs.first(where: { $0.isOnAir() }) {
-            path = [.detail(program, column.channel)]
+            app.send(.setPath(.guide, [.programDetail(program, column.channel)]))
         }
         if SampleData.isEnabled, let text = UserDefaults.standard.string(forKey: "SampleSearch") {
-            path = [.search]
+            app.send(.setPath(.guide, [.search]))
             viewModel.search.text = text
         }
         #endif
@@ -258,12 +244,6 @@ private struct PinnedHeader: View {
         }
         .offset(x: metrics.timeColumnWidth + origin.value.x)
     }
-}
-
-/// 番組表から開く画面
-private enum GuideRoute: Hashable {
-    case search
-    case detail(MirakurunProgram, RegzaChannel)
 }
 
 /// 左端の時刻 (正時ごと)

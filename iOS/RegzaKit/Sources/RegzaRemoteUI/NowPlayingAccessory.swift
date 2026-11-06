@@ -7,8 +7,8 @@ import SwiftUI
 /// iPhone で再生しているものと間違えないよう、テレビのアイコンとチャンネル名を添える
 struct NowPlayingAccessory: View {
     @Environment(RemoteViewModel.self) private var model
+    @Environment(AppViewModel.self) private var app
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
-    @State private var isShowingDetail = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -41,10 +41,10 @@ struct NowPlayingAccessory: View {
         }
         .padding(.horizontal, Design.outer)
         .contentShape(Rectangle())
-        .onTapGesture { isShowingDetail = true }
+        .onTapGesture { app.send(.showNowPlaying) }
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("番組の詳細を開きます")
-        .sheet(isPresented: $isShowingDetail) {
+        .sheet(isPresented: Binding(get: { app.state.isShowingNowPlaying }, set: { if !$0 { app.send(.closeNowPlaying) } })) {
             NowPlayingDetailView()
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -122,8 +122,8 @@ private struct NowPlayingDetailView: View {
     @Environment(RemoteViewModel.self) private var model
     @Environment(GuideViewModel.self) private var guide
     @Environment(StreamViewModel.self) private var stream
+    @Environment(AppViewModel.self) private var app
     @Environment(\.dismiss) private var dismiss
-    @State private var isShowingPlayer = false
 
     var body: some View {
         NavigationStack {
@@ -149,7 +149,7 @@ private struct NowPlayingDetailView: View {
                     }
                     if stream.canStream, model.nowPlaying?.kind == .broadcast, model.nowPlayingChannel != nil {
                         Button {
-                            isShowingPlayer = true
+                            if let channel = model.nowPlayingChannel { app.send(.play(channel)) }
                         } label: {
                             Label("アプリで見る", systemImage: "play.tv")
                                 .font(.body.weight(.semibold))
@@ -187,8 +187,12 @@ private struct NowPlayingDetailView: View {
                 // いま映っているチャンネルを知るため
                 try? await model.loadChannels()
             }
-            .fullScreenCover(isPresented: $isShowingPlayer) {
-                if let channel = model.nowPlayingChannel, let player = stream.livePlayer(for: channel) {
+            // このシートを開いている間は、アプリで見る画面をシートの上から出す
+            .fullScreenCover(isPresented: Binding(
+                get: { app.state.playingChannel != nil },
+                set: { if !$0 { app.send(.closePlayer) } }
+            )) {
+                if let player = app.player {
                     LivePlayerView(viewModel: player)
                 }
             }

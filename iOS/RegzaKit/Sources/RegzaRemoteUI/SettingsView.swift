@@ -5,6 +5,7 @@ import SwiftUI
 struct SettingsView: View {
     @State private var tv: TVSetupViewModel
     @State private var servers: ServerSetupViewModel
+    @Environment(AppViewModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isPINFocused: Bool
     /// 連携を解除するか確かめている設定
@@ -16,17 +17,15 @@ struct SettingsView: View {
     }
 
     /// 設定の画面。テレビの設定と、録画サーバー (Mirakurun・EPGStation) の設定を別の画面に分ける
-    private enum Page: Hashable {
-        case tv, guide, stream
+    private typealias Page = AppViewModel.SettingsPage
+
+    /// 開いている設定の画面 (テレビが未設定なら、AppViewModel がテレビの設定の画面から開く)
+    private var path: Binding<[Page]> {
+        Binding(get: { app.state.settingsPath }, set: { app.send(.setSettingsPath($0)) })
     }
 
-    /// 最初はテレビが未設定なら、テレビの設定の画面を開いておく
-    @State private var path: [Page] = []
-    /// 最初に開いたときだけ、テレビの設定の画面を開く
-    @State private var hasOpened = false
-
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack(path: path) {
             Form {
                 Section("テレビ") {
                     NavigationLink(value: Page.tv) {
@@ -99,13 +98,6 @@ struct SettingsView: View {
                     .disabled(!tv.canSave || !servers.isValid)
                 }
             }
-            .onAppear {
-                // 各設定の画面から一覧に戻ったときにも呼ばれるので、最初の 1 回だけにする
-                guard !hasOpened else { return }
-                hasOpened = true
-                if !tv.remote.connection.isConfigured, path.isEmpty { path = [.tv] }
-            }
-            .onDisappear { tv.close() }
             // テレビに PIN が出たら、すぐ打てるようにする
             .onChange(of: tv.isWaitingForPIN) { _, isWaiting in
                 if isWaiting { isPINFocused = true }
@@ -216,7 +208,8 @@ struct SettingsView: View {
                     Button("連携を解除", role: .destructive) {
                         Task {
                             await servers.unlink(server)
-                            path.removeAll { $0 == (server == .guide ? .guide : .stream) }
+                            let page: Page = server == .guide ? .guide : .stream
+                            app.send(.setSettingsPath(app.state.settingsPath.filter { $0 != page }))
                         }
                     }
                 } message: {

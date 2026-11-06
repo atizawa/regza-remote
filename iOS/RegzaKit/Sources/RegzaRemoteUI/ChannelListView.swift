@@ -6,18 +6,14 @@ import SwiftUI
 /// テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える
 struct ChannelListView: View {
     @State private var viewModel: ChannelListViewModel
-    @Environment(ReservationsViewModel.self) private var recording
-    /// 開いている画面 (チャンネルの番組表 → 番組の詳細)。番組の詳細は値で開くので、番組表も同じ順番に積む
-    @State private var path = NavigationPath()
-    /// アプリで見ているチャンネル
-    @State private var playerChannel: RegzaChannel?
+    @Environment(AppViewModel.self) private var app
 
     init(viewModel: ChannelListViewModel) {
         _viewModel = State(initialValue: viewModel)
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack(path: app.path(of: .channels)) {
             content
                 .navigationTitle("チャンネル")
                 // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
@@ -33,16 +29,7 @@ struct ChannelListView: View {
                         .disabled(viewModel.isLoading)
                     }
                 }
-                .navigationDestination(for: RegzaChannel.self) { channel in
-                    ChannelProgramsView(viewModel: ProgramListViewModel(
-                        guide: viewModel.guide, recording: recording, channel: channel
-                    ))
-                }
-                .fullScreenCover(item: $playerChannel) { channel in
-                    if let player = viewModel.stream.livePlayer(for: channel) {
-                        LivePlayerView(viewModel: player)
-                    }
-                }
+                .appRoutes()
                 .task { await viewModel.appear() }
         }
     }
@@ -124,7 +111,7 @@ struct ChannelListView: View {
             .disabled(viewModel.tuning != nil)
             if viewModel.hasPrograms(channel) {
                 Button {
-                    path.append(channel)
+                    app.send(.open(.channelPrograms(channel)))
                 } label: {
                     Image(systemName: "calendar")
                         // ボタンの色 (緑) が混ざらないよう、灰色に固定する
@@ -147,7 +134,7 @@ struct ChannelListView: View {
         }
         if viewModel.canStream {
             Button("アプリで見る", systemImage: "play.tv") {
-                playerChannel = channel
+                app.send(.play(channel))
             }
         }
         if viewModel.canStartOver(channel) {
@@ -157,7 +144,7 @@ struct ChannelListView: View {
         }
         if viewModel.hasPrograms(channel) {
             Button("番組表", systemImage: "calendar") {
-                path.append(channel)
+                app.send(.open(.channelPrograms(channel)))
             }
         }
     }
