@@ -16,7 +16,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1"
-        // Swift の .so は arm64 だけ作っている (mise run build-swift)
+        // Swift の .so は arm64 だけ作っている (buildSwift)
         ndk { abiFilters += "arm64-v8a" }
     }
 
@@ -28,13 +28,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // swift-java が RegzaAndroid の Swift から作った Java のクラス (mise run build-swift で作られる)
+    // swift-java が RegzaAndroid の Swift から作った Java のクラス (buildSwift で作られる)
     sourceSets.getByName("main").java.srcDirs(
         "../.build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java",
         // RegzaCore の型 (RegzaKey など) の Java のクラス
         "../.build/swift/regzacore-java",
     )
 }
+
+// Swift の .so と Java のクラスを先に作る (Android/build.gradle.kts の buildSwift)
+tasks.named("preBuild") { dependsOn(":buildSwift") }
 
 dependencies {
     // swift-java が作ったクラスが使う Java 側

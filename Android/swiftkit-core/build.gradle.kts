@@ -16,7 +16,11 @@ java {
     toolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
 }
 
+// ソースとリソースは buildSwift (mise run build-swift) が SwiftPM で取ってくる
+tasks.named("processResources") { dependsOn(":buildSwift") }
+
 tasks.withType<JavaCompile>().configureEach {
+    dependsOn(":buildSwift")
     // swift-java の設定と同じく Java 11 で使えるようにする
     options.release.set(11)
 }

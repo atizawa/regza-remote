@@ -37,7 +37,7 @@ open iOS/RegzaRemote.xcodeproj            # 実機へ入れるときは下の Lo
 
 cd Android                                # Android 版
 mise install && mise run install-android-swift-sdk   # 初回だけ（NDK r30 は mise.toml の場所に置く）
-mise run build-swift && ./gradlew :app:assembleDebug
+./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (mise run build-swift を呼ぶ)
 ```
 
 バンドル ID（`com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`）と署名のチームは `iOS/Config/Signing.xcconfig` にまとめている。自分でビルドして実機に入れるときは、このファイルは変えずに、同じフォルダに `Local.xcconfig` を作って自分の値で上書きする（Git には入れない）。
