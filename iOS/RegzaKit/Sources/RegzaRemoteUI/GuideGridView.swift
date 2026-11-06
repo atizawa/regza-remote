@@ -5,23 +5,21 @@ import SwiftUI
 
 /// 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる
 struct GuideGridView: View {
-    @Environment(RemoteViewModel.self) private var model
-    @Environment(GuideViewModel.self) private var guide
-    @Environment(ReservationsViewModel.self) private var recording
+    @State private var viewModel: GuideGridViewModel
     @Environment(StreamViewModel.self) private var stream
     @Environment(\.showSettings) private var showSettings
-    @State private var hasLoaded = false
     /// 開いている画面 (検索 → 番組の詳細と重ねたとき、戻ると 1 つ前の画面に戻れるよう順番を持つ)
     @State private var path: [GuideRoute] = []
-    /// 選んでいる日 (その日の朝 4 時)。nil なら今日 (今の時刻から 24 時間)
-    @State private var day: Date?
     /// 表の左上がスクロールでどれだけずれたか (固定する局名の行と時刻の列を合わせる)
     @State private var scrollOrigin = ScrollOrigin()
-    @State private var search = GuideSearch()
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+    init(viewModel: GuideGridViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
     /// 今の時刻の正時から 24 時間分
-    static let hours = 24
+    static let hours = GuideGridViewModel.hours
     /// 文字をこれより大きくすると 1 画面に 1 局も収まらなくなるので、番組表はここで止める
     static let maximumDynamicTypeSize = DynamicTypeSize.accessibility1
 
@@ -34,7 +32,7 @@ struct GuideGridView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
-                    if guide.hasGuide, hasLoaded, !columns.isEmpty {
+                    if viewModel.canSearch {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("番組を探す", systemImage: "magnifyingglass") { path.append(.search) }
                         }
@@ -43,12 +41,12 @@ struct GuideGridView: View {
                 .navigationDestination(for: GuideRoute.self) { route in
                     switch route {
                     case .search:
-                        GuideSearchScreen(search: search) { program, channel in
+                        GuideSearchScreen(search: viewModel.search) { program, channel in
                             path.append(.detail(program, channel))
                         }
                     case .detail(let program, let channel):
                         ProgramDetailView(viewModel: ProgramDetailViewModel(
-                            remote: model, guide: guide, recording: recording, stream: stream,
+                            remote: viewModel.remote, guide: viewModel.guide, recording: viewModel.recording, stream: stream,
                             program: program, channel: channel
                         ))
                     }
@@ -59,7 +57,7 @@ struct GuideGridView: View {
 
     @ViewBuilder
     private var content: some View {
-        if !guide.hasGuide {
+        if !viewModel.guide.hasGuide {
             // Mirakurun がなくてもタブは消さず (HIG)、何ができるかと設定のしかたを案内する
             ContentUnavailableView {
                 Label("番組表を使うには", systemImage: "calendar")
@@ -72,10 +70,10 @@ struct GuideGridView: View {
                 Button("設定を開く") { showSettings() }
                     .buttonStyle(.borderedProminent)
             }
-        } else if !hasLoaded {
+        } else if !viewModel.hasLoaded {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if columns.isEmpty {
+        } else if viewModel.columns.isEmpty {
             ContentUnavailableView {
                 Label("番組表を取得できません", systemImage: "calendar.badge.exclamationmark")
             } description: {
@@ -91,24 +89,28 @@ struct GuideGridView: View {
             // 上に積むと日付の横スクロールが先に見つかり、下へスクロールしてもタブバーが小さくならないので、表の上に重ねる
             .safeAreaBar(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
-                    if bands.count > 1 {
-                        BandPicker(bands: bands)
+                    if viewModel.bands.count > 1 {
+                        BandPicker(bands: viewModel.bands)
                     }
-                    DayPicker(days: days, selection: $day)
+                    DayPicker(viewModel: viewModel)
                 }
             }
         }
     }
 
     private func grid(now: Date) -> some View {
-        let window = Self.window(now: now, day: day)
+        let window = viewModel.window(now: now)
+        let columns = viewModel.columns
         let metrics = metrics
         let height = CGFloat(Self.hours * 60) * metrics.pointsPerMinute
         // 縦横を 1 つのスクロールにまとめ、局名の行と時刻の列はスクロール量に合わせてずらして重ねる
         return ScrollView([.horizontal, .vertical]) {
             HStack(alignment: .top, spacing: 0) {
                 ForEach(columns, id: \.channel) { column in
-                    ProgramColumn(channel: column.channel, programs: column.programs, window: window, metrics: metrics) { program in
+                    ProgramColumn(
+                        channel: column.channel, programs: column.programs, window: window, metrics: metrics,
+                        isReserved: viewModel.isReserved
+                    ) { program in
                         path.append(.detail(program, column.channel))
                     }
                 }
@@ -116,7 +118,7 @@ struct GuideGridView: View {
             .frame(height: height, alignment: .top)
             .overlay(alignment: .topLeading) {
                 // 今の時刻の線 (今日を見ているときだけ)
-                if day == nil {
+                if viewModel.day == nil {
                     Rectangle()
                         .fill(.red)
                         .frame(height: 1)
@@ -167,68 +169,19 @@ struct GuideGridView: View {
         }
     }
 
-    // MARK: - データ
-
-    private struct Column {
-        var channel: RegzaChannel
-        var programs: [MirakurunProgram]
-    }
-
-    /// 選んだ放送の局。サブチャンネル (同じリモコン番号の局) は代表のものだけにする
-    private var columns: [Column] {
-        let band = model.band(among: bands)
-        return model.channels
-            .filter { $0.band == band && guide.guidePrograms[$0.code] != nil }
-            .groupingSubchannels()
-            .map { Column(channel: $0, programs: guide.guidePrograms[$0.code] ?? []) }
-    }
-
-    private var bands: [RegzaChannel.Band] {
-        RegzaChannel.Band.allCases.filter { band in
-            model.channels.contains { $0.band == band && guide.guidePrograms[$0.code] != nil }
-        }
-    }
-
     private func load() async {
-        defer { hasLoaded = true }
-        try? await model.loadChannels()
-        await guide.loadGuidePrograms()
-        search.updateIndex(guide.guidePrograms, loadedAt: guide.guideProgramsLoadedAt)
-        // 予約した番組に印を付けるため
-        try? await recording.loadReservations()
+        await viewModel.load()
         #if DEBUG
         // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
         if SampleData.isEnabled, UserDefaults.standard.bool(forKey: "SampleDetail"),
-           let column = columns.first, let program = column.programs.first(where: { $0.isOnAir() }) {
+           let column = viewModel.columns.first, let program = column.programs.first(where: { $0.isOnAir() }) {
             path = [.detail(program, column.channel)]
         }
         if SampleData.isEnabled, let text = UserDefaults.standard.string(forKey: "SampleSearch") {
             path = [.search]
-            search.text = text
+            viewModel.search.text = text
         }
         #endif
-    }
-
-    // MARK: - 位置の計算
-
-    /// 表に出す時間。今日は今の時刻の正時から 24 時間、ほかの日はその日の朝 4 時から次の日の朝 4 時まで
-    static func window(now: Date, day: Date? = nil) -> ClosedRange<Date> {
-        let start = day ?? Calendar.current.dateInterval(of: .hour, for: now)?.start ?? now
-        return start...start.addingTimeInterval(TimeInterval(hours * 3600))
-    }
-
-    /// 明日から、Mirakurun が番組表を持っている最後の日まで (今日は nil で表す)
-    private var days: [Date] {
-        let today = BroadcastDay.start(of: Date())
-        guard let last = guide.guidePrograms.values.compactMap({ $0.last?.start }).max() else { return [] }
-        let lastDay = BroadcastDay.start(of: last)
-        var result: [Date] = []
-        var day = Calendar.current.date(byAdding: .day, value: 1, to: today) ?? today
-        while day <= lastDay {
-            result.append(day)
-            day = Calendar.current.date(byAdding: .day, value: 1, to: day) ?? lastDay.addingTimeInterval(1)
-        }
-        return result
     }
 }
 
@@ -351,6 +304,7 @@ private struct ProgramColumn: View {
     let programs: [MirakurunProgram]
     let window: ClosedRange<Date>
     let metrics: GuideMetrics
+    let isReserved: (MirakurunProgram) -> Bool
     var onSelect: (MirakurunProgram) -> Void
 
     var body: some View {
@@ -361,7 +315,7 @@ private struct ProgramColumn: View {
                 Button {
                     onSelect(program)
                 } label: {
-                    ProgramCell(program: program, channelName: channel.name)
+                    ProgramCell(program: program, channelName: channel.name, isReserved: isReserved(program))
                         .frame(width: metrics.columnWidth, height: max(1, bottom - top), alignment: .topLeading)
                         .clipped()
                 }
@@ -379,9 +333,9 @@ private struct ProgramColumn: View {
 }
 
 private struct ProgramCell: View {
-    @Environment(ReservationsViewModel.self) private var recording
     let program: MirakurunProgram
     let channelName: String
+    let isReserved: Bool
 
     var body: some View {
         let isOnAir = program.isOnAir()
@@ -390,7 +344,7 @@ private struct ProgramCell: View {
                 Text(program.start, format: .dateTime.hour().minute())
                     .font(.caption2.monospacedDigit().weight(isOnAir ? .semibold : .regular))
                     .foregroundStyle(isOnAir ? AppTheme.accent : .secondary)
-                if recording.isReserved(program) {
+                if isReserved {
                     Image(systemName: "record.circle.fill")
                         .font(.caption2)
                         .foregroundStyle(.red)
@@ -424,7 +378,7 @@ private struct ProgramCell: View {
         let time = "\(program.start.formatted(date: .omitted, time: .shortened))から\(program.end.formatted(date: .omitted, time: .shortened))"
         var parts = [isOnAir ? "放送中、\(time)" : time, program.name, channelName]
         if let genre = program.genreName { parts.append(genre) }
-        if recording.isReserved(program) { parts.append("録画予約済み") }
+        if isReserved { parts.append("録画予約済み") }
         return parts.joined(separator: "、")
     }
 
@@ -448,14 +402,13 @@ private struct ProgramCell: View {
 }
 /// 日付の選択。今日・明日・6(金) … を横に並べ、土曜は青、日曜は赤にする (テレビ欄と同じ)
 private struct DayPicker: View {
-    let days: [Date]
-    @Binding var selection: Date?
+    @Bindable var viewModel: GuideGridViewModel
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 chip(nil)
-                ForEach(days, id: \.self) { chip($0) }
+                ForEach(viewModel.days, id: \.self) { chip($0) }
             }
             .padding(.horizontal, Design.outer)
             .padding(.bottom, 8)
@@ -463,11 +416,11 @@ private struct DayPicker: View {
     }
 
     private func chip(_ day: Date?) -> some View {
-        let isSelected = selection == day
+        let isSelected = viewModel.day == day
         return Button {
-            selection = day
+            viewModel.day = day
         } label: {
-            Text(label(day))
+            Text(viewModel.label(of: day))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isSelected ? Color.white : color(day))
                 .padding(.horizontal, 12)
@@ -477,23 +430,11 @@ private struct DayPicker: View {
         .buttonStyle(.plain)
     }
 
-    private func label(_ day: Date?) -> String {
-        guard let day else { return "今日" }
-        let calendar = Calendar.current
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: BroadcastDay.start(of: Date()))
-        if day == tomorrow { return "明日" }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ja_JP")
-        formatter.dateFormat = "d(E)"
-        return formatter.string(from: day)
-    }
-
     private func color(_ day: Date?) -> Color {
-        guard let day else { return .primary }
-        switch Calendar.current.component(.weekday, from: day) {
-        case 7: return .blue
-        case 1: return .red
-        default: return .primary
+        switch viewModel.kind(of: day) {
+        case .saturday: .blue
+        case .sunday: .red
+        case .weekday: .primary
         }
     }
 }

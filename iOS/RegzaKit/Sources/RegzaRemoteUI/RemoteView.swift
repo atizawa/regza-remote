@@ -49,7 +49,7 @@ public struct RemoteView: View {
                     .tabItem { Label("リモコン", systemImage: "appletvremote.gen4.fill") }
                     .tag(AppTab.remote)
 
-                    GuideGridView()
+                    GuideGridView(viewModel: GuideGridViewModel(remote: model, guide: guide, recording: recording))
                         .tabItem { Label("番組表", systemImage: "calendar") }
                         .tag(AppTab.guide)
 

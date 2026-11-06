@@ -213,6 +213,76 @@ import Testing
     }
 }
 
+/// 番組表と検索の ViewModel
+@MainActor
+@Suite struct GuideScreenViewModelTests {
+    let screens = ScreenViewModelTests()
+
+    /// テスト局１ (JP-G00000001) の番組。start は今からの秒数
+    func program(id: Int, startingIn offset: TimeInterval, name: String = "テスト番組") throws -> MirakurunProgram {
+        let start = Int((Date().timeIntervalSince1970 + offset) * 1000)
+        let json = #"{"id":\#(id),"eventId":\#(id),"networkId":0,"serviceId":1,"startAt":\#(start),"duration":1800000,"name":"\#(name)"}"#
+        return try JSONDecoder().decode(MirakurunProgram.self, from: Data(json.utf8))
+    }
+
+    func channels() throws -> [RegzaChannel] {
+        try #require(try JSONDecoder().decode(RegzaChannelList.self, from: Data(ViewModelTests.channelList.utf8)).channels)
+    }
+
+    @Test func gridShowsChannelsThatHavePrograms() async throws {
+        let (remote, guide, recording, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: try channels())
+        guide.showSample(guideHost: "192.0.2.2", programs: [
+            try program(id: 1, startingIn: 0),
+            try program(id: 2, startingIn: 3 * 86_400),
+        ])
+        let viewModel = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
+
+        // 番組表があるのは地デジのテスト局１だけ。BS の局は番組表がないので出さない
+        #expect(viewModel.bands == [.terrestrial])
+        #expect(viewModel.columns.map(\.channel.name) == ["テスト局１"])
+        #expect(viewModel.columns.first?.programs.count == 2)
+        // 明日から、番組表がある最後の日まで
+        let today = BroadcastDay.start(of: Date())
+        #expect(viewModel.days.first == Calendar.current.date(byAdding: .day, value: 1, to: today))
+        let lastDay = BroadcastDay.start(of: Date().addingTimeInterval(3 * 86_400))
+        #expect(viewModel.days.last == lastDay)
+    }
+
+    @Test func gridDescribesDays() throws {
+        let (remote, guide, recording, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        let viewModel = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
+        let today = BroadcastDay.start(of: Date())
+        let tomorrow = try #require(Calendar.current.date(byAdding: .day, value: 1, to: today))
+        #expect(viewModel.label(of: nil) == "今日")
+        #expect(viewModel.label(of: tomorrow) == "明日")
+        // 2026-11-07 は土曜、11-08 は日曜
+        let saturday = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 4)))
+        #expect(viewModel.kind(of: saturday) == .saturday)
+        #expect(viewModel.kind(of: saturday.addingTimeInterval(86_400)) == .sunday)
+        #expect(viewModel.label(of: saturday.addingTimeInterval(7 * 86_400)).hasSuffix("(土)"))
+        // 今日は今の時刻の正時から 24 時間
+        let now = Date()
+        let window = viewModel.window(now: now)
+        #expect(window.lowerBound <= now && now < window.lowerBound.addingTimeInterval(3600))
+        #expect(window.upperBound.timeIntervalSince(window.lowerBound) == 24 * 3600)
+    }
+
+    @Test func searchExplainsWhyItFoundPrograms() throws {
+        let (remote, _, recording, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: try channels())
+        let search = GuideSearchViewModel(remote: remote, recording: recording)
+        let onAir = try program(id: 1, startingIn: -60)
+
+        let byCast = ProgramSearchResult(program: onAir, matches: [.init(term: "見本太郎", field: .cast)])
+        let byTitle = ProgramSearchResult(program: onAir, matches: [.init(term: "テスト", field: .title)])
+        #expect(search.reason(for: byCast) == "見本太郎 が出演")
+        #expect(search.reason(for: byTitle) == nil)
+        #expect(search.timeText(of: onAir).hasPrefix("放送中 〜"))
+        #expect(search.channel(for: onAir)?.name == "テスト局１")
+    }
+}
+
 /// 決めた返事を返し、届いた問い合わせを覚えておく
 final class FakeTransport: HTTPTransport, @unchecked Sendable {
     private let respond: @Sendable (HTTPRequest) -> HTTPResponse

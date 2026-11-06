@@ -3,106 +3,9 @@ import RegzaCore
 import RegzaLiveActivity
 import SwiftUI
 
-/// 番組表の検索。打った言葉から日付・時間帯・ジャンルを読み取り (「明日の夜のサッカー」→ 明日・18 時から・サッカー)、
-/// 残りの言葉で全部の番組から探す
-@MainActor @Observable
-final class GuideSearch {
-    var text = "" {
-        didSet {
-            guard text != oldValue else { return }
-            // 打ち直したら、外した条件も戻して読み直す
-            removed = []
-            isLiteral = false
-            refresh()
-        }
-    }
-    /// 読み取った条件 (外したものを除く)
-    private(set) var query = ProgramSearchQuery()
-    private(set) var results: [ProgramSearchResult] = []
-    /// 条件を読み取らず、打った言葉そのままで探すか (「夜のニュース」という番組名を探すときなど)
-    private(set) var isLiteral = false
-    /// 索引を作っている途中か (その間は結果が空でも「見つかりません」と出さない)
-    private(set) var isIndexing = false
-    private var removed: Set<Condition> = []
-
-    private var index = ProgramSearchIndex([])
-    private var indexedAt: Date?
-
-    /// 番組表を読み込み直したときに、探すための索引を作り直す。
-    /// 1 週間分で 1 秒ほどかかるので、番組表の表示を待たせないよう裏で作る
-    func updateIndex(_ programs: [String: [MirakurunProgram]], loadedAt: Date?) {
-        guard loadedAt != indexedAt || index.isEmpty else { return }
-        indexedAt = loadedAt
-        let all = programs.values.flatMap { $0 }
-        isIndexing = true
-        Task {
-            let index = await Task.detached { ProgramSearchIndex(all) }.value
-            // 作っている間に番組表を読み込み直していたら、古い索引は使わない
-            guard loadedAt == indexedAt else { return }
-            self.index = index
-            isIndexing = false
-            refresh()
-        }
-    }
-
-    /// 読み取った条件から 1 つ外す
-    func remove(_ condition: Condition) {
-        removed.insert(condition)
-        refresh()
-    }
-
-    /// 条件を読み取らず、打った言葉そのままで探す
-    func searchLiterally() {
-        isLiteral = true
-        refresh()
-    }
-
-    private func refresh() {
-        var query = isLiteral ? ProgramSearchQuery(text: text) : ProgramSearchQuery(parsing: text)
-        if removed.contains(.day) { query.dayOffset = nil }
-        if removed.contains(.hours) { query.startHour = nil; query.endHour = nil }
-        query.genres.removeAll { removed.contains(.genre($0)) }
-        self.query = query
-        results = query.isEmpty ? [] : index.search(query)
-    }
-
-    /// 画面に出す、読み取った条件
-    enum Condition: Hashable {
-        case day, hours, genre(Int)
-    }
-
-    var conditions: [Condition] {
-        var conditions: [Condition] = []
-        if query.dayOffset != nil { conditions.append(.day) }
-        if query.startHour != nil || query.endHour != nil { conditions.append(.hours) }
-        return conditions + query.genres.map(Condition.genre)
-    }
-
-    func label(_ condition: Condition) -> String {
-        switch condition {
-        case .day:
-            switch query.dayOffset ?? 0 {
-            case 0: return "今日"
-            case 1: return "明日"
-            case 2: return "あさって"
-            case let offset:
-                let today = BroadcastDay.start(of: Date())
-                let day = Calendar.current.date(byAdding: .day, value: offset, to: today) ?? today
-                return day.formatted(.dateTime.locale(Locale(identifier: "ja_JP")).month().day().weekday())
-            }
-        case .hours:
-            let start = query.startHour.map { "\($0)時" } ?? ""
-            let end = query.endHour.map { "\($0)時" } ?? ""
-            return "\(start)〜\(end)"
-        case .genre(let genre):
-            return ProgramSearch.genreNames.indices.contains(genre) ? ProgramSearch.genreNames[genre] : ""
-        }
-    }
-}
-
 /// 番組を探す画面。番組表のナビゲーションバーの虫眼鏡から開く
 struct GuideSearchScreen: View {
-    @Bindable var search: GuideSearch
+    @Bindable var search: GuideSearchViewModel
     let onSelect: (MirakurunProgram, RegzaChannel) -> Void
     @State private var isPresented = false
 
@@ -121,8 +24,7 @@ struct GuideSearchScreen: View {
 
 /// 検索の結果。時刻順に並べ、なぜ見つかったか (「〇〇 が出演」など) を添える
 struct GuideSearchResults: View {
-    @Environment(RemoteViewModel.self) private var model
-    let search: GuideSearch
+    let search: GuideSearchViewModel
     let onSelect: (MirakurunProgram, RegzaChannel) -> Void
 
     var body: some View {
@@ -142,7 +44,7 @@ struct GuideSearchResults: View {
         }
         .listStyle(.plain)
         .overlay {
-            if search.text.trimmingCharacters(in: .whitespaces).isEmpty {
+            if search.isBlank {
                 ContentUnavailableView {
                     Label("番組を探す", systemImage: "magnifyingglass")
                 } description: {
@@ -161,11 +63,11 @@ struct GuideSearchResults: View {
         if !results.isEmpty {
             Section {
                 ForEach(results) { result in
-                    if let channel = channel(for: result.program) {
+                    if let channel = search.channel(for: result.program) {
                         Button {
                             onSelect(result.program, channel)
                         } label: {
-                            SearchResultRow(result: result, channel: channel)
+                            SearchResultRow(search: search, result: result, channel: channel)
                         }
                         .tint(.primary)
                     }
@@ -173,15 +75,11 @@ struct GuideSearchResults: View {
             }
         }
     }
-
-    private func channel(for program: MirakurunProgram) -> RegzaChannel? {
-        model.channels.first { $0.code.caseInsensitiveCompare(program.channelCode) == .orderedSame }
-    }
 }
 
 /// 読み取った条件。× で外せる
 private struct ConditionChips: View {
-    let search: GuideSearch
+    let search: GuideSearchViewModel
 
     var body: some View {
         ScrollView(.horizontal) {
@@ -215,7 +113,7 @@ private struct ConditionChips: View {
 }
 
 private struct SearchResultRow: View {
-    @Environment(ReservationsViewModel.self) private var recording
+    let search: GuideSearchViewModel
     let result: ProgramSearchResult
     let channel: RegzaChannel
 
@@ -223,14 +121,14 @@ private struct SearchResultRow: View {
         let program = result.program
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Text(timeText)
+                Text(search.timeText(of: program))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(program.isOnAir() ? AppTheme.accent : .secondary)
                 Text(channel.name)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                if recording.isReserved(program) {
+                if search.isReserved(program) {
                     Image(systemName: "record.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.red)
@@ -240,7 +138,7 @@ private struct SearchResultRow: View {
             Text(program.name)
                 .font(.subheadline.weight(.medium))
                 .lineLimit(2)
-            if let reason {
+            if let reason = search.reason(for: result) {
                 Text(reason)
                     .font(.caption)
                     .foregroundStyle(AppTheme.accent)
@@ -248,25 +146,6 @@ private struct SearchResultRow: View {
             }
         }
         .padding(.vertical, 2)
-    }
-
-    /// 「11/5(木) 21:00〜」。放送中は「放送中」
-    private var timeText: String {
-        if result.program.isOnAir() { return "放送中 〜\(result.program.end.formatted(.dateTime.hour().minute()))" }
-        let day = result.program.start.formatted(.dateTime.locale(Locale(identifier: "ja_JP")).month(.defaultDigits).day().weekday())
-        return "\(day) \(result.program.start.formatted(.dateTime.hour().minute()))〜"
-    }
-
-    /// 番組名に入っていれば言うまでもないので、出演者と説明のときだけ添える
-    private var reason: String? {
-        let reasons = result.matches.compactMap { match -> String? in
-            switch match.field {
-            case .title: nil
-            case .cast: "\(match.term) が出演"
-            case .description: "説明に「\(match.term)」"
-            }
-        }
-        return reasons.isEmpty ? nil : reasons.joined(separator: "・")
     }
 }
 #endif
