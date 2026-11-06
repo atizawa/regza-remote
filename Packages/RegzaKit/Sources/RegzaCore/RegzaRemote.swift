@@ -27,6 +27,8 @@ public actor RegzaRemote {
     private var needsPlayStatus = false
     /// 落ち着いているときに `play/status` を問い合わせる間隔
     static let playStatusInterval: TimeInterval = 15
+    /// 走っている確認。重なって呼ばれたら、新しく問い合わせずにこの結果を使う
+    private var refreshing: Task<RegzaNowPlaying, Error>?
 
     /// 旧 API の値のうち、切り替わると変わるもの
     struct Probe: Equatable {
@@ -88,11 +90,17 @@ public actor RegzaRemote {
     /// 映像が切り替わるキーを送った直後は、落ち着くまで待ってから問い合わせる
     @discardableResult
     public func refresh() async throws -> RegzaNowPlaying {
-        if let quietUntil {
-            let wait = quietUntil.timeIntervalSinceNow
-            if wait > 0 { try await Task.sleep(for: .seconds(wait)) }
-            self.quietUntil = nil
-        }
+        // 2 秒ごとの確認・キーを送った後の取り直し・Live Activity などが重なると、ほかの確認が見つけた切り替わりを
+        // 見落として play/status を問い合わせてしまう (実機のログで確認) ので、1 本ずつにし、重なったら走っている確認の結果を使う
+        if let refreshing { return try await refreshing.value }
+        let task = Task { try await refreshOnce() }
+        refreshing = task
+        defer { refreshing = nil }
+        return try await task.value
+    }
+
+    private func refreshOnce() async throws -> RegzaNowPlaying {
+        try await waitUntilQuiet()
         // v2 API で一度取れてからは、旧 API で見張って play/status を必要なときだけにする
         guard supportsPlayStatus == true, let current = nowPlaying else { return try await fetch() }
 
@@ -108,11 +116,23 @@ public actor RegzaRemote {
         }
         let isDue = lastPlayStatusAt.map { Date().timeIntervalSince($0) >= Self.playStatusInterval } ?? true
         if needsPlayStatus || isDue {
+            // status.htm の返事を待つ間に切り替わるキーが送られていたら、play/status は落ち着いてからにする
+            guard !isQuiet else { return current }
             return try await fetch()
         }
         let updated = Self.advanced(current, with: status)
         nowPlaying = updated
         return updated
+    }
+
+    private var isQuiet: Bool { quietUntil.map { $0 > Date() } ?? false }
+
+    /// 切り替わりが落ち着くまで待つ。待っている間にキーが送られて延びたら、延びた分も待つ
+    private func waitUntilQuiet() async throws {
+        while let quietUntil, quietUntil > Date() {
+            let wait = quietUntil.timeIntervalSinceNow
+            try await Task.sleep(for: .seconds(wait))
+        }
     }
 
     /// play/status を問い合わせない間は、前回の値を今の時刻まで進める (録画は旧 API の再生位置を使う)
