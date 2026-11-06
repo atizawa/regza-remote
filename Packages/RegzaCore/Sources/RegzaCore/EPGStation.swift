@@ -1,7 +1,4 @@
 import Foundation
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
 
 /// 録画サーバー EPGStation の放送のライブ配信 (HLS)。認証は不要。
 ///
@@ -15,18 +12,11 @@ public final class EPGStation: Sendable {
 
     /// `192.168.0.2` か `192.168.0.2:8888`
     public let host: String
-    private let session: URLSession
+    private let timeout: TimeInterval
 
     public init(host: String, timeout: TimeInterval = 10) {
         self.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = timeout
-        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        session = URLSession(configuration: configuration)
-    }
-
-    deinit {
-        session.finishTasksAndInvalidate()
+        self.timeout = timeout
     }
 
     /// EPGStation のチャンネル ID (Mirakurun のサービス ID と同じ)。テレビのチャンネルの ID から求める
@@ -127,20 +117,8 @@ public final class EPGStation: Sendable {
     private func request(_ method: String, _ path: String, query: String? = nil) async throws -> Data {
         guard !host.isEmpty else { throw RegzaError.notConfigured }
         guard let url = url(path, query: query) else { throw RegzaError.invalidHost }
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        let (data, response): (Data, HTTPURLResponse) = try await withCheckedThrowingContinuation { continuation in
-            session.dataTask(with: request) { data, response, error in
-                if let error {
-                    continuation.resume(throwing: RegzaError.network(error.localizedDescription))
-                } else if let response = response as? HTTPURLResponse {
-                    continuation.resume(returning: (data ?? Data(), response))
-                } else {
-                    continuation.resume(throwing: RegzaError.network("不正なレスポンスです"))
-                }
-            }.resume()
-        }
+        let response = try await RegzaHTTP.transport.send(HTTPRequest(method: method, url: url, timeout: timeout))
         guard (200..<300).contains(response.statusCode) else { throw RegzaError.httpStatus(response.statusCode) }
-        return data
+        return response.body
     }
 }

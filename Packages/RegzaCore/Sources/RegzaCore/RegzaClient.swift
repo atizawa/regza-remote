@@ -1,7 +1,4 @@
 import Foundation
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
 
 public enum RegzaError: Error, Equatable, Sendable {
     case notConfigured
@@ -41,25 +38,19 @@ extension RegzaError: LocalizedError {
 /// いずれも Digest 認証が必要。PIN 登録は `RegzaPairing` を使う。
 public actor RegzaClient {
     public private(set) var connection: RegzaConnection
-    private let session: URLSession
+    private let transport: any HTTPTransport
+    private let timeout: TimeInterval
     private var challenge: DigestChallenge?
     private var nonceCount = 0
 
-    public init(connection: RegzaConnection, timeout: TimeInterval = 3) {
+    public init(connection: RegzaConnection, timeout: TimeInterval = 3, transport: any HTTPTransport = RegzaHTTP.transport) {
         self.connection = connection
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = timeout
-        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        self.session = URLSession(configuration: configuration, delegate: LocalTrustDelegate(), delegateQueue: nil)
+        self.timeout = timeout
+        self.transport = transport
     }
 
     /// テレビの HTTPS のポート。録画予約の追加はこちらでしか受け付けない
-    static let securePort = 4430
-
-    deinit {
-        // 接続テストや探し直しで作ったクライアントのセッションが残り続けないようにする
-        session.finishTasksAndInvalidate()
-    }
+    public static let securePort = 4430
 
     public func update(connection: RegzaConnection) {
         guard connection != self.connection else { return }
@@ -208,37 +199,21 @@ public actor RegzaClient {
         }
     }
 
-    private func perform(method: String, url: URL, uri: String, body: Data?) async throws -> (Data, HTTPURLResponse) {
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        if let body {
-            request.httpBody = body
-            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    private func perform(method: String, url: URL, uri: String, body: Data?) async throws -> (Data, HTTPResponse) {
+        var request = HTTPRequest(method: method, url: url, body: body, timeout: timeout)
+        if body != nil {
+            request.headers["Content-Type"] = "application/x-www-form-urlencoded"
         }
         if let challenge {
             nonceCount += 1
-            request.setValue(
-                challenge.authorization(
-                    method: method, uri: uri,
-                    user: connection.user, password: connection.password,
-                    nonceCount: nonceCount, clientNonce: Self.makeClientNonce()
-                ),
-                forHTTPHeaderField: "Authorization"
+            request.headers["Authorization"] = challenge.authorization(
+                method: method, uri: uri,
+                user: connection.user, password: connection.password,
+                nonceCount: nonceCount, clientNonce: Self.makeClientNonce()
             )
         }
-
-        // FoundationNetworking では async の data(for:) が使えない場合があるので completion 版を使う
-        return try await withCheckedThrowingContinuation { continuation in
-            session.dataTask(with: request) { data, response, error in
-                if let error {
-                    continuation.resume(throwing: RegzaError.network(error.localizedDescription))
-                } else if let response = response as? HTTPURLResponse {
-                    continuation.resume(returning: (data ?? Data(), response))
-                } else {
-                    continuation.resume(throwing: RegzaError.network("不正なレスポンスです"))
-                }
-            }.resume()
-        }
+        let response = try await transport.send(request)
+        return (response.body, response)
     }
 
     private func makeURL(path: String, query: String?, secure: Bool = false) -> URL? {
@@ -265,22 +240,5 @@ public actor RegzaClient {
             if let text = String(data: data, encoding: encoding) { return text }
         }
         return String(decoding: data, as: UTF8.self)
-    }
-}
-
-/// テレビの HTTPS は自己署名の証明書なので、テレビの HTTPS のポートへの接続に限って証明書を受け入れる。
-/// 同じ内容は HTTP (80 番) でも平文で送っているので、受け入れても安全性は下がらない
-private final class LocalTrustDelegate: NSObject, URLSessionDelegate, Sendable {
-    func urlSession(
-        _ session: URLSession, didReceive challenge: URLAuthenticationChallenge
-    ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
-        #if canImport(Security)
-        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
-           challenge.protectionSpace.port == RegzaClient.securePort,
-           let trust = challenge.protectionSpace.serverTrust {
-            return (.useCredential, URLCredential(trust: trust))
-        }
-        #endif
-        return (.performDefaultHandling, nil)
     }
 }

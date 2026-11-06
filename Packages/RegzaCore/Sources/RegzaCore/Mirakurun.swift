@@ -1,7 +1,4 @@
 import Foundation
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
 
 /// Mirakurun の番組 (`GET /api/programs`)。
 public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
@@ -80,18 +77,11 @@ public final class Mirakurun: Sendable {
 
     /// `192.168.0.2` か `192.168.0.2:40772`
     public let host: String
-    private let session: URLSession
+    private let timeout: TimeInterval
 
     public init(host: String, timeout: TimeInterval = 10) {
         self.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = timeout
-        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        session = URLSession(configuration: configuration)
-    }
-
-    deinit {
-        session.finishTasksAndInvalidate()
+        self.timeout = timeout
     }
 
     /// 1 番組。テレビの `epg_content_id` から `programID(epgContentID:)` で求めた ID を渡す
@@ -125,19 +115,9 @@ public final class Mirakurun: Sendable {
         guard let url = URL(string: "http://\(authority)\(path)" + (query.map { "?\($0)" } ?? "")) else {
             throw RegzaError.invalidHost
         }
-        let (data, response): (Data, HTTPURLResponse) = try await withCheckedThrowingContinuation { continuation in
-            session.dataTask(with: url) { data, response, error in
-                if let error {
-                    continuation.resume(throwing: RegzaError.network(error.localizedDescription))
-                } else if let response = response as? HTTPURLResponse {
-                    continuation.resume(returning: (data ?? Data(), response))
-                } else {
-                    continuation.resume(throwing: RegzaError.network("不正なレスポンスです"))
-                }
-            }.resume()
-        }
+        let response = try await RegzaHTTP.transport.send(HTTPRequest(url: url, timeout: timeout))
         guard (200..<300).contains(response.statusCode) else { throw RegzaError.httpStatus(response.statusCode) }
-        return data
+        return response.body
     }
 
     // MARK: - テレビの ID との変換

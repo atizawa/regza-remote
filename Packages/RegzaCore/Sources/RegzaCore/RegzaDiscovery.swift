@@ -1,7 +1,4 @@
 import Foundation
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -60,22 +57,16 @@ public enum RegzaDiscovery {
         AsyncStream { continuation in
             let task = Task {
                 let hosts = localNetworks().flatMap(\.hosts)
-                let configuration = URLSessionConfiguration.ephemeral
-                configuration.timeoutIntervalForRequest = timeout
-                configuration.timeoutIntervalForResource = timeout
-                let session = URLSession(configuration: configuration)
-                defer { session.invalidateAndCancel() }
-
                 await withTaskGroup(of: RegzaDevice?.self) { group in
                     var iterator = hosts.makeIterator()
                     for _ in 0..<concurrency {
                         guard let host = iterator.next() else { break }
-                        group.addTask { await probe(host: host, session: session) }
+                        group.addTask { await probe(host: host, timeout: timeout) }
                     }
                     for await device in group {
                         if let device { continuation.yield(device) }
                         if !Task.isCancelled, let host = iterator.next() {
-                            group.addTask { await probe(host: host, session: session) }
+                            group.addTask { await probe(host: host, timeout: timeout) }
                         }
                     }
                 }
@@ -113,16 +104,12 @@ public enum RegzaDiscovery {
     }
 
     /// 1 台に問い合わせる。REGZA でなければ nil
-    public static func probe(host: String, session: URLSession = .shared) async -> RegzaDevice? {
-        guard let url = URL(string: "http://\(host)/public/feature") else { return nil }
-        let data: Data? = await withCheckedContinuation { continuation in
-            session.dataTask(with: url) { data, response, _ in
-                let ok = (response as? HTTPURLResponse).map { (200..<300).contains($0.statusCode) } ?? false
-                continuation.resume(returning: ok ? data : nil)
-            }.resume()
-        }
-        guard let data else { return nil }
-        return device(host: host, featureJSON: data)
+    public static func probe(host: String, timeout: TimeInterval = 1.5) async -> RegzaDevice? {
+        guard let url = URL(string: "http://\(host)/public/feature"),
+              let response = try? await RegzaHTTP.transport.send(HTTPRequest(url: url, timeout: timeout)),
+              (200..<300).contains(response.statusCode)
+        else { return nil }
+        return device(host: host, featureJSON: response.body)
     }
 
     static func device(host: String, featureJSON data: Data) -> RegzaDevice? {
