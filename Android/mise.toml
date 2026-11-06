@@ -38,13 +38,13 @@ libcxx="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib
 rm -rf .build/swift/plugins/outputs/regzaandroid
 
 # RegzaCore (iOS と共有) の型の Java のつなぎを作る。RegzaCore にはプラグインをかけられないので、
-# Mac で動く swift-java のツールで、Packages/RegzaKit/Sources/RegzaCore を直接読む
+# Mac で動く swift-java のツールで、Packages/RegzaCore/Sources/RegzaCore を直接読む
 swift build --package-path RegzaAndroid --scratch-path .build/swift -c release --product swift-java
 generated=RegzaAndroid/Sources/RegzaCoreJava/Generated
 rm -rf "$generated" .build/swift/regzacore-java && mkdir -p "$generated" .build/swift/regzacore-java
 .build/swift/out/Products/Release/swift-java jextract --log-level warning \
   --config RegzaAndroid/RegzaCore.swift-java.config --swift-module RegzaCore \
-  --input-swift ../Packages/RegzaKit/Sources/RegzaCore \
+  --input-swift ../Packages/RegzaCore/Sources/RegzaCore \
   --output-swift "$generated" --output-java .build/swift/regzacore-java
 
 # Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)

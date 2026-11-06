@@ -13,19 +13,19 @@ let package = Package(
         .library(name: "RegzaAndroid", type: .dynamic, targets: ["RegzaAndroid"]),
     ],
     dependencies: [
-        .package(path: "../../Packages/RegzaKit"),
+        .package(path: "../../Packages/RegzaCore"),
         // まだ 1.0 前でリリースのタグがないので、確かめたコミットに固定する。
         // Java 側の SwiftKitCore も、SwiftPM が取ってきたこの版のソースを app のビルドに含める
         .package(url: "https://github.com/swiftlang/swift-java", revision: "301e3da710ede7af93e798f1ce1c7950715a5748"),
     ],
     targets: [
-        // RegzaCore (iOS と共有) の型の Java のつなぎ。RegzaCore は iOS と共有の Packages/RegzaKit にあって
+        // RegzaCore (iOS と共有) の型の Java のつなぎ。RegzaCore は iOS と共有の Packages/RegzaCore にあって
         // プラグインをかけられないので、mise run build-swift が swift-java のツールで Generated/ に作る
         // (設定は RegzaCore.swift-java.config)。ここにはプラグインをかけない
         .target(
             name: "RegzaCoreJava",
             dependencies: [
-                .product(name: "RegzaCore", package: "RegzaKit"),
+                .product(name: "RegzaCore", package: "RegzaCore"),
                 .product(name: "SwiftJava", package: "swift-java"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
@@ -34,7 +34,7 @@ let package = Package(
             name: "RegzaAndroid",
             dependencies: [
                 "RegzaCoreJava",
-                .product(name: "RegzaCore", package: "RegzaKit"),
+                .product(name: "RegzaCore", package: "RegzaCore"),
                 .product(name: "SwiftJava", package: "swift-java"),
             ],
             exclude: ["swift-java.config"],

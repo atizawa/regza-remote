@@ -12,23 +12,32 @@ REGZA だけでもリモコン・Live Activity・Siri・チャンネル一覧と
 ## 構成
 
 ```
-Packages/RegzaKit/            Swift Package（マルチモジュール）
-  RegzaCore                   クロスプラットフォーム（Foundation のみ）。Android でも使う想定
+Packages/RegzaCore/           iOS と Android で共有する Swift Package（Foundation のみ）
                               キーコード / Digest 認証 / HTTP クライアント / status.htm 解析 / RegzaRemote
+iOS/RegzaKit/                 iOS だけで使う Swift Package（マルチモジュール）
   RegzaAppleStorage           キーチェーンへの接続情報保存
-  RegzaLiveActivity           Live Activity・Dynamic Island の UI と、ボタン用 App Intent（iOS）
-  RegzaRemoteUI               SwiftUI のリモコン画面（iOS）
+  RegzaLiveActivity           Live Activity・Dynamic Island の UI と、ボタン用 App Intent
+  RegzaRemoteUI               SwiftUI のリモコン画面
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
+Android/                      Android 版（Kotlin・Jetpack Compose）
+  RegzaAndroid/               Android に見せる Swift の API。swift-java が Java のクラスを作る
+  app/                        Kotlin・Compose のアプリ
+  mise.toml                   道具の版（Swift 6.4.2・JDK・Gradle）と、Swift の .so を作る mise run build-swift
 ```
 
 - Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装している（Android の FoundationNetworking でも同じコードで動かすため）
-- iOS 専用モジュールは `#if os(iOS)` で囲んであるので、パッケージ全体を他プラットフォーム向けにビルドしても壊れない
+- `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
+- Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。`RegzaKey` などの型は写さずにそのまま使う
 
 ## 開発
 
 ```sh
-cd Packages/RegzaKit && swift test        # コアのテスト
+cd Packages/RegzaCore && swift test       # 共有部分のテスト
 open iOS/RegzaRemote.xcodeproj            # 実機へ入れるときは下の Local.xcconfig を作る
+
+cd Android                                # Android 版
+mise install && mise run install-android-swift-sdk   # 初回だけ（NDK r30 は mise.toml の場所に置く）
+mise run build-swift && ./gradlew :app:assembleDebug
 ```
 
 バンドル ID（`com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`）と署名のチームは `iOS/Config/Signing.xcconfig` にまとめている。自分でビルドして実機に入れるときは、このファイルは変えずに、同じフォルダに `Local.xcconfig` を作って自分の値で上書きする（Git には入れない）。
