@@ -1,0 +1,9 @@
+# Gradle
+.gradle/
+.kotlin/
+build/
+local.properties
+
+# mise run build-swift で作る Swift のビルドと .so
+.build/
+app/src/main/jniLibs/

@@ -10,6 +10,9 @@
 
 [tools]
 swift = "6.4.2"
+java = "temurin-21"
+# Gradle wrapper (gradlew) を作るときだけ使う。ふだんのビルドは ./gradlew で行う
+gradle = "9.8.2"
 
 [env]
 ANDROID_HOME = "{{env.HOME}}/Library/Android/sdk"
@@ -19,3 +22,29 @@ _.path = ["{{env.HOME}}/Library/Android/sdk/platform-tools"]
 [tasks.install-android-swift-sdk]
 description = "Swift SDK for Android を入れる (ツールチェーンと同じ 6.4.2)"
 run = "swift sdk install https://download.swift.org/swift-6.4.2-release/android-sdk/swift-6.4.2-RELEASE/swift-6.4.2-RELEASE_android.artifactbundle.tar.gz --checksum 4d6ad63ea74becd58e123ff58b1b48c3be5ec0db0dff0ea5abe37ac007dd3233"
+
+[tasks.build-swift]
+description = "RegzaAndroid を arm64 向けにビルドし (swift-java が Java のクラスも作る)、Swift の実行に要る .so と一緒に app の jniLibs に入れる"
+run = '''
+set -euo pipefail
+triple=aarch64-unknown-linux-android28
+sdk=swift-6.4.2-RELEASE_android
+out=app/src/main/jniLibs/arm64-v8a
+# Swift の実行に要る .so は SDK に入っているもの、libc++_shared.so は NDK のもの
+runtime="$HOME/Library/org.swift.swiftpm/swift-sdks/$sdk.artifactbundle/swift-android/swift-resources/usr/lib/swift-aarch64/android"
+libcxx="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so"
+
+# swift-java のプラグインは、Swift から消した型の Java のクラスを消さないので、毎回作り直す
+rm -rf .build/swift/plugins/outputs/regzaandroid
+# Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)
+swift build --package-path RegzaAndroid --scratch-path .build/swift --product RegzaAndroid -c release \
+  --swift-sdk "$sdk" --triple "$triple"
+
+rm -rf "$out" && mkdir -p "$out"
+# libRegzaAndroid.so と、swift-java の libSwiftJava.so
+cp .build/swift/out/Products/Release-android-aarch64/*.so "$out/"
+# テスト用のもの (Testing・XCTest) はアプリに要らない
+find "$runtime" -maxdepth 1 -name '*.so' ! -name '*Testing*' ! -name '*XCTest*' -exec cp {} "$out/" \;
+cp "$libcxx" "$out/"
+echo "$(ls "$out" | wc -l | tr -d ' ') 個の .so を $out に入れた"
+'''
