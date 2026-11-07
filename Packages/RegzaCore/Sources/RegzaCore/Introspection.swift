@@ -26,6 +26,41 @@ extension Introspectable {
     public var isBusy: Bool { false }
 }
 
+/// 操作から始めた処理を数える (終わるまで ViewModel の isBusy を true にする)
+@MainActor
+final class Work {
+    private(set) var running = 0
+
+    var isBusy: Bool { running > 0 }
+
+    func run(_ operation: @escaping @MainActor () async -> Void) {
+        running += 1
+        Task {
+            await operation()
+            running -= 1
+        }
+    }
+}
+
+/// 同じ種類の ViewModel がいくつも開いているとき (タブごとの戻る道など) に、道の名前を変えて見せる
+@MainActor
+final class IntrospectionAlias: Introspectable {
+    let introspectionName: String
+    let target: any Introspectable
+
+    init(_ name: String, _ target: any Introspectable) {
+        introspectionName = name
+        self.target = target
+    }
+
+    var introspectionState: JSONValue { target.introspectionState }
+    var introspectionValue: Any { target.introspectionValue }
+    var introspectionActions: [ActionDescription] { target.introspectionActions }
+    var introspectionChildren: [any Introspectable] { target.introspectionChildren }
+    var isBusy: Bool { target.isBusy }
+    func perform(_ action: String, _ arguments: [String: JSONValue]) throws { try target.perform(action, arguments) }
+}
+
 /// 操作の説明。引数は 名前 → 説明
 public struct ActionDescription: Codable, Equatable, Sendable {
     public var name: String

@@ -70,8 +70,7 @@ public final class RemoteViewModel {
 
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
     @ObservationIgnored private var lastSearch: Date?
-    /// 操作から始めて、まだ終わっていない処理の数 (Introspection の isBusy)
-    @ObservationIgnored private var running = 0
+    @ObservationIgnored private let work = Work()
     /// テレビの電源が切れているだけのこともあるので、探し直す間隔を空ける
     private static let searchInterval: TimeInterval = 180
 
@@ -100,7 +99,7 @@ public final class RemoteViewModel {
         switch action {
         case .press(let key): press(key)
         case .seek(let seconds): run { await self.seek(to: seconds) }
-        case .selectBand(let band): state.selectedBand = band
+        case .selectBand(let band): if state.selectedBand != band { state.selectedBand = band }
         case .loadChannels(let force): run { try? await self.loadChannels(force: force) }
         case .tune(let channel): run { try? await self.tune(to: channel) }
         case .refresh: run { await self.refresh() }
@@ -112,11 +111,7 @@ public final class RemoteViewModel {
 
     /// 操作から始める処理。終わるまで isBusy にする
     private func run(_ operation: @escaping @MainActor () async -> Void) {
-        running += 1
-        Task {
-            await operation()
-            running -= 1
-        }
+        work.run(operation)
     }
 
     // MARK: - リモコン
@@ -293,7 +288,7 @@ extension RegzaError {
 extension RemoteViewModel: Introspectable {
     public var introspectionName: String { "remote" }
     public var introspectionValue: Any { state }
-    public var isBusy: Bool { running > 0 }
+    public var isBusy: Bool { work.isBusy }
 
     public var introspectionActions: [ActionDescription] {
         [

@@ -151,12 +151,18 @@ import Testing
         return try JSONDecoder().decode(RegzaChannel.self, from: Data(json.utf8))
     }
 
+    /// 操作を送り、処理が終わるまで待つ
+    func send<Model: Introspectable>(_ viewModel: Model, _ send: (Model) -> Void) async {
+        send(viewModel)
+        _ = await Introspector(root: viewModel).waitUntilIdle()
+    }
+
     @Test func channelListExplainsUnsupportedModel() async {
         let (remote, guide, _, stream) = makeModels { _ in Self.status(404) }
         let viewModel = ChannelListViewModel(remote: remote, guide: guide, stream: stream)
-        await viewModel.load(force: false)
-        #expect(viewModel.loadErrorMessage == "この機種はチャンネル一覧の取得に対応していません。")
-        #expect(!viewModel.isLoading)
+        await send(viewModel) { $0.send(.reload) }
+        #expect(viewModel.state.loadErrorMessage == "この機種はチャンネル一覧の取得に対応していません。")
+        #expect(!viewModel.state.isLoading)
     }
 
     @Test func channelListExplainsRejectedTune() async throws {
@@ -164,15 +170,16 @@ import Testing
             request.url.path.hasSuffix("channel_list") ? Self.status(200, ViewModelTests.channelList) : Self.status(200, #"{"status":1}"#)
         }
         let viewModel = ChannelListViewModel(remote: remote, guide: guide, stream: stream)
-        await viewModel.load(force: false)
-        #expect(viewModel.bands == [.terrestrial, .bs])
-        let channel = try #require(viewModel.channels.first)
+        await send(viewModel) { $0.send(.reload) }
+        #expect(viewModel.state.bands == [.terrestrial, .bs])
+        let row = try #require(viewModel.state.rows.first)
+        #expect(!row.isSubchannel)
 
-        await viewModel.tune(to: channel)
+        await send(viewModel) { $0.send(.tune(row.channel)) }
 
-        #expect(viewModel.tuneError == "テスト局１ に切り替えられませんでした。テレビの電源が入っているか確認してください。")
-        #expect(viewModel.tuning == nil)
-        #expect(!viewModel.isNowPlaying(channel))
+        #expect(viewModel.state.tuneError == "テスト局１ に切り替えられませんでした。テレビの電源が入っているか確認してください。")
+        #expect(viewModel.state.tuning == nil)
+        #expect(viewModel.state.rows.first?.isNowPlaying == false)
     }
 
     @Test func programDetailExplainsRejectedReservation() async throws {
@@ -184,14 +191,14 @@ import Testing
             remote: remote, guide: guide, recording: recording, stream: stream,
             program: program, channel: try channel(code: program.channelCode)
         )
-        #expect(viewModel.canReserve)
-        #expect(!viewModel.canTune)
+        #expect(viewModel.state.canReserve)
+        #expect(!viewModel.state.canTune)
 
-        await viewModel.reserve(series: false)
+        await send(viewModel) { $0.send(.reserve(series: false)) }
 
-        #expect(viewModel.message == "テレビが予約を受け付けませんでした (2)。テレビの予約一覧や録画機器を確認してください。")
-        #expect(viewModel.reserving == nil)
-        #expect(viewModel.reserveCount == 0)
+        #expect(viewModel.state.message == "テレビが予約を受け付けませんでした (2)。テレビの予約一覧や録画機器を確認してください。")
+        #expect(viewModel.state.reserving == nil)
+        #expect(viewModel.state.reserveCount == 0)
     }
 
     @Test func programDetailDescribesSeriesReservation() async throws {
@@ -202,9 +209,10 @@ import Testing
             remote: remote, guide: guide, recording: recording, stream: stream,
             program: program, channel: try channel(code: program.channelCode)
         )
-        await viewModel.appear()
-        #expect(viewModel.isReserved)
-        #expect(viewModel.reservedText == "連ドラ予約済み（毎週）")
+        await send(viewModel) { $0.send(.appear) }
+        #expect(viewModel.state.isReserved)
+        #expect(viewModel.state.reservationIsSeries == true)
+        #expect(viewModel.state.reservedText == "連ドラ予約済み（毎週）")
     }
 
     @Test func reservationListSplitsScheduledAndWaiting() async {
@@ -217,14 +225,30 @@ import Testing
             request.url.path.hasSuffix("channel_list") ? Self.status(200, ViewModelTests.channelList) : Self.status(200, list)
         }
         let viewModel = ReservationListViewModel(remote: remote, recording: recording)
-        await viewModel.load()
+        await send(viewModel) { $0.send(.load) }
 
-        #expect(viewModel.hasLoaded)
-        #expect(viewModel.scheduled().map(\.id) == ["1"])
-        #expect(viewModel.waiting().map(\.id) == ["2"])
-        #expect(viewModel.channelName(of: viewModel.scheduled()[0]) == "テスト局１")
+        let state = viewModel.state
+        #expect(state.hasLoaded)
+        #expect(state.scheduled.map(\.id) == ["1"])
+        #expect(state.waiting.map(\.id) == ["2"])
+        #expect(state.scheduled.first?.channelName == "テスト局１")
+        #expect(state.scheduled.first?.isRecording == false)
         // チャンネル一覧にない局は名前を出さない
-        #expect(viewModel.channelName(of: viewModel.waiting()[0]) == nil)
+        #expect(state.waiting.first?.channelName == nil)
+    }
+
+    @Test func introspectionReachesScreensOnPath() async throws {
+        let (remote, guide, recording, stream) = makeModels { request in
+            request.url.path.hasSuffix("channel_list") ? Self.status(200, ViewModelTests.channelList) : Self.status(500)
+        }
+        let app = AppViewModel(remote: remote, guide: guide, recording: recording, stream: stream)
+        let introspector = Introspector(root: app)
+        try introspector.perform("app/channelList", "reload")
+        _ = await introspector.waitUntilIdle()
+        try introspector.perform("app", "selectTab", ["tab": .string("channels")])
+        try introspector.perform("app", "openPrograms", ["channel": .string("JP-G00000002")])
+        #expect(introspector.paths().contains("app/channels-0"))
+        #expect(try introspector.node("app/channels-0").actions.map(\.name) == ["appear", "reload"])
     }
 }
 

@@ -15,34 +15,82 @@ public final class ProgramListViewModel {
         self.channel = channel
     }
 
-    /// 番組。読み込む前は nil
-    public private(set) var programs: [MirakurunProgram]?
-    public private(set) var loadError: RegzaError?
+    public struct State: Equatable, Sendable {
+        public var channel: RegzaChannel
+        /// 日ごとの番組。読み込む前は nil
+        public var days: [Day]?
+        /// 取得できなかった説明
+        public var loadErrorMessage: String?
+    }
 
-    /// 日ごとの番組
-    public var days: [(day: Date, programs: [MirakurunProgram])] {
+    public struct Day: Equatable, Sendable, Identifiable {
+        /// その日の始まり
+        public var day: Date
+        public var rows: [Row]
+        public var id: Date { day }
+    }
+
+    public struct Row: Equatable, Sendable, Identifiable {
+        public var program: MirakurunProgram
+        public var isReserved: Bool
+        public var id: Int { program.id }
+    }
+
+    public enum Action: Sendable {
+        /// 画面を開いた。予約した番組に印を付けるため、予約も読む
+        case appear
+        case reload
+    }
+
+    private var programs: [MirakurunProgram]?
+    private var loadError: RegzaError?
+    @ObservationIgnored private let work = Work()
+
+    public var state: State {
         let calendar = Calendar.current
-        return Dictionary(grouping: programs ?? []) { calendar.startOfDay(for: $0.start) }
-            .map { (day: $0.key, programs: $0.value) }
-            .sorted { $0.day < $1.day }
+        let days = programs.map { programs in
+            Dictionary(grouping: programs) { calendar.startOfDay(for: $0.start) }
+                .map { Day(day: $0.key, rows: $0.value.map { Row(program: $0, isReserved: recording.isReserved($0)) }) }
+                .sorted { $0.day < $1.day }
+        }
+        return State(channel: channel, days: days, loadErrorMessage: programs == nil ? loadError?.localizedDescription : nil)
     }
 
-    public func isReserved(_ program: MirakurunProgram) -> Bool {
-        recording.isReserved(program)
+    public func send(_ action: Action) {
+        switch action {
+        case .appear:
+            work.run {
+                if self.programs == nil { await self.load() }
+                if self.recording.reservations.isEmpty { try? await self.recording.loadReservations() }
+            }
+        case .reload: work.run { await self.load() }
+        }
     }
 
-    /// 画面を開いたとき。予約した番組に印を付けるため、予約も読む
-    public func appear() async {
-        if programs == nil { await load() }
-        if recording.reservations.isEmpty { try? await recording.loadReservations() }
-    }
-
-    public func load() async {
+    private func load() async {
         do {
             programs = try await guide.programs(for: channel)
             loadError = nil
         } catch {
             loadError = error
+        }
+    }
+}
+
+extension ProgramListViewModel: Introspectable {
+    public var introspectionName: String { "programList" }
+    public var introspectionValue: Any { state }
+    public var isBusy: Bool { work.isBusy }
+
+    public var introspectionActions: [ActionDescription] {
+        [ActionDescription("appear", "画面を開いたときと同じく読み込む"), ActionDescription("reload", "番組を読み直す")]
+    }
+
+    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+        switch action {
+        case "appear": send(.appear)
+        case "reload": send(.reload)
+        default: throw IntrospectionError.unknownAction(action)
         }
     }
 }
@@ -75,44 +123,84 @@ public final class ProgramDetailViewModel {
         case single, series, cancel
     }
 
-    public private(set) var isTuning = false
-    /// 切り替えた結果 (切り替えてもタブは移らないので、画面に出す)
-    public private(set) var tuneMessage: String?
-    public private(set) var reserving: Reserving?
-    public private(set) var reserveMessage: String?
-    /// 予約・取り消しが終わった回数 (触覚フィードバック用)
-    public private(set) var reserveCount = 0
+    public struct State: Equatable, Sendable {
+        public var program: MirakurunProgram
+        public var channel: RegzaChannel
+        public var isTuning: Bool
+        public var reserving: Reserving?
+        /// 予約・取り消しが終わった回数 (触覚フィードバックの合図)
+        public var reserveCount: Int
+        /// 画面に出す説明。予約の説明を優先する
+        public var message: String?
+        /// 予約済みの説明 (「連ドラ予約済み（毎週）」など)。予約していなければ nil
+        public var reservedText: String?
+        /// 予約が連ドラ予約か。予約していなければ nil
+        public var reservationIsSeries: Bool?
+        /// 放送中なら切り替えられる
+        public var canTune: Bool
+        /// 終わっていなければ予約できる
+        public var canReserve: Bool
+        /// アプリで見られる
+        public var canStream: Bool
+        public var canStartOver: Bool
 
-    /// 画面に出す説明。予約の説明を優先する
-    public var message: String? { reserveMessage ?? tuneMessage }
+        public var isReserved: Bool { reservationIsSeries != nil }
+    }
 
-    public var reservation: RegzaReservation? { recording.reservation(for: program) }
-    public var isReserved: Bool { reservation != nil }
+    public enum Action: Sendable {
+        /// 画面を開いた。予約済みか、最初から見られるかを出すため
+        case appear
+        /// 録画予約する。`series` なら連ドラ予約 (次の回以降も録画する)
+        case reserve(series: Bool)
+        case cancelReservation
+        /// 切り替える。`startOver` なら、切り替えてから番組を最初から再生する
+        case tune(startOver: Bool)
+    }
 
-    /// 予約済みの説明 (「連ドラ予約済み（毎週）」など)。予約していなければ nil
-    public var reservedText: String? {
-        guard let reservation else { return nil }
+    private var isTuning = false
+    private var tuneMessage: String?
+    private var reserving: Reserving?
+    private var reserveMessage: String?
+    private var reserveCount = 0
+    @ObservationIgnored private let work = Work()
+
+    public var state: State {
+        let reservation = recording.reservation(for: program)
+        return State(
+            program: program,
+            channel: channel,
+            isTuning: isTuning,
+            reserving: reserving,
+            reserveCount: reserveCount,
+            message: reserveMessage ?? tuneMessage,
+            reservedText: reservation.map(Self.reservedText),
+            reservationIsSeries: reservation?.isSeries,
+            canTune: program.isOnAir(),
+            canReserve: program.end > Date(),
+            canStream: program.isOnAir() && stream.canStream,
+            canStartOver: program.isOnAir() && guide.canStartOver(channelCode: program.channelCode, programStart: program.start)
+        )
+    }
+
+    private static func reservedText(_ reservation: RegzaReservation) -> String {
         guard reservation.isSeries else { return "録画予約済み" }
         return reservation.repeatLabel.map { "連ドラ予約済み（\($0)）" } ?? "連ドラ予約済み"
     }
 
-    /// 放送中なら切り替えられる
-    public var canTune: Bool { program.isOnAir() }
-    /// 終わっていなければ予約できる
-    public var canReserve: Bool { program.end > Date() }
-    public var canStream: Bool { program.isOnAir() && stream.canStream }
-    public var canStartOver: Bool {
-        program.isOnAir() && guide.canStartOver(channelCode: program.channelCode, programStart: program.start)
+    public func send(_ action: Action) {
+        switch action {
+        case .appear:
+            work.run {
+                if self.recording.reservations.isEmpty { try? await self.recording.loadReservations() }
+                await self.guide.loadTimeshiftSettings()
+            }
+        case .reserve(let series): work.run { await self.reserve(series: series) }
+        case .cancelReservation: work.run { await self.cancelReservation() }
+        case .tune(let startOver): work.run { await self.tune(startOver: startOver) }
+        }
     }
 
-    /// 画面を開いたとき。予約済みか、最初から見られるかを出すため
-    public func appear() async {
-        if recording.reservations.isEmpty { try? await recording.loadReservations() }
-        await guide.loadTimeshiftSettings()
-    }
-
-    /// 録画予約する。`series` なら連ドラ予約 (次の回以降も録画する)
-    public func reserve(series: Bool) async {
+    private func reserve(series: Bool) async {
         reserving = series ? .series : .single
         defer { reserving = nil }
         reserveMessage = nil
@@ -131,8 +219,8 @@ public final class ProgramDetailViewModel {
         }
     }
 
-    public func cancelReservation() async {
-        guard let reservation else { return }
+    private func cancelReservation() async {
+        guard let reservation = recording.reservation(for: program) else { return }
         reserving = .cancel
         defer { reserving = nil }
         reserveMessage = nil
@@ -144,8 +232,7 @@ public final class ProgramDetailViewModel {
         }
     }
 
-    /// 切り替える。`startOver` なら、切り替えてから番組を最初から再生する
-    public func tune(startOver: Bool) async {
+    private func tune(startOver: Bool) async {
         isTuning = true
         defer { isTuning = false }
         do {
@@ -158,6 +245,41 @@ public final class ProgramDetailViewModel {
             }
         } catch {
             tuneMessage = error.localizedDescription
+        }
+    }
+}
+
+extension ProgramDetailViewModel: Introspectable {
+    public var introspectionName: String { "programDetail" }
+    public var introspectionValue: Any { state }
+    public var isBusy: Bool { work.isBusy }
+
+    public var introspectionActions: [ActionDescription] {
+        [
+            ActionDescription("appear", "画面を開いたときと同じく読み込む"),
+            ActionDescription("reserve", "録画予約する", parameters: ["series": "true なら連ドラ予約"]),
+            ActionDescription("cancelReservation", "予約を取り消す"),
+            ActionDescription("tune", "この局に切り替える", parameters: ["startOver": "true なら番組を最初から再生する"]),
+        ]
+    }
+
+    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+        let state = state
+        switch action {
+        case "appear": send(.appear)
+        case "reserve":
+            guard state.canReserve else { throw IntrospectionError.unavailable("終わった番組は予約できません") }
+            send(.reserve(series: try arguments.bool("series")))
+        case "cancelReservation":
+            guard state.isReserved else { throw IntrospectionError.unavailable("この番組は予約していません") }
+            send(.cancelReservation)
+        case "tune":
+            let startOver = try arguments.bool("startOver")
+            guard startOver ? state.canStartOver : state.canTune else {
+                throw IntrospectionError.unavailable(startOver ? "この番組は最初から見られません" : "放送中の番組ではありません")
+            }
+            send(.tune(startOver: startOver))
+        default: throw IntrospectionError.unknownAction(action)
         }
     }
 }

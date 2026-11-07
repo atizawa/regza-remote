@@ -28,6 +28,15 @@ extension View {
     }
 }
 
+/// 引っ張って読み直す (refreshable) とき、送った操作の処理が終わるまで待つ (send はすぐに返るので)
+@MainActor
+func waitWhileBusy(_ viewModel: any Introspectable) async {
+    try? await Task.sleep(for: .milliseconds(50))
+    while viewModel.isBusy {
+        try? await Task.sleep(for: .milliseconds(50))
+    }
+}
+
 extension AppViewModel {
     /// タブの戻る道を NavigationStack につなぐ (戻るボタンやスワイプで戻ったときも AppViewModel に伝える)
     func path(of tab: Tab) -> Binding<[Route]> {

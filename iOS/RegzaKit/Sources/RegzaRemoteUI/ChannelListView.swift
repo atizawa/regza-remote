@@ -13,69 +13,71 @@ struct ChannelListView: View {
     }
 
     var body: some View {
+        let state = viewModel.state
         NavigationStack(path: app.path(of: .channels)) {
-            content
+            content(state)
                 .navigationTitle("チャンネル")
                 // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
-                            Task { await viewModel.load(force: true) }
+                            viewModel.send(.reload)
                         } label: {
                             Image(systemName: "arrow.clockwise")
                         }
                         .accessibilityLabel("読み込み直す")
-                        .disabled(viewModel.isLoading)
+                        .disabled(state.isLoading)
                     }
                 }
                 .appRoutes()
-                .task { await viewModel.appear() }
+                .task { viewModel.send(.appear) }
         }
     }
 
     @ViewBuilder
-    private var content: some View {
-        if let message = viewModel.loadErrorMessage {
+    private func content(_ state: ChannelListViewModel.State) -> some View {
+        if let message = state.loadErrorMessage {
             ContentUnavailableView {
                 Label("チャンネルを取得できません", systemImage: "list.bullet.rectangle")
             } description: {
                 Text(message)
             } actions: {
-                Button("もう一度試す") { Task { await viewModel.load(force: true) } }
+                Button("もう一度試す") { viewModel.send(.reload) }
             }
-        } else if viewModel.remote.state.channels.isEmpty {
+        } else if state.hasNoChannels {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             VStack(spacing: 0) {
-                if viewModel.bands.count > 1 {
-                    BandPicker(bands: viewModel.bands)
+                if state.bands.count > 1 {
+                    BandPicker(bands: state.bands)
                 }
-                list
+                list(state)
             }
         }
     }
 
-    private var list: some View {
+    private func list(_ state: ChannelListViewModel.State) -> some View {
         List {
-            if let tuneError = viewModel.tuneError {
+            if let tuneError = state.tuneError {
                 Text(tuneError)
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
             Section {
-                ForEach(viewModel.channels) { channel in
-                    row(channel)
+                ForEach(state.rows) { row in
+                    self.row(row, state: state)
                 }
             }
         }
     }
 
-    private func row(_ channel: RegzaChannel) -> some View {
-        HStack(spacing: 12) {
+    private func row(_ row: ChannelListViewModel.Row, state: ChannelListViewModel.State) -> some View {
+        let channel = row.channel
+        return HStack(spacing: 12) {
             Button {
-                Task { await viewModel.tune(to: channel) }
+                viewModel.send(.tune(channel))
             } label: {
                 HStack(spacing: 12) {
                     Text(channel.formattedNumber)
@@ -84,9 +86,9 @@ struct ChannelListView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(channel.name)
                             // 同じ放送局のサブチャンネルは控えめに出す
-                            .foregroundStyle(channel.isRepresentative || channel.band == .cs ? .primary : .secondary)
+                            .foregroundStyle(row.isSubchannel ? .secondary : .primary)
                             .lineLimit(1)
-                        if let programName = viewModel.programName(for: channel) {
+                        if let programName = row.programName {
                             Text(programName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -94,9 +96,9 @@ struct ChannelListView: View {
                         }
                     }
                     Spacer()
-                    if viewModel.tuning == channel {
+                    if state.tuning == channel {
                         ProgressView()
-                    } else if viewModel.isNowPlaying(channel) {
+                    } else if row.isNowPlaying {
                         Image(systemName: "checkmark")
                             .font(.body.weight(.semibold))
                             .foregroundStyle(AppTheme.accent)
@@ -108,8 +110,8 @@ struct ChannelListView: View {
             // 行の中に 2 つのボタンがあるので、行全体ではなくそれぞれが押されるようにする
             .buttonStyle(.borderless)
             .tint(.primary)
-            .disabled(viewModel.tuning != nil)
-            if viewModel.hasPrograms(channel) {
+            .disabled(state.tuning != nil)
+            if row.hasPrograms {
                 Button {
                     app.send(.open(.channelPrograms(channel)))
                 } label: {
@@ -124,27 +126,27 @@ struct ChannelListView: View {
             }
         }
         // 押すとすぐ切り替わるので、切り替え以外は長押しのメニューにまとめる
-        .contextMenu { menu(for: channel) }
+        .contextMenu { menu(for: row, state: state) }
     }
 
     @ViewBuilder
-    private func menu(for channel: RegzaChannel) -> some View {
+    private func menu(for row: ChannelListViewModel.Row, state: ChannelListViewModel.State) -> some View {
         Button("切り替える", systemImage: "play.fill") {
-            Task { await viewModel.tune(to: channel) }
+            viewModel.send(.tune(row.channel))
         }
-        if viewModel.canStream {
+        if state.canStream {
             Button("アプリで見る", systemImage: "play.tv") {
-                app.send(.play(channel))
+                app.send(.play(row.channel))
             }
         }
-        if viewModel.canStartOver(channel) {
+        if row.canStartOver {
             Button("最初から見る", systemImage: "backward.end.alt") {
-                Task { await viewModel.tune(to: channel, startOver: true) }
+                viewModel.send(.tuneFromStart(row.channel))
             }
         }
-        if viewModel.hasPrograms(channel) {
+        if row.hasPrograms {
             Button("番組表", systemImage: "calendar") {
-                app.send(.open(.channelPrograms(channel)))
+                app.send(.open(.channelPrograms(row.channel)))
             }
         }
     }

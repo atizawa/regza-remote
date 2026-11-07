@@ -16,69 +16,111 @@ public final class ChannelListViewModel {
         self.stream = stream
     }
 
-    public private(set) var isLoading = false
-    public private(set) var loadError: RegzaError?
-    /// 切り替えられなかったときの説明
-    public private(set) var tuneError: String?
-    /// 切り替え中のチャンネル
-    public private(set) var tuning: RegzaChannel?
-
-    /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
-    public var bands: [RegzaChannel.Band] {
-        RegzaChannel.bands(in: remote.channels)
+    public struct State: Equatable, Sendable {
+        public var isLoading: Bool
+        /// 一覧の代わりに出す、取得できなかった説明。一覧があれば nil
+        public var loadErrorMessage: String?
+        /// まだ一覧がない (読み込み中か、取得できなかった)
+        public var hasNoChannels: Bool
+        /// 切り替えられなかったときの説明
+        public var tuneError: String?
+        /// 切り替え中のチャンネル
+        public var tuning: RegzaChannel?
+        /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
+        public var bands: [RegzaChannel.Band]
+        /// 出す放送の種類 (選んでいなければ、いま見ている種類)
+        public var band: RegzaChannel.Band?
+        public var rows: [Row]
+        /// アプリで見られる (ライブ視聴が設定されている)
+        public var canStream: Bool
     }
 
-    /// 出す放送の種類 (選んでいなければ、いま見ている種類)
-    public var band: RegzaChannel.Band? {
-        remote.band(among: bands)
+    /// 1 チャンネル分の行
+    public struct Row: Equatable, Sendable, Identifiable {
+        public var channel: RegzaChannel
+        /// 放送中の番組名
+        public var programName: String?
+        public var isNowPlaying: Bool
+        /// 番組表を開ける
+        public var hasPrograms: Bool
+        /// 放送中の番組を最初から見られる
+        public var canStartOver: Bool
+        /// 控えめに出す (同じ放送局のサブチャンネル。CS は局ごとに別なので控えめにしない)
+        public var isSubchannel: Bool
+
+        public var id: String { channel.code }
     }
 
-    /// 一覧に出すチャンネル
-    public var channels: [RegzaChannel] {
-        RegzaChannel.channelList(remote.channels, in: band, nowPlayingChannelCode: remote.nowPlaying?.channelCode) {
+    public enum Action: Sendable {
+        /// 画面を開いた。番組名と「最初から見る」を出すため、番組表とタイムシフトの設定も読む
+        case appear
+        case reload
+        case tune(RegzaChannel)
+        /// 切り替えてから、放送中の番組を最初から再生する
+        case tuneFromStart(RegzaChannel)
+    }
+
+    // 自分で持つ状態
+    private var isLoading = false
+    private var loadError: RegzaError?
+    private var tuneError: String?
+    private var tuning: RegzaChannel?
+    @ObservationIgnored private let work = Work()
+
+    /// 画面に出すもの。自分の状態と、土台・番組表・配信の状態から作る
+    public var state: State {
+        let channels = remote.state.channels
+        let bands = RegzaChannel.bands(in: channels)
+        let band = remote.state.band(among: bands)
+        let nowPlayingCode = remote.state.nowPlaying?.channelCode
+        let listed = RegzaChannel.channelList(channels, in: band, nowPlayingChannelCode: nowPlayingCode) {
             guide.currentProgram(for: $0)?.name
         }
+        return State(
+            isLoading: isLoading,
+            loadErrorMessage: channels.isEmpty ? loadError.map(Self.message) : nil,
+            hasNoChannels: channels.isEmpty,
+            tuneError: tuneError,
+            tuning: tuning,
+            bands: bands,
+            band: band,
+            rows: listed.map { channel in
+                let program = guide.currentProgram(for: channel)
+                return Row(
+                    channel: channel,
+                    programName: program?.name,
+                    isNowPlaying: channel.code == nowPlayingCode,
+                    hasPrograms: guide.hasGuide && guide.guidePrograms[channel.code] != nil,
+                    canStartOver: program.map { guide.canStartOver(channelCode: channel.code, programStart: $0.start) } ?? false,
+                    isSubchannel: !channel.isRepresentative && channel.band != .cs
+                )
+            },
+            canStream: stream.canStream
+        )
     }
 
-    /// 一覧の代わりに出す、取得できなかった説明。一覧があれば nil
-    public var loadErrorMessage: String? {
-        guard let loadError, remote.channels.isEmpty else { return nil }
-        switch loadError {
-        case .httpStatus(404), .unsupported: return "この機種はチャンネル一覧の取得に対応していません。"
-        default: return loadError.localizedDescription
+    public func send(_ action: Action) {
+        switch action {
+        case .appear:
+            work.run {
+                await self.load(force: false)
+                await self.guide.loadGuidePrograms()
+                await self.guide.loadTimeshiftSettings()
+            }
+        case .reload: work.run { await self.load(force: true) }
+        case .tune(let channel): work.run { await self.tune(to: channel, startOver: false) }
+        case .tuneFromStart(let channel): work.run { await self.tune(to: channel, startOver: true) }
         }
     }
 
-    /// そのチャンネルで放送中の番組名
-    public func programName(for channel: RegzaChannel) -> String? {
-        guide.currentProgram(for: channel)?.name
+    private static func message(for error: RegzaError) -> String {
+        switch error {
+        case .httpStatus(404), .unsupported: "この機種はチャンネル一覧の取得に対応していません。"
+        default: error.localizedDescription
+        }
     }
 
-    public func isNowPlaying(_ channel: RegzaChannel) -> Bool {
-        channel.code == remote.nowPlaying?.channelCode
-    }
-
-    /// そのチャンネルの番組表を出せるか
-    public func hasPrograms(_ channel: RegzaChannel) -> Bool {
-        guide.hasGuide && guide.guidePrograms[channel.code] != nil
-    }
-
-    public var canStream: Bool { stream.canStream }
-
-    /// そのチャンネルの放送中の番組を最初から見られるか
-    public func canStartOver(_ channel: RegzaChannel) -> Bool {
-        guard let program = guide.currentProgram(for: channel) else { return false }
-        return guide.canStartOver(channelCode: channel.code, programStart: program.start)
-    }
-
-    /// 画面を開いたとき。番組名と「最初から見る」を出すため、番組表とタイムシフトの設定も読む
-    public func appear() async {
-        await load(force: false)
-        await guide.loadGuidePrograms()
-        await guide.loadTimeshiftSettings()
-    }
-
-    public func load(force: Bool) async {
+    private func load(force: Bool) async {
         isLoading = true
         defer { isLoading = false }
         do {
@@ -89,15 +131,14 @@ public final class ChannelListViewModel {
         }
     }
 
-    /// 切り替える。`startOver` なら、切り替えてから番組を最初から再生する
-    public func tune(to channel: RegzaChannel, startOver: Bool = false) async {
+    private func tune(to channel: RegzaChannel, startOver: Bool) async {
         tuning = channel
         defer { tuning = nil }
         tuneError = nil
         do {
             if !startOver {
                 try await remote.tune(to: channel)
-            } else if isNowPlaying(channel) {
+            } else if channel.code == remote.state.nowPlaying?.channelCode {
                 guide.startOver()
             } else {
                 try await guide.tuneAndStartOver(channel)
@@ -107,5 +148,41 @@ public final class ChannelListViewModel {
         } catch {
             tuneError = error.localizedDescription
         }
+    }
+}
+
+extension ChannelListViewModel: Introspectable {
+    public var introspectionName: String { "channelList" }
+    public var introspectionValue: Any { state }
+    public var isBusy: Bool { work.isBusy }
+
+    public var introspectionActions: [ActionDescription] {
+        [
+            ActionDescription("appear", "画面を開いたときと同じく読み込む"),
+            ActionDescription("reload", "チャンネル一覧を読み直す"),
+            ActionDescription("tune", "選局する", parameters: ["channel": "チャンネルの code"]),
+            ActionDescription("tuneFromStart", "選局して、放送中の番組を最初から再生する", parameters: ["channel": "チャンネルの code"]),
+        ]
+    }
+
+    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+        switch action {
+        case "appear": send(.appear)
+        case "reload": send(.reload)
+        case "tune": send(.tune(try row(arguments).channel))
+        case "tuneFromStart":
+            let row = try row(arguments)
+            guard row.canStartOver else { throw IntrospectionError.unavailable("\(row.channel.name) の番組は最初から見られません") }
+            send(.tuneFromStart(row.channel))
+        default: throw IntrospectionError.unknownAction(action)
+        }
+    }
+
+    private func row(_ arguments: [String: JSONValue]) throws -> Row {
+        let code = try arguments.string("channel")
+        guard let row = state.rows.first(where: { $0.channel.code == code }) else {
+            throw IntrospectionError.unavailable("チャンネル \(code) は一覧にありません")
+        }
+        return row
     }
 }

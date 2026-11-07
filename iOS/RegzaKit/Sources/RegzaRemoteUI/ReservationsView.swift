@@ -18,8 +18,11 @@ struct ReservationsView: View {
                 .navigationTitle("録画予約")
                 // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
                 .navigationBarTitleDisplayMode(.inline)
-                .task { await viewModel.load() }
-                .refreshable { await viewModel.load() }
+                .task { viewModel.send(.load) }
+                .refreshable {
+                    viewModel.send(.load)
+                    await waitWhileBusy(viewModel)
+                }
                 .confirmationDialog(
                     canceling.map { "「\($0.title)」の予約を取り消しますか？" } ?? "",
                     isPresented: Binding(get: { canceling != nil }, set: { if !$0 { canceling = nil } }),
@@ -27,7 +30,7 @@ struct ReservationsView: View {
                     presenting: canceling
                 ) { reservation in
                     Button(reservation.isSeries ? "連ドラ予約を取り消す" : "予約を取り消す", role: .destructive) {
-                        Task { await viewModel.cancel(reservation) }
+                        viewModel.send(.cancel(reservation))
                     }
                 } message: { reservation in
                     if reservation.isSeries {
@@ -39,37 +42,35 @@ struct ReservationsView: View {
 
     @ViewBuilder
     private var content: some View {
-        let now = Date()
-        let scheduled = viewModel.scheduled(now: now)
-        let waiting = viewModel.waiting(now: now)
-        if let message = viewModel.loadErrorMessage {
+        let state = viewModel.state
+        if let message = state.loadErrorMessage {
             ContentUnavailableView {
                 Label("録画予約を取得できません", systemImage: "calendar.badge.exclamationmark")
             } description: {
                 Text(message)
             } actions: {
-                Button("もう一度試す") { Task { await viewModel.load() } }
+                Button("もう一度試す") { viewModel.send(.load) }
             }
-        } else if !viewModel.hasLoaded {
+        } else if !state.hasLoaded {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if viewModel.isEmpty {
+        } else if state.isEmpty {
             ContentUnavailableView("録画予約はありません", systemImage: "calendar")
         } else {
             List {
-                if let cancelError = viewModel.cancelError {
+                if let cancelError = state.cancelError {
                     Text(cancelError)
                         .font(.footnote)
                         .foregroundStyle(.red)
                 }
-                if !scheduled.isEmpty {
+                if !state.scheduled.isEmpty {
                     Section("予定") {
-                        ForEach(scheduled) { row($0, isScheduled: true) }
+                        ForEach(state.scheduled) { row($0, isScheduled: true) }
                     }
                 }
-                if !waiting.isEmpty {
+                if !state.waiting.isEmpty {
                     Section {
-                        ForEach(waiting) { row($0, isScheduled: false) }
+                        ForEach(state.waiting) { row($0, isScheduled: false) }
                     } header: {
                         Text("次の回を待っている連ドラ予約")
                     } footer: {
@@ -80,20 +81,21 @@ struct ReservationsView: View {
         }
     }
 
-    private func row(_ reservation: RegzaReservation, isScheduled: Bool) -> some View {
-        rowContent(reservation, isScheduled: isScheduled)
+    private func row(_ row: ReservationListViewModel.Row, isScheduled: Bool) -> some View {
+        rowContent(row, isScheduled: isScheduled)
             .swipeActions {
-                Button("取り消す", role: .destructive) { canceling = reservation }
+                Button("取り消す", role: .destructive) { canceling = row.reservation }
             }
     }
 
-    private func rowContent(_ reservation: RegzaReservation, isScheduled: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    private func rowContent(_ row: ReservationListViewModel.Row, isScheduled: Bool) -> some View {
+        let reservation = row.reservation
+        return VStack(alignment: .leading, spacing: 4) {
             Text(reservation.title)
                 .lineLimit(2)
                 .foregroundStyle(isScheduled ? .primary : .secondary)
             HStack(spacing: 6) {
-                if isScheduled, reservation.start <= Date() {
+                if row.isRecording {
                     Label("録画中", systemImage: "record.circle")
                         .foregroundStyle(.red)
                 }
@@ -108,7 +110,7 @@ struct ReservationsView: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
-            if let channelName = viewModel.channelName(of: reservation) {
+            if let channelName = row.channelName {
                 Text(channelName)
                     .font(.caption)
                     .foregroundStyle(.secondary)

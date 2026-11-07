@@ -83,43 +83,53 @@ public final class AppViewModel {
     }
 
     public func send(_ action: Action) {
+        // 変わったときだけ state を入れ替える (SwiftUI は戻る道などの Binding に同じ値を書き戻すことがあり、
+        // そのたびに入れ替えると、変わっていないのに画面を描き直すことになる)
+        var next = state
+        defer {
+            if next != state { state = next }
+            forgetClosedScreens()
+        }
         switch action {
         case .selectTab(let tab):
-            state.tab = tab
+            next.tab = tab
         case .open(let route):
-            state.paths[state.tab, default: []].append(route)
+            next.paths[next.tab, default: []].append(route)
         case .setPath(let tab, let path):
-            state.paths[tab] = path
+            next.paths[tab] = path
         case .back:
-            if state.paths[state.tab]?.isEmpty == false { state.paths[state.tab]?.removeLast() }
+            if next.paths[next.tab]?.isEmpty == false { next.paths[next.tab]?.removeLast() }
         case .showSettings:
             let remote = remote
             settings = (TVSetupViewModel(remote: remote), ServerSetupViewModel(guide: guide, stream: stream))
             // テレビが未設定なら、テレビの設定の画面から始める
-            state.settingsPath = remote.connection.isConfigured ? [] : [.tv]
-            state.isShowingSettings = true
+            next.settingsPath = remote.connection.isConfigured ? [] : [.tv]
+            next.isShowingSettings = true
         case .setSettingsPath(let path):
-            state.settingsPath = path
+            next.settingsPath = path
         case .closeSettings:
             // PIN を入れずに閉じたら、テレビの PIN 表示を消しておく
-            settings?.tv.close()
-            settings = nil
-            state.isShowingSettings = false
-            state.settingsPath = []
+            if let settings {
+                settings.tv.close()
+                self.settings = nil
+            }
+            next.isShowingSettings = false
+            next.settingsPath = []
         case .showNowPlaying:
-            state.isShowingNowPlaying = true
+            next.isShowingNowPlaying = true
         case .closeNowPlaying:
-            state.isShowingNowPlaying = false
+            next.isShowingNowPlaying = false
         case .play(let channel):
             guard let viewModel = stream.livePlayer(for: channel) else { return }
             player = viewModel
-            state.playingChannel = channel
+            next.playingChannel = channel
         case .closePlayer:
-            player?.end()
-            player = nil
-            state.playingChannel = nil
+            if let player {
+                player.end()
+                self.player = nil
+            }
+            next.playingChannel = nil
         }
-        forgetClosedScreens()
     }
 
     // MARK: - 開いている画面の ViewModel
@@ -166,7 +176,21 @@ public final class AppViewModel {
 extension AppViewModel: Introspectable {
     public var introspectionName: String { "app" }
     public var introspectionValue: Any { state }
-    public var introspectionChildren: [any Introspectable] { [remote] }
+    /// 土台・タブの画面・戻る道の画面 (`channels-0` のように、タブと奥行きで名前を付ける)
+    public var introspectionChildren: [any Introspectable] {
+        var children: [any Introspectable] = [remote, channelList, reservationList]
+        for tab in Tab.allCases {
+            for (depth, route) in state.path(of: tab).enumerated() {
+                let screen: any Introspectable? = switch route {
+                case .channelPrograms(let channel): programList(for: channel)
+                case .programDetail(let program, let channel): programDetail(program, channel: channel)
+                case .search: nil
+                }
+                if let screen { children.append(IntrospectionAlias("\(tab.rawValue)-\(depth)", screen)) }
+            }
+        }
+        return children
+    }
 
     public var introspectionActions: [ActionDescription] {
         [

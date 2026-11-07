@@ -12,26 +12,30 @@ struct ChannelProgramsView: View {
     }
 
     var body: some View {
-        content
-            .navigationTitle(viewModel.channel.name)
+        let state = viewModel.state
+        content(state)
+            .navigationTitle(state.channel.name)
             .navigationBarTitleDisplayMode(.inline)
-            .task { await viewModel.appear() }
-            .refreshable { await viewModel.load() }
+            .task { viewModel.send(.appear) }
+            .refreshable {
+                viewModel.send(.reload)
+                await waitWhileBusy(viewModel)
+            }
     }
 
     @ViewBuilder
-    private var content: some View {
-        if let programs = viewModel.programs {
-            if programs.isEmpty {
+    private func content(_ state: ProgramListViewModel.State) -> some View {
+        if let days = state.days {
+            if days.isEmpty {
                 ContentUnavailableView("番組表がありません", systemImage: "calendar",
                                        description: Text("Mirakurun がこのチャンネルの番組表を持っていません。"))
             } else {
                 List {
-                    ForEach(viewModel.days, id: \.day) { group in
+                    ForEach(days) { group in
                         Section {
-                            ForEach(group.programs) { program in
-                                NavigationLink(value: AppViewModel.Route.programDetail(program, viewModel.channel)) {
-                                    ProgramRow(program: program, isReserved: viewModel.isReserved(program))
+                            ForEach(group.rows) { row in
+                                NavigationLink(value: AppViewModel.Route.programDetail(row.program, state.channel)) {
+                                    ProgramRow(program: row.program, isReserved: row.isReserved)
                                 }
                             }
                         } header: {
@@ -40,13 +44,13 @@ struct ChannelProgramsView: View {
                     }
                 }
             }
-        } else if let loadError = viewModel.loadError {
+        } else if let message = state.loadErrorMessage {
             ContentUnavailableView {
                 Label("番組表を取得できません", systemImage: "calendar.badge.exclamationmark")
             } description: {
-                Text(loadError.localizedDescription)
+                Text(message)
             } actions: {
-                Button("もう一度試す") { Task { await viewModel.load() } }
+                Button("もう一度試す") { viewModel.send(.reload) }
             }
         } else {
             ProgressView()
@@ -109,15 +113,16 @@ struct ProgramDetailView: View {
         _viewModel = State(initialValue: viewModel)
     }
 
-    private var program: MirakurunProgram { viewModel.program }
-    private var channel: RegzaChannel { viewModel.channel }
+    private var state: ProgramDetailViewModel.State { viewModel.state }
+    private var program: MirakurunProgram { state.program }
+    private var channel: RegzaChannel { state.channel }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Design.group) {
                 header
                 actions
-                if let message = viewModel.message {
+                if let message = state.message {
                     Text(message)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -130,9 +135,9 @@ struct ProgramDetailView: View {
         .background(Surface.background)
         .navigationTitle("番組の詳細")
         .navigationBarTitleDisplayMode(.inline)
-        .sensoryFeedback(.success, trigger: viewModel.reserveCount)
-        .animation(.default, value: viewModel.isReserved)
-        .task { await viewModel.appear() }
+        .sensoryFeedback(.success, trigger: state.reserveCount)
+        .animation(.default, value: state.isReserved)
+        .task { viewModel.send(.appear) }
     }
 
     /// 局名・番組名・時刻。番組名をいちばん大きくする
@@ -171,7 +176,7 @@ struct ProgramDetailView: View {
                 .padding(.top, 4)
             }
 
-            if let reservedText = viewModel.reservedText {
+            if let reservedText = state.reservedText {
                 Label(reservedText, systemImage: "record.circle.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.red)
@@ -184,20 +189,20 @@ struct ProgramDetailView: View {
     private var actions: some View {
         VStack(spacing: Design.item) {
             HStack(spacing: Design.item) {
-                if viewModel.canTune {
+                if state.canTune {
                     Button {
-                        Task { await viewModel.tune(startOver: false) }
+                        viewModel.send(.tune(startOver: false))
                     } label: {
-                        actionLabel("切り替えて見る", systemImage: "play.fill", isBusy: viewModel.isTuning)
+                        actionLabel("切り替えて見る", systemImage: "play.fill", isBusy: state.isTuning)
                     }
                     .buttonStyle(FilledActionStyle(color: AppTheme.accent))
-                    .disabled(viewModel.isTuning)
+                    .disabled(state.isTuning)
                 }
-                if viewModel.canReserve {
+                if state.canReserve {
                     reserveMenu
                 }
             }
-            if viewModel.canStream {
+            if state.canStream {
                 Button {
                     app.send(.play(channel))
                 } label: {
@@ -205,14 +210,14 @@ struct ProgramDetailView: View {
                 }
                 .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
             }
-            if viewModel.canStartOver {
+            if state.canStartOver {
                 Button {
-                    Task { await viewModel.tune(startOver: true) }
+                    viewModel.send(.tune(startOver: true))
                 } label: {
                     actionLabel("最初から見る", systemImage: "backward.end.alt", isBusy: false)
                 }
                 .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
-                .disabled(viewModel.isTuning)
+                .disabled(state.isTuning)
             }
         }
     }
@@ -220,35 +225,35 @@ struct ProgramDetailView: View {
     /// 「録画予約」を押すと、この回だけか連ドラ予約かを選ぶ。予約済みならメニューから取り消す
     @ViewBuilder
     private var reserveMenu: some View {
-        if let reservation = viewModel.reservation {
+        if let isSeries = state.reservationIsSeries {
             Menu {
                 Button(role: .destructive) {
-                    Task { await viewModel.cancelReservation() }
+                    viewModel.send(.cancelReservation)
                 } label: {
-                    Label(reservation.isSeries ? "連ドラ予約を取り消す" : "予約を取り消す", systemImage: "xmark.circle")
+                    Label(isSeries ? "連ドラ予約を取り消す" : "予約を取り消す", systemImage: "xmark.circle")
                 }
             } label: {
-                actionLabel("予約済み", systemImage: "checkmark", isBusy: viewModel.reserving != nil)
+                actionLabel("予約済み", systemImage: "checkmark", isBusy: state.reserving != nil)
             }
             .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .red))
-            .disabled(viewModel.reserving != nil)
+            .disabled(state.reserving != nil)
         } else {
             Menu {
                 Button {
-                    Task { await viewModel.reserve(series: false) }
+                    viewModel.send(.reserve(series: false))
                 } label: {
                     Label("この回だけ録画", systemImage: "record.circle")
                 }
                 Button {
-                    Task { await viewModel.reserve(series: true) }
+                    viewModel.send(.reserve(series: true))
                 } label: {
                     Label("連ドラ予約（毎回録画）", systemImage: "repeat")
                 }
             } label: {
-                actionLabel("録画予約", systemImage: "record.circle", isBusy: viewModel.reserving != nil)
+                actionLabel("録画予約", systemImage: "record.circle", isBusy: state.reserving != nil)
             }
             .buttonStyle(FilledActionStyle(color: .red))
-            .disabled(viewModel.reserving != nil)
+            .disabled(state.reserving != nil)
         }
     }
 
