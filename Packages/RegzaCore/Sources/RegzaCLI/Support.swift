@@ -56,6 +56,12 @@ struct SampleTransport: HTTPTransport {
             body = "0"
         case "/api/programs":
             body = Self.programs(query: request.url.query ?? "")
+        case let path where path.hasPrefix("/api/streams/live/"):
+            body = #"{"streamId":1}"#
+        case "/api/streams":
+            body = #"{"items":[]}"#
+        case "/streamfiles/stream1.m3u8":
+            body = "#EXTM3U\nsegment0.ts\n"
         default:
             body = #"{"status":0}"#
         }

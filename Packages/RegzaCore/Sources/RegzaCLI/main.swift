@@ -17,8 +17,11 @@ import RegzaCore
 func main() async {
     let options = Options(CommandLine.arguments.dropFirst(), environment: ProcessInfo.processInfo.environment)
     let store = MemoryConnectionStore(connection: RegzaConnection(host: options.host, user: options.user, password: options.password))
-    // 見本では、番組表 (Mirakurun) も見本の返事を使う
-    if options.sample { store.guideHost = "192.0.2.20" }
+    // 見本では、番組表 (Mirakurun) と録画サーバー (EPGStation) も見本の返事を使う
+    if options.sample {
+        store.guideHost = "192.0.2.20"
+        store.streamHost = "192.0.2.30"
+    }
     let transport: any HTTPTransport = options.sample ? SampleTransport() : SocketTransport()
     // 番組表 (Mirakurun) や録画サーバーへの通信も同じ方法で送る
     RegzaHTTP.transport = transport
