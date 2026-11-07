@@ -55,6 +55,8 @@ public final class AppViewModel {
         case back
         case showSettings
         case setSettingsPath([SettingsPage])
+        /// 設定を保存して閉じる
+        case saveSettings
         case closeSettings
         case showNowPlaying
         case closeNowPlaying
@@ -63,6 +65,7 @@ public final class AppViewModel {
         case closePlayer
     }
 
+    @ObservationIgnored private let work = Work()
     /// 画面の移り変わり (playingChannel はライブ視聴の ViewModel から求めるので、ここでは使わない)
     private var navigation = State()
 
@@ -79,6 +82,7 @@ public final class AppViewModel {
         self.stream = stream
         channelList = ChannelListViewModel(remote: remote, guide: guide, stream: stream)
         guideGrid = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
+        nowPlaying = NowPlayingViewModel(remote: remote, guide: guide, stream: stream)
         reservationList = ReservationListViewModel(remote: remote, recording: recording)
     }
 
@@ -114,10 +118,17 @@ public final class AppViewModel {
             next.isShowingSettings = true
         case .setSettingsPath(let path):
             next.settingsPath = path
+        case .saveSettings:
+            guard let settings else { return }
+            work.run {
+                await settings.servers.save()
+                await settings.tv.save()
+                self.send(.closeSettings)
+            }
         case .closeSettings:
             // PIN を入れずに閉じたら、テレビの PIN 表示を消しておく
             if let settings {
-                settings.tv.close()
+                settings.tv.send(.close)
                 self.settings = nil
             }
             next.isShowingSettings = false
@@ -142,6 +153,8 @@ public final class AppViewModel {
     public let channelList: ChannelListViewModel
     public let guideGrid: GuideGridViewModel
     public let reservationList: ReservationListViewModel
+    /// いま映っているものの詳細のシート
+    public let nowPlaying: NowPlayingViewModel
     /// 設定のシートを開いている間だけある
     public private(set) var settings: (tv: TVSetupViewModel, servers: ServerSetupViewModel)?
     /// ライブ視聴を開いている間だけある
@@ -181,9 +194,12 @@ public final class AppViewModel {
 extension AppViewModel: Introspectable {
     public var introspectionName: String { "app" }
     public var introspectionValue: Any { state }
+    public var isBusy: Bool { work.isBusy }
     /// 土台・タブの画面・戻る道の画面 (`channels-0` のように、タブと奥行きで名前を付ける)
     public var introspectionChildren: [any Introspectable] {
         var children: [any Introspectable] = [remote, guideGrid, channelList, reservationList]
+        if state.isShowingNowPlaying { children.append(nowPlaying) }
+        if let settings { children += [settings.tv, settings.servers] }
         if let player { children.append(player) }
         for tab in Tab.allCases {
             for (depth, route) in state.path(of: tab).enumerated() {
@@ -207,7 +223,8 @@ extension AppViewModel: Introspectable {
             ActionDescription("back", "いまのタブで 1 つ戻る"),
             ActionDescription("showSettings", "設定を開く"),
             ActionDescription("openSettingsPage", "設定の中の画面を開く", parameters: ["page": "tv | guide | stream"]),
-            ActionDescription("closeSettings", "設定を閉じる"),
+            ActionDescription("saveSettings", "設定を保存して閉じる"),
+            ActionDescription("closeSettings", "設定を閉じる (保存しない)"),
             ActionDescription("showNowPlaying", "いま映っているものの詳細を開く"),
             ActionDescription("closeNowPlaying", "いま映っているものの詳細を閉じる"),
             ActionDescription("play", "アプリで見る (ライブ視聴)", parameters: ["channel": "チャンネルの code"]),
@@ -235,6 +252,7 @@ extension AppViewModel: Introspectable {
         case "openSettingsPage":
             guard let page = SettingsPage(rawValue: try arguments.string("page")) else { throw IntrospectionError.invalidArgument("page") }
             send(.setSettingsPath(state.settingsPath + [page]))
+        case "saveSettings": send(.saveSettings)
         case "closeSettings": send(.closeSettings)
         case "showNowPlaying": send(.showNowPlaying)
         case "closeNowPlaying": send(.closeNowPlaying)

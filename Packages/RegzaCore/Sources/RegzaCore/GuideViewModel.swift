@@ -101,13 +101,6 @@ public final class GuideViewModel {
         timeshiftSettings?.canStartOver(channelCode: channelCode, programStart: programStart) ?? false
     }
 
-    /// いま映っている放送を最初から見られるか
-    public var canStartOverNowPlaying: Bool {
-        guard let nowPlaying = remote.nowPlaying, nowPlaying.kind == .broadcast, nowPlaying.hasTimeline else { return false }
-        let start = nowPlaying.updatedAt.addingTimeInterval(-TimeInterval(nowPlaying.position))
-        return canStartOver(channelCode: nowPlaying.channelCode, programStart: start)
-    }
-
     /// いま映っている番組を最初から再生する (リモコンの「始めにジャンプ」)
     public func startOver() {
         remote.send(.press(.jumpToStart))

@@ -119,53 +119,30 @@ private struct ProgressIcon: View {
 
 /// ミニプレーヤーを押したときの詳細。録画ならシークもできる
 private struct NowPlayingDetailView: View {
-    @Environment(RemoteViewModel.self) private var model
-    @Environment(GuideViewModel.self) private var guide
-    @Environment(StreamViewModel.self) private var stream
     @Environment(AppViewModel.self) private var app
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        let viewModel = app.nowPlaying
+        let state = viewModel.state
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Design.group) {
                     NowPlayingCard()
-                    if let description = model.state.nowPlaying?.description, !description.isEmpty {
+                    if let description = state.description {
                         Text(description)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 4)
                     }
-                    // 開いている間はミニプレーヤーの電源ボタンが隠れるので、ここでも入れられるようにする
-                    if model.state.nowPlaying?.kind == .standby, model.state.lastError == nil {
-                        Button {
-                            model.send(.press(.power))
-                        } label: {
-                            Label("電源を入れる", systemImage: "power")
-                                .font(.body.weight(.semibold))
-                                .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
-                        }
-                        .buttonStyle(RemoteButtonStyle())
+                    if state.canPowerOn {
+                        actionButton("電源を入れる", systemImage: "power") { viewModel.send(.powerOn) }
                     }
-                    if stream.canStream, model.state.nowPlaying?.kind == .broadcast, model.state.nowPlayingChannel != nil {
-                        Button {
-                            if let channel = model.state.nowPlayingChannel { app.send(.play(channel)) }
-                        } label: {
-                            Label("アプリで見る", systemImage: "play.tv")
-                                .font(.body.weight(.semibold))
-                                .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
-                        }
-                        .buttonStyle(RemoteButtonStyle())
+                    if let channel = state.playableChannel {
+                        actionButton("アプリで見る", systemImage: "play.tv") { app.send(.play(channel)) }
                     }
-                    if guide.canStartOverNowPlaying {
-                        Button {
-                            guide.startOver()
-                        } label: {
-                            Label("この番組を最初から見る", systemImage: "backward.end.alt")
-                                .font(.body.weight(.semibold))
-                                .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
-                        }
-                        .buttonStyle(RemoteButtonStyle())
+                    if state.canStartOver {
+                        actionButton("この番組を最初から見る", systemImage: "backward.end.alt") { viewModel.send(.startOver) }
                     }
                     LiveActivityToggle()
                         .padding(Design.outer)
@@ -174,7 +151,7 @@ private struct NowPlayingDetailView: View {
                 .padding(Design.outer)
             }
             .background(Surface.background)
-            .navigationTitle(title)
+            .navigationTitle(state.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // 閉じるだけの画面は、iOS 標準の × のボタンにそろえる
@@ -182,11 +159,7 @@ private struct NowPlayingDetailView: View {
                     Button(role: .close) { dismiss() }
                 }
             }
-            .task {
-                await guide.loadTimeshiftSettings()
-                // いま映っているチャンネルを知るため
-                model.send(.loadChannels(force: false))
-            }
+            .onAppear { viewModel.send(.appear) }
             // このシートを開いている間は、アプリで見る画面をシートの上から出す
             .fullScreenCover(isPresented: Binding(
                 get: { app.state.playingChannel != nil },
@@ -199,13 +172,13 @@ private struct NowPlayingDetailView: View {
         }
     }
 
-    /// 番組を映しているときだけ「視聴中」にする。待機中などはカードに状態が出るので、見出しはテレビとだけ書く
-    private var title: String {
-        guard !model.state.isSearchingTV, model.state.lastError == nil else { return "テレビ" }
-        switch model.state.nowPlaying?.kind {
-        case .broadcast, .recorded: return "視聴中"
-        default: return "テレビ"
+    private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.body.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
         }
+        .buttonStyle(RemoteButtonStyle())
     }
 }
 #endif

@@ -7,9 +7,6 @@ import Observation
 @Observable
 public final class TVSetupViewModel {
     public let remote: RemoteViewModel
-
-    /// 入力中の接続情報 (保存するまで RemoteViewModel には入れない)
-    public var draft: RegzaConnection
     /// このアプリ用のユーザー ID。手入力のユーザー名は他のツールと共有している
     /// かもしれないので使い回さない (同じ ID で登録し直すと、前のパスワードが無効になる)
     public let pairingUserID: String
@@ -20,17 +17,139 @@ public final class TVSetupViewModel {
         pairingUserID = remote.pairingUserID()
     }
 
+    public struct State: Equatable, Sendable {
+        /// 入力中の接続情報 (保存するまで RemoteViewModel には入れない)
+        public var draft: RegzaConnection
+        /// 見つかったテレビ
+        public var devices: [Device]
+        public var isScanning: Bool
+        public var scanMessage: String?
+        /// テレビに PIN が表示されていて、入力を待っている
+        public var isWaitingForPIN: Bool
+        public var pin: String
+        public var isPairing: Bool
+        public var pairingMessage: String?
+        /// PIN で登録して保存できた (画面を閉じる)
+        public var hasRegistered: Bool
+        /// このアプリの ID で登録済みか
+        public var isRegistered: Bool
+        /// ユーザー名とパスワードの入力欄を開いているか (PIN 登録に対応していない機種なら開く)
+        public var isShowingManualEntry: Bool
+        public var isTesting: Bool
+        public var testResult: String?
+        /// 一覧に出すテレビの状態
+        public var status: Status
+        /// 保存できるか (アドレスがあり、PIN の入力を待っていない)
+        public var canSave: Bool
+    }
+
+    public struct Device: Equatable, Sendable, Identifiable {
+        public var device: RegzaDevice
+        public var isSelected: Bool
+        public var id: String { device.id }
+    }
+
+    /// 操作できるときはアドレスだけ、注意が要るときだけ目立たせる
+    public struct Status: Equatable, Sendable {
+        public var text: String
+        public var needsAttention: Bool
+    }
+
+    public enum Action: Sendable {
+        /// 画面を開いた。未設定なら探し始める
+        case appear
+        case setHost(String)
+        case setUser(String)
+        case setPassword(String)
+        case setPIN(String)
+        case setShowingManualEntry(Bool)
+        case scan
+        /// 未登録なら、選んだテレビにそのまま PIN を表示させる。
+        /// 登録済みなら IP アドレスだけ変える (DHCP でアドレスが変わった場合など)
+        case select(RegzaDevice)
+        case startPairing
+        /// PIN で登録を確定して保存する
+        case confirmPairing
+        case cancelPairing
+        case test
+        /// 画面を閉じた。PIN を入れずに閉じたら、テレビの PIN 表示を消しておく
+        case close
+    }
+
+    private var draft: RegzaConnection
+    private var devices: [RegzaDevice] = []
+    private var isScanning = false
+    private var scanMessage: String?
+    /// PIN 登録中 (テレビに PIN が表示されている間) のセッション
+    @ObservationIgnored private var pairing: RegzaPairing?
+    private var isWaitingForPIN = false
+    private var pin = ""
+    private var isPairing = false
+    private var pairingMessage: String?
+    private var hasRegistered = false
+    private var isShowingManualEntry = false
+    private var isTesting = false
+    private var testResult: String?
+    @ObservationIgnored private let work = Work()
+
+    public var state: State {
+        State(
+            draft: draft,
+            devices: devices.map { Device(device: $0, isSelected: draft.host == $0.host) },
+            isScanning: isScanning,
+            scanMessage: scanMessage,
+            isWaitingForPIN: isWaitingForPIN,
+            pin: pin,
+            isPairing: isPairing,
+            pairingMessage: pairingMessage,
+            hasRegistered: hasRegistered,
+            isRegistered: isRegistered,
+            isShowingManualEntry: isShowingManualEntry,
+            isTesting: isTesting,
+            testResult: testResult,
+            status: status,
+            canSave: draft.isConfigured && !isWaitingForPIN
+        )
+    }
+
+    public func send(_ action: Action) {
+        switch action {
+        case .appear:
+            if !remote.connection.isConfigured && devices.isEmpty && !isScanning { work.run { await self.scan() } }
+        case .setHost(let host): draft.host = host
+        case .setUser(let user): draft.user = user
+        case .setPassword(let password): draft.password = password
+        case .setPIN(let newPIN): pin = newPIN
+        case .setShowingManualEntry(let isShowing): isShowingManualEntry = isShowing
+        case .scan:
+            guard !isScanning else { return }
+            work.run { await self.scan() }
+        case .select(let device):
+            draft.host = device.host
+            if device.supportsPIN, !isRegistered { work.run { await self.startPairing() } }
+        case .startPairing: work.run { await self.startPairing() }
+        case .confirmPairing: work.run { await self.confirmPairing() }
+        case .cancelPairing: work.run { await self.cancelPairing() }
+        case .test: work.run { await self.test() }
+        case .close: close()
+        }
+    }
+
+    private var isRegistered: Bool {
+        !pairingUserID.isEmpty && draft.user == pairingUserID && !draft.password.isEmpty
+    }
+
+    private var status: Status {
+        let host = draft.host.trimmingCharacters(in: .whitespaces)
+        if host.isEmpty { return Status(text: "未設定", needsAttention: true) }
+        // PIN の登録でも手入力でも、パスワードがなければ操作できない
+        if draft.password.isEmpty { return Status(text: "PIN の登録が必要", needsAttention: true) }
+        return Status(text: host, needsAttention: false)
+    }
+
     // MARK: - テレビを探す
 
-    /// 見つかったテレビ
-    public private(set) var devices: [RegzaDevice] = []
-    public private(set) var isScanning = false
-    public private(set) var scanMessage: String?
-
-    /// 未設定なら、画面を開いたときに探し始める
-    public var shouldScanOnOpen: Bool { !remote.connection.isConfigured && devices.isEmpty }
-
-    public func scan() async {
+    private func scan() async {
         isScanning = true
         defer { isScanning = false }
         scanMessage = nil
@@ -47,33 +166,9 @@ public final class TVSetupViewModel {
         }
     }
 
-    /// 未登録なら、選んだテレビにそのまま PIN を表示させる。
-    /// 登録済みなら IP アドレスだけ変える (DHCP でアドレスが変わった場合など)
-    public func select(_ device: RegzaDevice) async {
-        draft.host = device.host
-        if device.supportsPIN, !isRegistered { await startPairing() }
-    }
-
-    public func isSelected(_ device: RegzaDevice) -> Bool { draft.host == device.host }
-
     // MARK: - PIN で登録
 
-    /// PIN 登録中 (テレビに PIN が表示されている間) のセッション
-    @ObservationIgnored private var pairing: RegzaPairing?
-    /// テレビに PIN が表示されていて、入力を待っている
-    public private(set) var isWaitingForPIN = false
-    public var pin = ""
-    public private(set) var isPairing = false
-    public private(set) var pairingMessage: String?
-    /// ユーザー名とパスワードの入力欄を開いているか (PIN 登録に対応していない機種なら開く)
-    public var isShowingManualEntry = false
-
-    /// このアプリの ID で登録済みか
-    public var isRegistered: Bool {
-        !pairingUserID.isEmpty && draft.user == pairingUserID && !draft.password.isEmpty
-    }
-
-    public func startPairing() async {
+    private func startPairing() async {
         isPairing = true
         defer { isPairing = false }
         pairingMessage = nil
@@ -92,9 +187,8 @@ public final class TVSetupViewModel {
         }
     }
 
-    /// PIN で登録を確定して保存する。保存できたら true (画面を閉じる)
-    public func confirmPairing() async -> Bool {
-        guard let pairing else { return false }
+    private func confirmPairing() async {
+        guard let pairing else { return }
         isPairing = true
         defer { isPairing = false }
         do {
@@ -102,15 +196,14 @@ public final class TVSetupViewModel {
             self.pairing = nil
             isWaitingForPIN = false
             await remote.save(draft)
-            return true
+            hasRegistered = true
         } catch {
             // PIN の打ち間違いはそのまま入力し直せるようにする
             pairingMessage = error.localizedDescription
-            return false
         }
     }
 
-    public func cancelPairing() async {
+    private func cancelPairing() async {
         await pairing?.cancel()
         pairing = nil
         isWaitingForPIN = false
@@ -118,8 +211,7 @@ public final class TVSetupViewModel {
         pairingMessage = nil
     }
 
-    /// 画面を閉じたとき。PIN を入れずに閉じたら、テレビの PIN 表示を消しておく
-    public func close() {
+    private func close() {
         guard let pairing else { return }
         self.pairing = nil
         isWaitingForPIN = false
@@ -128,10 +220,7 @@ public final class TVSetupViewModel {
 
     // MARK: - 接続テスト
 
-    public private(set) var isTesting = false
-    public private(set) var testResult: String?
-
-    public func test() async {
+    private func test() async {
         isTesting = true
         defer { isTesting = false }
         switch await remote.testConnection(draft) {
@@ -145,20 +234,57 @@ public final class TVSetupViewModel {
 
     // MARK: - 保存
 
-    /// 一覧に出すテレビの状態。操作できるときはアドレスだけ、注意が要るときだけ目立たせる
-    public var status: (text: String, needsAttention: Bool) {
-        let host = draft.host.trimmingCharacters(in: .whitespaces)
-        if host.isEmpty { return ("未設定", true) }
-        // PIN の登録でも手入力でも、パスワードがなければ操作できない
-        if draft.password.isEmpty { return ("PIN の登録が必要", true) }
-        return (host, false)
+    /// 入力した接続情報を保存する (設定の画面の「保存」から、AppViewModel が呼ぶ)
+    func save() async {
+        await remote.save(draft)
+    }
+}
+
+extension TVSetupViewModel: Introspectable {
+    public var introspectionName: String { "tv" }
+    public var isBusy: Bool { work.isBusy }
+
+    /// パスワードは見せない (入っているかどうかだけ)
+    public var introspectionValue: Any {
+        var state = state
+        if !state.draft.password.isEmpty { state.draft.password = "(入力済み)" }
+        return state
     }
 
-    /// 保存できるか (アドレスがあり、PIN の入力を待っていない)
-    public var canSave: Bool { draft.isConfigured && !isWaitingForPIN }
+    public var introspectionActions: [ActionDescription] {
+        [
+            ActionDescription("setHost", "テレビの IP アドレスを入れる", parameters: ["host": "IP アドレス"]),
+            ActionDescription("setUser", "ユーザー名を入れる (PIN 登録に対応していない機種)", parameters: ["user": "ユーザー名"]),
+            ActionDescription("setPassword", "パスワードを入れる (PIN 登録に対応していない機種)", parameters: ["password": "パスワード"]),
+            ActionDescription("scan", "同じネットワークのテレビを探す"),
+            ActionDescription("select", "見つかったテレビを選ぶ (未登録なら PIN を表示させる)", parameters: ["host": "devices の host"]),
+            ActionDescription("startPairing", "テレビに PIN を表示させる"),
+            ActionDescription("setPIN", "テレビに表示された PIN を入れる", parameters: ["pin": "PIN"]),
+            ActionDescription("confirmPairing", "PIN で登録して保存する"),
+            ActionDescription("cancelPairing", "PIN の登録をやめる"),
+            ActionDescription("test", "入力した接続情報でつながるか試す"),
+        ]
+    }
 
-    public func save() async {
-        await remote.save(draft)
+    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+        switch action {
+        case "setHost": send(.setHost(try arguments.string("host")))
+        case "setUser": send(.setUser(try arguments.string("user")))
+        case "setPassword": send(.setPassword(try arguments.string("password")))
+        case "scan": send(.scan)
+        case "select":
+            let host = try arguments.string("host")
+            guard let device = devices.first(where: { $0.host == host }) else {
+                throw IntrospectionError.unavailable("テレビ \(host) は見つかっていません")
+            }
+            send(.select(device))
+        case "startPairing": send(.startPairing)
+        case "setPIN": send(.setPIN(try arguments.string("pin")))
+        case "confirmPairing": send(.confirmPairing)
+        case "cancelPairing": send(.cancelPairing)
+        case "test": send(.test)
+        default: throw IntrospectionError.unknownAction(action)
+        }
     }
 }
 
@@ -169,10 +295,6 @@ public final class ServerSetupViewModel {
     public let guide: GuideViewModel
     public let stream: StreamViewModel
 
-    /// 入力中のアドレス (`192.168.0.2` か `192.168.0.2:40772`)
-    public var guideHost: String
-    public var streamHost: String
-
     public init(guide: GuideViewModel, stream: StreamViewModel) {
         self.guide = guide
         self.stream = stream
@@ -180,36 +302,95 @@ public final class ServerSetupViewModel {
         streamHost = stream.streamHost
     }
 
-    public enum Server: Sendable {
+    public enum Server: String, CaseIterable, Sendable {
         case guide, stream
     }
 
-    public private(set) var guideHosts: [String] = []
-    public private(set) var isScanningGuide = false
-    public private(set) var guideMessage: String?
-    public private(set) var streamHosts: [String] = []
-    public private(set) var isScanningStream = false
-    public private(set) var streamMessage: String?
+    public struct State: Equatable, Sendable {
+        public var guide: ServerState
+        public var stream: ServerState
+        /// Mirakurun のアドレスが入っているか (保存前の入力も含む)。EPGStation は Mirakurun から放送を受け取るので、
+        /// Mirakurun を入れてから設定できるようにする
+        public var hasGuideDraft: Bool
+        /// 入力したポートが正しいか
+        public var isValid: Bool
 
-    /// Mirakurun のアドレスが入っているか (保存前の入力も含む)。EPGStation は Mirakurun から放送を受け取るので、
-    /// Mirakurun を入れてから設定できるようにする
-    public var hasGuideDraft: Bool { !ServerAddress(guideHost).saved.isEmpty }
+        public subscript(server: Server) -> ServerState { server == .guide ? guide : stream }
+    }
 
-    /// 一覧に出す状態 (アドレスか「未設定」)
-    public func status(of server: Server) -> String {
-        let host = ServerAddress(server == .guide ? guideHost : streamHost).saved
+    /// 1 つの録画サーバーの設定
+    public struct ServerState: Equatable, Sendable {
+        /// 入力中のアドレス (`192.168.0.2` か `192.168.0.2:40772`)
+        public var host: String
+        public var defaultPort: Int
+        /// 探して見つかったアドレス
+        public var hosts: [String]
+        public var isScanning: Bool
+        public var message: String?
+        /// 一覧に出す状態 (アドレスか「未設定」)
+        public var status: String
+        /// 保存済みで、連携を解除できるか
+        public var isLinked: Bool
+        /// 解除するか確かめるときの見出しと説明
+        public var unlinkTitle: String
+        public var unlinkMessage: String
+    }
+
+    public enum Action: Sendable {
+        case setHost(Server, String)
+        case scan(Server)
+        /// Mirakurun と同じサーバーで EPGStation が動いていれば、候補として出す
+        case suggestStreamHost
+        /// 連携をやめる。すぐにアドレスを消して反映する。EPGStation だけでは使えないので、番組表を外したら一緒に外す
+        case unlink(Server)
+    }
+
+    private var guideHost: String
+    private var streamHost: String
+    private var guideHosts: [String] = []
+    private var isScanningGuide = false
+    private var guideMessage: String?
+    private var streamHosts: [String] = []
+    private var isScanningStream = false
+    private var streamMessage: String?
+    @ObservationIgnored private let work = Work()
+
+    public var state: State {
+        State(
+            guide: ServerState(
+                host: guideHost, defaultPort: Mirakurun.defaultPort, hosts: guideHosts, isScanning: isScanningGuide,
+                message: guideMessage, status: Self.status(guideHost), isLinked: !guide.guideHost.isEmpty,
+                unlinkTitle: "Mirakurun との連携を解除しますか？",
+                unlinkMessage: "番組名・番組表・番組表からの録画予約が使えなくなります。ライブ視聴（EPGStation）の連携も解除されます。"
+            ),
+            stream: ServerState(
+                host: streamHost, defaultPort: EPGStation.defaultPort, hosts: streamHosts, isScanning: isScanningStream,
+                message: streamMessage, status: Self.status(streamHost), isLinked: !stream.streamHost.isEmpty,
+                unlinkTitle: "EPGStation との連携を解除しますか？",
+                unlinkMessage: "アプリでのライブ視聴が使えなくなります。"
+            ),
+            hasGuideDraft: !ServerAddress(guideHost).saved.isEmpty,
+            isValid: ServerAddress(guideHost).isValid && ServerAddress(streamHost).isValid
+        )
+    }
+
+    public func send(_ action: Action) {
+        switch action {
+        case .setHost(.guide, let host): guideHost = host
+        case .setHost(.stream, let host): streamHost = host
+        case .scan(.guide): work.run { await self.scanGuide() }
+        case .scan(.stream): work.run { await self.scanStream() }
+        case .suggestStreamHost: work.run { await self.suggestStreamHost() }
+        case .unlink(let server): work.run { await self.unlink(server) }
+        }
+    }
+
+    private static func status(_ host: String) -> String {
+        let host = ServerAddress(host).saved
         return host.isEmpty ? "未設定" : host
     }
 
-    /// 保存済みで、連携を解除できるか
-    public func isLinked(_ server: Server) -> Bool {
-        !(server == .guide ? guide.guideHost : stream.streamHost).isEmpty
-    }
-
-    /// 入力したポートが正しいか
-    public var isValid: Bool { ServerAddress(guideHost).isValid && ServerAddress(streamHost).isValid }
-
-    public func scanGuide() async {
+    private func scanGuide() async {
         isScanningGuide = true
         defer { isScanningGuide = false }
         guideMessage = nil
@@ -222,7 +403,7 @@ public final class ServerSetupViewModel {
         }
     }
 
-    public func scanStream() async {
+    private func scanStream() async {
         isScanningStream = true
         defer { isScanningStream = false }
         streamMessage = nil
@@ -235,8 +416,7 @@ public final class ServerSetupViewModel {
         }
     }
 
-    /// Mirakurun と同じサーバーで EPGStation が動いていれば、候補として出す
-    public func suggestStreamHost(transport: any HTTPTransport = RegzaHTTP.transport) async {
+    func suggestStreamHost(transport: any HTTPTransport = RegzaHTTP.transport) async {
         guard streamHost.trimmingCharacters(in: .whitespaces).isEmpty, streamHosts.isEmpty else { return }
         // Mirakurun のアドレスからポートを除いたもの
         let server = ServerAddress(guideHost).address
@@ -246,8 +426,7 @@ public final class ServerSetupViewModel {
         streamMessage = "Mirakurun と同じサーバーで EPGStation が見つかりました。よければ「保存」を押してください。"
     }
 
-    /// 連携をやめる。すぐにアドレスを消して反映する。EPGStation だけでは使えないので、番組表を外したら一緒に外す
-    public func unlink(_ server: Server) async {
+    func unlink(_ server: Server) async {
         if server == .guide {
             guideHost = ""
             guideHosts = []
@@ -258,20 +437,40 @@ public final class ServerSetupViewModel {
         stream.saveStreamHost("")
     }
 
-    /// 解除するか確かめるときの見出しと説明
-    public func unlinkQuestion(_ server: Server) -> (title: String, message: String) {
-        switch server {
-        case .guide:
-            ("Mirakurun との連携を解除しますか？",
-             "番組名・番組表・番組表からの録画予約が使えなくなります。ライブ視聴（EPGStation）の連携も解除されます。")
-        case .stream:
-            ("EPGStation との連携を解除しますか？", "アプリでのライブ視聴が使えなくなります。")
-        }
-    }
-
-    public func save() async {
+    /// 入力したアドレスを保存する (設定の画面の「保存」から、AppViewModel が呼ぶ)
+    func save() async {
         await guide.saveGuideHost(ServerAddress(guideHost).saved)
         stream.saveStreamHost(ServerAddress(streamHost).saved)
+    }
+}
+
+extension ServerSetupViewModel: Introspectable {
+    public var introspectionName: String { "servers" }
+    public var introspectionValue: Any { state }
+    public var isBusy: Bool { work.isBusy }
+
+    public var introspectionActions: [ActionDescription] {
+        let server = Server.allCases.map(\.rawValue).joined(separator: " | ")
+        return [
+            ActionDescription("setHost", "アドレスを入れる", parameters: ["server": server, "host": "192.0.2.2 か 192.0.2.2:40772"]),
+            ActionDescription("scan", "同じネットワークで探す", parameters: ["server": server]),
+            ActionDescription("suggestStreamHost", "Mirakurun と同じサーバーの EPGStation を探す"),
+            ActionDescription("unlink", "連携を解除する (番組表を外すとライブ視聴も外れる)", parameters: ["server": server]),
+        ]
+    }
+
+    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+        func server() throws -> Server {
+            guard let server = Server(rawValue: try arguments.string("server")) else { throw IntrospectionError.invalidArgument("server") }
+            return server
+        }
+        switch action {
+        case "setHost": send(.setHost(try server(), try arguments.string("host")))
+        case "scan": send(.scan(try server()))
+        case "suggestStreamHost": send(.suggestStreamHost)
+        case "unlink": send(.unlink(try server()))
+        default: throw IntrospectionError.unknownAction(action)
+        }
     }
 }
 

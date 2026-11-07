@@ -353,6 +353,35 @@ import Testing
     }
 }
 
+/// いま映っているものの詳細のシートの ViewModel
+@MainActor
+@Suite struct NowPlayingViewModelTests {
+    let screens = ScreenViewModelTests()
+
+    @Test func offersPowerOnOnlyInStandby() throws {
+        let (remote, guide, _, stream) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        let viewModel = NowPlayingViewModel(remote: remote, guide: guide, stream: stream)
+        let channels = try GuideScreenViewModelTests().channels()
+
+        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: RegzaNowPlaying(kind: .standby), channels: channels)
+        #expect(viewModel.state.canPowerOn)
+        #expect(viewModel.state.title == "テレビ")
+
+        remote.showSample(
+            connection: RegzaConnection(host: "192.0.2.1"),
+            nowPlaying: RegzaNowPlaying(kind: .broadcast, channelCode: "JP-G00000001", title: "見本の番組", description: "見本の説明"),
+            channels: channels
+        )
+        let state = viewModel.state
+        #expect(!state.canPowerOn)
+        #expect(state.title == "視聴中")
+        #expect(state.description == "見本の説明")
+        // 見本のときは配信できないので、アプリで見るは出さない。タイムシフトの設定もないので最初から見るも出さない
+        #expect(state.playableChannel == nil)
+        #expect(!state.canStartOver)
+    }
+}
+
 /// ライブ視聴の ViewModel
 @MainActor
 @Suite struct LivePlayerViewModelTests {
@@ -442,17 +471,19 @@ import Testing
         let (remote, _, _, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
         let tv = TVSetupViewModel(remote: remote)
         // 保存済みの接続から始める
-        #expect(tv.draft == remote.connection)
-        #expect(tv.status.text == "192.0.2.10")
-        #expect(!tv.status.needsAttention)
+        #expect(tv.state.draft == remote.connection)
+        #expect(tv.state.status == .init(text: "192.0.2.10", needsAttention: false))
         // このアプリの ID で登録していないので、登録済みではない
-        #expect(!tv.isRegistered)
+        #expect(!tv.state.isRegistered)
 
-        tv.draft.password = ""
-        #expect(tv.status == ("PIN の登録が必要", true))
-        tv.draft.host = " "
-        #expect(tv.status == ("未設定", true))
-        #expect(!tv.canSave)
+        tv.send(.setPassword(""))
+        #expect(tv.state.status == .init(text: "PIN の登録が必要", needsAttention: true))
+        tv.send(.setHost(" "))
+        #expect(tv.state.status == .init(text: "未設定", needsAttention: true))
+        #expect(!tv.state.canSave)
+        // CLI に見せる状態には、パスワードを出さない
+        tv.send(.setPassword("secret"))
+        #expect(!JSONValue(reflecting: tv.introspectionValue).json.contains("secret"))
     }
 
     @Test func unlinkingGuideAlsoUnlinksStream() async {
@@ -461,14 +492,15 @@ import Testing
         stream.saveStreamHost("192.0.2.2:8888")
         // 番組表の ViewModel は、作ったときに保存済みのアドレスを読む
         let servers = ServerSetupViewModel(guide: GuideViewModel(remote: remote), stream: stream)
-        #expect(servers.status(of: .guide) == "192.0.2.2")
-        #expect(servers.isLinked(.stream))
+        #expect(servers.state.guide.status == "192.0.2.2")
+        #expect(servers.state.stream.isLinked)
 
-        await servers.unlink(.guide)
+        await screens.send(servers) { $0.send(.unlink(.guide)) }
 
         // EPGStation は Mirakurun から放送を受け取るので、一緒に外す
-        #expect(servers.status(of: .guide) == "未設定")
-        #expect(servers.status(of: .stream) == "未設定")
+        #expect(servers.state.guide.status == "未設定")
+        #expect(servers.state.stream.status == "未設定")
+        #expect(!servers.state.stream.isLinked)
         #expect(remote.store.guideHost == "")
         #expect(remote.store.streamHost == "")
     }
@@ -476,16 +508,16 @@ import Testing
     @Test func suggestsEPGStationOnMirakurunServer() async {
         let (remote, guide, _, stream) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
         let servers = ServerSetupViewModel(guide: guide, stream: stream)
-        servers.guideHost = "192.0.2.2:40772"
+        servers.send(.setHost(.guide, "192.0.2.2:40772"))
         let transport = FakeTransport { request in
             request.url.path == "/api/version" ? ScreenViewModelTests.status(200, #"{"version":"2.0.0"}"#) : ScreenViewModelTests.status(404)
         }
 
         await servers.suggestStreamHost(transport: transport)
 
-        #expect(servers.streamHost == "192.0.2.2")
-        #expect(servers.streamHosts == ["192.0.2.2"])
-        #expect(servers.streamMessage != nil)
+        #expect(servers.state.stream.host == "192.0.2.2")
+        #expect(servers.state.stream.hosts == ["192.0.2.2"])
+        #expect(servers.state.stream.message != nil)
         // 保存するまでは入れない
         #expect(remote.store.streamHost == "")
     }
