@@ -39,7 +39,7 @@ public final class AppViewModel {
         public var settingsPath: [SettingsPage] = []
         /// いま映っているものの詳細のシート
         public var isShowingNowPlaying = false
-        /// アプリで見ている局 (ライブ視聴の全画面)
+        /// アプリで見ている局 (ライブ視聴の全画面)。ライブ視聴の中で局を切り替えたら、その局になる
         public var playingChannel: RegzaChannel?
 
         public func path(of tab: Tab) -> [Route] { paths[tab] ?? [] }
@@ -63,7 +63,14 @@ public final class AppViewModel {
         case closePlayer
     }
 
-    public private(set) var state = State()
+    /// 画面の移り変わり (playingChannel はライブ視聴の ViewModel から求めるので、ここでは使わない)
+    private var navigation = State()
+
+    public var state: State {
+        var state = navigation
+        state.playingChannel = player?.state.channel
+        return state
+    }
 
     public init(remote: RemoteViewModel, guide: GuideViewModel, recording: ReservationsViewModel, stream: StreamViewModel) {
         self.remote = remote
@@ -85,9 +92,9 @@ public final class AppViewModel {
     public func send(_ action: Action) {
         // 変わったときだけ state を入れ替える (SwiftUI は戻る道などの Binding に同じ値を書き戻すことがあり、
         // そのたびに入れ替えると、変わっていないのに画面を描き直すことになる)
-        var next = state
+        var next = navigation
         defer {
-            if next != state { state = next }
+            if next != navigation { navigation = next }
             forgetClosedScreens()
         }
         switch action {
@@ -122,13 +129,11 @@ public final class AppViewModel {
         case .play(let channel):
             guard let viewModel = stream.livePlayer(for: channel) else { return }
             player = viewModel
-            next.playingChannel = channel
         case .closePlayer:
             if let player {
                 player.send(.end)
                 self.player = nil
             }
-            next.playingChannel = nil
         }
     }
 
