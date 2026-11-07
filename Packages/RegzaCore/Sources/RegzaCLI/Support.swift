@@ -54,9 +54,27 @@ struct SampleTransport: HTTPTransport {
             body = #"{"status":0,"rsv_list":[]}"#
         case "/remote/remote.htm":
             body = "0"
+        case "/api/programs":
+            body = Self.programs(query: request.url.query ?? "")
         default:
             body = #"{"status":0}"#
         }
         return HTTPResponse(statusCode: 200, headers: [:], body: Data(body.utf8))
+    }
+
+    /// Mirakurun の番組表の見本。テスト局１・２に、今の正時の 1 時間前から 2 日分、1 時間ずつの番組を並べる
+    static func programs(query: String) -> String {
+        let names = ["見本の朝の便り", "見本の散歩", "見本の料理教室", "見本の劇場", "見本の天気"]
+        let hour = Int(Date().timeIntervalSince1970) / 3600 * 3600 - 3600
+        var programs: [String] = []
+        for service in 1...2 where query.isEmpty || query.hasSuffix("serviceId=\(service)") {
+            for index in 0..<48 {
+                let id = service * 1000 + index
+                let start = (hour + index * 3600) * 1000
+                let name = "\(names[(index + service) % names.count]) 第\(index + 1)回"
+                programs.append(#"{"id":\#(id),"eventId":\#(id),"networkId":0,"serviceId":\#(service),"startAt":\#(start),"duration":3600000,"name":"\#(name)","genres":[]}"#)
+            }
+        }
+        return "[" + programs.joined(separator: ",") + "]"
     }
 }
