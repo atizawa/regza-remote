@@ -276,49 +276,80 @@ import Testing
             try program(id: 2, startingIn: 3 * 86_400),
         ])
         let viewModel = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
+        let state = viewModel.state
 
         // 番組表があるのは地デジのテスト局１だけ。BS の局は番組表がないので出さない
-        #expect(viewModel.bands == [.terrestrial])
-        #expect(viewModel.columns.map(\.channel.name) == ["テスト局１"])
-        #expect(viewModel.columns.first?.programs.count == 2)
-        // 明日から、番組表がある最後の日まで
+        #expect(state.bands == [.terrestrial])
+        #expect(state.columns.map(\.channel.name) == ["テスト局１"])
+        #expect(state.columns.first?.cells.count == 2)
+        // 今日のあと、明日から番組表がある最後の日まで
         let today = BroadcastDay.start(of: Date())
-        #expect(viewModel.days.first == Calendar.current.date(byAdding: .day, value: 1, to: today))
+        #expect(state.days.first?.day == nil)
+        #expect(state.days.dropFirst().first?.day == Calendar.current.date(byAdding: .day, value: 1, to: today))
         let lastDay = BroadcastDay.start(of: Date().addingTimeInterval(3 * 86_400))
-        #expect(viewModel.days.last == lastDay)
+        #expect(state.days.last?.day == lastDay)
+        // 読み込むまでは検索を出さない
+        #expect(!state.canSearch)
+
+        let day = try #require(state.days.last?.day)
+        viewModel.send(.selectDay(day))
+        #expect(viewModel.state.selectedDay == day)
     }
 
     @Test func gridDescribesDays() throws {
-        let (remote, guide, recording, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
-        let viewModel = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
         let today = BroadcastDay.start(of: Date())
         let tomorrow = try #require(Calendar.current.date(byAdding: .day, value: 1, to: today))
-        #expect(viewModel.label(of: nil) == "今日")
-        #expect(viewModel.label(of: tomorrow) == "明日")
+        #expect(GuideGridViewModel.label(of: nil) == "今日")
+        #expect(GuideGridViewModel.label(of: tomorrow) == "明日")
         // 2026-11-07 は土曜、11-08 は日曜
         let saturday = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 4)))
-        #expect(viewModel.kind(of: saturday) == .saturday)
-        #expect(viewModel.kind(of: saturday.addingTimeInterval(86_400)) == .sunday)
-        #expect(viewModel.label(of: saturday.addingTimeInterval(7 * 86_400)).hasSuffix("(土)"))
-        // 今日は今の時刻の正時から 24 時間
+        #expect(GuideGridViewModel.kind(of: saturday) == .saturday)
+        #expect(GuideGridViewModel.kind(of: saturday.addingTimeInterval(86_400)) == .sunday)
+        #expect(GuideGridViewModel.label(of: saturday.addingTimeInterval(7 * 86_400)).hasSuffix("(土)"))
+        // 今日は今の時刻の正時から 24 時間、ほかの日はその日の朝 4 時から
         let now = Date()
-        let window = viewModel.window(now: now)
+        let window = GuideGridViewModel.window(now: now)
         #expect(window.lowerBound <= now && now < window.lowerBound.addingTimeInterval(3600))
         #expect(window.upperBound.timeIntervalSince(window.lowerBound) == 24 * 3600)
+        #expect(GuideGridViewModel.window(now: now, day: tomorrow).lowerBound == tomorrow)
+    }
+
+    @Test func searchFindsProgramsAndReadsConditions() async throws {
+        let (remote, guide, recording, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: try channels())
+        guide.showSample(guideHost: "192.0.2.2", programs: [
+            try program(id: 1, startingIn: -60, name: "あおぞら散歩"),
+            try program(id: 2, startingIn: 86_400, name: "みどり劇場"),
+        ])
+        let grid = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
+        let search = grid.search
+        // 番組表を読むと索引を作る (読めなくても、見本の番組表はそのまま使う)
+        await screens.send(grid) { $0.send(.load) }
+        #expect(!search.state.isIndexing)
+
+        search.send(.setText("あおぞら"))
+        var state = search.state
+        #expect(state.results.map(\.program.id) == [1])
+        #expect(state.results.first?.channel.name == "テスト局１")
+        #expect(state.results.first?.timeText.hasPrefix("放送中 〜") == true)
+        #expect(state.results.first?.reason == nil)
+
+        // 「明日」は条件として読み取り、外すこともできる
+        search.send(.setText("明日のみどり"))
+        #expect(search.state.conditions.map(\.label).contains("明日"))
+        #expect(search.state.results.map(\.program.id) == [2])
+        search.send(.removeCondition(.day))
+        state = search.state
+        #expect(!state.conditions.contains { $0.condition == .day })
+        #expect(state.results.map(\.program.id) == [2])
     }
 
     @Test func searchExplainsWhyItFoundPrograms() throws {
-        let (remote, _, recording, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
-        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: try channels())
-        let search = GuideSearchViewModel(remote: remote, recording: recording)
         let onAir = try program(id: 1, startingIn: -60)
-
         let byCast = ProgramSearchResult(program: onAir, matches: [.init(term: "見本太郎", field: .cast)])
         let byTitle = ProgramSearchResult(program: onAir, matches: [.init(term: "テスト", field: .title)])
-        #expect(search.reason(for: byCast) == "見本太郎 が出演")
-        #expect(search.reason(for: byTitle) == nil)
-        #expect(search.timeText(of: onAir).hasPrefix("放送中 〜"))
-        #expect(search.channel(for: onAir)?.name == "テスト局１")
+        #expect(GuideSearchViewModel.reason(for: byCast) == "見本太郎 が出演")
+        #expect(GuideSearchViewModel.reason(for: byTitle) == nil)
     }
 }
 

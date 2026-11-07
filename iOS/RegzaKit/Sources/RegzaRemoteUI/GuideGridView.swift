@@ -30,7 +30,7 @@ struct GuideGridView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
-                    if viewModel.canSearch {
+                    if viewModel.state.canSearch {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("番組を探す", systemImage: "magnifyingglass") { app.send(.open(.search)) }
                         }
@@ -43,7 +43,8 @@ struct GuideGridView: View {
 
     @ViewBuilder
     private var content: some View {
-        if !viewModel.guide.hasGuide {
+        let state = viewModel.state
+        if !state.hasGuide {
             // Mirakurun がなくてもタブは消さず (HIG)、何ができるかと設定のしかたを案内する
             ContentUnavailableView {
                 Label("番組表を使うには", systemImage: "calendar")
@@ -56,47 +57,44 @@ struct GuideGridView: View {
                 Button("設定を開く") { showSettings() }
                     .buttonStyle(.borderedProminent)
             }
-        } else if !viewModel.hasLoaded {
+        } else if !state.hasLoaded {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if viewModel.columns.isEmpty {
+        } else if state.columns.isEmpty {
             ContentUnavailableView {
                 Label("番組表を取得できません", systemImage: "calendar.badge.exclamationmark")
             } description: {
                 Text("テレビと Mirakurun につながっているか確認してください。")
             } actions: {
-                Button("もう一度試す") { Task { await load() } }
+                Button("もう一度試す") { viewModel.send(.load) }
             }
         } else {
             TimelineView(.periodic(from: .now, by: 60)) { context in
-                grid(now: context.date)
+                grid(state, now: context.date)
             }
             .dynamicTypeSize(...Self.maximumDynamicTypeSize)
             // 上に積むと日付の横スクロールが先に見つかり、下へスクロールしてもタブバーが小さくならないので、表の上に重ねる
             .safeAreaBar(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
-                    if viewModel.bands.count > 1 {
-                        BandPicker(bands: viewModel.bands)
+                    if state.bands.count > 1 {
+                        BandPicker(bands: state.bands)
                     }
-                    DayPicker(viewModel: viewModel)
+                    DayPicker(days: state.days, selected: state.selectedDay) { viewModel.send(.selectDay($0)) }
                 }
             }
         }
     }
 
-    private func grid(now: Date) -> some View {
-        let window = viewModel.window(now: now)
-        let columns = viewModel.columns
+    private func grid(_ state: GuideGridViewModel.State, now: Date) -> some View {
+        let window = GuideGridViewModel.window(now: now, day: state.selectedDay)
+        let columns = state.columns
         let metrics = metrics
         let height = CGFloat(Self.hours * 60) * metrics.pointsPerMinute
         // 縦横を 1 つのスクロールにまとめ、局名の行と時刻の列はスクロール量に合わせてずらして重ねる
         return ScrollView([.horizontal, .vertical]) {
             HStack(alignment: .top, spacing: 0) {
-                ForEach(columns, id: \.channel) { column in
-                    ProgramColumn(
-                        channel: column.channel, programs: column.programs, window: window, metrics: metrics,
-                        isReserved: viewModel.isReserved
-                    ) { program in
+                ForEach(columns) { column in
+                    ProgramColumn(channel: column.channel, cells: column.cells, window: window, metrics: metrics) { program in
                         app.send(.open(.programDetail(program, column.channel)))
                     }
                 }
@@ -104,7 +102,7 @@ struct GuideGridView: View {
             .frame(height: height, alignment: .top)
             .overlay(alignment: .topLeading) {
                 // 今の時刻の線 (今日を見ているときだけ)
-                if viewModel.day == nil {
+                if state.selectedDay == nil {
                     Rectangle()
                         .fill(.red)
                         .frame(height: 1)
@@ -156,16 +154,17 @@ struct GuideGridView: View {
     }
 
     private func load() async {
-        await viewModel.load()
+        viewModel.send(.load)
+        await waitWhileBusy(viewModel)
         #if DEBUG
         // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
         if SampleData.isEnabled, UserDefaults.standard.bool(forKey: "SampleDetail"),
-           let column = viewModel.columns.first, let program = column.programs.first(where: { $0.isOnAir() }) {
-            app.send(.setPath(.guide, [.programDetail(program, column.channel)]))
+           let column = viewModel.state.columns.first, let cell = column.cells.first(where: { $0.program.isOnAir() }) {
+            app.send(.setPath(.guide, [.programDetail(cell.program, column.channel)]))
         }
         if SampleData.isEnabled, let text = UserDefaults.standard.string(forKey: "SampleSearch") {
             app.send(.setPath(.guide, [.search]))
-            viewModel.search.text = text
+            viewModel.search.send(.setText(text))
         }
         #endif
     }
@@ -281,21 +280,21 @@ private struct TimeColumn: View {
 /// 1 局分の番組の枠
 private struct ProgramColumn: View {
     let channel: RegzaChannel
-    let programs: [MirakurunProgram]
+    let cells: [GuideGridViewModel.Cell]
     let window: ClosedRange<Date>
     let metrics: GuideMetrics
-    let isReserved: (MirakurunProgram) -> Bool
     var onSelect: (MirakurunProgram) -> Void
 
     var body: some View {
         ZStack(alignment: .top) {
-            ForEach(programs.filter { $0.end > window.lowerBound && $0.start < window.upperBound }) { program in
+            ForEach(cells.filter { $0.program.end > window.lowerBound && $0.program.start < window.upperBound }) { cell in
+                let program = cell.program
                 let top = metrics.offset(of: program.start, in: window)
                 let bottom = metrics.offset(of: program.end, in: window)
                 Button {
                     onSelect(program)
                 } label: {
-                    ProgramCell(program: program, channelName: channel.name, isReserved: isReserved(program))
+                    ProgramCell(program: program, channelName: channel.name, isReserved: cell.isReserved)
                         .frame(width: metrics.columnWidth, height: max(1, bottom - top), alignment: .topLeading)
                         .clipped()
                 }
@@ -382,27 +381,28 @@ private struct ProgramCell: View {
 }
 /// 日付の選択。今日・明日・6(金) … を横に並べ、土曜は青、日曜は赤にする (テレビ欄と同じ)
 private struct DayPicker: View {
-    @Bindable var viewModel: GuideGridViewModel
+    let days: [GuideGridViewModel.Day]
+    let selected: Date?
+    let onSelect: (Date?) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                chip(nil)
-                ForEach(viewModel.days, id: \.self) { chip($0) }
+                ForEach(days) { chip($0) }
             }
             .padding(.horizontal, Design.outer)
             .padding(.bottom, 8)
         }
     }
 
-    private func chip(_ day: Date?) -> some View {
-        let isSelected = viewModel.day == day
+    private func chip(_ day: GuideGridViewModel.Day) -> some View {
+        let isSelected = selected == day.day
         return Button {
-            viewModel.day = day
+            onSelect(day.day)
         } label: {
-            Text(viewModel.label(of: day))
+            Text(day.label)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isSelected ? Color.white : color(day))
+                .foregroundStyle(isSelected ? Color.white : color(day.kind))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(isSelected ? AnyShapeStyle(AppTheme.accent) : AnyShapeStyle(.fill.tertiary), in: Capsule())
@@ -410,8 +410,8 @@ private struct DayPicker: View {
         .buttonStyle(.plain)
     }
 
-    private func color(_ day: Date?) -> Color {
-        switch viewModel.kind(of: day) {
+    private func color(_ kind: GuideGridViewModel.DayKind) -> Color {
+        switch kind {
         case .saturday: .blue
         case .sunday: .red
         case .weekday: .primary

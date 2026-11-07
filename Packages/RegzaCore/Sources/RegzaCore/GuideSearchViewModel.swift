@@ -15,33 +15,104 @@ public final class GuideSearchViewModel {
         self.recording = recording
     }
 
-    public var text = "" {
-        didSet {
-            guard text != oldValue else { return }
+    /// 画面に出す、読み取った条件
+    public enum Condition: Hashable, Sendable {
+        case day, hours, genre(Int)
+    }
+
+    public struct State: Equatable, Sendable {
+        public var text: String
+        /// 何も打っていない
+        public var isBlank: Bool
+        /// 読み取った条件 (外したものを除く)
+        public var conditions: [ConditionChip]
+        /// 条件を読み取らず、打った言葉そのままで探しているか (「夜のニュース」という番組名を探すときなど)
+        public var isLiteral: Bool
+        /// 索引を作っている途中か (その間は結果が空でも「見つかりません」と出さない)
+        public var isIndexing: Bool
+        /// 見つかった番組 (テレビに登録されていない局の番組は出さない)
+        public var results: [Row]
+    }
+
+    public struct ConditionChip: Equatable, Sendable, Identifiable {
+        public var condition: Condition
+        /// 「明日」「18時〜」「スポーツ」
+        public var label: String
+        public var id: Condition { condition }
+    }
+
+    public struct Row: Equatable, Sendable, Identifiable {
+        public var program: MirakurunProgram
+        public var channel: RegzaChannel
+        /// 「11/5(木) 21:00〜」。放送中は「放送中 〜21:54」
+        public var timeText: String
+        /// なぜ見つかったか (「〇〇 が出演」など)。番組名に入っていたときは nil
+        public var reason: String?
+        public var isReserved: Bool
+        public var id: Int { program.id }
+    }
+
+    public enum Action: Sendable {
+        case setText(String)
+        /// 読み取った条件から 1 つ外す
+        case removeCondition(Condition)
+        /// 条件を読み取らず、打った言葉そのままで探す
+        case searchLiterally
+    }
+
+    private var text = ""
+    private var query = ProgramSearchQuery()
+    private var results: [ProgramSearchResult] = []
+    private var isLiteral = false
+    private var isIndexing = false
+    @ObservationIgnored private var removed: Set<Condition> = []
+    @ObservationIgnored private var index = ProgramSearchIndex([])
+    @ObservationIgnored private var indexedAt: Date?
+
+    public var state: State {
+        let now = Date()
+        let channels = remote.state.channels
+        return State(
+            text: text,
+            isBlank: text.trimmingCharacters(in: .whitespaces).isEmpty,
+            conditions: conditions.map { ConditionChip(condition: $0, label: label($0)) },
+            isLiteral: isLiteral,
+            isIndexing: isIndexing,
+            results: results.compactMap { result in
+                guard let channel = channels.first(where: { $0.code.caseInsensitiveCompare(result.program.channelCode) == .orderedSame })
+                else { return nil }
+                return Row(
+                    program: result.program,
+                    channel: channel,
+                    timeText: Self.timeText(of: result.program, now: now),
+                    reason: Self.reason(for: result),
+                    isReserved: recording.isReserved(result.program)
+                )
+            }
+        )
+    }
+
+    public func send(_ action: Action) {
+        switch action {
+        case .setText(let newText):
+            guard newText != text else { return }
+            text = newText
             // 打ち直したら、外した条件も戻して読み直す
             removed = []
             isLiteral = false
             refresh()
+        case .removeCondition(let condition):
+            removed.insert(condition)
+            refresh()
+        case .searchLiterally:
+            isLiteral = true
+            refresh()
         }
     }
-    /// 読み取った条件 (外したものを除く)
-    public private(set) var query = ProgramSearchQuery()
-    public private(set) var results: [ProgramSearchResult] = []
-    /// 条件を読み取らず、打った言葉そのままで探すか (「夜のニュース」という番組名を探すときなど)
-    public private(set) var isLiteral = false
-    /// 索引を作っている途中か (その間は結果が空でも「見つかりません」と出さない)
-    public private(set) var isIndexing = false
-    private var removed: Set<Condition> = []
 
-    @ObservationIgnored private var index = ProgramSearchIndex([])
-    @ObservationIgnored private var indexedAt: Date?
-
-    /// 何も打っていない
-    public var isBlank: Bool { text.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    /// 番組表を読み込み直したときに、探すための索引を作り直す。
+    /// 番組表を読み込み直したときに、探すための索引を作り直す (番組表の画面から呼ぶ)。
     /// 1 週間分で 1 秒ほどかかるので、番組表の表示を待たせないよう裏で作る
-    public func updateIndex(_ programs: [String: [MirakurunProgram]], loadedAt: Date?) {
+    func updateIndex(_ programs: [String: [MirakurunProgram]], loadedAt: Date?) {
         guard loadedAt != indexedAt || index.isEmpty else { return }
         indexedAt = loadedAt
         let all = programs.values.flatMap { $0 }
@@ -56,18 +127,6 @@ public final class GuideSearchViewModel {
         }
     }
 
-    /// 読み取った条件から 1 つ外す
-    public func remove(_ condition: Condition) {
-        removed.insert(condition)
-        refresh()
-    }
-
-    /// 条件を読み取らず、打った言葉そのままで探す
-    public func searchLiterally() {
-        isLiteral = true
-        refresh()
-    }
-
     private func refresh() {
         var query = isLiteral ? ProgramSearchQuery(text: text) : ProgramSearchQuery(parsing: text)
         if removed.contains(.day) { query.dayOffset = nil }
@@ -77,19 +136,14 @@ public final class GuideSearchViewModel {
         results = query.isEmpty ? [] : index.search(query)
     }
 
-    /// 画面に出す、読み取った条件
-    public enum Condition: Hashable, Sendable {
-        case day, hours, genre(Int)
-    }
-
-    public var conditions: [Condition] {
+    private var conditions: [Condition] {
         var conditions: [Condition] = []
         if query.dayOffset != nil { conditions.append(.day) }
         if query.startHour != nil || query.endHour != nil { conditions.append(.hours) }
         return conditions + query.genres.map(Condition.genre)
     }
 
-    public func label(_ condition: Condition) -> String {
+    private func label(_ condition: Condition) -> String {
         switch condition {
         case .day:
             switch query.dayOffset ?? 0 {
@@ -110,26 +164,14 @@ public final class GuideSearchViewModel {
         }
     }
 
-    // MARK: - 結果の行
-
-    /// 番組の局。テレビに登録されていない局の番組は出さない
-    public func channel(for program: MirakurunProgram) -> RegzaChannel? {
-        remote.channels.first { $0.code.caseInsensitiveCompare(program.channelCode) == .orderedSame }
-    }
-
-    public func isReserved(_ program: MirakurunProgram) -> Bool {
-        recording.isReserved(program)
-    }
-
-    /// 「11/5(木) 21:00〜」。放送中は「放送中 〜21:54」
-    public func timeText(of program: MirakurunProgram, now: Date = Date()) -> String {
+    static func timeText(of program: MirakurunProgram, now: Date = Date()) -> String {
         if program.isOnAir(at: now) { return "放送中 〜\(program.end.formatted(.dateTime.hour().minute()))" }
         let day = program.start.formatted(.dateTime.locale(Locale(identifier: "ja_JP")).month(.defaultDigits).day().weekday())
         return "\(day) \(program.start.formatted(.dateTime.hour().minute()))〜"
     }
 
-    /// なぜ見つかったか。番組名に入っていれば言うまでもないので、出演者と説明のときだけ添える
-    public func reason(for result: ProgramSearchResult) -> String? {
+    /// 番組名に入っていれば言うまでもないので、出演者と説明のときだけ添える
+    static func reason(for result: ProgramSearchResult) -> String? {
         let reasons = result.matches.compactMap { match -> String? in
             switch match.field {
             case .title: nil
@@ -138,5 +180,54 @@ public final class GuideSearchViewModel {
             }
         }
         return reasons.isEmpty ? nil : reasons.joined(separator: "・")
+    }
+}
+
+extension GuideSearchViewModel: Introspectable {
+    public var introspectionName: String { "search" }
+
+    /// 結果は多くなることがあるので、番組の id・名前・局・時刻・理由だけを見せる
+    public var introspectionValue: Any {
+        let state = state
+        return JSONValue.object([
+            "text": .string(state.text),
+            "isLiteral": .bool(state.isLiteral),
+            "isIndexing": .bool(state.isIndexing),
+            "conditions": .array(state.conditions.map { .string($0.label) }),
+            "results": .array(state.results.prefix(50).map { row in
+                .object([
+                    "program": .number(Double(row.program.id)),
+                    "name": .string(row.program.name),
+                    "channel": .string(row.channel.code),
+                    "time": .string(row.timeText),
+                    "reason": row.reason.map(JSONValue.string) ?? .null,
+                    "isReserved": .bool(row.isReserved),
+                ])
+            }),
+            "resultCount": .number(Double(state.results.count)),
+        ])
+    }
+
+    public var isBusy: Bool { isIndexing }
+
+    public var introspectionActions: [ActionDescription] {
+        [
+            ActionDescription("setText", "探す言葉を入れる (「明日の夜のドラマ」など)", parameters: ["text": "探す言葉"]),
+            ActionDescription("removeCondition", "読み取った条件を外す", parameters: ["index": "conditions の何番目か (0 から)"]),
+            ActionDescription("searchLiterally", "条件を読み取らず、打った言葉そのままで探す"),
+        ]
+    }
+
+    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+        switch action {
+        case "setText": send(.setText(try arguments.string("text")))
+        case "removeCondition":
+            let index = try arguments.int("index")
+            let conditions = state.conditions
+            guard conditions.indices.contains(index) else { throw IntrospectionError.invalidArgument("index") }
+            send(.removeCondition(conditions[index].condition))
+        case "searchLiterally": send(.searchLiterally)
+        default: throw IntrospectionError.unknownAction(action)
+        }
     }
 }

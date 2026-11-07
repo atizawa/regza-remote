@@ -178,15 +178,15 @@ extension AppViewModel: Introspectable {
     public var introspectionValue: Any { state }
     /// 土台・タブの画面・戻る道の画面 (`channels-0` のように、タブと奥行きで名前を付ける)
     public var introspectionChildren: [any Introspectable] {
-        var children: [any Introspectable] = [remote, channelList, reservationList]
+        var children: [any Introspectable] = [remote, guideGrid, channelList, reservationList]
         for tab in Tab.allCases {
             for (depth, route) in state.path(of: tab).enumerated() {
-                let screen: any Introspectable? = switch route {
+                let screen: any Introspectable = switch route {
                 case .channelPrograms(let channel): programList(for: channel)
                 case .programDetail(let program, let channel): programDetail(program, channel: channel)
-                case .search: nil
+                case .search: guideGrid.search
                 }
-                if let screen { children.append(IntrospectionAlias("\(tab.rawValue)-\(depth)", screen)) }
+                children.append(IntrospectionAlias("\(tab.rawValue)-\(depth)", screen))
             }
         }
         return children

@@ -5,7 +5,7 @@ import SwiftUI
 
 /// 番組を探す画面。番組表のナビゲーションバーの虫眼鏡から開く
 struct GuideSearchScreen: View {
-    @Bindable var search: GuideSearchViewModel
+    let search: GuideSearchViewModel
     let onSelect: (MirakurunProgram, RegzaChannel) -> Void
     @State private var isPresented = false
 
@@ -14,11 +14,11 @@ struct GuideSearchScreen: View {
             .navigationTitle("番組を探す")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
-                text: $search.text, isPresented: $isPresented,
+                text: Binding(get: { search.state.text }, set: { search.send(.setText($0)) }), isPresented: $isPresented,
                 placement: .navigationBarDrawer(displayMode: .always), prompt: "番組名・出演者・「明日の夜のドラマ」"
             )
             // 開いたらすぐ打てるようにする (前に探した言葉が残っていれば結果を見せる)
-            .onAppear { if search.text.isEmpty { isPresented = true } }
+            .onAppear { if search.state.text.isEmpty { isPresented = true } }
     }
 }
 
@@ -28,49 +28,48 @@ struct GuideSearchResults: View {
     let onSelect: (MirakurunProgram, RegzaChannel) -> Void
 
     var body: some View {
+        let state = search.state
         List {
-            if !search.conditions.isEmpty {
+            if !state.conditions.isEmpty {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        ConditionChips(search: search)
-                        Button("「\(search.text)」をそのまま探す") { search.searchLiterally() }
+                        ConditionChips(conditions: state.conditions) { search.send(.removeCondition($0)) }
+                        Button("「\(state.text)」をそのまま探す") { search.send(.searchLiterally) }
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(AppTheme.accent)
                     }
                     .listRowSeparator(.hidden)
                 }
             }
-            section(search.results)
+            section(state.results)
         }
         .listStyle(.plain)
         .overlay {
-            if search.isBlank {
+            if state.isBlank {
                 ContentUnavailableView {
                     Label("番組を探す", systemImage: "magnifyingglass")
                 } description: {
                     Text("1 週間分の番組から、番組名・出演者・説明で探します。\n「明日の夜のドラマ」「土曜 21時から」のように、日付・時間帯・ジャンルでも絞り込めます。")
                 }
-            } else if search.results.isEmpty, search.isIndexing {
+            } else if state.results.isEmpty, state.isIndexing {
                 ProgressView("番組を読み込んでいます")
-            } else if search.results.isEmpty {
-                ContentUnavailableView.search(text: search.text)
+            } else if state.results.isEmpty {
+                ContentUnavailableView.search(text: state.text)
             }
         }
     }
 
     @ViewBuilder
-    private func section(_ results: [ProgramSearchResult]) -> some View {
-        if !results.isEmpty {
+    private func section(_ rows: [GuideSearchViewModel.Row]) -> some View {
+        if !rows.isEmpty {
             Section {
-                ForEach(results) { result in
-                    if let channel = search.channel(for: result.program) {
-                        Button {
-                            onSelect(result.program, channel)
-                        } label: {
-                            SearchResultRow(search: search, result: result, channel: channel)
-                        }
-                        .tint(.primary)
+                ForEach(rows) { row in
+                    Button {
+                        onSelect(row.program, row.channel)
+                    } label: {
+                        SearchResultRow(row: row)
                     }
+                    .tint(.primary)
                 }
             }
         }
@@ -79,7 +78,8 @@ struct GuideSearchResults: View {
 
 /// 読み取った条件。× で外せる
 private struct ConditionChips: View {
-    let search: GuideSearchViewModel
+    let conditions: [GuideSearchViewModel.ConditionChip]
+    let onRemove: (GuideSearchViewModel.Condition) -> Void
 
     var body: some View {
         ScrollView(.horizontal) {
@@ -88,12 +88,12 @@ private struct ConditionChips: View {
                     .font(.caption)
                     .foregroundStyle(AppTheme.accent)
                     .accessibilityLabel("読み取った条件")
-                ForEach(search.conditions, id: \.self) { condition in
+                ForEach(conditions) { chip in
                     Button {
-                        search.remove(condition)
+                        onRemove(chip.condition)
                     } label: {
                         HStack(spacing: 4) {
-                            Text(search.label(condition))
+                            Text(chip.label)
                             Image(systemName: "xmark")
                                 .font(.caption2.weight(.bold))
                                 .foregroundStyle(.secondary)
@@ -104,7 +104,7 @@ private struct ConditionChips: View {
                         .background(Surface.button, in: Capsule())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(search.label(condition)) を外す")
+                    .accessibilityLabel("\(chip.label) を外す")
                 }
             }
         }
@@ -113,22 +113,20 @@ private struct ConditionChips: View {
 }
 
 private struct SearchResultRow: View {
-    let search: GuideSearchViewModel
-    let result: ProgramSearchResult
-    let channel: RegzaChannel
+    let row: GuideSearchViewModel.Row
 
     var body: some View {
-        let program = result.program
+        let program = row.program
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Text(search.timeText(of: program))
+                Text(row.timeText)
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(program.isOnAir() ? AppTheme.accent : .secondary)
-                Text(channel.name)
+                Text(row.channel.name)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                if search.isReserved(program) {
+                if row.isReserved {
                     Image(systemName: "record.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.red)
@@ -138,7 +136,7 @@ private struct SearchResultRow: View {
             Text(program.name)
                 .font(.subheadline.weight(.medium))
                 .lineLimit(2)
-            if let reason = search.reason(for: result) {
+            if let reason = row.reason {
                 Text(reason)
                     .font(.caption)
                     .foregroundStyle(AppTheme.accent)
