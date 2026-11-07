@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -22,14 +23,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.RegzaAndroidSnapshot
 
-/** テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える (iOS 版と同じ) */
+/** テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える (iOS と同じ ChannelListViewModel) */
 @Composable
-fun ChannelScreen(model: RegzaViewModel) {
-    LaunchedEffect(model.connection) { model.loadChannels() }
-    val bands = model.bands
-    val band = model.band
-    val nowPlayingCode = model.nowPlaying?.channelCode
+fun ChannelScreen(state: RegzaAndroidSnapshot, send: Send) {
+    LaunchedEffect(Unit) { send(RegzaAndroidAction.showChannels()) }
+    val list = state.channelList
+    val bands = list.bands
+    val band = list.band.orElse(null)
+    val tuningCode = list.tuningChannelCode.orElse(null)
 
     Column(Modifier.padding(horizontal = 16.dp)) {
         if (bands.size > 1) {
@@ -38,20 +42,27 @@ fun ChannelScreen(model: RegzaViewModel) {
                     SegmentedButton(
                         // Swift の値なので、同じ種類かは rawValue で比べる
                         selected = item.rawValue == band?.rawValue,
-                        onClick = { model.selectedBand = item },
+                        onClick = { send(RegzaAndroidAction.selectBand(item)) },
                         shape = SegmentedButtonDefaults.itemShape(index, bands.size),
                     ) { Text(item.label) }
                 }
             }
         }
-        val message = model.connectionError ?: model.message
-        if (message.isNotEmpty()) Text(message, color = MaterialTheme.colorScheme.error)
+        list.loadErrorMessage.orElse(null)?.let { message ->
+            Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(vertical = 12.dp))
+            TextButton(onClick = { send(RegzaAndroidAction.reloadChannels()) }) { Text("もう一度試す") }
+        }
+        list.tuneError.orElse(null)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        if (list.isLoading && list.rows.isEmpty()) {
+            CircularProgressIndicator(Modifier.padding(24.dp).align(Alignment.CenterHorizontally))
+        }
         LazyColumn {
-            items(model.listedChannels, key = { it.code }) { channel ->
+            items(list.rows, key = { it.channel.code }) { row ->
+                val channel = row.channel
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(enabled = model.tuningChannelCode == null) { model.tune(channel) }
+                        .clickable(enabled = tuningCode == null) { send(RegzaAndroidAction.tune(channel)) }
                         .padding(vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -64,18 +75,14 @@ fun ChannelScreen(model: RegzaViewModel) {
                     Text(
                         channel.name,
                         // 同じ放送局のサブチャンネルは控えめに出す (iOS 版と同じ)
-                        color = if (channel.isRepresentative || band?.rawValue == "cs") {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        color = if (row.isSubchannel) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
                     when {
-                        model.tuningChannelCode == channel.code -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        channel.code == nowPlayingCode -> Text("✓", color = MaterialTheme.colorScheme.primary)
+                        tuningCode == channel.code -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        row.isNowPlaying -> Text("✓", color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 HorizontalDivider()

@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.RegzaAndroidSnapshot
 import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RegzaNowPlaying
 
@@ -34,17 +36,20 @@ import com.example.regzaremote.core.RegzaNowPlaying
  * 手の感覚で押すので、再生中かどうかでボタンの位置は変えない (再生と一時停止は同じ場所で入れ替える)
  */
 @Composable
-fun RemoteScreen(model: RegzaViewModel) {
-    val nowPlaying = model.nowPlaying
-    val message = model.connectionError ?: model.message
-    val send: (RegzaKey) -> Unit = model::send
+fun RemoteScreen(state: RegzaAndroidSnapshot, sendAction: Send) {
+    val nowPlaying = state.nowPlaying.orElse(null)
+    // テレビを探している間は、エラーではないので普通の色で出す
+    val message = if (state.isSearchingTV) "テレビを探しています…" else state.connectionError.orElse("")
+    val send: (RegzaKey) -> Unit = { sendAction(RegzaAndroidAction.press(it)) }
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         NowPlayingCard(nowPlaying)
-        if (message.isNotEmpty()) Text(message, color = MaterialTheme.colorScheme.error)
+        if (message.isNotEmpty()) {
+            Text(message, color = if (state.isSearchingTV) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
+        }
 
         // 電源は誤って押さないよう左端に離し、入力切替・消音と並べる
         KeyRow {
@@ -107,7 +112,7 @@ fun RemoteScreen(model: RegzaViewModel) {
         KeyRow { listOf(Keys.recordedList, Keys.timeShift, Keys.jumpToStart).forEach { KeyButton(it, send, Modifier.weight(1f)) } }
 
         Spacer(Modifier.height(8.dp))
-        TextButton(onClick = model::reregister) { Text("テレビを登録し直す") }
+        TextButton(onClick = { sendAction(RegzaAndroidAction.showSetup()) }) { Text("テレビを登録し直す") }
     }
 }
 

@@ -162,7 +162,11 @@ public final class TVSetupViewModel {
             }
         }
         if devices.isEmpty {
+            #if os(iOS)
             scanMessage = "見つかりませんでした。テレビの電源が入っているか、iPhone の「設定」→「プライバシーとセキュリティ」→「ローカルネットワーク」でこのアプリが許可されているか確認してください。"
+            #else
+            scanMessage = "見つかりませんでした。テレビの電源が入っているか、テレビと同じ Wi-Fi につながっているか確認してください。"
+            #endif
         }
     }
 
