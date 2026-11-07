@@ -125,7 +125,7 @@ public final class AppViewModel {
             next.playingChannel = channel
         case .closePlayer:
             if let player {
-                player.end()
+                player.send(.end)
                 self.player = nil
             }
             next.playingChannel = nil
@@ -179,6 +179,7 @@ extension AppViewModel: Introspectable {
     /// 土台・タブの画面・戻る道の画面 (`channels-0` のように、タブと奥行きで名前を付ける)
     public var introspectionChildren: [any Introspectable] {
         var children: [any Introspectable] = [remote, guideGrid, channelList, reservationList]
+        if let player { children.append(player) }
         for tab in Tab.allCases {
             for (depth, route) in state.path(of: tab).enumerated() {
                 let screen: any Introspectable = switch route {

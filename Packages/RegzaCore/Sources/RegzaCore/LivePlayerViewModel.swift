@@ -27,70 +27,111 @@ public final class LivePlayerViewModel {
         case failed(String, canRetry: Bool)
     }
 
-    /// いま見ている局
-    public private(set) var channel: RegzaChannel
-    public private(set) var phase = Phase.preparing
+    public struct State: Equatable, Sendable {
+        /// いま見ている局
+        public var channel: RegzaChannel
+        public var phase: Phase
+        /// 見ている局でいま放送中の番組 (番組表から)
+        public var program: MirakurunProgram?
+        /// 準備中に出す説明
+        public var preparingMessage: String
+        /// 見られる局がある放送の種類
+        public var bands: [RegzaChannel.Band]
+        /// 一覧に出す局 (選んでいる放送の種類のもの)
+        public var channels: [Row]
+    }
+
+    public struct Row: Equatable, Sendable, Identifiable {
+        public var channel: RegzaChannel
+        public var programName: String?
+        /// いま見ている局
+        public var isWatching: Bool
+        public var id: String { channel.code }
+    }
+
+    public enum Action: Sendable {
+        /// 画面を開いた。局名と番組名を出すため、チャンネルと番組表を読む
+        case appear
+        /// 配信を頼む
+        case start
+        /// 前の配信を止めて、選んだ局の配信を頼み直す
+        case switchChannel(RegzaChannel)
+        /// 準備できないまま残っている配信 (ほかの端末のものも含む) を止めてから、もう一度頼む
+        case retryAfterStoppingStalled
+        /// 見終わった。配信を止めてチューナーを空ける
+        case end
+    }
+
+    private var channel: RegzaChannel
+    private var phase = Phase.preparing
     @ObservationIgnored private var streamID: Int?
     /// 配信を頼んでから見終わるまでの処理 (局を切り替えたら止めて頼み直す)
     @ObservationIgnored private var session: Task<Void, Never>?
+    @ObservationIgnored private let work = Work()
 
-    /// 準備中に出す説明
-    public var preparingMessage: String { "\(channel.name) の配信を準備しています…（20 秒ほど）" }
+    public var state: State {
+        let now = Date()
+        let bands = bands
+        let band = remote.state.band(among: bands)
+        return State(
+            channel: channel,
+            phase: phase,
+            program: guide.currentProgram(for: channel, at: now),
+            preparingMessage: "\(channel.name) の配信を準備しています…（20 秒ほど）",
+            bands: bands,
+            channels: watchableChannels.filter { $0.band == band }.map {
+                Row(channel: $0, programName: guide.currentProgram(for: $0, at: now)?.name, isWatching: $0 == channel)
+            }
+        )
+    }
+
+    public func send(_ action: Action) {
+        switch action {
+        case .appear:
+            work.run {
+                try? await self.remote.loadChannels()
+                await self.guide.loadGuidePrograms()
+            }
+        case .start:
+            start()
+        case .switchChannel(let newChannel):
+            guard newChannel != channel else { return }
+            end()
+            channel = newChannel
+            start()
+        case .retryAfterStoppingStalled:
+            work.run {
+                await self.stream.stopStalled()
+                self.start()
+            }
+        case .end:
+            end()
+        }
+    }
 
     // MARK: - 見られる局
 
     /// EPGStation で見られる局 (Mirakurun が受信している局。番組表がまだなければ CS 以外)。サブチャンネルは代表だけ
-    public var watchableChannels: [RegzaChannel] {
-        remote.channels.filter { channel in
+    private var watchableChannels: [RegzaChannel] {
+        remote.state.channels.filter { channel in
             guard channel.isRepresentative || channel.band == .cs else { return false }
             return guide.guidePrograms.isEmpty ? channel.band != .cs : guide.guidePrograms[channel.code] != nil
         }
     }
 
-    public var bands: [RegzaChannel.Band] {
+    private var bands: [RegzaChannel.Band] {
         RegzaChannel.Band.allCases.filter { band in watchableChannels.contains { $0.band == band } }
-    }
-
-    /// 一覧に出す局 (選んでいる放送の種類のもの)
-    public var listedChannels: [RegzaChannel] {
-        let band = remote.band(among: bands)
-        return watchableChannels.filter { $0.band == band }
-    }
-
-    public func currentProgram(for channel: RegzaChannel, at date: Date = Date()) -> MirakurunProgram? {
-        guide.currentProgram(for: channel, at: date)
     }
 
     // MARK: - 配信
 
-    /// 画面を開いたとき。局名と番組名を出すため、チャンネルと番組表を読む
-    public func appear() async {
-        try? await remote.loadChannels()
-        await guide.loadGuidePrograms()
-    }
-
-    public func start() {
+    private func start() {
         session?.cancel()
         let channel = channel
         session = Task { await run(channel) }
     }
 
-    /// 前の配信を止めて、選んだ局の配信を頼み直す
-    public func switchChannel(to newChannel: RegzaChannel) {
-        guard newChannel != channel else { return }
-        end()
-        channel = newChannel
-        start()
-    }
-
-    /// 準備できないまま残っている配信 (ほかの端末のものも含む) を止めてから、もう一度頼む
-    public func retryAfterStoppingStalled() async {
-        await stream.stopStalled()
-        start()
-    }
-
-    /// 見終わった。配信を止めてチューナーを空ける
-    public func end() {
+    private func end() {
         session?.cancel()
         session = nil
         phase = .preparing
@@ -137,6 +178,33 @@ public final class LivePlayerViewModel {
                 再生できませんでした。\(error.localizedDescription)
                 EPGStation で同時に変換できる数の上限に達していると始まりません。ほかの画面で見ている配信を閉じるか、準備できないまま残っている配信を止めてから試してください。
                 """, canRetry: true)
+        }
+    }
+}
+
+extension LivePlayerViewModel: Introspectable {
+    public var introspectionName: String { "player" }
+    public var introspectionValue: Any { state }
+    /// 配信の準備中も忙しいとする (CLI の do で、再生できるか失敗するまで待てるように)
+    public var isBusy: Bool { work.isBusy || (session != nil && phase == .preparing) }
+
+    public var introspectionActions: [ActionDescription] {
+        [
+            ActionDescription("switchChannel", "局を切り替える", parameters: ["channel": "channels の局の code"]),
+            ActionDescription("retryAfterStoppingStalled", "準備できないまま残っている配信を止めて、もう一度頼む"),
+        ]
+    }
+
+    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+        switch action {
+        case "switchChannel":
+            let code = try arguments.string("channel")
+            guard let row = state.channels.first(where: { $0.channel.code == code }) else {
+                throw IntrospectionError.unavailable("チャンネル \(code) はライブ視聴で見られません")
+            }
+            send(.switchChannel(row.channel))
+        case "retryAfterStoppingStalled": send(.retryAfterStoppingStalled)
+        default: throw IntrospectionError.unknownAction(action)
         }
     }
 }

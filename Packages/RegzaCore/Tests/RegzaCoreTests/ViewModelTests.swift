@@ -387,15 +387,15 @@ import Testing
                 ScreenViewModelTests.status(200, "{}")
             }
         }
-        player.start()
-        await wait { if case .ready = player.phase { true } else { false } }
+        player.send(.start)
+        await wait { if case .ready = player.state.phase { true } else { false } }
 
-        #expect(player.phase == .ready(try #require(URL(string: "http://192.0.2.30:8888/streamfiles/stream5.m3u8"))))
+        #expect(player.state.phase == .ready(try #require(URL(string: "http://192.0.2.30:8888/streamfiles/stream5.m3u8"))))
         // 止められずに残ったときに次に開いて止められるよう、頼んだ配信を覚えておく
         #expect(remote.store.ownStreamIDs == [5])
 
-        player.end()
-        #expect(player.phase == .preparing)
+        player.send(.end)
+        #expect(player.state.phase == .preparing)
         await wait { remote.store.ownStreamIDs.isEmpty }
         #expect(remote.store.ownStreamIDs.isEmpty)
         #expect(transport.paths.contains("/api/streams/5"))
@@ -403,10 +403,10 @@ import Testing
 
     @Test func explainsWhenStreamDoesNotStart() async throws {
         let (player, _, remote) = try makePlayer(channelCode: "JP-G00000001") { _ in ScreenViewModelTests.status(500) }
-        player.start()
-        await wait { if case .failed = player.phase { true } else { false } }
-        guard case .failed(let message, let canRetry) = player.phase else {
-            Issue.record("失敗にならなかった: \(player.phase)")
+        player.send(.start)
+        await wait { if case .failed = player.state.phase { true } else { false } }
+        guard case .failed(let message, let canRetry) = player.state.phase else {
+            Issue.record("失敗にならなかった: \(player.state.phase)")
             return
         }
         #expect(message.hasPrefix("再生できませんでした。"))
@@ -416,9 +416,9 @@ import Testing
 
     @Test func refusesChannelThatEPGStationDoesNotKnow() async throws {
         let (player, transport, _) = try makePlayer(channelCode: "unknown") { _ in ScreenViewModelTests.status(200, "{}") }
-        player.start()
-        await wait { player.phase != .preparing }
-        #expect(player.phase == .failed("このチャンネルは EPGStation で見られません。", canRetry: false))
+        player.send(.start)
+        await wait { player.state.phase != .preparing }
+        #expect(player.state.phase == .failed("このチャンネルは EPGStation で見られません。", canRetry: false))
         #expect(transport.paths.isEmpty)
     }
 }

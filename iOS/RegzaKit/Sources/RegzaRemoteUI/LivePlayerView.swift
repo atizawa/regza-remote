@@ -52,10 +52,12 @@ struct LivePlayerView: View {
                 }
             }
         }
-        .task { await viewModel.appear() }
-        .onAppear { viewModel.start() }
-        .onDisappear { viewModel.end() }
-        .onChange(of: viewModel.phase, initial: true) { _, phase in
+        .onAppear {
+            viewModel.send(.appear)
+            viewModel.send(.start)
+        }
+        .onDisappear { viewModel.send(.end) }
+        .onChange(of: viewModel.state.phase, initial: true) { _, phase in
             // 局を切り替えたり閉じたりしたら、前の配信の再生をやめる
             player?.pause()
             player = nil
@@ -71,13 +73,14 @@ struct LivePlayerView: View {
     private var video: some View {
         ZStack {
             Color.black
-            switch viewModel.phase {
+            let state = viewModel.state
+            switch state.phase {
             case .preparing:
                 VStack(spacing: 12) {
                     ProgressView()
                         .controlSize(.large)
                         .tint(.white)
-                    Text(viewModel.preparingMessage)
+                    Text(state.preparingMessage)
                         .font(.footnote)
                         .foregroundStyle(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
@@ -95,7 +98,7 @@ struct LivePlayerView: View {
                         .multilineTextAlignment(.center)
                     if canRetry {
                         Button("準備できていない配信を止めて、もう一度試す") {
-                            Task { await viewModel.retryAfterStoppingStalled() }
+                            viewModel.send(.retryAfterStoppingStalled)
                         }
                         .buttonStyle(.borderedProminent)
                     }
@@ -115,9 +118,11 @@ private struct ProgramInfo: View {
 
     var body: some View {
         // 番組が変わったら表示も変える
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            let channel = viewModel.channel
-            let program = viewModel.currentProgram(for: channel, at: context.date)
+        // state は読むたびに今の時刻で番組を求める
+        TimelineView(.periodic(from: .now, by: 30)) { _ in
+            let state = viewModel.state
+            let channel = state.channel
+            let program = state.program
             VStack(alignment: .leading, spacing: 6) {
                 Text(channel.name + (program == nil ? "" : " · 放送中"))
                     .font(.subheadline.weight(.semibold))
@@ -158,13 +163,15 @@ private struct ChannelPicker: View {
     let viewModel: LivePlayerViewModel
 
     var body: some View {
+        let state = viewModel.state
         VStack(alignment: .leading, spacing: 0) {
-            if viewModel.bands.count > 1 {
-                BandPicker(bands: viewModel.bands)
+            if state.bands.count > 1 {
+                BandPicker(bands: state.bands)
             }
-            ForEach(viewModel.listedChannels) { channel in
+            ForEach(state.channels) { row in
+                let channel = row.channel
                 Button {
-                    viewModel.switchChannel(to: channel)
+                    viewModel.send(.switchChannel(channel))
                 } label: {
                     HStack(spacing: 12) {
                         Text(channel.formattedNumber)
@@ -173,15 +180,15 @@ private struct ChannelPicker: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(channel.name)
                                 .lineLimit(1)
-                            if let program = viewModel.currentProgram(for: channel) {
-                                Text(program.name)
+                            if let programName = row.programName {
+                                Text(programName)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
                             }
                         }
                         Spacer()
-                        if channel == viewModel.channel {
+                        if row.isWatching {
                             Image(systemName: "play.fill")
                                 .foregroundStyle(AppTheme.accent)
                                 .accessibilityLabel("再生中")
