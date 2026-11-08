@@ -7,11 +7,13 @@ import Observation
 @Observable
 public final class ChannelListViewModel {
     public let remote: RemoteViewModel
+    public let channels: ChannelUseCase
     public let guide: GuideUseCase
     public let stream: StreamUseCase
 
-    public init(remote: RemoteViewModel, guide: GuideUseCase, stream: StreamUseCase) {
+    public init(remote: RemoteViewModel, channels: ChannelUseCase, guide: GuideUseCase, stream: StreamUseCase) {
         self.remote = remote
+        self.channels = channels
         self.guide = guide
         self.stream = stream
     }
@@ -24,77 +26,48 @@ public final class ChannelListViewModel {
         public var hasNoChannels: Bool
         /// 切り替えられなかったときの説明
         public var tuneError: String?
-        /// 切り替え中のチャンネル
-        public var tuning: RegzaChannel?
+        /// 切り替え中のチャンネルのコード
+        public var tuningCode: String?
         /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
         public var bands: [RegzaChannel.Band]
         /// 出す放送の種類 (選んでいなければ、いま見ている種類)
         public var band: RegzaChannel.Band?
-        public var rows: [Row]
+        public var rows: [ChannelItem]
         /// アプリで見られる (ライブ視聴が設定されている)
         public var canStream: Bool
-    }
-
-    /// 1 チャンネル分の行
-    public struct Row: Equatable, Sendable, Identifiable {
-        public var channel: RegzaChannel
-        /// 放送中の番組名
-        public var programName: String?
-        public var isNowPlaying: Bool
-        /// 番組表を開ける
-        public var hasPrograms: Bool
-        /// 放送中の番組を最初から見られる
-        public var canStartOver: Bool
-        /// 控えめに出す (同じ放送局のサブチャンネル。CS は局ごとに別なので控えめにしない)
-        public var isSubchannel: Bool
-
-        public var id: String { channel.code }
     }
 
     public enum Action: Sendable {
         /// 画面を開いた。番組名と「最初から見る」を出すため、番組表とタイムシフトの設定も読む
         case appear
         case reload
-        case tune(RegzaChannel)
-        /// 切り替えてから、放送中の番組を最初から再生する
-        case tuneFromStart(RegzaChannel)
+        /// 選局する (チャンネルのコード)
+        case tune(String)
+        /// 切り替えてから、放送中の番組を最初から再生する (チャンネルのコード)
+        case tuneFromStart(String)
     }
 
     // 自分で持つ状態
     private var isLoading = false
     private var loadError: RegzaError?
     private var tuneError: String?
-    private var tuning: RegzaChannel?
+    private var tuningCode: String?
     @ObservationIgnored private let work = Work()
 
     /// 画面に出すもの。自分の状態と、土台・番組表・配信の状態から作る
     public var state: State {
-        let channels = remote.state.channels
-        let bands = RegzaChannel.bands(in: channels)
+        let bands = channels.bands
         let band = remote.state.band(among: bands)
-        let nowPlayingCode = remote.state.nowPlaying?.channelCode
-        let listed = RegzaChannel.channelList(channels, in: band, nowPlayingChannelCode: nowPlayingCode) {
-            guide.currentProgram(for: $0)?.name
-        }
+        let rows = channels.items(band: band, nowPlayingCode: remote.state.nowPlaying?.channelCode)
         return State(
             isLoading: isLoading,
-            loadErrorMessage: channels.isEmpty ? loadError.map(Self.message) : nil,
-            hasNoChannels: channels.isEmpty,
+            loadErrorMessage: remote.state.channels.isEmpty ? loadError.map(Self.message) : nil,
+            hasNoChannels: remote.state.channels.isEmpty,
             tuneError: tuneError,
-            tuning: tuning,
+            tuningCode: tuningCode,
             bands: bands,
             band: band,
-            rows: listed.map { channel in
-                let program = guide.currentProgram(for: channel)
-                return Row(
-                    channel: channel,
-                    programName: program?.name,
-                    isNowPlaying: channel.code == nowPlayingCode,
-                    hasPrograms: guide.hasGuide && guide.guidePrograms[channel.code] != nil,
-                    canStartOver: program.map { remote.tv.canStartOver(channelCode: channel.code, programStart: $0.start) } ?? false,
-                    isSubchannel: !channel.isRepresentative && channel.band != .cs
-                )
-            },
+            rows: rows,
             canStream: stream.canStream
         )
     }
@@ -108,8 +81,8 @@ public final class ChannelListViewModel {
                 await self.remote.tv.loadTimeshiftSettings()
             }
         case .reload: work.run { await self.load(force: true) }
-        case .tune(let channel): work.run { await self.tune(to: channel, startOver: false) }
-        case .tuneFromStart(let channel): work.run { await self.tune(to: channel, startOver: true) }
+        case .tune(let code): work.run { await self.tune(code: code, startOver: false) }
+        case .tuneFromStart(let code): work.run { await self.tune(code: code, startOver: true) }
         }
     }
 
@@ -131,9 +104,10 @@ public final class ChannelListViewModel {
         }
     }
 
-    private func tune(to channel: RegzaChannel, startOver: Bool) async {
-        tuning = channel
-        defer { tuning = nil }
+    private func tune(code: String, startOver: Bool) async {
+        guard let channel = channels.channel(code: code) else { return }
+        tuningCode = code
+        defer { tuningCode = nil }
         tuneError = nil
         do {
             if !startOver {
@@ -169,18 +143,18 @@ extension ChannelListViewModel: Introspectable {
         switch action {
         case "appear": send(.appear)
         case "reload": send(.reload)
-        case "tune": send(.tune(try row(arguments).channel))
+        case "tune": send(.tune(try row(arguments).code))
         case "tuneFromStart":
             let row = try row(arguments)
-            guard row.canStartOver else { throw IntrospectionError.unavailable("\(row.channel.name) の番組は最初から見られません") }
-            send(.tuneFromStart(row.channel))
+            guard row.canStartOver else { throw IntrospectionError.unavailable("\(row.name) の番組は最初から見られません") }
+            send(.tuneFromStart(row.code))
         default: throw IntrospectionError.unknownAction(action)
         }
     }
 
-    private func row(_ arguments: [String: JSONValue]) throws -> Row {
+    private func row(_ arguments: [String: JSONValue]) throws -> ChannelItem {
         let code = try arguments.string("channel")
-        guard let row = state.rows.first(where: { $0.channel.code == code }) else {
+        guard let row = state.rows.first(where: { $0.code == code }) else {
             throw IntrospectionError.unavailable("チャンネル \(code) は一覧にありません")
         }
         return row

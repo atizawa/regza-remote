@@ -24,7 +24,7 @@ public final class NowPlayingViewModel {
         /// 待機中なので電源を入れられる (開いている間はミニプレーヤーの電源ボタンが隠れるので、ここでも出す)
         public var canPowerOn: Bool
         /// アプリで見られる、いま映っている局
-        public var playableChannel: RegzaChannel?
+        public var playableChannelCode: String?
         /// いま映っている放送を最初から見られるか
         public var canStartOver: Bool
     }
@@ -49,7 +49,7 @@ public final class NowPlayingViewModel {
             title: isConnected && isWatching ? "視聴中" : "テレビ",
             description: description.isEmpty ? nil : description,
             canPowerOn: nowPlaying?.kind == .standby && remoteState.lastError == nil,
-            playableChannel: stream.canStream && nowPlaying?.kind == .broadcast ? remoteState.nowPlayingChannel : nil,
+            playableChannelCode: stream.canStream && nowPlaying?.kind == .broadcast ? remoteState.nowPlayingChannel?.code : nil,
             canStartOver: canStartOver(nowPlaying)
         )
     }

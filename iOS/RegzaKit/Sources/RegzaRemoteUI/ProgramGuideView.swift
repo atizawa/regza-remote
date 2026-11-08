@@ -14,7 +14,7 @@ struct ChannelProgramsView: View {
     var body: some View {
         let state = viewModel.state
         content(state)
-            .navigationTitle(state.channel.name)
+            .navigationTitle(state.channelName)
             .navigationBarTitleDisplayMode(.inline)
             .task { viewModel.send(.appear) }
             .refreshable {
@@ -34,7 +34,7 @@ struct ChannelProgramsView: View {
                     ForEach(days) { group in
                         Section {
                             ForEach(group.programs) { program in
-                                NavigationLink(value: AppViewModel.Route.programDetail(programID: program.id, channelCode: state.channel.code)) {
+                                NavigationLink(value: AppViewModel.Route.programDetail(programID: program.id, channelCode: state.channelCode)) {
                                     ProgramRow(program: program)
                                 }
                             }
@@ -115,7 +115,6 @@ struct ProgramDetailView: View {
 
     private var state: ProgramDetailViewModel.State { viewModel.state }
     private var program: ProgramItem { state.program }
-    private var channel: RegzaChannel { state.channel }
 
     var body: some View {
         ScrollView {
@@ -144,7 +143,7 @@ struct ProgramDetailView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Text(channel.name)
+                Text(state.channelName)
                 if program.isOnAir {
                     Text("· 放送中")
                 }
@@ -201,7 +200,7 @@ struct ProgramDetailView: View {
             }
             if state.canStream {
                 Button {
-                    app.send(.play(channel))
+                    app.send(.play(channelCode: state.channelCode))
                 } label: {
                     actionLabel("アプリで見る", systemImage: "play.tv", isBusy: false)
                 }

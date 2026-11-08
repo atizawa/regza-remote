@@ -12,6 +12,7 @@ struct LiveModels {
     let store: MemoryStore
     let tv: RegzaTVRepository
     let remote: RemoteViewModel
+    let channels: ChannelUseCase
     let guide: GuideUseCase
     let recording: RecordingUseCase
     let stream: StreamUseCase
@@ -25,6 +26,7 @@ struct LiveModels {
         let guide = MirakurunGuideRepository(store: store, transport: transport)
         let stream = EPGStationStreamRepository(store: store, guide: guide, transport: transport)
         let recording = RegzaRecordingRepository(tv: tv)
+        channels = ChannelUseCase(tv: tv, guide: guide)
         self.guide = GuideUseCase(guide: guide, recording: recording)
         self.recording = RecordingUseCase(recording: recording)
         self.stream = StreamUseCase(stream: stream)
@@ -32,7 +34,7 @@ struct LiveModels {
     }
 
     var app: AppViewModel {
-        AppViewModel(remote: remote, guide: guide, recording: recording, stream: stream, setup: setup)
+        AppViewModel(remote: remote, channels: channels, guide: guide, recording: recording, stream: stream, setup: setup)
     }
 }
 
@@ -188,27 +190,27 @@ struct LiveModels {
     }
 
     @Test func channelListExplainsUnsupportedModel() async {
-        let (remote, guide, _, stream) = makeModels { _ in Self.status(404) }
-        let viewModel = ChannelListViewModel(remote: remote, guide: guide, stream: stream)
+        let live = LiveModels(transport: FakeTransport { _ in Self.status(404) })
+        let viewModel = live.app.channelList
         await send(viewModel) { $0.send(.reload) }
         #expect(viewModel.state.loadErrorMessage == "この機種はチャンネル一覧の取得に対応していません。")
         #expect(!viewModel.state.isLoading)
     }
 
     @Test func channelListExplainsRejectedTune() async throws {
-        let (remote, guide, _, stream) = makeModels { request in
+        let live = LiveModels(transport: FakeTransport { request in
             request.url.path.hasSuffix("channel_list") ? Self.status(200, ViewModelTests.channelList) : Self.status(200, #"{"status":1}"#)
-        }
-        let viewModel = ChannelListViewModel(remote: remote, guide: guide, stream: stream)
+        })
+        let viewModel = live.app.channelList
         await send(viewModel) { $0.send(.reload) }
-        #expect(viewModel.state.bands == [.terrestrial, .bs])
+        #expect(viewModel.state.bands == [RegzaChannel.Band.terrestrial, .bs])
         let row = try #require(viewModel.state.rows.first)
         #expect(!row.isSubchannel)
 
-        await send(viewModel) { $0.send(.tune(row.channel)) }
+        await send(viewModel) { $0.send(.tune(row.code)) }
 
         #expect(viewModel.state.tuneError == "テスト局１ に切り替えられませんでした。テレビの電源が入っているか確認してください。")
-        #expect(viewModel.state.tuning == nil)
+        #expect(viewModel.state.tuningCode == nil)
         #expect(viewModel.state.rows.first?.isNowPlaying == false)
     }
 
@@ -401,7 +403,7 @@ struct LiveModels {
         #expect(state.title == "視聴中")
         #expect(state.description == "見本の説明")
         // 見本のときは配信できないので、アプリで見るは出さない。タイムシフトの設定もないので最初から見るも出さない
-        #expect(state.playableChannel == nil)
+        #expect(state.playableChannelCode == nil)
         #expect(!state.canStartOver)
     }
 }
@@ -566,18 +568,18 @@ struct LiveModels {
         let app = try makeApp()
         let channel = try #require(app.remote.channels.first)
         app.send(.selectTab(.channels))
-        app.send(.open(.channelPrograms(channel)))
-        let list = app.programList(for: channel)
+        app.send(.open(.channelPrograms(channelCode: channel.code)))
+        let list = try #require(app.programList(channelCode: channel.code))
         // 戻る道にある間は同じ ViewModel を使う
-        #expect(app.programList(for: channel) === list)
-        #expect(app.state.path(of: .channels) == [.channelPrograms(channel)])
+        #expect(app.programList(channelCode: channel.code) === list)
+        #expect(app.state.path(of: .channels) == [.channelPrograms(channelCode: channel.code)])
         // ほかのタブの戻る道には入らない
         #expect(app.state.path(of: .guide).isEmpty)
 
         app.send(.back)
         #expect(app.state.path(of: .channels).isEmpty)
         // 閉じた画面の ViewModel は捨て、開き直すと作り直す
-        #expect(app.programList(for: channel) !== list)
+        #expect(app.programList(channelCode: channel.code) !== list)
     }
 
     @Test func settingsStartFromTVWhenNotConfigured() throws {
@@ -595,7 +597,7 @@ struct LiveModels {
         let app = try makeApp()
         let channel = try #require(app.remote.channels.first)
         // EPGStation が設定されていないので開かない
-        app.send(.play(channel))
+        app.send(.play(channelCode: channel.code))
         #expect(app.state.playingChannel == nil)
         #expect(app.player == nil)
     }

@@ -28,17 +28,7 @@ public struct RegzaAndroidChannelList {
     public var tuningChannelCode: String?
     public var bands: [RegzaChannel.Band]
     public var band: RegzaChannel.Band?
-    public var rows: [RegzaAndroidChannelRow]
-}
-
-public struct RegzaAndroidChannelRow {
-    public var channel: RegzaChannel
-    public var programName: String?
-    public var isNowPlaying: Bool
-    /// 番組表を開ける
-    public var hasPrograms: Bool
-    /// 控えめに出す (同じ放送局のサブチャンネル)
-    public var isSubchannel: Bool
+    public var rows: [ChannelItem]
 }
 
 /// 新聞のテレビ欄のような番組表 (GuideGridViewModel.State)。選んでいる日の 24 時間分だけを入れる
@@ -136,15 +126,10 @@ extension RegzaAndroidScreen {
                 isLoading: state.isLoading,
                 loadErrorMessage: state.loadErrorMessage,
                 tuneError: state.tuneError,
-                tuningChannelCode: state.tuning?.code,
+                tuningChannelCode: state.tuningCode,
                 bands: state.bands,
                 band: state.band,
-                rows: state.rows.map {
-                    RegzaAndroidChannelRow(
-                        channel: $0.channel, programName: $0.programName, isNowPlaying: $0.isNowPlaying,
-                        hasPrograms: $0.hasPrograms, isSubchannel: $0.isSubchannel
-                    )
-                }
+                rows: state.rows
             ))
         case .guide(let state, let band, let window):
             let hours = (0..<GuideGridViewModel.hours).map {
@@ -181,7 +166,7 @@ extension RegzaAndroidScreen {
             ))
         case .programs(let state):
             self.init(kind: "programs", programs: RegzaAndroidProgramList(
-                channelName: state.channel.name,
+                channelName: state.channelName,
                 isLoaded: state.days != nil,
                 loadErrorMessage: state.loadErrorMessage,
                 days: state.days ?? []
@@ -190,7 +175,7 @@ extension RegzaAndroidScreen {
             self.init(kind: "detail", detail: RegzaAndroidProgramDetail(
                 program: state.program,
                 texts: state.texts,
-                channelName: state.channel.name,
+                channelName: state.channelName,
                 isTuning: state.isTuning,
                 isReserving: state.reserving != nil,
                 message: state.message,

@@ -1,0 +1,41 @@
+import Foundation
+
+/// チャンネル: テレビに登録されているチャンネルを、放送の種類ごとに、放送中の番組名つきで並べる
+@MainActor
+public final class ChannelUseCase {
+    private let tv: any TVRepository
+    private let guide: any GuideRepository
+
+    public init(tv: any TVRepository, guide: any GuideRepository) {
+        self.tv = tv
+        self.guide = guide
+    }
+
+    /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
+    public var bands: [RegzaChannel.Band] { RegzaChannel.bands(in: tv.channels) }
+
+    /// チャンネルの ID のチャンネル。テレビに登録されていなければ nil
+    public func channel(code: String) -> RegzaChannel? {
+        tv.channels.first { $0.code == code }
+    }
+
+    /// 一覧に出すチャンネル (UI の型)。サブチャンネルは代表と、いま映っているものだけにする
+    public func items(band: RegzaChannel.Band?, nowPlayingCode: String?, now: Date = Date()) -> [ChannelItem] {
+        let listed = RegzaChannel.channelList(tv.channels, in: band, nowPlayingChannelCode: nowPlayingCode) {
+            guide.currentProgram(for: $0, at: now)?.name
+        }
+        return listed.map { channel in
+            let program = guide.currentProgram(for: channel, at: now)
+            return ChannelItem(
+                code: channel.code,
+                name: channel.name,
+                numberText: channel.formattedNumber,
+                programName: program?.name,
+                isNowPlaying: channel.code == nowPlayingCode,
+                hasPrograms: guide.hasGuide && guide.guidePrograms[channel.code] != nil,
+                canStartOver: program.map { tv.canStartOver(channelCode: channel.code, programStart: $0.start) } ?? false,
+                isSubchannel: !channel.isRepresentative && channel.band != .cs
+            )
+        }
+    }
+}

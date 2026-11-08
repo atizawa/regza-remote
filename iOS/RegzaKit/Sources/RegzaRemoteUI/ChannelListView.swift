@@ -73,18 +73,17 @@ struct ChannelListView: View {
         }
     }
 
-    private func row(_ row: ChannelListViewModel.Row, state: ChannelListViewModel.State) -> some View {
-        let channel = row.channel
-        return HStack(spacing: 12) {
+    private func row(_ row: ChannelItem, state: ChannelListViewModel.State) -> some View {
+        HStack(spacing: 12) {
             Button {
-                viewModel.send(.tune(channel))
+                viewModel.send(.tune(row.code))
             } label: {
                 HStack(spacing: 12) {
-                    Text(channel.formattedNumber)
+                    Text(row.numberText)
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(channel.name)
+                        Text(row.name)
                             // 同じ放送局のサブチャンネルは控えめに出す
                             .foregroundStyle(row.isSubchannel ? .secondary : .primary)
                             .lineLimit(1)
@@ -96,7 +95,7 @@ struct ChannelListView: View {
                         }
                     }
                     Spacer()
-                    if state.tuning == channel {
+                    if state.tuningCode == row.code {
                         ProgressView()
                     } else if row.isNowPlaying {
                         Image(systemName: "checkmark")
@@ -110,10 +109,10 @@ struct ChannelListView: View {
             // 行の中に 2 つのボタンがあるので、行全体ではなくそれぞれが押されるようにする
             .buttonStyle(.borderless)
             .tint(.primary)
-            .disabled(state.tuning != nil)
+            .disabled(state.tuningCode != nil)
             if row.hasPrograms {
                 Button {
-                    app.send(.open(.channelPrograms(channel)))
+                    app.send(.open(.channelPrograms(channelCode: row.code)))
                 } label: {
                     Image(systemName: "calendar")
                         // ボタンの色 (緑) が混ざらないよう、灰色に固定する
@@ -122,7 +121,7 @@ struct ChannelListView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
-                .accessibilityLabel("\(channel.name) の番組表")
+                .accessibilityLabel("\(row.name) の番組表")
             }
         }
         // 押すとすぐ切り替わるので、切り替え以外は長押しのメニューにまとめる
@@ -130,23 +129,23 @@ struct ChannelListView: View {
     }
 
     @ViewBuilder
-    private func menu(for row: ChannelListViewModel.Row, state: ChannelListViewModel.State) -> some View {
+    private func menu(for row: ChannelItem, state: ChannelListViewModel.State) -> some View {
         Button("切り替える", systemImage: "play.fill") {
-            viewModel.send(.tune(row.channel))
+            viewModel.send(.tune(row.code))
         }
         if state.canStream {
             Button("アプリで見る", systemImage: "play.tv") {
-                app.send(.play(row.channel))
+                app.send(.play(channelCode: row.code))
             }
         }
         if row.canStartOver {
             Button("最初から見る", systemImage: "backward.end.alt") {
-                viewModel.send(.tuneFromStart(row.channel))
+                viewModel.send(.tuneFromStart(row.code))
             }
         }
         if row.hasPrograms {
             Button("番組表", systemImage: "calendar") {
-                app.send(.open(.channelPrograms(row.channel)))
+                app.send(.open(.channelPrograms(channelCode: row.code)))
             }
         }
     }

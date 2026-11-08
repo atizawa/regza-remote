@@ -47,24 +47,23 @@ fun ChannelScreen(list: RegzaAndroidChannelList, send: Send) {
             CircularProgressIndicator(Modifier.padding(24.dp).align(Alignment.CenterHorizontally))
         }
         LazyColumn {
-            items(list.rows, key = { it.channel.code }) { row ->
-                val channel = row.channel
+            items(list.rows, key = { it.code }) { row ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(enabled = tuningCode == null) { send(RegzaAndroidAction.tune(channel)) }
+                        .clickable(enabled = tuningCode == null) { send(RegzaAndroidAction.tune(row.code)) }
                         .padding(vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        channel.formattedNumber,
+                        row.numberText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(56.dp),
                     )
                     Column(Modifier.weight(1f)) {
                         Text(
-                            channel.name,
+                            row.name,
                             // 同じ放送局のサブチャンネルは控えめに出す (iOS 版と同じ)
                             color = if (row.isSubchannel) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
@@ -78,12 +77,12 @@ fun ChannelScreen(list: RegzaAndroidChannelList, send: Send) {
                         }
                     }
                     when {
-                        tuningCode == channel.code -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        tuningCode == row.code -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                         row.isNowPlaying -> Text("✓", color = MaterialTheme.colorScheme.primary)
                     }
                     // 番組表がある局は、その局の番組表を開ける (iOS 版と同じ)
                     if (row.isHasPrograms) {
-                        TextButton(onClick = { send(RegzaAndroidAction.openPrograms(channel.code)) }) { Text("番組表") }
+                        TextButton(onClick = { send(RegzaAndroidAction.openPrograms(row.code)) }) { Text("番組表") }
                     }
                 }
                 HorizontalDivider()

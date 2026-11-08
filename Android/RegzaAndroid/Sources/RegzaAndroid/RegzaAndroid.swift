@@ -99,7 +99,8 @@ public enum RegzaAndroidAction {
     // チャンネル一覧 (ChannelListViewModel)
     case showChannels
     case reloadChannels
-    case tune(RegzaChannel)
+    /// 選局する (チャンネルのコード)
+    case tune(String)
     /// 1 チャンネルの番組表を開く (チャンネルのコード)
     case openPrograms(String)
     /// 番組の詳細を開く (チャンネルのコード、番組の id)
@@ -262,7 +263,9 @@ public final class RegzaAndroidApp {
     @MainActor private func screenKey() -> ScreenKey {
         let state = app.state
         switch state.path(of: state.tab).last {
-        case .channelPrograms(let channel): return .programs(app.programList(for: channel).state)
+        case .channelPrograms(let code):
+            // チャンネルが見つからなければ、タブの最初の画面を出す
+            if let list = app.programList(channelCode: code) { return .programs(list.state) }
         case .programDetail(let id, let code):
             // 番組が見つからなければ、タブの最初の画面を出す
             if let detail = app.programDetail(programID: id, channelCode: code) { return .detail(detail.state) }
@@ -311,9 +314,9 @@ public final class RegzaAndroidApp {
         case .selectBand(let band): app.remote.send(.selectBand(band))
         case .showChannels: app.channelList.send(.appear)
         case .reloadChannels: app.channelList.send(.reload)
-        case .tune(let channel): app.channelList.send(.tune(channel))
+        case .tune(let code): app.channelList.send(.tune(code))
         case .openPrograms(let code):
-            if let channel = app.remote.state.channels.first(where: { $0.code == code }) { app.send(.open(.channelPrograms(channel))) }
+            app.send(.open(.channelPrograms(channelCode: code)))
         case .openProgram(let code, let id): app.send(.open(.programDetail(programID: id, channelCode: code)))
         case .showGuide: app.guideGrid.send(.load)
         case .selectDay(let index):
@@ -356,8 +359,8 @@ public final class RegzaAndroidApp {
     }
 
     @MainActor private func currentProgramList() -> ProgramListViewModel? {
-        guard case .channelPrograms(let channel) = app.state.path(of: app.state.tab).last else { return nil }
-        return app.programList(for: channel)
+        guard case .channelPrograms(let code) = app.state.path(of: app.state.tab).last else { return nil }
+        return app.programList(channelCode: code)
     }
 
     @MainActor private func currentDetail() -> ProgramDetailViewModel? {

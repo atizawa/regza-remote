@@ -138,8 +138,8 @@ private struct NowPlayingDetailView: View {
                     if state.canPowerOn {
                         actionButton("電源を入れる", systemImage: "power") { viewModel.send(.powerOn) }
                     }
-                    if let channel = state.playableChannel {
-                        actionButton("アプリで見る", systemImage: "play.tv") { app.send(.play(channel)) }
+                    if let code = state.playableChannelCode {
+                        actionButton("アプリで見る", systemImage: "play.tv") { app.send(.play(channelCode: code)) }
                     }
                     if state.canStartOver {
                         actionButton("この番組を最初から見る", systemImage: "backward.end.alt") { viewModel.send(.startOver) }

@@ -11,6 +11,7 @@ public final class AppViewModel {
     public let recording: RecordingUseCase
     public let stream: StreamUseCase
     public let setup: SetupUseCase
+    public let channels: ChannelUseCase
 
     // MARK: - 状態と操作
 
@@ -21,7 +22,7 @@ public final class AppViewModel {
     /// タブの中で開く画面
     public enum Route: Hashable, Sendable {
         /// 1 チャンネルの番組表
-        case channelPrograms(RegzaChannel)
+        case channelPrograms(channelCode: String)
         /// 番組の詳細 (番組の id とチャンネルのコード)。番組とチャンネルは UseCase から引く
         case programDetail(programID: Int, channelCode: String)
         /// 番組表の検索
@@ -63,7 +64,7 @@ public final class AppViewModel {
         case showNowPlaying
         case closeNowPlaying
         /// アプリで見る (ライブ視聴)
-        case play(RegzaChannel)
+        case play(channelCode: String)
         case closePlayer
     }
 
@@ -78,13 +79,17 @@ public final class AppViewModel {
     }
 
     /// 画面の ViewModel は UseCase だけを使う。どの Repository の実装を使うかは、組み立てる側 (RegzaApp や見本) が決める
-    public init(remote: RemoteViewModel, guide: GuideUseCase, recording: RecordingUseCase, stream: StreamUseCase, setup: SetupUseCase) {
+    public init(
+        remote: RemoteViewModel, channels: ChannelUseCase, guide: GuideUseCase, recording: RecordingUseCase,
+        stream: StreamUseCase, setup: SetupUseCase
+    ) {
+        self.channels = channels
         self.remote = remote
         self.guide = guide
         self.recording = recording
         self.stream = stream
         self.setup = setup
-        channelList = ChannelListViewModel(remote: remote, guide: guide, stream: stream)
+        channelList = ChannelListViewModel(remote: remote, channels: channels, guide: guide, stream: stream)
         guideGrid = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
         nowPlaying = NowPlayingViewModel(remote: remote, guide: guide, stream: stream)
         reservationList = ReservationListViewModel(remote: remote, recording: recording)
@@ -134,8 +139,8 @@ public final class AppViewModel {
             next.isShowingNowPlaying = true
         case .closeNowPlaying:
             next.isShowingNowPlaying = false
-        case .play(let channel):
-            guard stream.canStream else { return }
+        case .play(let code):
+            guard stream.canStream, let channel = channels.channel(code: code) else { return }
             player = LivePlayerViewModel(remote: remote, guide: guide, stream: stream, channel: channel)
         case .closePlayer:
             if let player {
@@ -158,13 +163,15 @@ public final class AppViewModel {
     public private(set) var player: LivePlayerViewModel?
 
     /// 戻る道の画面の ViewModel。戻って閉じたら捨てる (同じ画面を開き直すと読み直す)
-    @ObservationIgnored private var programLists: [RegzaChannel: ProgramListViewModel] = [:]
+    @ObservationIgnored private var programLists: [String: ProgramListViewModel] = [:]
     @ObservationIgnored private var programDetails: [Route: ProgramDetailViewModel] = [:]
 
-    public func programList(for channel: RegzaChannel) -> ProgramListViewModel {
-        if let viewModel = programLists[channel] { return viewModel }
+    /// 1 チャンネルの番組表の画面の ViewModel。チャンネルがテレビに登録されていなければ nil
+    public func programList(channelCode: String) -> ProgramListViewModel? {
+        if let viewModel = programLists[channelCode] { return viewModel }
+        guard let channel = channels.channel(code: channelCode) else { return nil }
         let viewModel = ProgramListViewModel(guide: guide, recording: recording, channel: channel)
-        programLists[channel] = viewModel
+        programLists[channelCode] = viewModel
         return viewModel
     }
 
@@ -173,7 +180,7 @@ public final class AppViewModel {
         let route = Route.programDetail(programID: programID, channelCode: channelCode)
         if let viewModel = programDetails[route] { return viewModel }
         guard let program = guide.program(id: programID, channelCode: channelCode),
-              let channel = remote.channels.first(where: { $0.code == channelCode })
+              let channel = channels.channel(code: channelCode)
         else { return nil }
         let viewModel = ProgramDetailViewModel(
             remote: remote, guide: guide, recording: recording, stream: stream, program: program, channel: channel
@@ -185,7 +192,7 @@ public final class AppViewModel {
     /// どの戻る道にもない画面の ViewModel を捨てる
     private func forgetClosedScreens() {
         let open = Set(state.paths.values.flatMap { $0 })
-        programLists = programLists.filter { open.contains(.channelPrograms($0.key)) }
+        programLists = programLists.filter { open.contains(.channelPrograms(channelCode: $0.key)) }
         programDetails = programDetails.filter { open.contains($0.key) }
     }
 }
@@ -205,7 +212,7 @@ extension AppViewModel: Introspectable {
         for tab in Tab.allCases {
             for (depth, route) in state.path(of: tab).enumerated() {
                 let screen: (any Introspectable)? = switch route {
-                case .channelPrograms(let channel): programList(for: channel)
+                case .channelPrograms(let code): programList(channelCode: code)
                 case .programDetail(let id, let code): programDetail(programID: id, channelCode: code)
                 case .search: guideGrid.search
                 }
@@ -239,7 +246,7 @@ extension AppViewModel: Introspectable {
             guard let tab = Tab(rawValue: try arguments.string("tab")) else { throw IntrospectionError.invalidArgument("tab") }
             send(.selectTab(tab))
         case "openPrograms":
-            send(.open(.channelPrograms(try channel(arguments))))
+            send(.open(.channelPrograms(channelCode: try channel(arguments).code)))
         case "openProgram":
             let channel = try channel(arguments)
             let id = try arguments.int("program")
@@ -258,8 +265,7 @@ extension AppViewModel: Introspectable {
         case "showNowPlaying": send(.showNowPlaying)
         case "closeNowPlaying": send(.closeNowPlaying)
         case "play":
-            let channel = try channel(arguments)
-            send(.play(channel))
+            send(.play(channelCode: try channel(arguments).code))
             if player == nil { throw IntrospectionError.unavailable("ライブ視聴が設定されていません") }
         case "closePlayer": send(.closePlayer)
         default: throw IntrospectionError.unknownAction(action)
@@ -269,7 +275,7 @@ extension AppViewModel: Introspectable {
     /// 引数 channel の code のチャンネル
     private func channel(_ arguments: [String: JSONValue]) throws -> RegzaChannel {
         let code = try arguments.string("channel")
-        guard let channel = remote.channels.first(where: { $0.code == code }) else {
+        guard let channel = channels.channel(code: code) else {
             throw IntrospectionError.unavailable("チャンネル \(code) はテレビに登録されていません")
         }
         return channel

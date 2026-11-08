@@ -24,6 +24,7 @@ extension AppViewModel {
         let recording = RegzaRecordingRepository(tv: tv)
         self.init(
             remote: model,
+            channels: ChannelUseCase(tv: tv, guide: guide),
             guide: GuideUseCase(guide: guide, recording: recording),
             recording: RecordingUseCase(recording: recording),
             stream: StreamUseCase(stream: stream),

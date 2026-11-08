@@ -21,6 +21,7 @@ extension AppViewModel {
         let recording = SampleRecordingRepository(reservations: reservations)
         return AppViewModel(
             remote: RemoteViewModel(tv: TVUseCase(tv: tv), nowPlaying: nowPlaying),
+            channels: ChannelUseCase(tv: tv, guide: guide),
             guide: GuideUseCase(guide: guide, recording: recording),
             recording: RecordingUseCase(recording: recording),
             stream: StreamUseCase(stream: stream),

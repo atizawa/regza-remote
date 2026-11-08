@@ -16,7 +16,8 @@ public final class ProgramListViewModel {
     }
 
     public struct State: Equatable, Sendable {
-        public var channel: RegzaChannel
+        public var channelCode: String
+        public var channelName: String
         /// 日ごとの番組。読み込む前は nil
         public var days: [ProgramDay]?
         /// 取得できなかった説明
@@ -35,7 +36,8 @@ public final class ProgramListViewModel {
 
     public var state: State {
         State(
-            channel: channel,
+            channelCode: channel.code,
+            channelName: channel.name,
             days: programs.map { guide.days($0) },
             loadErrorMessage: programs == nil ? loadError?.localizedDescription : nil
         )
@@ -112,7 +114,8 @@ public final class ProgramDetailViewModel {
         public var program: ProgramItem
         /// 番組内容・出演者など
         public var texts: [ProgramTextItem]
-        public var channel: RegzaChannel
+        public var channelCode: String
+        public var channelName: String
         public var isTuning: Bool
         public var reserving: Reserving?
         /// 予約・取り消しが終わった回数 (触覚フィードバックの合図)
@@ -156,7 +159,8 @@ public final class ProgramDetailViewModel {
         return State(
             program: guide.item(program),
             texts: guide.texts(of: program),
-            channel: channel,
+            channelCode: channel.code,
+            channelName: channel.name,
             isTuning: isTuning,
             reserving: reserving,
             reserveCount: reserveCount,
