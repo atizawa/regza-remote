@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 
 /// `/remote/status.htm` のレスポンス。
 /// `key=value` が改行区切りで返る。録画再生中以外は各値が 0 か空になる。

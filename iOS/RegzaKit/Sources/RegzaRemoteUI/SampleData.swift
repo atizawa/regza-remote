@@ -55,7 +55,7 @@ enum SampleData {
     ]
 
     private static func code(_ network: Int, _ service: Int) -> String {
-        Mirakurun.channelCode(networkId: network, serviceId: service)
+        BroadcastID.channelCode(networkId: network, serviceId: service)
     }
 
     static func channels() -> [RegzaChannel] {

@@ -91,15 +91,15 @@ libcxx=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/sysroot/usr/lib/aarch
 # swift-java のプラグインは、Swift から消した型の Java のクラスを消さないので、毎回作り直す
 rm -rf .build/swift/plugins/outputs/regzaandroid
 
-# RegzaCore (iOS と共有) の型の Java のつなぎを作る。RegzaCore にはプラグインをかけられないので、
-# Mac で動く swift-java のツールで、Packages/RegzaCore/Sources/RegzaCore を直接読む
+# 共有の型 (RegzaDomain の RegzaKey・RegzaChannel など) の Java のつなぎを作る。iOS と共有のパッケージにはプラグインを
+# かけられないので、Mac で動く swift-java のツールで、Packages/RegzaCore/Sources/RegzaDomain を直接読む
 # Android 向けのビルドとはビルドの設定が違い、同じ置き場だと互いのキャッシュを捨て合うので、置き場を分ける
 swift build --package-path RegzaAndroid --scratch-path .build/swift-tool -c release --product swift-java
 generated=RegzaAndroid/Sources/RegzaCoreJava/Generated
 rm -rf "$generated" .build/swift/regzacore-java && mkdir -p "$generated" .build/swift/regzacore-java
 .build/swift-tool/out/Products/Release/swift-java jextract --log-level warning \
-  --config RegzaAndroid/RegzaCore.swift-java.config --swift-module RegzaCore \
-  --input-swift ../Packages/RegzaCore/Sources/RegzaCore \
+  --config RegzaAndroid/RegzaCore.swift-java.config --swift-module RegzaDomain \
+  --input-swift ../Packages/RegzaCore/Sources/RegzaDomain \
   --output-swift "$generated" --output-java .build/swift/regzacore-java
 
 # Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)。

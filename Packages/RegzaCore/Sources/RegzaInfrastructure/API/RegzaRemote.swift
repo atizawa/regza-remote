@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 
 /// リモコン操作と再生状況の追跡をまとめたもの。
 /// UI フレームワークに依存しないので、iOS は SwiftUI / App Intents から、
@@ -205,7 +206,7 @@ public actor RegzaRemote {
     }
 
     private func program(epgContentID: String?) async -> MirakurunProgram? {
-        guard let guide, let id = epgContentID.flatMap(Mirakurun.programID(epgContentID:)) else { return nil }
+        guard let guide, let id = epgContentID.flatMap(BroadcastID.programID(epgContentID:)) else { return nil }
         if let cached = programCache[id], cached.program != nil || Date().timeIntervalSince(cached.checkedAt) < 60 {
             return cached.program
         }

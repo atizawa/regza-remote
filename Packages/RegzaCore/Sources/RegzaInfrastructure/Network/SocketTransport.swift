@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)

@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 
 /// レグザAppsコネクト v2 API `GET /v2/remote/play/status` のレスポンス。
 /// 機種によっては、放送中の番組名 (`title`) が空で返る。

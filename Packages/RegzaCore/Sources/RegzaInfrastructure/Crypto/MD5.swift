@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 
 /// Digest 認証用の MD5。CryptoKit が無い環境 (Android/Linux) でも動くように自前で実装する。
 enum MD5 {

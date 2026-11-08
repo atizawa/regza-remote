@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 
 /// PIN 登録で受け取るパスワードの復号用 AES-128 (復号のみ)。CommonCrypto が無い環境でも動くように自前で実装する。
 struct AES128 {

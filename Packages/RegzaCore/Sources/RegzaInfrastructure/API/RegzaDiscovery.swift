@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -6,20 +7,6 @@ import Glibc
 #elseif canImport(Android)
 import Android
 #endif
-
-/// 同じネットワークにある REGZA。
-public struct RegzaDevice: Hashable, Sendable, Identifiable {
-    public var host: String
-    public var model: String
-    public var size: String
-    /// PIN 登録 (レグザAppsコネクト v2) に対応しているか
-    public var supportsPIN: Bool
-
-    public var id: String { host }
-
-    /// 例: `REGZA 55Z000`
-    public var name: String { "REGZA \(size)\(model)" }
-}
 
 /// `GET /public/feature` (認証不要) の応答。
 struct RegzaFeature: Decodable {

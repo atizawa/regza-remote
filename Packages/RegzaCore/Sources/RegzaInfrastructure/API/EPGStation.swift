@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 
 /// 録画サーバー EPGStation の放送のライブ配信 (HLS)。認証は不要。
 ///
@@ -23,7 +24,7 @@ public final class EPGStation: Sendable {
 
     /// EPGStation のチャンネル ID (Mirakurun のサービス ID と同じ)。テレビのチャンネルの ID から求める
     public static func channelID(channelCode: String) -> Int? {
-        Mirakurun.ids(channelCode: channelCode).map { $0.networkId * 100_000 + $0.serviceId }
+        BroadcastID.ids(channelCode: channelCode).map { $0.networkId * 100_000 + $0.serviceId }
     }
 
     /// ライブ配信を頼み、配信の番号を返す。`mode` は EPGStation の設定の画質の順番 (0 が最初の画質)

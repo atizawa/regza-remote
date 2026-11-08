@@ -1,6 +1,8 @@
 import Foundation
 import Testing
 @testable import RegzaCore
+@testable import RegzaDomain
+@testable import RegzaInfrastructure
 
 @Suite struct MD5Tests {
     @Test func knownVectors() {
@@ -351,7 +353,7 @@ import Testing
         #expect(list[0].epgContentID == "JP-0000000000010002")
         // Mirakurun から組み立てた ID と大文字・小文字が違っても同じ番組とみなす
         #expect(list[0].isReservation(of: "jp-0000000000010002"))
-        #expect(list[0].isReservation(of: Mirakurun.epgContentID(networkId: 0, serviceId: 1, eventId: 2)))
+        #expect(list[0].isReservation(of: BroadcastID.epgContentID(networkId: 0, serviceId: 1, eventId: 2)))
         #expect(!list[0].isReservation(of: "JP-0000000000010003"))
         #expect(!list[0].isReservation(of: ""))
         #expect(list[0].isSeries)
@@ -364,14 +366,14 @@ import Testing
 
 @Suite struct MirakurunTests {
     @Test func convertsTVIDs() throws {
-        #expect(Mirakurun.channelCode(networkId: 0x7FE0, serviceId: 0x0400) == "JP-G7fe00400")
-        #expect(Mirakurun.channelCode(networkId: 4, serviceId: 0xB7) == "JP-G000400b7")
-        let ids = try #require(Mirakurun.ids(channelCode: "JP-G000400b7"))
+        #expect(BroadcastID.channelCode(networkId: 0x7FE0, serviceId: 0x0400) == "JP-G7fe00400")
+        #expect(BroadcastID.channelCode(networkId: 4, serviceId: 0xB7) == "JP-G000400b7")
+        let ids = try #require(BroadcastID.ids(channelCode: "JP-G000400b7"))
         #expect(ids.networkId == 4 && ids.serviceId == 0xB7)
-        #expect(Mirakurun.programID(epgContentID: "JP-00007fe1040820b6") == 32737 * 10_000_000_000 + 1032 * 100_000 + 0x20B6)
+        #expect(BroadcastID.programID(epgContentID: "JP-00007fe1040820b6") == 32737 * 10_000_000_000 + 1032 * 100_000 + 0x20B6)
         // 番組の決まっていない ID (event_id 0xffff)
-        #expect(Mirakurun.programID(epgContentID: "JP-00007fe30418ffff") == nil)
-        #expect(Mirakurun.programID(epgContentID: "") == nil)
+        #expect(BroadcastID.programID(epgContentID: "JP-00007fe30418ffff") == nil)
+        #expect(BroadcastID.programID(epgContentID: "") == nil)
     }
 
     @Test func decodesProgram() throws {
@@ -384,7 +386,7 @@ import Testing
         #expect(program.name == "テスト番組")
         #expect(program.channelCode == "JP-G7fe10408")
         #expect(program.epgContentID == "JP-00007fe104080001")
-        #expect(Mirakurun.programID(epgContentID: program.epgContentID) == program.id)
+        #expect(BroadcastID.programID(epgContentID: program.epgContentID) == program.id)
         #expect(program.start == Date(timeIntervalSince1970: 1_700_000_000))
         #expect(program.end == Date(timeIntervalSince1970: 1_700_001_800))
         #expect(program.extended.map(\.title) == ["番組内容", "出演者"])

@@ -150,7 +150,7 @@ extension ProgramSearchIndex.Entry {
 
 public enum ProgramSearch {
     /// ジャンルの名前 (ARIB の大分類の順)
-    public static var genreNames: [String] { Mirakurun.genreNames }
+    public static var genreNames: [String] { ProgramGenre.names }
 
     /// 全角・半角、ひらがな・カタカナ、大文字・小文字の違いを無視して比べるための形。
     /// NFKC で全角英数を半角に、半角カナを全角にそろえ (ｶﾞ → ガ)、ひらがなはカタカナにする。

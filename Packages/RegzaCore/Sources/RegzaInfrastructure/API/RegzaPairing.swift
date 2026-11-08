@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 
 /// テレビに表示される PIN でアプリを登録する (レグザAppsコネクト v2)。
 ///

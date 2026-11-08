@@ -119,17 +119,3 @@ extension Sequence where Element == RegzaChannel {
         }
     }
 }
-
-struct RegzaChannelList: Decodable {
-    var status: Int
-    var channels: [RegzaChannel]?
-
-    enum CodingKeys: String, CodingKey {
-        case status
-        case channels = "channel_list"
-    }
-}
-
-struct RegzaResult: Decodable {
-    var status: Int
-}

@@ -63,13 +63,3 @@ public struct RegzaReservation: Decodable, Hashable, Sendable, Identifiable {
         isSeries = try container.decodeIfPresent(String.self, forKey: .isSeries) == "true"
     }
 }
-
-struct RegzaReservationList: Decodable {
-    var status: Int
-    var reservations: [RegzaReservation]?
-
-    enum CodingKeys: String, CodingKey {
-        case status
-        case reservations = "rsv_list"
-    }
-}

@@ -1,6 +1,8 @@
 import Foundation
 import Testing
 @testable import RegzaCore
+@testable import RegzaDomain
+@testable import RegzaInfrastructure
 
 /// 共有の ViewModel を、偽の通信と保存先で確かめる (iOS と Android で同じふるまいになることの確認)
 @MainActor

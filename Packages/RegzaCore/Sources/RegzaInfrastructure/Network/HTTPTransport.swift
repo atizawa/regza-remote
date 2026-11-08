@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif

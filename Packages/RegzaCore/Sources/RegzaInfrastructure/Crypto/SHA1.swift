@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 
 /// PIN 登録の鍵導出 (PBKDF2-HMAC-SHA1) 用。MD5 と同じく Android/Linux でも動くように自前で実装する。
 enum SHA1 {

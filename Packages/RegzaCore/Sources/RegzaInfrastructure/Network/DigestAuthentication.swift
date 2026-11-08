@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 
 /// HTTP Digest 認証 (RFC 2617) の `WWW-Authenticate` チャレンジ。
 /// URLSession の認証チャレンジは Android の FoundationNetworking で Digest に対応していないため、

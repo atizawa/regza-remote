@@ -1,6 +1,8 @@
 import Foundation
 import Testing
 @testable import RegzaCore
+@testable import RegzaDomain
+@testable import RegzaInfrastructure
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
