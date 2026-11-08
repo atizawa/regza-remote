@@ -2,10 +2,45 @@ import Foundation
 
 /// テレビの録画予約: 一覧・予約・取り消し
 @MainActor
-public final class RecordingUseCase {
-    private let recording: any RecordingRepository
+public protocol RecordingUseCaseProtocol: AnyObject {
+    /// 録画予約。予定のあるものを先に、時刻順に並べる
+    var reservations: [RegzaReservation] { get }
 
-    public init(recording: any RecordingRepository) {
+    /// 一覧に出す予約 (UI の型)。チャンネルの名前は、テレビに登録されているチャンネルから引く
+    func items(channels: [RegzaChannel], now: Date) -> [ReservationItem]
+
+    func loadReservations() async throws(RegzaError)
+
+    /// その番組の予約。なければ nil
+    func reservation(for program: MirakurunProgram) -> RegzaReservation?
+
+    func isReserved(_ program: MirakurunProgram) -> Bool
+
+    /// 番組表の番組を録画予約する。`series` なら連ドラ予約 (次の回以降も録画する)
+    func reserve(_ program: MirakurunProgram, series: Bool) async throws(RegzaError)
+
+    func cancel(_ reservation: RegzaReservation) async throws(RegzaError)
+
+    /// 一覧の予約を取り消す (UI の型の id から)
+    func cancel(id: String) async throws(RegzaError)
+}
+
+extension RecordingUseCaseProtocol {
+    public func items(channels: [RegzaChannel]) -> [ReservationItem] {
+        items(channels: channels, now: Date())
+    }
+
+    public func reserve(_ program: MirakurunProgram) async throws(RegzaError) {
+        try await reserve(program, series: false)
+    }
+}
+
+/// テレビの録画予約: 一覧・予約・取り消し
+@MainActor
+public final class RecordingUseCase: RecordingUseCaseProtocol {
+    private let recording: any RecordingRepositoryProtocol
+
+    public init(recording: any RecordingRepositoryProtocol) {
         self.recording = recording
     }
 

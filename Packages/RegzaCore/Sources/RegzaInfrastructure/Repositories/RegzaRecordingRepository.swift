@@ -2,10 +2,10 @@ import Foundation
 import Observation
 import RegzaDomain
 
-/// テレビの録画予約 (RecordingRepository の実装)。テレビの Repository と同じリモコンで送る
+/// テレビの録画予約 (RecordingRepositoryProtocol の実装)。テレビの Repository と同じリモコンで送る
 @MainActor
 @Observable
-public final class RegzaRecordingRepository: RecordingRepository {
+public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
     @ObservationIgnored private let tv: RegzaTVRepository
     /// 読み込んだ予約と、そのときの接続。接続が変わったら使わない
     private var loaded: (reservations: [RegzaReservation], connection: RegzaConnection)?

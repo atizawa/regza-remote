@@ -279,7 +279,7 @@ import Testing
 
 /// 送ったキーと選局を記録するテレビ
 @MainActor
-final class RecordingTVRepository: TVRepository {
+final class RecordingTVRepository: TVRepositoryProtocol {
     var events: [String] = []
     var connection = RegzaConnection(host: "192.0.2.1")
     var channels: [RegzaChannel] = []
@@ -306,7 +306,7 @@ final class RecordingTVRepository: TVRepository {
 
 /// 頼んだ順番を記録する配信
 @MainActor
-final class RecordingStreamRepository: StreamRepository {
+final class RecordingStreamRepository: StreamRepositoryProtocol {
     var events: [String] = []
     var streamHost = "192.0.2.30"
     var canStream: Bool { true }
@@ -327,7 +327,7 @@ final class RecordingStreamRepository: StreamRepository {
 }
 
 /// テレビ 1 台と、192.0.2.2 で動いている EPGStation が見つかる機器探し
-struct RecordingDeviceRepository: DeviceRepository {
+struct RecordingDeviceRepository: DeviceRepositoryProtocol {
     func devices() -> AsyncStream<RegzaDevice> {
         AsyncStream { continuation in
             continuation.yield(RegzaDevice(host: "192.0.2.10", model: "Z000", size: "55", supportsPIN: true))

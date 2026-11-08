@@ -7,11 +7,11 @@ import Observation
 @Observable
 public final class ChannelListViewModel {
     public let remote: RemoteViewModel
-    public let channels: ChannelUseCase
-    public let guide: GuideUseCase
-    public let stream: StreamUseCase
+    public let channels: any ChannelUseCaseProtocol
+    public let guide: any GuideUseCaseProtocol
+    public let stream: any StreamUseCaseProtocol
 
-    public init(remote: RemoteViewModel, channels: ChannelUseCase, guide: GuideUseCase, stream: StreamUseCase) {
+    public init(remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol) {
         self.remote = remote
         self.channels = channels
         self.guide = guide

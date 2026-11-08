@@ -6,9 +6,9 @@ import Observation
 @Observable
 public final class ReservationListViewModel {
     public let remote: RemoteViewModel
-    public let recording: RecordingUseCase
+    public let recording: any RecordingUseCaseProtocol
 
-    public init(remote: RemoteViewModel, recording: RecordingUseCase) {
+    public init(remote: RemoteViewModel, recording: any RecordingUseCaseProtocol) {
         self.remote = remote
         self.recording = recording
     }

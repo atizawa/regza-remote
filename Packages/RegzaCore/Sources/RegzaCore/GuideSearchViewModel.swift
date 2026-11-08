@@ -8,9 +8,9 @@ import Observation
 @Observable
 public final class GuideSearchViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideUseCase
+    public let guide: any GuideUseCaseProtocol
 
-    public init(remote: RemoteViewModel, guide: GuideUseCase) {
+    public init(remote: RemoteViewModel, guide: any GuideUseCaseProtocol) {
         self.remote = remote
         self.guide = guide
     }

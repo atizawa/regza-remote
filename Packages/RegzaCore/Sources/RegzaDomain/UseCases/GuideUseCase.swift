@@ -3,11 +3,84 @@ import Foundation
 /// 番組表 (Mirakurun): 全局の番組表・1 チャンネルの番組表・放送中の番組・番組の録画予約。
 /// 番組は、UI の型 (ProgramItem など) にして返す。予約済みの印を付けるため、録画予約の Repository も見る
 @MainActor
-public final class GuideUseCase {
-    private let guide: any GuideRepository
-    private let recording: any RecordingRepository
+public protocol GuideUseCaseProtocol: AnyObject {
+    /// Mirakurun のアドレス。未設定なら空
+    var guideHost: String { get }
 
-    public init(guide: any GuideRepository, recording: any RecordingRepository) {
+    var hasGuide: Bool { get }
+
+    /// 全局の番組を、チャンネルの ID ごとに時刻順で持つ
+    var guidePrograms: [String: [MirakurunProgram]] { get }
+
+    /// 番組表を読み込んだ時刻 (検索の索引を作り直すかを決めるのに使う)
+    var guideProgramsLoadedAt: Date? { get }
+
+    func loadGuidePrograms() async
+
+    /// 1 チャンネルの番組表 (放送中の番組から)
+    func programs(for channel: RegzaChannel) async throws(RegzaError) -> [MirakurunProgram]
+
+    /// 全局の番組表か、1 チャンネルの番組表で読んだ番組 (番組の詳細を開くとき、番組の id から引く)
+    func program(id: Int, channelCode: String) -> MirakurunProgram?
+
+    /// そのチャンネルでいま放送中の番組
+    func currentProgram(for channel: RegzaChannel, at date: Date) -> MirakurunProgram?
+
+    func saveGuideHost(_ host: String) async
+
+    /// 番組 (予約済みの印つき)
+    func item(_ program: MirakurunProgram, now: Date) -> ProgramItem
+
+    /// 番組内容・出演者など、見出しつきの説明
+    func texts(of program: MirakurunProgram) -> [ProgramTextItem]
+
+    /// 1 チャンネルの番組を、日ごとに分ける
+    func days(_ programs: [MirakurunProgram], now: Date) -> [ProgramDay]
+
+    /// 番組表の 1 局分 (全局の番組表から)
+    func column(_ channel: RegzaChannel, now: Date) -> GuideColumn
+
+    /// 番組表の日付の選択肢。最初は今日、そのあと明日から番組表がある最後の日まで
+    func guideDays(now: Date) -> [GuideDay]
+
+    /// 検索で見つかった番組
+    func searchResult(_ result: ProgramSearchResult, channel: RegzaChannel, now: Date) -> SearchResultItem
+}
+
+extension GuideUseCaseProtocol {
+    public func currentProgram(for channel: RegzaChannel) -> MirakurunProgram? {
+        currentProgram(for: channel, at: Date())
+    }
+
+    public func item(_ program: MirakurunProgram) -> ProgramItem {
+        item(program, now: Date())
+    }
+
+    public func days(_ programs: [MirakurunProgram]) -> [ProgramDay] {
+        days(programs, now: Date())
+    }
+
+    public func column(_ channel: RegzaChannel) -> GuideColumn {
+        column(channel, now: Date())
+    }
+
+    public func guideDays() -> [GuideDay] {
+        guideDays(now: Date())
+    }
+
+    public func searchResult(_ result: ProgramSearchResult, channel: RegzaChannel) -> SearchResultItem {
+        searchResult(result, channel: channel, now: Date())
+    }
+}
+
+/// 番組表 (Mirakurun): 全局の番組表・1 チャンネルの番組表・放送中の番組・番組の録画予約。
+/// 番組は、UI の型 (ProgramItem など) にして返す。予約済みの印を付けるため、録画予約の Repository も見る
+@MainActor
+public final class GuideUseCase: GuideUseCaseProtocol {
+    private let guide: any GuideRepositoryProtocol
+    private let recording: any RecordingRepositoryProtocol
+
+    public init(guide: any GuideRepositoryProtocol, recording: any RecordingRepositoryProtocol) {
         self.guide = guide
         self.recording = recording
     }

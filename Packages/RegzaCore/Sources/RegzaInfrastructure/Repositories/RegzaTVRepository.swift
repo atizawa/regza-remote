@@ -2,10 +2,10 @@ import Foundation
 import Observation
 import RegzaDomain
 
-/// テレビ (REGZA) とのやり取り (TVRepository の実装)。RegzaRemote (切り替えの最中は問い合わせないしくみ) を使う
+/// テレビ (REGZA) とのやり取り (TVRepositoryProtocol の実装)。RegzaRemote (切り替えの最中は問い合わせないしくみ) を使う
 @MainActor
 @Observable
-public final class RegzaTVRepository: TVRepository {
+public final class RegzaTVRepository: TVRepositoryProtocol {
     @ObservationIgnored public let store: any RegzaConnectionStore
     /// テレビのリモコン。iOS は Live Activity のボタン (App Intents) と同じものを使う
     @ObservationIgnored public let remote: RegzaRemote

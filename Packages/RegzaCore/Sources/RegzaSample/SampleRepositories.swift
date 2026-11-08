@@ -33,7 +33,7 @@ extension AppViewModel {
 /// 見本のテレビ。キーを送っても何もせず、選局すると、その局に切り替わったものとして出す
 @MainActor
 @Observable
-public final class SampleTVRepository: TVRepository {
+public final class SampleTVRepository: TVRepositoryProtocol {
     public private(set) var connection: RegzaConnection
     public private(set) var channels: [RegzaChannel]
     public var timeshiftSettings: RegzaTimeshiftSettings? { nil }
@@ -79,7 +79,7 @@ public final class SampleTVRepository: TVRepository {
 /// 見本の番組表。渡した番組を読み込み済みのものとして持つ
 @MainActor
 @Observable
-public final class SampleGuideRepository: GuideRepository {
+public final class SampleGuideRepository: GuideRepositoryProtocol {
     public private(set) var guideHost: String
     public private(set) var guidePrograms: [String: [MirakurunProgram]]
     public private(set) var guideProgramsLoadedAt: Date?
@@ -108,7 +108,7 @@ public final class SampleGuideRepository: GuideRepository {
 /// 見本の録画予約。予約・取り消しは、持っている一覧だけを変える
 @MainActor
 @Observable
-public final class SampleRecordingRepository: RecordingRepository {
+public final class SampleRecordingRepository: RecordingRepositoryProtocol {
     public private(set) var reservations: [RegzaReservation]
 
     public init(reservations: [RegzaReservation]) {
@@ -129,7 +129,7 @@ public final class SampleRecordingRepository: RecordingRepository {
 /// 見本のライブ配信。配信はできない
 @MainActor
 @Observable
-public final class SampleStreamRepository: StreamRepository {
+public final class SampleStreamRepository: StreamRepositoryProtocol {
     public private(set) var streamHost = ""
     public var canStream: Bool { false }
 
@@ -146,7 +146,7 @@ public final class SampleStreamRepository: StreamRepository {
 }
 
 /// 見本の機器探し。何も見つからず、PIN 登録もできない
-public struct SampleDeviceRepository: DeviceRepository {
+public struct SampleDeviceRepository: DeviceRepositoryProtocol {
     public init() {}
 
     public func devices() -> AsyncStream<RegzaDevice> { AsyncStream { $0.finish() } }

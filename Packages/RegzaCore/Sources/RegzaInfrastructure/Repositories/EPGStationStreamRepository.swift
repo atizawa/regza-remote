@@ -2,18 +2,18 @@ import Foundation
 import Observation
 import RegzaDomain
 
-/// ライブ配信 (StreamRepository の実装)。録画サーバー EPGStation に頼む。
+/// ライブ配信 (StreamRepositoryProtocol の実装)。録画サーバー EPGStation に頼む。
 /// このアプリが頼んだ配信の番号は保存先に覚え、アプリが強制終了されて止められなかった配信は、次に開いたときに止める
 @MainActor
 @Observable
-public final class EPGStationStreamRepository: StreamRepository {
+public final class EPGStationStreamRepository: StreamRepositoryProtocol {
     @ObservationIgnored private let store: any RegzaConnectionStore
-    @ObservationIgnored private let guide: any GuideRepository
+    @ObservationIgnored private let guide: any GuideRepositoryProtocol
     @ObservationIgnored private let transport: any HTTPTransport
 
     public private(set) var streamHost: String
 
-    public init(store: any RegzaConnectionStore, guide: any GuideRepository, transport: any HTTPTransport = RegzaHTTP.transport) {
+    public init(store: any RegzaConnectionStore, guide: any GuideRepositoryProtocol, transport: any HTTPTransport = RegzaHTTP.transport) {
         self.store = store
         self.guide = guide
         self.transport = transport

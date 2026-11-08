@@ -3,7 +3,7 @@ import Foundation
 /// 録画サーバー EPGStation のライブ配信。EPGStation は配信を自動では止めないので、
 /// このアプリが頼んだ配信を覚えておき、止められなかった配信はあとで止める
 @MainActor
-public protocol StreamRepository: AnyObject {
+public protocol StreamRepositoryProtocol: AnyObject {
     /// EPGStation のアドレス。未設定なら空
     var streamHost: String { get }
     /// 配信を頼める。EPGStation は Mirakurun から放送を受け取るので、番組表も設定しているときだけ

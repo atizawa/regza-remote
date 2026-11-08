@@ -2,7 +2,7 @@ import Foundation
 
 /// 番組表 (録画サーバー Mirakurun)。全局の番組表は、読み込んだものを持っておく
 @MainActor
-public protocol GuideRepository: AnyObject {
+public protocol GuideRepositoryProtocol: AnyObject {
     /// Mirakurun のアドレス。未設定なら空
     var guideHost: String { get }
     /// 全局の番組を、チャンネルの ID ごとに時刻順で持つ (読み込んだもの)
@@ -20,7 +20,7 @@ public protocol GuideRepository: AnyObject {
     func saveGuideHost(_ host: String) async
 }
 
-extension GuideRepository {
+extension GuideRepositoryProtocol {
     public var hasGuide: Bool { !guideHost.isEmpty }
 
     /// そのチャンネルでいま放送中の番組

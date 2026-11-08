@@ -2,7 +2,7 @@ import Foundation
 
 /// テレビの録画予約。予約の一覧は、読み込んだものを持っておく (接続が変わったら使わない)
 @MainActor
-public protocol RecordingRepository: AnyObject {
+public protocol RecordingRepositoryProtocol: AnyObject {
     /// 録画予約。予定のあるものを先に、時刻順に並べる
     var reservations: [RegzaReservation] { get }
 
@@ -12,7 +12,7 @@ public protocol RecordingRepository: AnyObject {
     func cancel(_ reservation: RegzaReservation) async throws(RegzaError)
 }
 
-extension RecordingRepository {
+extension RecordingRepositoryProtocol {
     /// その番組の予約。なければ nil
     public func reservation(for program: MirakurunProgram) -> RegzaReservation? {
         reservations.first { $0.isReservation(of: program.epgContentID) }

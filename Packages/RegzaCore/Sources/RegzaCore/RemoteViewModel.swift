@@ -18,7 +18,7 @@ public protocol RemoteViewModelObserver: AnyObject {
 @Observable
 public final class RemoteViewModel {
     /// テレビの操作。接続とチャンネルは、この先の Repository が持つ
-    public let tv: TVUseCase
+    public let tv: any TVUseCaseProtocol
     @ObservationIgnored public weak var observer: (any RemoteViewModelObserver)?
 
     public struct State: Equatable, Sendable {
@@ -91,7 +91,7 @@ public final class RemoteViewModel {
     private static let searchInterval: TimeInterval = 180
 
     /// - Parameter nowPlaying: 最初に出しておく「いま映っているもの」(見本など)
-    public init(tv: TVUseCase, nowPlaying: RegzaNowPlaying? = nil) {
+    public init(tv: any TVUseCaseProtocol, nowPlaying: RegzaNowPlaying? = nil) {
         self.tv = tv
         self.nowPlaying = nowPlaying
     }

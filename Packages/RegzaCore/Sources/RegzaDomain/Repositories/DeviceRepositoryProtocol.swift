@@ -1,7 +1,7 @@
 import Foundation
 
 /// 同じネットワークの機器を探すことと、テレビへの PIN 登録
-public protocol DeviceRepository: Sendable {
+public protocol DeviceRepositoryProtocol: Sendable {
     /// 同じネットワークのテレビを、見つかった順に返す
     func devices() -> AsyncStream<RegzaDevice>
     /// テレビに PIN を表示させてから確定するまでの 1 回の登録

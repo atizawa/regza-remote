@@ -7,12 +7,12 @@ import Observation
 @Observable
 public final class TVSetupViewModel {
     public let remote: RemoteViewModel
-    public let setup: SetupUseCase
+    public let setup: any SetupUseCaseProtocol
     /// このアプリ用のユーザー ID。手入力のユーザー名は他のツールと共有している
     /// かもしれないので使い回さない (同じ ID で登録し直すと、前のパスワードが無効になる)
     public let pairingUserID: String
 
-    public init(remote: RemoteViewModel, setup: SetupUseCase) {
+    public init(remote: RemoteViewModel, setup: any SetupUseCaseProtocol) {
         self.remote = remote
         self.setup = setup
         draft = remote.connection
@@ -298,9 +298,9 @@ extension TVSetupViewModel: Introspectable {
 @MainActor
 @Observable
 public final class ServerSetupViewModel {
-    public let setup: SetupUseCase
+    public let setup: any SetupUseCaseProtocol
 
-    public init(setup: SetupUseCase) {
+    public init(setup: any SetupUseCaseProtocol) {
         self.setup = setup
         guideHost = setup.linkedGuideHost
         streamHost = setup.linkedStreamHost

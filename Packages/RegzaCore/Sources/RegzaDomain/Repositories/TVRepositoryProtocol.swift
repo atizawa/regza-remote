@@ -2,7 +2,7 @@ import Foundation
 
 /// テレビ (REGZA) とのやり取り。接続・チャンネル・タイムシフトマシンの設定は、読み込んだものを持っておく
 @MainActor
-public protocol TVRepository: AnyObject {
+public protocol TVRepositoryProtocol: AnyObject {
     /// 保存してある接続
     var connection: RegzaConnection { get }
     /// テレビに登録されているチャンネル (読み込んだもの)。取得前は空
@@ -34,7 +34,7 @@ public protocol TVRepository: AnyObject {
     func pairingUserID() -> String
 }
 
-extension TVRepository {
+extension TVRepositoryProtocol {
     /// その局の番組を最初から見られるか。録画していない番組で「始めにジャンプ」を押すとテレビにエラーが出るので、
     /// 対象の局で、番組の始まりから今までずっと録画している時間帯のときだけ true
     public func canStartOver(channelCode: String, programStart: Date) -> Bool {

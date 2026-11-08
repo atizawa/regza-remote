@@ -2,11 +2,40 @@ import Foundation
 
 /// チャンネル: テレビに登録されているチャンネルを、放送の種類ごとに、放送中の番組名つきで並べる
 @MainActor
-public final class ChannelUseCase {
-    private let tv: any TVRepository
-    private let guide: any GuideRepository
+public protocol ChannelUseCaseProtocol: AnyObject {
+    /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
+    var bands: [RegzaChannel.Band] { get }
 
-    public init(tv: any TVRepository, guide: any GuideRepository) {
+    /// チャンネルの ID のチャンネル。テレビに登録されていなければ nil
+    func channel(code: String) -> RegzaChannel?
+
+    /// ライブ視聴で見られる局がある放送の種類
+    var liveBands: [RegzaChannel.Band] { get }
+
+    /// ライブ視聴の局の一覧 (UI の型)。見ている局は isNowPlaying にする
+    func liveItems(band: RegzaChannel.Band?, watchingCode: String, now: Date) -> [ChannelItem]
+
+    /// 一覧に出すチャンネル (UI の型)。サブチャンネルは代表と、いま映っているものだけにする
+    func items(band: RegzaChannel.Band?, nowPlayingCode: String?, now: Date) -> [ChannelItem]
+}
+
+extension ChannelUseCaseProtocol {
+    public func liveItems(band: RegzaChannel.Band?, watchingCode: String) -> [ChannelItem] {
+        liveItems(band: band, watchingCode: watchingCode, now: Date())
+    }
+
+    public func items(band: RegzaChannel.Band?, nowPlayingCode: String?) -> [ChannelItem] {
+        items(band: band, nowPlayingCode: nowPlayingCode, now: Date())
+    }
+}
+
+/// チャンネル: テレビに登録されているチャンネルを、放送の種類ごとに、放送中の番組名つきで並べる
+@MainActor
+public final class ChannelUseCase: ChannelUseCaseProtocol {
+    private let tv: any TVRepositoryProtocol
+    private let guide: any GuideRepositoryProtocol
+
+    public init(tv: any TVRepositoryProtocol, guide: any GuideRepositoryProtocol) {
         self.tv = tv
         self.guide = guide
     }

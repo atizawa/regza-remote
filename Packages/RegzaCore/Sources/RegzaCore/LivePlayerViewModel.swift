@@ -8,11 +8,11 @@ import Observation
 @Observable
 public final class LivePlayerViewModel {
     public let remote: RemoteViewModel
-    public let channels: ChannelUseCase
-    public let guide: GuideUseCase
-    public let stream: StreamUseCase
+    public let channels: any ChannelUseCaseProtocol
+    public let guide: any GuideUseCaseProtocol
+    public let stream: any StreamUseCaseProtocol
 
-    public init(remote: RemoteViewModel, channels: ChannelUseCase, guide: GuideUseCase, stream: StreamUseCase, channel: RegzaChannel) {
+    public init(remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol, channel: RegzaChannel) {
         self.remote = remote
         self.channels = channels
         self.guide = guide

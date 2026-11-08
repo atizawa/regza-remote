@@ -2,10 +2,10 @@ import Foundation
 import Observation
 import RegzaDomain
 
-/// 番組表 (GuideRepository の実装)。録画サーバー Mirakurun から読む
+/// 番組表 (GuideRepositoryProtocol の実装)。録画サーバー Mirakurun から読む
 @MainActor
 @Observable
-public final class MirakurunGuideRepository: GuideRepository {
+public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     @ObservationIgnored private let store: any RegzaConnectionStore
     @ObservationIgnored private let transport: any HTTPTransport
     /// アドレスが変わったとき (テレビの Repository に、番組名を補う番組表を差し替えてもらう)

@@ -1,8 +1,8 @@
 import Foundation
 import RegzaDomain
 
-/// 同じネットワークの機器を探すことと PIN 登録 (DeviceRepository の実装)
-public struct NetworkDeviceRepository: DeviceRepository {
+/// 同じネットワークの機器を探すことと PIN 登録 (DeviceRepositoryProtocol の実装)
+public struct NetworkDeviceRepository: DeviceRepositoryProtocol {
     private let transport: any HTTPTransport
 
     public init(transport: any HTTPTransport = RegzaHTTP.transport) {

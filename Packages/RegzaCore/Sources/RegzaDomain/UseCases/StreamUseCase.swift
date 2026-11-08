@@ -2,10 +2,43 @@ import Foundation
 
 /// ライブ視聴 (EPGStation): 配信を頼む・再生できるまで待つ・見続ける・止める
 @MainActor
-public final class StreamUseCase {
-    private let stream: any StreamRepository
+public protocol StreamUseCaseProtocol: AnyObject {
+    /// EPGStation のアドレス。未設定なら空
+    var streamHost: String { get }
 
-    public init(stream: any StreamRepository) {
+    /// 配信を頼める (EPGStation と番組表の両方を設定している)
+    var canStream: Bool { get }
+
+    func saveStreamHost(_ host: String)
+
+    /// その局を EPGStation で見られるか
+    func isPlayable(channelCode: String) -> Bool
+
+    /// 前に止められずに残った、このアプリの配信を止めてから、その局の配信を頼む。配信の番号を返す
+    func startLiveStream(channelCode: String) async throws(RegzaError) -> Int
+
+    /// 再生できるようになるまで待ち、再生する URL を返す
+    func waitUntilReady(streamID: Int) async throws(RegzaError) -> URL
+
+    /// まだ見ていることを知らせる (知らせないと EPGStation が配信を止める)
+    func keep(streamID: Int) async
+
+    /// 配信を止めてチューナーを空ける
+    func stop(streamID: Int) async
+
+    /// 止められずに残った、このアプリの配信を止める
+    func cleanUp() async
+
+    /// 準備できないまま残っている配信 (ほかの端末のものも含む) を止める
+    func stopStalled() async
+}
+
+/// ライブ視聴 (EPGStation): 配信を頼む・再生できるまで待つ・見続ける・止める
+@MainActor
+public final class StreamUseCase: StreamUseCaseProtocol {
+    private let stream: any StreamRepositoryProtocol
+
+    public init(stream: any StreamRepositoryProtocol) {
         self.stream = stream
     }
 

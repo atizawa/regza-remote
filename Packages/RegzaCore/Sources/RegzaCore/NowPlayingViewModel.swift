@@ -7,10 +7,10 @@ import Observation
 @Observable
 public final class NowPlayingViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideUseCase
-    public let stream: StreamUseCase
+    public let guide: any GuideUseCaseProtocol
+    public let stream: any StreamUseCaseProtocol
 
-    public init(remote: RemoteViewModel, guide: GuideUseCase, stream: StreamUseCase) {
+    public init(remote: RemoteViewModel, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol) {
         self.remote = remote
         self.guide = guide
         self.stream = stream

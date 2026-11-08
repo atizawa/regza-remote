@@ -5,11 +5,11 @@ import Observation
 @MainActor
 @Observable
 public final class ProgramListViewModel {
-    public let guide: GuideUseCase
-    public let recording: RecordingUseCase
+    public let guide: any GuideUseCaseProtocol
+    public let recording: any RecordingUseCaseProtocol
     public let channel: RegzaChannel
 
-    public init(guide: GuideUseCase, recording: RecordingUseCase, channel: RegzaChannel) {
+    public init(guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, channel: RegzaChannel) {
         self.guide = guide
         self.recording = recording
         self.channel = channel
@@ -87,14 +87,14 @@ extension ProgramListViewModel: Introspectable {
 @Observable
 public final class ProgramDetailViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideUseCase
-    public let recording: RecordingUseCase
-    public let stream: StreamUseCase
+    public let guide: any GuideUseCaseProtocol
+    public let recording: any RecordingUseCaseProtocol
+    public let stream: any StreamUseCaseProtocol
     public let program: MirakurunProgram
     public let channel: RegzaChannel
 
     public init(
-        remote: RemoteViewModel, guide: GuideUseCase, recording: RecordingUseCase, stream: StreamUseCase,
+        remote: RemoteViewModel, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, stream: any StreamUseCaseProtocol,
         program: MirakurunProgram, channel: RegzaChannel
     ) {
         self.remote = remote

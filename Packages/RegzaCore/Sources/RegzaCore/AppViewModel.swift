@@ -7,11 +7,11 @@ import Observation
 @Observable
 public final class AppViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideUseCase
-    public let recording: RecordingUseCase
-    public let stream: StreamUseCase
-    public let setup: SetupUseCase
-    public let channels: ChannelUseCase
+    public let guide: any GuideUseCaseProtocol
+    public let recording: any RecordingUseCaseProtocol
+    public let stream: any StreamUseCaseProtocol
+    public let setup: any SetupUseCaseProtocol
+    public let channels: any ChannelUseCaseProtocol
 
     // MARK: - 状態と操作
 
@@ -80,8 +80,8 @@ public final class AppViewModel {
 
     /// 画面の ViewModel は UseCase だけを使う。どの Repository の実装を使うかは、組み立てる側 (RegzaApp や見本) が決める
     public init(
-        remote: RemoteViewModel, channels: ChannelUseCase, guide: GuideUseCase, recording: RecordingUseCase,
-        stream: StreamUseCase, setup: SetupUseCase
+        remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol,
+        stream: any StreamUseCaseProtocol, setup: any SetupUseCaseProtocol
     ) {
         self.channels = channels
         self.remote = remote
