@@ -33,13 +33,13 @@ struct ChannelProgramsView: View {
                 List {
                     ForEach(days) { group in
                         Section {
-                            ForEach(group.rows) { row in
-                                NavigationLink(value: AppViewModel.Route.programDetail(row.program, state.channel)) {
-                                    ProgramRow(program: row.program, isReserved: row.isReserved)
+                            ForEach(group.programs) { program in
+                                NavigationLink(value: AppViewModel.Route.programDetail(programID: program.id, channelCode: state.channel.code)) {
+                                    ProgramRow(program: program)
                                 }
                             }
                         } header: {
-                            Text(group.day, format: .dateTime.month().day().weekday())
+                            Text(group.label)
                         }
                     }
                 }
@@ -75,14 +75,14 @@ struct ReservedBadge: View {
 }
 
 private struct ProgramRow: View {
-    let program: MirakurunProgram
-    let isReserved: Bool
+    let program: ProgramItem
+    private var isReserved: Bool { program.isReserved }
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(program.start, format: .dateTime.hour().minute())
+            Text(program.startText)
                 .font(.subheadline.monospacedDigit())
-                .foregroundStyle(program.isOnAir() ? AppTheme.accent : .secondary)
+                .foregroundStyle(program.isOnAir ? AppTheme.accent : .secondary)
                 .frame(width: 48, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 Text(program.name)
@@ -91,7 +91,7 @@ private struct ProgramRow: View {
                     if isReserved {
                         ReservedBadge(compact: true)
                     }
-                    if program.isOnAir() {
+                    if program.isOnAir {
                         Text("放送中").foregroundStyle(AppTheme.accent)
                     }
                     if let genre = program.genreName {
@@ -114,7 +114,7 @@ struct ProgramDetailView: View {
     }
 
     private var state: ProgramDetailViewModel.State { viewModel.state }
-    private var program: MirakurunProgram { state.program }
+    private var program: ProgramItem { state.program }
     private var channel: RegzaChannel { state.channel }
 
     var body: some View {
@@ -145,7 +145,7 @@ struct ProgramDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Text(channel.name)
-                if program.isOnAir() {
+                if program.isOnAir {
                     Text("· 放送中")
                 }
             }
@@ -157,16 +157,13 @@ struct ProgramDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 6) {
-                Text(program.start, format: .dateTime.month().day().weekday().hour().minute())
-                Text("〜")
-                Text(program.end, format: .dateTime.hour().minute())
-                Text("· \(Int(program.end.timeIntervalSince(program.start) / 60))分")
+                Text(program.timeText)
                 if let genre = program.genreName { Text("· \(genre)") }
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
 
-            if program.isOnAir() {
+            if program.isOnAir {
                 ProgressView(timerInterval: program.start...program.end, countsDown: false) {
                     EmptyView()
                 } currentValueLabel: {
@@ -278,7 +275,7 @@ struct ProgramDetailView: View {
                 .font(.body)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        ForEach(program.extended, id: \.title) { item in
+        ForEach(state.texts) { item in
             VStack(alignment: .leading, spacing: 6) {
                 Text(item.title)
                     .font(.subheadline.weight(.semibold))

@@ -18,10 +18,11 @@ extension AppViewModel {
         let tv = SampleTVRepository(connection: connection, channels: channels, nowPlaying: nowPlaying)
         let guide = SampleGuideRepository(guideHost: guideHost, programs: programs)
         let stream = SampleStreamRepository()
+        let recording = SampleRecordingRepository(reservations: reservations)
         return AppViewModel(
             remote: RemoteViewModel(tv: TVUseCase(tv: tv), nowPlaying: nowPlaying),
-            guide: GuideUseCase(guide: guide),
-            recording: RecordingUseCase(recording: SampleRecordingRepository(reservations: reservations)),
+            guide: GuideUseCase(guide: guide, recording: recording),
+            recording: RecordingUseCase(recording: recording),
             stream: StreamUseCase(stream: stream),
             setup: SetupUseCase(devices: SampleDeviceRepository(), guide: guide, stream: stream)
         )
@@ -92,6 +93,10 @@ public final class SampleGuideRepository: GuideRepository {
 
     public func programs(for channel: RegzaChannel) async throws(RegzaError) -> [MirakurunProgram] {
         (guidePrograms[channel.code] ?? []).filter { $0.end > Date() }
+    }
+
+    public func program(id: Int, channelCode: String) -> MirakurunProgram? {
+        guidePrograms[channelCode]?.first { $0.id == id }
     }
 
     public func saveGuideHost(_ host: String) async {

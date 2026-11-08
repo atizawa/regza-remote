@@ -8,11 +8,11 @@ import Observation
 @Observable
 public final class GuideSearchViewModel {
     public let remote: RemoteViewModel
-    public let recording: RecordingUseCase
+    public let guide: GuideUseCase
 
-    public init(remote: RemoteViewModel, recording: RecordingUseCase) {
+    public init(remote: RemoteViewModel, guide: GuideUseCase) {
         self.remote = remote
-        self.recording = recording
+        self.guide = guide
     }
 
     /// 画面に出す、読み取った条件
@@ -31,7 +31,7 @@ public final class GuideSearchViewModel {
         /// 索引を作っている途中か (その間は結果が空でも「見つかりません」と出さない)
         public var isIndexing: Bool
         /// 見つかった番組 (テレビに登録されていない局の番組は出さない)
-        public var results: [Row]
+        public var results: [SearchResultItem]
     }
 
     public struct ConditionChip: Equatable, Sendable, Identifiable {
@@ -39,17 +39,6 @@ public final class GuideSearchViewModel {
         /// 「明日」「18時〜」「スポーツ」
         public var label: String
         public var id: Condition { condition }
-    }
-
-    public struct Row: Equatable, Sendable, Identifiable {
-        public var program: MirakurunProgram
-        public var channel: RegzaChannel
-        /// 「11/5(木) 21:00〜」。放送中は「放送中 〜21:54」
-        public var timeText: String
-        /// なぜ見つかったか (「〇〇 が出演」など)。番組名に入っていたときは nil
-        public var reason: String?
-        public var isReserved: Bool
-        public var id: Int { program.id }
     }
 
     public enum Action: Sendable {
@@ -81,13 +70,7 @@ public final class GuideSearchViewModel {
             results: results.compactMap { result in
                 guard let channel = channels.first(where: { $0.code.caseInsensitiveCompare(result.program.channelCode) == .orderedSame })
                 else { return nil }
-                return Row(
-                    program: result.program,
-                    channel: channel,
-                    timeText: Self.timeText(of: result.program, now: now),
-                    reason: Self.reason(for: result),
-                    isReserved: recording.isReserved(result.program)
-                )
+                return guide.searchResult(result, channel: channel, now: now)
             }
         )
     }
@@ -163,24 +146,6 @@ public final class GuideSearchViewModel {
             return ProgramSearch.genreNames.indices.contains(genre) ? ProgramSearch.genreNames[genre] : ""
         }
     }
-
-    static func timeText(of program: MirakurunProgram, now: Date = Date()) -> String {
-        if program.isOnAir(at: now) { return "放送中 〜\(program.end.formatted(.dateTime.hour().minute()))" }
-        let day = program.start.formatted(.dateTime.locale(Locale(identifier: "ja_JP")).month(.defaultDigits).day().weekday())
-        return "\(day) \(program.start.formatted(.dateTime.hour().minute()))〜"
-    }
-
-    /// 番組名に入っていれば言うまでもないので、出演者と説明のときだけ添える
-    static func reason(for result: ProgramSearchResult) -> String? {
-        let reasons = result.matches.compactMap { match -> String? in
-            switch match.field {
-            case .title: nil
-            case .cast: "\(match.term) が出演"
-            case .description: "説明に「\(match.term)」"
-            }
-        }
-        return reasons.isEmpty ? nil : reasons.joined(separator: "・")
-    }
 }
 
 extension GuideSearchViewModel: Introspectable {
@@ -198,10 +163,10 @@ extension GuideSearchViewModel: Introspectable {
                 .object([
                     "program": .number(Double(row.program.id)),
                     "name": .string(row.program.name),
-                    "channel": .string(row.channel.code),
+                    "channel": .string(row.channelCode),
                     "time": .string(row.timeText),
                     "reason": row.reason.map(JSONValue.string) ?? .null,
-                    "isReserved": .bool(row.isReserved),
+                    "isReserved": .bool(row.program.isReserved),
                 ])
             }),
             "resultCount": .number(Double(state.results.count)),

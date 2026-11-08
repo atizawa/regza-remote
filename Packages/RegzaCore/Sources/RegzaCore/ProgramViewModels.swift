@@ -18,22 +18,9 @@ public final class ProgramListViewModel {
     public struct State: Equatable, Sendable {
         public var channel: RegzaChannel
         /// 日ごとの番組。読み込む前は nil
-        public var days: [Day]?
+        public var days: [ProgramDay]?
         /// 取得できなかった説明
         public var loadErrorMessage: String?
-    }
-
-    public struct Day: Equatable, Sendable, Identifiable {
-        /// その日の始まり
-        public var day: Date
-        public var rows: [Row]
-        public var id: Date { day }
-    }
-
-    public struct Row: Equatable, Sendable, Identifiable {
-        public var program: MirakurunProgram
-        public var isReserved: Bool
-        public var id: Int { program.id }
     }
 
     public enum Action: Sendable {
@@ -47,13 +34,11 @@ public final class ProgramListViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let calendar = Calendar.current
-        let days = programs.map { programs in
-            Dictionary(grouping: programs) { calendar.startOfDay(for: $0.start) }
-                .map { Day(day: $0.key, rows: $0.value.map { Row(program: $0, isReserved: recording.isReserved($0)) }) }
-                .sorted { $0.day < $1.day }
-        }
-        return State(channel: channel, days: days, loadErrorMessage: programs == nil ? loadError?.localizedDescription : nil)
+        State(
+            channel: channel,
+            days: programs.map { guide.days($0) },
+            loadErrorMessage: programs == nil ? loadError?.localizedDescription : nil
+        )
     }
 
     public func send(_ action: Action) {
@@ -124,7 +109,9 @@ public final class ProgramDetailViewModel {
     }
 
     public struct State: Equatable, Sendable {
-        public var program: MirakurunProgram
+        public var program: ProgramItem
+        /// 番組内容・出演者など
+        public var texts: [ProgramTextItem]
         public var channel: RegzaChannel
         public var isTuning: Bool
         public var reserving: Reserving?
@@ -167,7 +154,8 @@ public final class ProgramDetailViewModel {
     public var state: State {
         let reservation = recording.reservation(for: program)
         return State(
-            program: program,
+            program: guide.item(program),
+            texts: guide.texts(of: program),
             channel: channel,
             isTuning: isTuning,
             reserving: reserving,

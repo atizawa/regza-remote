@@ -159,8 +159,6 @@ public final class RegzaAndroidApp {
     @MainActor private let screenChanges = Changes()
     /// 前に返した画面の状態 (同じなら返さない)
     @MainActor private var lastScreen: ScreenKey?
-    /// 画面に出した番組 (番組の id から)。詳細を開く操作で使う
-    @MainActor private var shownPrograms: [Int: (MirakurunProgram, RegzaChannel)] = [:]
 
     /// 保存してある値から作る。メインスレッドから呼ぶ (先に regzaSetUpMainActor を呼んでおく)
     public init(host: String, user: String, password: String, pairingUserID: String, guideHost: String) {
@@ -265,7 +263,9 @@ public final class RegzaAndroidApp {
         let state = app.state
         switch state.path(of: state.tab).last {
         case .channelPrograms(let channel): return .programs(app.programList(for: channel).state)
-        case .programDetail(let program, let channel): return .detail(app.programDetail(program, channel: channel).state)
+        case .programDetail(let id, let code):
+            // 番組が見つからなければ、タブの最初の画面を出す
+            if let detail = app.programDetail(programID: id, channelCode: code) { return .detail(detail.state) }
         case .search: return .search(app.guideGrid.search.state)
         case nil: break
         }
@@ -285,10 +285,7 @@ public final class RegzaAndroidApp {
 
     @MainActor private func makeScreen(_ key: ScreenKey) -> RegzaAndroidScreen {
         lastScreen = key
-        var programs: [Int: (MirakurunProgram, RegzaChannel)] = [:]
-        let screen = RegzaAndroidScreen(key) { programs[$0.id] = ($0, $1) }
-        if !programs.isEmpty { shownPrograms = programs }
-        return screen
+        return RegzaAndroidScreen(key)
     }
 
     @MainActor private func nextScreenOnMain() async -> RegzaAndroidScreen {
@@ -317,12 +314,11 @@ public final class RegzaAndroidApp {
         case .tune(let channel): app.channelList.send(.tune(channel))
         case .openPrograms(let code):
             if let channel = app.remote.state.channels.first(where: { $0.code == code }) { app.send(.open(.channelPrograms(channel))) }
-        case .openProgram(let code, let id):
-            if let (program, channel) = program(id: id, channelCode: code) { app.send(.open(.programDetail(program, channel))) }
+        case .openProgram(let code, let id): app.send(.open(.programDetail(programID: id, channelCode: code)))
         case .showGuide: app.guideGrid.send(.load)
         case .selectDay(let index):
             let days = app.guideGrid.state.days
-            if days.indices.contains(index) { app.guideGrid.send(.selectDay(days[index].day)) }
+            if days.indices.contains(index) { app.guideGrid.send(.selectDay(days[index].date)) }
         case .openSearch: app.send(.open(.search))
         case .setSearchText(let text): app.guideGrid.search.send(.setText(text))
         case .removeCondition(let index):
@@ -359,23 +355,14 @@ public final class RegzaAndroidApp {
         }
     }
 
-    /// 画面に出した番組か、番組表にある番組
-    @MainActor private func program(id: Int, channelCode: String) -> (MirakurunProgram, RegzaChannel)? {
-        if let shown = shownPrograms[id] { return shown }
-        guard let channel = app.remote.state.channels.first(where: { $0.code == channelCode }),
-              let program = app.guide.guidePrograms[channelCode]?.first(where: { $0.id == id })
-        else { return nil }
-        return (program, channel)
-    }
-
     @MainActor private func currentProgramList() -> ProgramListViewModel? {
         guard case .channelPrograms(let channel) = app.state.path(of: app.state.tab).last else { return nil }
         return app.programList(for: channel)
     }
 
     @MainActor private func currentDetail() -> ProgramDetailViewModel? {
-        guard case .programDetail(let program, let channel) = app.state.path(of: app.state.tab).last else { return nil }
-        return app.programDetail(program, channel: channel)
+        guard case .programDetail(let id, let code) = app.state.path(of: app.state.tab).last else { return nil }
+        return app.programDetail(programID: id, channelCode: code)
     }
 }
 

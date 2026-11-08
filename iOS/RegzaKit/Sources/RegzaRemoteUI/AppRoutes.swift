@@ -11,11 +11,15 @@ struct RouteView: View {
         switch route {
         case .channelPrograms(let channel):
             ChannelProgramsView(viewModel: app.programList(for: channel))
-        case .programDetail(let program, let channel):
-            ProgramDetailView(viewModel: app.programDetail(program, channel: channel))
+        case .programDetail(let programID, let channelCode):
+            if let viewModel = app.programDetail(programID: programID, channelCode: channelCode) {
+                ProgramDetailView(viewModel: viewModel)
+            } else {
+                ContentUnavailableView("番組が見つかりません", systemImage: "calendar.badge.exclamationmark")
+            }
         case .search:
-            GuideSearchScreen(search: app.guideGrid.search) { program, channel in
-                app.send(.open(.programDetail(program, channel)))
+            GuideSearchScreen(search: app.guideGrid.search) { row in
+                app.send(.open(.programDetail(programID: row.program.id, channelCode: row.channelCode)))
             }
         }
     }

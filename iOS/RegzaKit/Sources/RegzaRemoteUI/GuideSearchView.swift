@@ -6,7 +6,7 @@ import SwiftUI
 /// 番組を探す画面。番組表のナビゲーションバーの虫眼鏡から開く
 struct GuideSearchScreen: View {
     let search: GuideSearchViewModel
-    let onSelect: (MirakurunProgram, RegzaChannel) -> Void
+    let onSelect: (SearchResultItem) -> Void
     @State private var isPresented = false
 
     var body: some View {
@@ -25,7 +25,7 @@ struct GuideSearchScreen: View {
 /// 検索の結果。時刻順に並べ、なぜ見つかったか (「〇〇 が出演」など) を添える
 struct GuideSearchResults: View {
     let search: GuideSearchViewModel
-    let onSelect: (MirakurunProgram, RegzaChannel) -> Void
+    let onSelect: (SearchResultItem) -> Void
 
     var body: some View {
         let state = search.state
@@ -60,12 +60,12 @@ struct GuideSearchResults: View {
     }
 
     @ViewBuilder
-    private func section(_ rows: [GuideSearchViewModel.Row]) -> some View {
+    private func section(_ rows: [SearchResultItem]) -> some View {
         if !rows.isEmpty {
             Section {
                 ForEach(rows) { row in
                     Button {
-                        onSelect(row.program, row.channel)
+                        onSelect(row)
                     } label: {
                         SearchResultRow(row: row)
                     }
@@ -113,7 +113,7 @@ private struct ConditionChips: View {
 }
 
 private struct SearchResultRow: View {
-    let row: GuideSearchViewModel.Row
+    let row: SearchResultItem
 
     var body: some View {
         let program = row.program
@@ -121,12 +121,12 @@ private struct SearchResultRow: View {
             HStack(spacing: 6) {
                 Text(row.timeText)
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(program.isOnAir() ? AppTheme.accent : .secondary)
-                Text(row.channel.name)
+                    .foregroundStyle(program.isOnAir ? AppTheme.accent : .secondary)
+                Text(row.channelName)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                if row.isReserved {
+                if program.isReserved {
                     Image(systemName: "record.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.red)

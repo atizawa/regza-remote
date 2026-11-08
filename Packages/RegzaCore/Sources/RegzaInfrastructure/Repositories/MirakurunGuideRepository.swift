@@ -11,6 +11,8 @@ public final class MirakurunGuideRepository: GuideRepository {
     /// アドレスが変わったとき (テレビの Repository に、番組名を補う番組表を差し替えてもらう)
     @ObservationIgnored private let onHostChange: @MainActor (String) async -> Void
     @ObservationIgnored private var client: Mirakurun?
+    /// 1 チャンネルの番組表で読んだ番組 (番組の id から引くため)
+    @ObservationIgnored private var channelPrograms: [String: [MirakurunProgram]] = [:]
 
     public private(set) var guideHost: String
     public private(set) var guidePrograms: [String: [MirakurunProgram]] = [:]
@@ -33,6 +35,7 @@ public final class MirakurunGuideRepository: GuideRepository {
         store.guideHost = host
         guideHost = host
         client = nil
+        channelPrograms = [:]
         guidePrograms = [:]
         guideProgramsLoadedAt = nil
         await onHostChange(host)
@@ -63,9 +66,15 @@ public final class MirakurunGuideRepository: GuideRepository {
         guard let guide = guideClient() else { throw .notConfigured }
         do {
             let now = Date()
-            return try await guide.programs(channelCode: channel.code).filter { $0.end > now }
+            let programs = try await guide.programs(channelCode: channel.code).filter { $0.end > now }
+            channelPrograms[channel.code] = programs
+            return programs
         } catch {
             throw RegzaError(error)
         }
+    }
+
+    public func program(id: Int, channelCode: String) -> MirakurunProgram? {
+        guidePrograms[channelCode]?.first { $0.id == id } ?? channelPrograms[channelCode]?.first { $0.id == id }
     }
 }

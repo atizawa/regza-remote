@@ -35,7 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.RegzaAndroidAction
 import com.example.regzaremote.core.RegzaAndroidGuide
-import com.example.regzaremote.core.RegzaAndroidProgram
+import com.example.regzaremote.core.ProgramItem
 
 /** 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる (iOS と同じ GuideGridViewModel) */
 @Composable
@@ -79,15 +79,18 @@ private fun DayPicker(guide: RegzaAndroidGuide, send: Send) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         guide.days.forEachIndexed { index, day ->
-            val color = when (day.kind) {
+            val color = when (day.kind.rawValue) {
                 "saturday" -> Color(0xFF64B5F6)
                 "sunday" -> Color(0xFFE57373)
                 else -> MaterialTheme.colorScheme.onSurface
             }
             FilterChip(
-                selected = day.isSelected,
+                selected = index.toLong() == guide.selectedDayIndex,
                 onClick = { send(RegzaAndroidAction.selectDay(index.toLong())) },
-                label = { Text(day.label, color = if (day.isSelected) MaterialTheme.colorScheme.onSecondaryContainer else color) },
+                label = {
+                    val isSelected = index.toLong() == guide.selectedDayIndex
+                    Text(day.label, color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else color)
+                },
             )
         }
     }
@@ -106,10 +109,10 @@ private data class Cell(
     val isReserved: Boolean,
 )
 
-private data class GuideColumn(val name: String, val cells: List<Cell>)
+private data class GridColumn(val name: String, val cells: List<Cell>)
 
-private fun RegzaAndroidProgram.toCell() =
-    Cell(id, channelCode, name, startText, start, end, genre.toInt(), isOnAir, isReserved)
+private fun ProgramItem.toCell() =
+    Cell(id, channelCode, name, startText, start.timeIntervalSince1970, end.timeIntervalSince1970, genre.toInt(), isOnAir, isReserved)
 
 private val columnWidth = 120.dp
 private val timeColumnWidth = 32.dp
@@ -120,7 +123,7 @@ private val dpPerMinute = 2.dp
 @Composable
 private fun GuideGrid(guide: RegzaAndroidGuide, send: Send) {
     val columns = remember(guide) {
-        guide.columns.map { column -> GuideColumn(column.channel.name, column.programs.map { it.toCell() }) }
+        guide.columns.map { column -> GridColumn(column.channelName, column.programs.map { it.toCell() }) }
     }
     val hours = remember(guide) { guide.hourLabels.toList() }
     val windowStart = guide.windowStart

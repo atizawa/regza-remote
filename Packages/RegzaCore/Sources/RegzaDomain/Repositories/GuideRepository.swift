@@ -12,8 +12,10 @@ public protocol GuideRepository: AnyObject {
 
     /// 全局の番組表を読む。数 MB あるので、読み込んでから間がなければ読み直さない
     func loadGuidePrograms() async
-    /// 1 チャンネルの番組表 (放送中の番組から)
+    /// 1 チャンネルの番組表 (放送中の番組から)。読んだ番組は、番組の id から引けるように覚えておく
     func programs(for channel: RegzaChannel) async throws(RegzaError) -> [MirakurunProgram]
+    /// 全局の番組表か、1 チャンネルの番組表で読んだ番組
+    func program(id: Int, channelCode: String) -> MirakurunProgram?
     /// アドレスを保存する。変わったら、読み込んだ番組表を捨てる
     func saveGuideHost(_ host: String) async
 }

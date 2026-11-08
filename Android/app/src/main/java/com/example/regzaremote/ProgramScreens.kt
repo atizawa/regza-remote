@@ -32,7 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidProgram
+import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.RegzaAndroidProgramDetail
 import com.example.regzaremote.core.RegzaAndroidProgramList
 import com.example.regzaremote.core.RegzaAndroidSearch
@@ -63,7 +63,7 @@ fun ProgramListScreen(list: RegzaAndroidProgramList, onBack: (() -> Unit)?, send
 }
 
 @Composable
-private fun ProgramRow(program: RegzaAndroidProgram, send: Send) {
+private fun ProgramRow(program: ProgramItem, send: Send) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -130,7 +130,7 @@ fun ProgramDetailScreen(detail: RegzaAndroidProgramDetail, onBack: (() -> Unit)?
             detail.message.orElse(null)?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
             if (program.description.isNotEmpty()) Text(program.description)
-            detail.extended.forEach { item ->
+            detail.texts.forEach { item ->
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(item.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(item.text)

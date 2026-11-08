@@ -22,7 +22,8 @@ public final class AppViewModel {
     public enum Route: Hashable, Sendable {
         /// 1 チャンネルの番組表
         case channelPrograms(RegzaChannel)
-        case programDetail(MirakurunProgram, RegzaChannel)
+        /// 番組の詳細 (番組の id とチャンネルのコード)。番組とチャンネルは UseCase から引く
+        case programDetail(programID: Int, channelCode: String)
         /// 番組表の検索
         case search
     }
@@ -167,9 +168,13 @@ public final class AppViewModel {
         return viewModel
     }
 
-    public func programDetail(_ program: MirakurunProgram, channel: RegzaChannel) -> ProgramDetailViewModel {
-        let route = Route.programDetail(program, channel)
+    /// 番組の詳細の画面の ViewModel。番組かチャンネルが見つからなければ nil
+    public func programDetail(programID: Int, channelCode: String) -> ProgramDetailViewModel? {
+        let route = Route.programDetail(programID: programID, channelCode: channelCode)
         if let viewModel = programDetails[route] { return viewModel }
+        guard let program = guide.program(id: programID, channelCode: channelCode),
+              let channel = remote.channels.first(where: { $0.code == channelCode })
+        else { return nil }
         let viewModel = ProgramDetailViewModel(
             remote: remote, guide: guide, recording: recording, stream: stream, program: program, channel: channel
         )
@@ -199,12 +204,12 @@ extension AppViewModel: Introspectable {
         if let player { children.append(player) }
         for tab in Tab.allCases {
             for (depth, route) in state.path(of: tab).enumerated() {
-                let screen: any Introspectable = switch route {
+                let screen: (any Introspectable)? = switch route {
                 case .channelPrograms(let channel): programList(for: channel)
-                case .programDetail(let program, let channel): programDetail(program, channel: channel)
+                case .programDetail(let id, let code): programDetail(programID: id, channelCode: code)
                 case .search: guideGrid.search
                 }
-                children.append(IntrospectionAlias("\(tab.rawValue)-\(depth)", screen))
+                if let screen { children.append(IntrospectionAlias("\(tab.rawValue)-\(depth)", screen)) }
             }
         }
         return children
@@ -238,10 +243,10 @@ extension AppViewModel: Introspectable {
         case "openProgram":
             let channel = try channel(arguments)
             let id = try arguments.int("program")
-            guard let program = guide.guidePrograms[channel.code]?.first(where: { $0.id == id }) else {
+            guard guide.program(id: id, channelCode: channel.code) != nil else {
                 throw IntrospectionError.unavailable("番組 \(id) は番組表にありません")
             }
-            send(.open(.programDetail(program, channel)))
+            send(.open(.programDetail(programID: id, channelCode: channel.code)))
         case "openSearch": send(.open(.search))
         case "back": send(.back)
         case "showSettings": send(.showSettings)

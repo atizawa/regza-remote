@@ -21,10 +21,11 @@ extension AppViewModel {
             model?.send(.refresh)
         }
         let stream = EPGStationStreamRepository(store: store, guide: guide, transport: transport)
+        let recording = RegzaRecordingRepository(tv: tv)
         self.init(
             remote: model,
-            guide: GuideUseCase(guide: guide),
-            recording: RecordingUseCase(recording: RegzaRecordingRepository(tv: tv)),
+            guide: GuideUseCase(guide: guide, recording: recording),
+            recording: RecordingUseCase(recording: recording),
             stream: StreamUseCase(stream: stream),
             setup: SetupUseCase(devices: NetworkDeviceRepository(transport: transport), guide: guide, stream: stream)
         )

@@ -94,8 +94,8 @@ struct GuideGridView: View {
         return ScrollView([.horizontal, .vertical]) {
             HStack(alignment: .top, spacing: 0) {
                 ForEach(columns) { column in
-                    ProgramColumn(channel: column.channel, cells: column.cells, window: window, metrics: metrics) { program in
-                        app.send(.open(.programDetail(program, column.channel)))
+                    ProgramColumn(column: column, window: window, metrics: metrics) { program in
+                        app.send(.open(.programDetail(programID: program.id, channelCode: column.channelCode)))
                     }
                 }
             }
@@ -134,7 +134,7 @@ struct GuideGridView: View {
                 .accessibilityHidden(true)
         }
         .overlay(alignment: .topLeading) {
-            PinnedHeader(channels: columns.map(\.channel), metrics: metrics, origin: scrollOrigin)
+            PinnedHeader(channelNames: columns.map(\.channelName), metrics: metrics, origin: scrollOrigin)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(height: metrics.headerHeight)
                 .clipped()
@@ -159,8 +159,8 @@ struct GuideGridView: View {
         #if DEBUG
         // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
         if SampleData.isEnabled, UserDefaults.standard.bool(forKey: "SampleDetail"),
-           let column = viewModel.state.columns.first, let cell = column.cells.first(where: { $0.program.isOnAir() }) {
-            app.send(.setPath(.guide, [.programDetail(cell.program, column.channel)]))
+           let column = viewModel.state.columns.first, let program = column.programs.first(where: \.isOnAir) {
+            app.send(.setPath(.guide, [.programDetail(programID: program.id, channelCode: column.channelCode)]))
         }
         if SampleData.isEnabled, let text = UserDefaults.standard.string(forKey: "SampleSearch") {
             app.send(.setPath(.guide, [.search]))
@@ -225,14 +225,14 @@ private struct PinnedTimeColumn: View {
 
 /// 上に固定する局名の行。横のスクロールにだけ合わせて動かす
 private struct PinnedHeader: View {
-    let channels: [RegzaChannel]
+    let channelNames: [String]
     let metrics: GuideMetrics
     let origin: ScrollOrigin
 
     var body: some View {
         HStack(spacing: 0) {
-            ForEach(channels, id: \.self) { channel in
-                Text(channel.name)
+            ForEach(Array(channelNames.enumerated()), id: \.offset) { _, name in
+                Text(name)
                     .font(.caption.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -279,22 +279,20 @@ private struct TimeColumn: View {
 
 /// 1 局分の番組の枠
 private struct ProgramColumn: View {
-    let channel: RegzaChannel
-    let cells: [GuideGridViewModel.Cell]
+    let column: GuideColumn
     let window: ClosedRange<Date>
     let metrics: GuideMetrics
-    var onSelect: (MirakurunProgram) -> Void
+    var onSelect: (ProgramItem) -> Void
 
     var body: some View {
         ZStack(alignment: .top) {
-            ForEach(cells.filter { $0.program.end > window.lowerBound && $0.program.start < window.upperBound }) { cell in
-                let program = cell.program
+            ForEach(column.programs.filter { $0.end > window.lowerBound && $0.start < window.upperBound }) { program in
                 let top = metrics.offset(of: program.start, in: window)
                 let bottom = metrics.offset(of: program.end, in: window)
                 Button {
                     onSelect(program)
                 } label: {
-                    ProgramCell(program: program, channelName: channel.name, isReserved: cell.isReserved)
+                    ProgramCell(program: program, channelName: column.channelName)
                         .frame(width: metrics.columnWidth, height: max(1, bottom - top), alignment: .topLeading)
                         .clipped()
                 }
@@ -304,7 +302,7 @@ private struct ProgramColumn: View {
         }
         // VoiceOver のローターで局ごとに移れるようにする
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(channel.name)
+        .accessibilityLabel(column.channelName)
         .frame(width: metrics.columnWidth, alignment: .top)
         .frame(maxHeight: .infinity, alignment: .top)
         .overlay(alignment: .trailing) { GridLine(axis: .vertical) }
@@ -312,12 +310,14 @@ private struct ProgramColumn: View {
 }
 
 private struct ProgramCell: View {
-    let program: MirakurunProgram
+    let program: ProgramItem
     let channelName: String
-    let isReserved: Bool
+    private var isReserved: Bool { program.isReserved }
 
     var body: some View {
-        let isOnAir = program.isOnAir()
+        // 毎分描き直すので、作ったときではなく今の時刻で放送中か見る
+        let now = Date()
+        let isOnAir = program.start <= now && now < program.end
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 3) {
                 Text(program.start, format: .dateTime.hour().minute())
@@ -363,7 +363,7 @@ private struct ProgramCell: View {
 
     /// ジャンル (ARIB の大分類) ごとの色
     private var genreColor: Color {
-        switch program.genres.first {
+        switch program.genre {
         case 0: .blue
         case 1: .green
         case 2: .teal
@@ -381,7 +381,7 @@ private struct ProgramCell: View {
 }
 /// 日付の選択。今日・明日・6(金) … を横に並べ、土曜は青、日曜は赤にする (テレビ欄と同じ)
 private struct DayPicker: View {
-    let days: [GuideGridViewModel.Day]
+    let days: [GuideDay]
     let selected: Date?
     let onSelect: (Date?) -> Void
 
@@ -395,10 +395,10 @@ private struct DayPicker: View {
         }
     }
 
-    private func chip(_ day: GuideGridViewModel.Day) -> some View {
-        let isSelected = selected == day.day
+    private func chip(_ day: GuideDay) -> some View {
+        let isSelected = selected == day.date
         return Button {
-            onSelect(day.day)
+            onSelect(day.date)
         } label: {
             Text(day.label)
                 .font(.subheadline.weight(.semibold))
@@ -410,7 +410,7 @@ private struct DayPicker: View {
         .buttonStyle(.plain)
     }
 
-    private func color(_ kind: GuideGridViewModel.DayKind) -> Color {
+    private func color(_ kind: GuideDayKind) -> Color {
         switch kind {
         case .saturday: .blue
         case .sunday: .red

@@ -24,8 +24,9 @@ struct LiveModels {
         remote = RemoteViewModel(tv: TVUseCase(tv: tv))
         let guide = MirakurunGuideRepository(store: store, transport: transport)
         let stream = EPGStationStreamRepository(store: store, guide: guide, transport: transport)
-        self.guide = GuideUseCase(guide: guide)
-        recording = RecordingUseCase(recording: RegzaRecordingRepository(tv: tv))
+        let recording = RegzaRecordingRepository(tv: tv)
+        self.guide = GuideUseCase(guide: guide, recording: recording)
+        self.recording = RecordingUseCase(recording: recording)
         self.stream = StreamUseCase(stream: stream)
         setup = SetupUseCase(devices: NetworkDeviceRepository(transport: transport), guide: guide, stream: stream)
     }
@@ -307,18 +308,18 @@ struct LiveModels {
 
         // 番組表があるのは地デジのテスト局１だけ。BS の局は番組表がないので出さない
         #expect(state.bands == [.terrestrial])
-        #expect(state.columns.map(\.channel.name) == ["テスト局１"])
-        #expect(state.columns.first?.cells.count == 2)
+        #expect(state.columns.map(\.channelName) == ["テスト局１"])
+        #expect(state.columns.first?.programs.count == 2)
         // 今日のあと、明日から番組表がある最後の日まで
         let today = BroadcastDay.start(of: Date())
-        #expect(state.days.first?.day == nil)
-        #expect(state.days.dropFirst().first?.day == Calendar.current.date(byAdding: .day, value: 1, to: today))
+        #expect(state.days.first?.date == nil)
+        #expect(state.days.dropFirst().first?.date == Calendar.current.date(byAdding: .day, value: 1, to: today))
         let lastDay = BroadcastDay.start(of: Date().addingTimeInterval(3 * 86_400))
-        #expect(state.days.last?.day == lastDay)
+        #expect(state.days.last?.date == lastDay)
         // 読み込むまでは検索を出さない
         #expect(!state.canSearch)
 
-        let day = try #require(state.days.last?.day)
+        let day = try #require(state.days.last?.date)
         viewModel.send(.selectDay(day))
         #expect(viewModel.state.selectedDay == day)
     }
@@ -326,13 +327,13 @@ struct LiveModels {
     @Test func gridDescribesDays() throws {
         let today = BroadcastDay.start(of: Date())
         let tomorrow = try #require(Calendar.current.date(byAdding: .day, value: 1, to: today))
-        #expect(GuideGridViewModel.label(of: nil) == "今日")
-        #expect(GuideGridViewModel.label(of: tomorrow) == "明日")
+        #expect(GuideUseCase.label(of: nil) == "今日")
+        #expect(GuideUseCase.label(of: tomorrow) == "明日")
         // 2026-11-07 は土曜、11-08 は日曜
         let saturday = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 4)))
-        #expect(GuideGridViewModel.kind(of: saturday) == .saturday)
-        #expect(GuideGridViewModel.kind(of: saturday.addingTimeInterval(86_400)) == .sunday)
-        #expect(GuideGridViewModel.label(of: saturday.addingTimeInterval(7 * 86_400)).hasSuffix("(土)"))
+        #expect(GuideUseCase.kind(of: saturday) == .saturday)
+        #expect(GuideUseCase.kind(of: saturday.addingTimeInterval(86_400)) == .sunday)
+        #expect(GuideUseCase.label(of: saturday.addingTimeInterval(7 * 86_400)).hasSuffix("(土)"))
         // 今日は今の時刻の正時から 24 時間、ほかの日はその日の朝 4 時から
         let now = Date()
         let window = GuideGridViewModel.window(now: now)
@@ -356,7 +357,7 @@ struct LiveModels {
         search.send(.setText("あおぞら"))
         var state = search.state
         #expect(state.results.map(\.program.id) == [1])
-        #expect(state.results.first?.channel.name == "テスト局１")
+        #expect(state.results.first?.channelName == "テスト局１")
         #expect(state.results.first?.timeText.hasPrefix("放送中 〜") == true)
         #expect(state.results.first?.reason == nil)
 
@@ -374,8 +375,8 @@ struct LiveModels {
         let onAir = try program(id: 1, startingIn: -60)
         let byCast = ProgramSearchResult(program: onAir, matches: [.init(term: "見本太郎", field: .cast)])
         let byTitle = ProgramSearchResult(program: onAir, matches: [.init(term: "テスト", field: .title)])
-        #expect(GuideSearchViewModel.reason(for: byCast) == "見本太郎 が出演")
-        #expect(GuideSearchViewModel.reason(for: byTitle) == nil)
+        #expect(GuideUseCase.reason(for: byCast) == "見本太郎 が出演")
+        #expect(GuideUseCase.reason(for: byTitle) == nil)
     }
 }
 

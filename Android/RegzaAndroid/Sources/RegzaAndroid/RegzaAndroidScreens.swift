@@ -17,26 +17,6 @@ public struct RegzaAndroidScreen {
     public var search: RegzaAndroidSearch?
 }
 
-/// 番組 (MirakurunProgram に、画面に出す表記を足したもの)
-public struct RegzaAndroidProgram {
-    public var id: Int
-    public var channelCode: String
-    public var name: String
-    public var description: String
-    /// 1970 年からの秒
-    public var start: Double
-    public var end: Double
-    /// 「13:00」
-    public var startText: String
-    /// 「11月7日(土) 13:00 〜 13:45 · 45分」
-    public var timeText: String
-    public var genreName: String?
-    /// ARIB のジャンルの大分類 (0〜15)。なければ -1
-    public var genre: Int
-    public var isOnAir: Bool
-    public var isReserved: Bool
-}
-
 /// チャンネル一覧の画面 (ChannelListViewModel.State)
 public struct RegzaAndroidChannelList {
     public var isLoading: Bool
@@ -69,28 +49,18 @@ public struct RegzaAndroidGuide {
     public var canSearch: Bool
     public var bands: [RegzaChannel.Band]
     public var band: RegzaChannel.Band?
-    public var days: [RegzaAndroidDay]
-    /// 表に出す時間 (1970 年からの秒)。今日は今の時刻の正時から、ほかの日は朝 4 時から 24 時間
+    public var days: [GuideDay]
+    /// 選んでいる日 (days の何番目か)
+    public var selectedDayIndex: Int
+    /// 表に出す時間 (1970 年からの秒)。今日は今の時刻の正時から、ほかの日は朝 4 時から 24 時間。
+    /// Date にすると、Date の Java のつなぎを Domain と窓口の両方で作ってしまうので、数値で渡す
     public var windowStart: Double
     public var windowEnd: Double
     /// 表の左端に出す時刻 (朝 4 時より前は 24〜27 時と書く)
     public var hourLabels: [String]
     /// 今日を見ている (今の時刻の線を出す)
     public var isToday: Bool
-    public var columns: [RegzaAndroidGuideColumn]
-}
-
-public struct RegzaAndroidDay {
-    /// 「今日」「明日」「9(月)」
-    public var label: String
-    /// "weekday"・"saturday"・"sunday" (土曜は青、日曜は赤で出す)
-    public var kind: String
-    public var isSelected: Bool
-}
-
-public struct RegzaAndroidGuideColumn {
-    public var channel: RegzaChannel
-    public var programs: [RegzaAndroidProgram]
+    public var columns: [GuideColumn]
 }
 
 /// 1 チャンネルの番組表 (ProgramListViewModel.State)
@@ -99,18 +69,14 @@ public struct RegzaAndroidProgramList {
     /// 読み込み済み (まだなら読み込み中を出す)
     public var isLoaded: Bool
     public var loadErrorMessage: String?
-    public var days: [RegzaAndroidProgramDay]
-}
-
-public struct RegzaAndroidProgramDay {
-    /// 「11月7日(土)」
-    public var label: String
-    public var programs: [RegzaAndroidProgram]
+    public var days: [ProgramDay]
 }
 
 /// 番組の詳細 (ProgramDetailViewModel.State)
 public struct RegzaAndroidProgramDetail {
-    public var program: RegzaAndroidProgram
+    public var program: ProgramItem
+    /// 番組内容・出演者など
+    public var texts: [ProgramTextItem]
     public var channelName: String
     public var isTuning: Bool
     /// 予約・取り消しの途中
@@ -123,13 +89,6 @@ public struct RegzaAndroidProgramDetail {
     public var canTune: Bool
     public var canReserve: Bool
     public var canStartOver: Bool
-    /// 番組内容・出演者など
-    public var extended: [RegzaAndroidTextItem]
-}
-
-public struct RegzaAndroidTextItem {
-    public var title: String
-    public var text: String
 }
 
 /// 録画予約の一覧 (ReservationListViewModel.State)
@@ -151,16 +110,7 @@ public struct RegzaAndroidSearch {
     public var isIndexing: Bool
     /// 読み取った条件 (「明日」「18時〜」「スポーツ」)。removeCondition には何番目かを渡す
     public var conditions: [String]
-    public var results: [RegzaAndroidSearchRow]
-}
-
-public struct RegzaAndroidSearchRow {
-    public var program: RegzaAndroidProgram
-    public var channelName: String
-    /// 「11/5(木) 21:00〜」。放送中は「放送中 〜21:54」
-    public var timeText: String
-    /// なぜ見つかったか (「〇〇 が出演」など)
-    public var reason: String?
+    public var results: [SearchResultItem]
 }
 
 // MARK: - ViewModel の state から作る
@@ -176,43 +126,8 @@ enum ScreenKey: Equatable {
     case search(GuideSearchViewModel.State)
 }
 
-enum AndroidFormat {
-    static let locale = Locale(identifier: "ja_JP")
-
-    static func time(_ date: Date) -> String {
-        date.formatted(.dateTime.locale(locale).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
-    }
-
-    static func day(_ date: Date) -> String {
-        date.formatted(.dateTime.locale(locale).month().day().weekday())
-    }
-
-    /// 「11月7日(土) 13:00 〜 13:45」
-    static func range(_ start: Date, _ end: Date) -> String {
-        "\(day(start)) \(time(start)) 〜 \(time(end))"
-    }
-
-    static func program(_ program: MirakurunProgram, isReserved: Bool, now: Date = Date()) -> RegzaAndroidProgram {
-        let minutes = Int(program.end.timeIntervalSince(program.start) / 60)
-        return RegzaAndroidProgram(
-            id: program.id,
-            channelCode: program.channelCode,
-            name: program.name,
-            description: program.description,
-            start: program.start.timeIntervalSince1970,
-            end: program.end.timeIntervalSince1970,
-            startText: time(program.start),
-            timeText: "\(range(program.start, program.end)) · \(minutes)分",
-            genreName: program.genreName,
-            genre: program.genres.first ?? -1,
-            isOnAir: program.isOnAir(at: now),
-            isReserved: isReserved
-        )
-    }
-}
-
 extension RegzaAndroidScreen {
-    init(_ key: ScreenKey, programs record: (MirakurunProgram, RegzaChannel) -> Void) {
+    init(_ key: ScreenKey) {
         switch key {
         case .remote:
             self.init(kind: "remote")
@@ -232,7 +147,6 @@ extension RegzaAndroidScreen {
                 }
             ))
         case .guide(let state, let band, let window):
-            let now = Date()
             let hours = (0..<GuideGridViewModel.hours).map {
                 "\(BroadcastDay.hour(of: window.lowerBound.addingTimeInterval(TimeInterval($0 * 3600))))"
             }
@@ -242,22 +156,18 @@ extension RegzaAndroidScreen {
                 canSearch: state.canSearch,
                 bands: state.bands,
                 band: band,
-                days: state.days.map {
-                    RegzaAndroidDay(label: $0.label, kind: "\($0.kind)", isSelected: $0.day == state.selectedDay)
-                },
+                days: state.days,
+                selectedDayIndex: state.days.firstIndex { $0.date == state.selectedDay } ?? 0,
                 windowStart: window.lowerBound.timeIntervalSince1970,
                 windowEnd: window.upperBound.timeIntervalSince1970,
                 hourLabels: hours,
                 isToday: state.selectedDay == nil,
+                // 表に出す時間の番組だけを渡す (1 週間分を渡すと重い)
                 columns: state.columns.map { column in
-                    RegzaAndroidGuideColumn(
-                        channel: column.channel,
-                        programs: column.cells
-                            .filter { $0.program.end > window.lowerBound && $0.program.start < window.upperBound }
-                            .map { cell in
-                                record(cell.program, column.channel)
-                                return AndroidFormat.program(cell.program, isReserved: cell.isReserved, now: now)
-                            }
+                    GuideColumn(
+                        channelCode: column.channelCode,
+                        channelName: column.channelName,
+                        programs: column.programs.filter { $0.end > window.lowerBound && $0.start < window.upperBound }
                     )
                 }
             ))
@@ -274,16 +184,12 @@ extension RegzaAndroidScreen {
                 channelName: state.channel.name,
                 isLoaded: state.days != nil,
                 loadErrorMessage: state.loadErrorMessage,
-                days: (state.days ?? []).map { day in
-                    RegzaAndroidProgramDay(label: AndroidFormat.day(day.day), programs: day.rows.map { row in
-                        record(row.program, state.channel)
-                        return AndroidFormat.program(row.program, isReserved: row.isReserved)
-                    })
-                }
+                days: state.days ?? []
             ))
         case .detail(let state):
             self.init(kind: "detail", detail: RegzaAndroidProgramDetail(
-                program: AndroidFormat.program(state.program, isReserved: state.isReserved),
+                program: state.program,
+                texts: state.texts,
                 channelName: state.channel.name,
                 isTuning: state.isTuning,
                 isReserving: state.reserving != nil,
@@ -293,8 +199,7 @@ extension RegzaAndroidScreen {
                 isSeriesReservation: state.reservationIsSeries == true,
                 canTune: state.canTune,
                 canReserve: state.canReserve,
-                canStartOver: state.canStartOver,
-                extended: state.program.extended.map { RegzaAndroidTextItem(title: $0.title, text: $0.text) }
+                canStartOver: state.canStartOver
             ))
         case .search(let state):
             self.init(kind: "search", search: RegzaAndroidSearch(
@@ -303,15 +208,7 @@ extension RegzaAndroidScreen {
                 isLiteral: state.isLiteral,
                 isIndexing: state.isIndexing,
                 conditions: state.conditions.map(\.label),
-                results: state.results.map { row in
-                    record(row.program, row.channel)
-                    return RegzaAndroidSearchRow(
-                        program: AndroidFormat.program(row.program, isReserved: row.isReserved),
-                        channelName: row.channel.name,
-                        timeText: row.timeText,
-                        reason: row.reason
-                    )
-                }
+                results: state.results
             ))
         }
     }
