@@ -20,25 +20,17 @@ public final class ReservationListViewModel {
         /// 取り消せなかったときの説明
         public var cancelError: String?
         /// 録画の予定があるもの (時刻順)
-        public var scheduled: [Row]
+        public var scheduled: [ReservationItem]
         /// 次の回を待っている連ドラ予約
-        public var waiting: [Row]
+        public var waiting: [ReservationItem]
 
         public var isEmpty: Bool { scheduled.isEmpty && waiting.isEmpty }
     }
 
-    public struct Row: Equatable, Sendable, Identifiable {
-        public var reservation: RegzaReservation
-        /// 予約したチャンネルの名前。チャンネル一覧を取れなければ nil
-        public var channelName: String?
-        /// 録画している最中
-        public var isRecording: Bool
-        public var id: String { reservation.id }
-    }
-
     public enum Action: Sendable {
         case load
-        case cancel(RegzaReservation)
+        /// 予約を取り消す (ReservationItem の id)
+        case cancel(String)
     }
 
     private var loadError: RegzaError?
@@ -47,28 +39,20 @@ public final class ReservationListViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let now = Date()
-        let channels = remote.state.channels
-        let rows = recording.reservations.map { reservation in
-            Row(
-                reservation: reservation,
-                channelName: channels.first { $0.code == reservation.channelCode }?.name,
-                isRecording: reservation.isScheduled(now: now) && reservation.start <= now
-            )
-        }
+        let items = recording.items(channels: remote.state.channels)
         return State(
             hasLoaded: hasLoaded,
-            loadErrorMessage: recording.reservations.isEmpty ? loadError?.recordingMessage : nil,
+            loadErrorMessage: items.isEmpty ? loadError?.recordingMessage : nil,
             cancelError: cancelError,
-            scheduled: rows.filter { $0.reservation.isScheduled(now: now) },
-            waiting: rows.filter { !$0.reservation.isScheduled(now: now) }
+            scheduled: items.filter(\.isScheduled),
+            waiting: items.filter { !$0.isScheduled }
         )
     }
 
     public func send(_ action: Action) {
         switch action {
         case .load: work.run { await self.load() }
-        case .cancel(let reservation): work.run { await self.cancel(reservation) }
+        case .cancel(let id): work.run { await self.cancel(id: id) }
         }
     }
 
@@ -84,12 +68,13 @@ public final class ReservationListViewModel {
         }
     }
 
-    private func cancel(_ reservation: RegzaReservation) async {
+    private func cancel(id: String) async {
         cancelError = nil
+        let title = recording.reservations.first { $0.id == id }?.title ?? ""
         do {
-            try await recording.cancel(reservation)
+            try await recording.cancel(id: id)
         } catch {
-            cancelError = "「\(reservation.title)」の予約を取り消せませんでした: \(error.localizedDescription)"
+            cancelError = "「\(title)」の予約を取り消せませんでした: \(error.localizedDescription)"
         }
     }
 }
@@ -111,10 +96,10 @@ extension ReservationListViewModel: Introspectable {
         case "load": send(.load)
         case "cancel":
             let id = try arguments.string("reservation")
-            guard let reservation = recording.reservations.first(where: { $0.id == id }) else {
+            guard recording.reservations.contains(where: { $0.id == id }) else {
                 throw IntrospectionError.unavailable("予約 \(id) はありません")
             }
-            send(.cancel(reservation))
+            send(.cancel(id))
         default: throw IntrospectionError.unknownAction(action)
         }
     }

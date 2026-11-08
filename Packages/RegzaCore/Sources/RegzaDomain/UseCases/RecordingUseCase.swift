@@ -12,6 +12,23 @@ public final class RecordingUseCase {
     /// 録画予約。予定のあるものを先に、時刻順に並べる
     public var reservations: [RegzaReservation] { recording.reservations }
 
+    /// 一覧に出す予約 (UI の型)。チャンネルの名前は、テレビに登録されているチャンネルから引く
+    public func items(channels: [RegzaChannel], now: Date = Date()) -> [ReservationItem] {
+        reservations.map { reservation in
+            let isScheduled = reservation.isScheduled(now: now)
+            return ReservationItem(
+                id: reservation.id,
+                title: reservation.title,
+                timeText: DisplayText.range(reservation.start, reservation.end),
+                repeatLabel: reservation.repeatLabel,
+                isSeries: reservation.isSeries,
+                channelName: channels.first { $0.code == reservation.channelCode }?.name,
+                isRecording: isScheduled && reservation.start <= now,
+                isScheduled: isScheduled
+            )
+        }
+    }
+
     public func loadReservations() async throws(RegzaError) {
         try await recording.loadReservations()
     }
@@ -31,6 +48,12 @@ public final class RecordingUseCase {
     }
 
     public func cancel(_ reservation: RegzaReservation) async throws(RegzaError) {
+        try await recording.cancel(reservation)
+    }
+
+    /// 一覧の予約を取り消す (UI の型の id から)
+    public func cancel(id: String) async throws(RegzaError) {
+        guard let reservation = reservations.first(where: { $0.id == id }) else { return }
         try await recording.cancel(reservation)
     }
 }

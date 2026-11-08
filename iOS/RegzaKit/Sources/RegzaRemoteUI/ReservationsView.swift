@@ -6,7 +6,7 @@ import SwiftUI
 struct ReservationsView: View {
     @State private var viewModel: ReservationListViewModel
     /// 取り消すか確かめている予約
-    @State private var canceling: RegzaReservation?
+    @State private var canceling: ReservationItem?
 
     init(viewModel: ReservationListViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -30,7 +30,7 @@ struct ReservationsView: View {
                     presenting: canceling
                 ) { reservation in
                     Button(reservation.isSeries ? "連ドラ予約を取り消す" : "予約を取り消す", role: .destructive) {
-                        viewModel.send(.cancel(reservation))
+                        viewModel.send(.cancel(reservation.id))
                     }
                 } message: { reservation in
                     if reservation.isSeries {
@@ -65,12 +65,12 @@ struct ReservationsView: View {
                 }
                 if !state.scheduled.isEmpty {
                     Section("予定") {
-                        ForEach(state.scheduled) { row($0, isScheduled: true) }
+                        ForEach(state.scheduled) { row($0) }
                     }
                 }
                 if !state.waiting.isEmpty {
                     Section {
-                        ForEach(state.waiting) { row($0, isScheduled: false) }
+                        ForEach(state.waiting) { row($0) }
                     } header: {
                         Text("次の回を待っている連ドラ予約")
                     } footer: {
@@ -81,28 +81,25 @@ struct ReservationsView: View {
         }
     }
 
-    private func row(_ row: ReservationListViewModel.Row, isScheduled: Bool) -> some View {
-        rowContent(row, isScheduled: isScheduled)
+    private func row(_ item: ReservationItem) -> some View {
+        rowContent(item)
             .swipeActions {
-                Button("取り消す", role: .destructive) { canceling = row.reservation }
+                Button("取り消す", role: .destructive) { canceling = item }
             }
     }
 
-    private func rowContent(_ row: ReservationListViewModel.Row, isScheduled: Bool) -> some View {
-        let reservation = row.reservation
-        return VStack(alignment: .leading, spacing: 4) {
-            Text(reservation.title)
+    private func rowContent(_ item: ReservationItem) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(item.title)
                 .lineLimit(2)
-                .foregroundStyle(isScheduled ? .primary : .secondary)
+                .foregroundStyle(item.isScheduled ? .primary : .secondary)
             HStack(spacing: 6) {
-                if row.isRecording {
+                if item.isRecording {
                     Label("録画中", systemImage: "record.circle")
                         .foregroundStyle(.red)
                 }
-                Text(reservation.start, format: .dateTime.month().day().weekday().hour().minute())
-                Text("〜")
-                Text(reservation.end, format: .dateTime.hour().minute())
-                if let repeatLabel = reservation.repeatLabel {
+                Text(item.timeText)
+                if let repeatLabel = item.repeatLabel {
                     Text(repeatLabel)
                         .padding(.horizontal, 6)
                         .background(.fill.tertiary, in: Capsule())
@@ -110,7 +107,7 @@ struct ReservationsView: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
-            if let channelName = row.channelName {
+            if let channelName = item.channelName {
                 Text(channelName)
                     .font(.caption)
                     .foregroundStyle(.secondary)

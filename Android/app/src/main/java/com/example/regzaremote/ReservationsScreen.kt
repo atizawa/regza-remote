@@ -26,15 +26,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidReservation
 import com.example.regzaremote.core.RegzaAndroidReservations
+import com.example.regzaremote.core.ReservationItem
 
 /** テレビの録画予約の一覧 (iOS と同じ ReservationListViewModel)。取り消しは確かめてから送る */
 @Composable
 fun ReservationsScreen(list: RegzaAndroidReservations, send: Send) {
     LaunchedEffect(Unit) { send(RegzaAndroidAction.showReservations()) }
     // 取り消すか確かめている予約
-    var cancelling by remember { mutableStateOf<RegzaAndroidReservation?>(null) }
+    var cancelling by remember { mutableStateOf<ReservationItem?>(null) }
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("録画予約") {
@@ -68,7 +68,7 @@ fun ReservationsScreen(list: RegzaAndroidReservations, send: Send) {
         AlertDialog(
             onDismissRequest = { cancelling = null },
             title = { Text("「${reservation.title}」の予約を取り消しますか？") },
-            text = { if (reservation.repeatLabel.isPresent) Text("連ドラ予約なので、次の回以降も録画されなくなります。") },
+            text = { if (reservation.isSeries) Text("連ドラ予約なので、次の回以降も録画されなくなります。") },
             confirmButton = {
                 TextButton(onClick = {
                     send(RegzaAndroidAction.cancelReservation(reservation.id))
@@ -86,7 +86,7 @@ private fun Section(title: String) {
 }
 
 @Composable
-private fun ReservationRow(reservation: RegzaAndroidReservation, onCancel: () -> Unit) {
+private fun ReservationRow(reservation: ReservationItem, onCancel: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

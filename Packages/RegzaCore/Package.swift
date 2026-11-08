@@ -17,8 +17,10 @@ let package = Package(
         .executable(name: "regza", targets: ["RegzaCLI"]),
     ],
     targets: [
-        // Domain: アプリの中心になる型 (Data)、保存先などの protocol (Repositories)、決まりごと (UseCases)。ほかの層に依存しない
-        .target(name: "RegzaDomain"),
+        // Domain: アプリの中心になる型 (Data)、保存先などの protocol (Repositories)、決まりごと (UseCases)。SharedModels だけに依存する
+        // SharedModels: UI で使う型。Domain の UseCase がエンティティから作る。Android からも使うので、Java のクラスにできる形にする
+        .target(name: "RegzaSharedModels", exclude: ["README.md"]),
+        .target(name: "RegzaDomain", dependencies: ["RegzaSharedModels"]),
         // Infrastructure: テレビ・Mirakurun・EPGStation との通信、HTTP、暗号、通信の形から Domain の型への変換 (Mappers)
         .target(name: "RegzaInfrastructure", dependencies: ["RegzaDomain"]),
         // Presentation: iOS と Android で共有する ViewModel。Domain の UseCase だけを使う (Repository や通信は知らない)
@@ -28,6 +30,6 @@ let package = Package(
         // 見本の Repository (テレビにも録画サーバーにもつながない)
         .target(name: "RegzaSample", dependencies: ["RegzaCore"]),
         .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp"]),
-        .testTarget(name: "RegzaCoreTests", dependencies: ["RegzaApp", "RegzaSample", "RegzaCore", "RegzaDomain", "RegzaInfrastructure"]),
+        .testTarget(name: "RegzaCoreTests", dependencies: ["RegzaApp", "RegzaSample", "RegzaCore", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels"]),
     ]
 )

@@ -101,6 +101,11 @@ rm -rf "$generated" .build/swift/regzacore-java && mkdir -p "$generated" .build/
   --config RegzaAndroid/RegzaCore.swift-java.config --swift-module RegzaDomain \
   --input-swift ../Packages/RegzaCore/Sources/RegzaDomain \
   --output-swift "$generated" --output-java .build/swift/regzacore-java
+# UI で使う型 (RegzaSharedModels) は、すべてそのまま Java のクラスにする
+.build/swift-tool/out/Products/Release/swift-java jextract --log-level warning \
+  --config RegzaAndroid/RegzaSharedModels.swift-java.config --swift-module RegzaSharedModels \
+  --input-swift ../Packages/RegzaCore/Sources/RegzaSharedModels \
+  --output-swift "$generated" --output-java .build/swift/regzacore-java
 
 # Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)。
 # HTTPS に使う BoringSSL は、SDK の静的ライブラリ (libssl.a・libcrypto.a) を RegzaAndroid に埋め込む

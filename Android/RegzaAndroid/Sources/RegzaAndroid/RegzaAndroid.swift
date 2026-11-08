@@ -336,8 +336,7 @@ public final class RegzaAndroidApp {
         case .cancelProgramReservation: currentDetail()?.send(.cancelReservation)
         case .tuneProgram(let startOver): currentDetail()?.send(.tune(startOver: startOver))
         case .showReservations: app.reservationList.send(.load)
-        case .cancelReservation(let id):
-            if let reservation = app.recording.reservations.first(where: { $0.id == id }) { app.reservationList.send(.cancel(reservation)) }
+        case .cancelReservation(let id): app.reservationList.send(.cancel(id))
         case .showSetup: app.send(.showSettings)
         case .closeSetup: app.send(.closeSettings)
         case .setupAppear: tv?.send(.appear)

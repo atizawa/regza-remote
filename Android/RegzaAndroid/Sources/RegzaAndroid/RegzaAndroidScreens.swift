@@ -138,20 +138,9 @@ public struct RegzaAndroidReservations {
     public var loadErrorMessage: String?
     public var cancelError: String?
     /// 録画の予定があるもの (時刻順)
-    public var scheduled: [RegzaAndroidReservation]
+    public var scheduled: [ReservationItem]
     /// 次の回を待っている連ドラ予約
-    public var waiting: [RegzaAndroidReservation]
-}
-
-public struct RegzaAndroidReservation {
-    public var id: String
-    public var title: String
-    /// 「11月7日(土) 16:30 〜 17:00」
-    public var timeText: String
-    /// 「毎週」など
-    public var repeatLabel: String?
-    public var channelName: String?
-    public var isRecording: Bool
+    public var waiting: [ReservationItem]
 }
 
 /// 番組表の検索 (GuideSearchViewModel.State)
@@ -273,22 +262,12 @@ extension RegzaAndroidScreen {
                 }
             ))
         case .reservations(let state):
-            func row(_ row: ReservationListViewModel.Row) -> RegzaAndroidReservation {
-                RegzaAndroidReservation(
-                    id: row.reservation.id,
-                    title: row.reservation.title,
-                    timeText: AndroidFormat.range(row.reservation.start, row.reservation.end),
-                    repeatLabel: row.reservation.repeatLabel,
-                    channelName: row.channelName,
-                    isRecording: row.isRecording
-                )
-            }
             self.init(kind: "reservations", reservations: RegzaAndroidReservations(
                 hasLoaded: state.hasLoaded,
                 loadErrorMessage: state.loadErrorMessage,
                 cancelError: state.cancelError,
-                scheduled: state.scheduled.map(row),
-                waiting: state.waiting.map(row)
+                scheduled: state.scheduled,
+                waiting: state.waiting
             ))
         case .programs(let state):
             self.init(kind: "programs", programs: RegzaAndroidProgramList(
