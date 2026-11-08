@@ -8,8 +8,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.regzaremote.core.RegzaAndroidAction
 import com.example.regzaremote.core.RegzaAndroidApp
+import com.example.regzaremote.core.RegzaAndroidScreen
 import com.example.regzaremote.core.RegzaAndroidSnapshot
-import com.example.regzaremote.core.RegzaConnection
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 
@@ -25,11 +25,15 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
     private var saved: Connection? = store.load()
 
     private val core = RegzaAndroidApp.init(
-        saved?.host ?: "", saved?.user ?: "", saved?.password ?: "", store.pairingUserID(),
+        saved?.host ?: "", saved?.user ?: "", saved?.password ?: "", store.pairingUserID(), store.guideHost,
     )
 
-    /** 画面に出す状態。Swift から最初の状態を受け取るまでは null */
+    /** アプリ全体の状態 (タブ・登録の画面・接続)。Swift から最初の状態を受け取るまでは null */
     var state by mutableStateOf<RegzaAndroidSnapshot?>(null)
+        private set
+
+    /** いま見えている画面の状態。中身が変わったときだけ Swift から届く */
+    var screen by mutableStateOf<RegzaAndroidScreen?>(null)
         private set
 
     init {
@@ -41,21 +45,28 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
                 snapshot = core.nextSnapshot().await()
             }
         }
+        viewModelScope.launch {
+            screen = core.screen().await()
+            while (true) screen = core.nextScreen().await()
+        }
     }
 
     fun send(action: RegzaAndroidAction) = core.send(action)
 
     private fun update(snapshot: RegzaAndroidSnapshot) {
         state = snapshot
-        save(snapshot.connection)
+        save(snapshot)
     }
 
-    /** PIN で登録したときなど、Swift の側で接続情報が変わったら保存する */
-    private fun save(connection: RegzaConnection) {
+    /** PIN で登録したときや設定を保存したときなど、Swift の側で変わったものを保存する */
+    private fun save(snapshot: RegzaAndroidSnapshot) {
+        val connection = snapshot.connection
         val changed = Connection(connection.host, connection.user, connection.password)
-        if (changed.host.isEmpty() || changed == saved) return
-        store.save(changed)
-        saved = changed
+        if (changed.host.isNotEmpty() && changed != saved) {
+            store.save(changed)
+            saved = changed
+        }
+        if (snapshot.guideHost != store.guideHost) store.guideHost = snapshot.guideHost
     }
 
     override fun onCleared() {

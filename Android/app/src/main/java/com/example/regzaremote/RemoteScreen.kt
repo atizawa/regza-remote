@@ -112,7 +112,7 @@ fun RemoteScreen(state: RegzaAndroidSnapshot, sendAction: Send) {
         KeyRow { listOf(Keys.recordedList, Keys.timeShift, Keys.jumpToStart).forEach { KeyButton(it, send, Modifier.weight(1f)) } }
 
         Spacer(Modifier.height(8.dp))
-        TextButton(onClick = { sendAction(RegzaAndroidAction.showSetup()) }) { Text("テレビを登録し直す") }
+        TextButton(onClick = { sendAction(RegzaAndroidAction.showSetup()) }) { Text("設定") }
     }
 }
 

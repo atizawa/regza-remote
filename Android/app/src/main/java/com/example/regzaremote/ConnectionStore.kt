@@ -36,6 +36,11 @@ class ConnectionStore(context: Context) {
             .apply()
     }
 
+    /** 番組表を読む Mirakurun のアドレス。未設定なら空 (パスワードではないので暗号化しない) */
+    var guideHost: String
+        get() = preferences.getString(GUIDE_HOST, null) ?: ""
+        set(value) = preferences.edit().putString(GUIDE_HOST, value).apply()
+
     /**
      * PIN 登録に使うこのアプリ用のユーザー ID。無ければ作って保存する。
      * 登録し直すときも同じ ID を使うと、テレビ側で上書きされて登録が増えない。
@@ -80,6 +85,7 @@ class ConnectionStore(context: Context) {
         const val USER = "user"
         const val PASSWORD = "password"
         const val PAIRING_USER_ID = "pairingUserID"
+        const val GUIDE_HOST = "guideHost"
         const val KEYSTORE = "AndroidKeyStore"
         const val KEY_ALIAS = "regza.connection"
         const val TRANSFORMATION = "AES/GCM/NoPadding"

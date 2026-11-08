@@ -24,30 +24,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidSnapshot
+import com.example.regzaremote.core.RegzaAndroidChannelList
+import com.example.regzaremote.core.RegzaChannel
 
 /** テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える (iOS と同じ ChannelListViewModel) */
 @Composable
-fun ChannelScreen(state: RegzaAndroidSnapshot, send: Send) {
+fun ChannelScreen(list: RegzaAndroidChannelList, send: Send) {
     LaunchedEffect(Unit) { send(RegzaAndroidAction.showChannels()) }
-    val list = state.channelList
     val bands = list.bands
     val band = list.band.orElse(null)
     val tuningCode = list.tuningChannelCode.orElse(null)
 
     Column(Modifier.padding(horizontal = 16.dp)) {
-        if (bands.size > 1) {
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                bands.forEachIndexed { index, item ->
-                    SegmentedButton(
-                        // Swift の値なので、同じ種類かは rawValue で比べる
-                        selected = item.rawValue == band?.rawValue,
-                        onClick = { send(RegzaAndroidAction.selectBand(item)) },
-                        shape = SegmentedButtonDefaults.itemShape(index, bands.size),
-                    ) { Text(item.label) }
-                }
-            }
-        }
+        ScreenHeader("チャンネル")
+        BandPicker(bands, band, send)
         list.loadErrorMessage.orElse(null)?.let { message ->
             Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(vertical = 12.dp))
             TextButton(onClick = { send(RegzaAndroidAction.reloadChannels()) }) { Text("もう一度試す") }
@@ -72,21 +62,48 @@ fun ChannelScreen(state: RegzaAndroidSnapshot, send: Send) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(56.dp),
                     )
-                    Text(
-                        channel.name,
-                        // 同じ放送局のサブチャンネルは控えめに出す (iOS 版と同じ)
-                        color = if (row.isSubchannel) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            channel.name,
+                            // 同じ放送局のサブチャンネルは控えめに出す (iOS 版と同じ)
+                            color = if (row.isSubchannel) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        row.programName.orElse(null)?.let {
+                            Text(
+                                it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                     when {
                         tuningCode == channel.code -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                         row.isNowPlaying -> Text("✓", color = MaterialTheme.colorScheme.primary)
                     }
+                    // 番組表がある局は、その局の番組表を開ける (iOS 版と同じ)
+                    if (row.isHasPrograms) {
+                        TextButton(onClick = { send(RegzaAndroidAction.openPrograms(channel.code)) }) { Text("番組表") }
+                    }
                 }
                 HorizontalDivider()
             }
+        }
+    }
+}
+
+/** 地デジ・BS・CS の切り替え。番組表とチャンネルのタブで同じものを選ぶ (iOS 版と同じ) */
+@Composable
+fun BandPicker(bands: Array<RegzaChannel.Band>, band: RegzaChannel.Band?, send: Send) {
+    if (bands.size <= 1) return
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+        bands.forEachIndexed { index, item ->
+            SegmentedButton(
+                // Swift の値なので、同じ種類かは rawValue で比べる
+                selected = item.rawValue == band?.rawValue,
+                onClick = { send(RegzaAndroidAction.selectBand(item)) },
+                shape = SegmentedButtonDefaults.itemShape(index, bands.size),
+            ) { Text(item.label) }
         }
     }
 }

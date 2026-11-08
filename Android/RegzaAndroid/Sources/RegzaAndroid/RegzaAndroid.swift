@@ -8,7 +8,9 @@ import RegzaCore
 //
 // 画面の状態と操作は iOS と同じ共有の ViewModel (AppViewModel とその下の画面の ViewModel) が持つ。
 // ViewModel は MainActor で動き、swift-java は MainActor の同期の関数を Java に出せないので、ここに窓口を置く:
-//   - snapshot() / nextSnapshot(): 画面に出す状態をまとめて返す (async なので Java の Future になる)
+//   - snapshot() / nextSnapshot(): アプリ全体の状態 (タブ・登録の画面・接続) を返す (async なので Java の Future になる)
+//   - screen() / nextScreen(): いま見えている画面の状態を返す。番組表は大きいので、全体の状態とは分け、
+//     中身が変わったときだけ返す (2 秒ごとの取り直しで、番組表を渡し直さない)
 //   - send(_:): 操作を送る (MainActor に順に積むだけで、すぐ返る)
 
 /// このアプリ用のユーザー ID を新しく作る (MAC アドレスの形)。Kotlin の保存先が、初めて使うときに作って保存する
@@ -18,47 +20,27 @@ public func regzaMakeUserID() -> String {
 
 // MARK: - 状態
 
-/// 画面に出す状態をまとめたもの (iOS の画面が ViewModel の state から読むものと同じ)
+/// アプリ全体の状態 (いま見えている画面の中身は RegzaAndroidScreen)
 public struct RegzaAndroidSnapshot {
-    /// 選んでいるタブ ("remote" か "channels")
+    /// 選んでいるタブ ("remote"・"guide"・"channels"・"reservations")
     public var tab: String
-    /// テレビの登録の画面を出している (未登録のとき、登録し直すとき)
+    /// いまのタブで戻れる (タブの中で画面を開いている)
+    public var canGoBack: Bool
+    /// テレビの登録の画面を出している (未登録のとき、設定を開いたとき)
     public var isShowingSetup: Bool
-    /// 保存すべき接続情報。変わったら Kotlin が保存する
+    /// 保存すべき接続情報と番組表のアドレス。変わったら Kotlin が保存する
     public var connection: RegzaConnection
+    public var guideHost: String
     public var nowPlaying: RegzaNowPlaying?
     /// テレビに接続できないときの説明
     public var connectionError: String?
     /// つながらないので、IP アドレスが変わっていないかテレビを探している
     public var isSearchingTV: Bool
-    public var channelList: RegzaAndroidChannelList
     /// 登録の画面を出している間だけある
     public var setup: RegzaAndroidSetup?
 }
 
-/// チャンネル一覧の画面 (ChannelListViewModel.State)
-public struct RegzaAndroidChannelList {
-    public var isLoading: Bool
-    /// 一覧の代わりに出す、取得できなかった説明
-    public var loadErrorMessage: String?
-    /// 切り替えられなかったときの説明
-    public var tuneError: String?
-    /// 切り替え中のチャンネルのコード
-    public var tuningChannelCode: String?
-    public var bands: [RegzaChannel.Band]
-    public var band: RegzaChannel.Band?
-    public var rows: [RegzaAndroidChannelRow]
-}
-
-public struct RegzaAndroidChannelRow {
-    public var channel: RegzaChannel
-    public var programName: String?
-    public var isNowPlaying: Bool
-    /// 控えめに出す (同じ放送局のサブチャンネル)
-    public var isSubchannel: Bool
-}
-
-/// テレビの登録の画面 (TVSetupViewModel.State)
+/// テレビの登録と録画サーバーの設定の画面 (TVSetupViewModel.State と ServerSetupViewModel.State)
 public struct RegzaAndroidSetup {
     public var host: String
     public var user: String
@@ -83,6 +65,15 @@ public struct RegzaAndroidSetup {
     public var canSave: Bool
     /// 登録の画面を閉じられる (登録済みのテレビがある)
     public var canClose: Bool
+    /// 番組表 (Mirakurun) のアドレス
+    public var guideHost: String
+    public var guideHosts: [String]
+    public var isScanningGuide: Bool
+    public var guideMessage: String?
+    /// 保存済みで、連携を解除できるか
+    public var isGuideLinked: Bool
+    /// 入力したポートが正しいか
+    public var isGuideHostValid: Bool
 }
 
 /// 見つかったテレビ
@@ -97,17 +88,47 @@ public struct RegzaAndroidDevice {
 /// 画面からの操作 (共有の ViewModel の Action に送る)
 public enum RegzaAndroidAction {
     case selectTab(String)
+    /// いまのタブで 1 つ戻る
+    case back
     // リモコン (RemoteViewModel)
     case press(RegzaKey)
     /// 画面が見えている間、2 秒ごとに取り直す
     case startPolling
     case stopPolling
+    case selectBand(RegzaChannel.Band)
     // チャンネル一覧 (ChannelListViewModel)
     case showChannels
     case reloadChannels
-    case selectBand(RegzaChannel.Band)
     case tune(RegzaChannel)
-    // テレビの登録 (TVSetupViewModel)
+    /// 1 チャンネルの番組表を開く (チャンネルのコード)
+    case openPrograms(String)
+    /// 番組の詳細を開く (チャンネルのコード、番組の id)
+    case openProgram(String, Int)
+    // 番組表 (GuideGridViewModel)
+    case showGuide
+    /// 日付を選ぶ (RegzaAndroidGuide.days の何番目か)
+    case selectDay(Int)
+    case openSearch
+    // 番組表の検索 (GuideSearchViewModel)
+    case setSearchText(String)
+    /// 読み取った条件を外す (RegzaAndroidSearch.conditions の何番目か)
+    case removeCondition(Int)
+    case searchLiterally
+    // 1 チャンネルの番組表 (ProgramListViewModel)
+    case showPrograms
+    case reloadPrograms
+    // 番組の詳細 (ProgramDetailViewModel)
+    case showDetail
+    /// 録画予約する (true なら連ドラ予約)
+    case reserve(Bool)
+    case cancelProgramReservation
+    /// 選局する (true なら放送中の番組を最初から)
+    case tuneProgram(Bool)
+    // 録画予約の一覧 (ReservationListViewModel)
+    case showReservations
+    /// 予約を取り消す (予約の id)
+    case cancelReservation(String)
+    // 設定 (TVSetupViewModel・ServerSetupViewModel)
     case showSetup
     case closeSetup
     case setupAppear
@@ -122,6 +143,9 @@ public enum RegzaAndroidAction {
     case confirmPairing
     case cancelPairing
     case test
+    case setGuideHost(String)
+    case scanGuide
+    case unlinkGuide
     case save
 }
 
@@ -131,15 +155,20 @@ public enum RegzaAndroidAction {
 public final class RegzaAndroidApp {
     private let store: AndroidConnectionStore
     private let app: AppViewModel
-    /// 前に返した状態から変わったか (変わるのを待つ間に起きた変化も逃さない)
-    @MainActor private var hasChanged = false
-    @MainActor private var waiter: CheckedContinuation<Void, Never>?
+    @MainActor private let snapshotChanges = Changes()
+    @MainActor private let screenChanges = Changes()
+    /// 前に返した画面の状態 (同じなら返さない)
+    @MainActor private var lastScreen: ScreenKey?
+    /// 画面に出した番組 (番組の id から)。詳細を開く操作で使う
+    @MainActor private var shownPrograms: [Int: (MirakurunProgram, RegzaChannel)] = [:]
 
     /// 保存してある値から作る。メインスレッドから呼ぶ (先に regzaSetUpMainActor を呼んでおく)
-    public init(host: String, user: String, password: String, pairingUserID: String) {
+    public init(host: String, user: String, password: String, pairingUserID: String, guideHost: String) {
         _ = useSocketTransport
         let store = AndroidConnectionStore(
-            connection: RegzaConnection(host: host, user: user, password: password), pairingUserID: pairingUserID
+            connection: RegzaConnection(host: host, user: user, password: password),
+            pairingUserID: pairingUserID,
+            guideHost: guideHost
         )
         self.store = store
         app = MainActor.assumeIsolated {
@@ -150,15 +179,25 @@ public final class RegzaAndroidApp {
         }
     }
 
-    /// いまの状態
+    /// いまのアプリ全体の状態
     public func snapshot() async -> RegzaAndroidSnapshot {
-        await trackedSnapshot()
+        await currentSnapshot()
     }
 
-    /// 前に返したときから状態が変わるまで待って、変わった状態を返す
+    /// 前に返したときからアプリ全体の状態が変わるまで待って、変わった状態を返す
     public func nextSnapshot() async -> RegzaAndroidSnapshot {
-        await waitForChange()
-        return await trackedSnapshot()
+        await snapshotChanges.wait()
+        return await snapshot()
+    }
+
+    /// いま見えている画面の状態
+    public func screen() async -> RegzaAndroidScreen {
+        await currentScreen()
+    }
+
+    /// 見えている画面の状態が前に返したものから変わるまで待って、変わった状態を返す
+    public func nextScreen() async -> RegzaAndroidScreen {
+        await nextScreenOnMain()
     }
 
     /// 操作を送る。送った順に MainActor で処理する
@@ -166,91 +205,139 @@ public final class RegzaAndroidApp {
         Task { @MainActor in self.perform(action) }
     }
 
-    // MARK: 状態の変化を待つ
-
-    @MainActor private func trackedSnapshot() -> RegzaAndroidSnapshot {
-        hasChanged = false
-        return withObservationTracking { makeSnapshot() } onChange: { [weak self] in
-            // 変わる直前に呼ばれるので、変わり終わってから知らせる
-            Task { @MainActor in self?.markChanged() }
-        }
-    }
-
-    @MainActor private func markChanged() {
-        hasChanged = true
-        waiter?.resume()
-        waiter = nil
-    }
-
-    @MainActor private func waitForChange() async {
-        if hasChanged { return }
-        await withCheckedContinuation { waiter = $0 }
-    }
-
     // MARK: ViewModel の state から作る
+
+    @MainActor private func currentSnapshot() -> RegzaAndroidSnapshot {
+        snapshotChanges.track { makeSnapshot() }
+    }
+
+    @MainActor private func currentScreen() -> RegzaAndroidScreen {
+        makeScreen(screenChanges.track { screenKey() })
+    }
 
     @MainActor private func makeSnapshot() -> RegzaAndroidSnapshot {
         let appState = app.state
         let remote = app.remote.state
-        let channels = app.channelList.state
-        let tv = appState.isShowingSettings ? app.settings?.tv : nil
+        let settings = appState.isShowingSettings ? app.settings : nil
         return RegzaAndroidSnapshot(
             tab: appState.tab.rawValue,
-            isShowingSetup: tv != nil,
+            canGoBack: !appState.path(of: appState.tab).isEmpty,
+            isShowingSetup: settings != nil,
             connection: remote.connection,
+            guideHost: app.guide.guideHost,
             nowPlaying: remote.nowPlaying,
             connectionError: remote.lastError?.localizedDescription,
             isSearchingTV: remote.isSearchingTV,
-            channelList: RegzaAndroidChannelList(
-                isLoading: channels.isLoading,
-                loadErrorMessage: channels.loadErrorMessage,
-                tuneError: channels.tuneError,
-                tuningChannelCode: channels.tuning?.code,
-                bands: channels.bands,
-                band: channels.band,
-                rows: channels.rows.map {
-                    RegzaAndroidChannelRow(
-                        channel: $0.channel, programName: $0.programName, isNowPlaying: $0.isNowPlaying, isSubchannel: $0.isSubchannel
-                    )
-                }
-            ),
-            setup: tv.map { tv in
-                let state = tv.state
+            setup: settings.map { settings in
+                let tv = settings.tv.state
+                let servers = settings.servers.state
                 return RegzaAndroidSetup(
-                    host: state.draft.host,
-                    user: state.draft.user,
-                    password: state.draft.password,
-                    devices: state.devices.map { RegzaAndroidDevice(name: $0.device.name, host: $0.device.host, isSelected: $0.isSelected) },
-                    isScanning: state.isScanning,
-                    scanMessage: state.scanMessage,
-                    isWaitingForPIN: state.isWaitingForPIN,
-                    pin: state.pin,
-                    isPairing: state.isPairing,
-                    pairingMessage: state.pairingMessage,
-                    isRegistered: state.isRegistered,
-                    hasRegistered: state.hasRegistered,
-                    isShowingManualEntry: state.isShowingManualEntry,
-                    isTesting: state.isTesting,
-                    testResult: state.testResult,
-                    canSave: state.canSave,
-                    canClose: remote.connection.isConfigured
+                    host: tv.draft.host,
+                    user: tv.draft.user,
+                    password: tv.draft.password,
+                    devices: tv.devices.map { RegzaAndroidDevice(name: $0.device.name, host: $0.device.host, isSelected: $0.isSelected) },
+                    isScanning: tv.isScanning,
+                    scanMessage: tv.scanMessage,
+                    isWaitingForPIN: tv.isWaitingForPIN,
+                    pin: tv.pin,
+                    isPairing: tv.isPairing,
+                    pairingMessage: tv.pairingMessage,
+                    isRegistered: tv.isRegistered,
+                    hasRegistered: tv.hasRegistered,
+                    isShowingManualEntry: tv.isShowingManualEntry,
+                    isTesting: tv.isTesting,
+                    testResult: tv.testResult,
+                    canSave: tv.canSave && servers.isValid,
+                    canClose: remote.connection.isConfigured,
+                    guideHost: servers.guide.host,
+                    guideHosts: servers.guide.hosts,
+                    isScanningGuide: servers.guide.isScanning,
+                    guideMessage: servers.guide.message,
+                    isGuideLinked: servers.guide.isLinked,
+                    isGuideHostValid: servers.isValid
                 )
             }
         )
     }
 
+    /// いま見えている画面 (いまのタブの戻る道の最後、なければタブの最初の画面) の state
+    @MainActor private func screenKey() -> ScreenKey {
+        let state = app.state
+        switch state.path(of: state.tab).last {
+        case .channelPrograms(let channel): return .programs(app.programList(for: channel).state)
+        case .programDetail(let program, let channel): return .detail(app.programDetail(program, channel: channel).state)
+        case .search: return .search(app.guideGrid.search.state)
+        case nil: break
+        }
+        switch state.tab {
+        case .remote: return .remote
+        case .channels: return .channels(app.channelList.state)
+        case .reservations: return .reservations(app.reservationList.state)
+        case .guide:
+            let grid = app.guideGrid.state
+            return .guide(
+                grid,
+                band: app.remote.state.band(among: grid.bands),
+                window: GuideGridViewModel.window(now: Date(), day: grid.selectedDay)
+            )
+        }
+    }
+
+    @MainActor private func makeScreen(_ key: ScreenKey) -> RegzaAndroidScreen {
+        lastScreen = key
+        var programs: [Int: (MirakurunProgram, RegzaChannel)] = [:]
+        let screen = RegzaAndroidScreen(key) { programs[$0.id] = ($0, $1) }
+        if !programs.isEmpty { shownPrograms = programs }
+        return screen
+    }
+
+    @MainActor private func nextScreenOnMain() async -> RegzaAndroidScreen {
+        while true {
+            await screenChanges.wait()
+            let key = screenChanges.track { screenKey() }
+            if key != lastScreen { return makeScreen(key) }
+        }
+    }
+
+    // MARK: 操作
+
     @MainActor private func perform(_ action: RegzaAndroidAction) {
         let tv = app.settings?.tv
+        let servers = app.settings?.servers
         switch action {
         case .selectTab(let tab):
             if let tab = AppViewModel.Tab(rawValue: tab) { app.send(.selectTab(tab)) }
+        case .back: app.send(.back)
         case .press(let key): app.remote.send(.press(key))
         case .startPolling: app.remote.send(.startPolling)
         case .stopPolling: app.remote.send(.stopPolling)
+        case .selectBand(let band): app.remote.send(.selectBand(band))
         case .showChannels: app.channelList.send(.appear)
         case .reloadChannels: app.channelList.send(.reload)
-        case .selectBand(let band): app.remote.send(.selectBand(band))
         case .tune(let channel): app.channelList.send(.tune(channel))
+        case .openPrograms(let code):
+            if let channel = app.remote.state.channels.first(where: { $0.code == code }) { app.send(.open(.channelPrograms(channel))) }
+        case .openProgram(let code, let id):
+            if let (program, channel) = program(id: id, channelCode: code) { app.send(.open(.programDetail(program, channel))) }
+        case .showGuide: app.guideGrid.send(.load)
+        case .selectDay(let index):
+            let days = app.guideGrid.state.days
+            if days.indices.contains(index) { app.guideGrid.send(.selectDay(days[index].day)) }
+        case .openSearch: app.send(.open(.search))
+        case .setSearchText(let text): app.guideGrid.search.send(.setText(text))
+        case .removeCondition(let index):
+            let conditions = app.guideGrid.search.state.conditions
+            if conditions.indices.contains(index) { app.guideGrid.search.send(.removeCondition(conditions[index].condition)) }
+        case .searchLiterally: app.guideGrid.search.send(.searchLiterally)
+        case .showPrograms: currentProgramList()?.send(.appear)
+        case .reloadPrograms: currentProgramList()?.send(.reload)
+        case .showDetail: currentDetail()?.send(.appear)
+        case .reserve(let series): currentDetail()?.send(.reserve(series: series))
+        case .cancelProgramReservation: currentDetail()?.send(.cancelReservation)
+        case .tuneProgram(let startOver): currentDetail()?.send(.tune(startOver: startOver))
+        case .showReservations: app.reservationList.send(.load)
+        case .cancelReservation(let id):
+            if let reservation = app.recording.reservations.first(where: { $0.id == id }) { app.reservationList.send(.cancel(reservation)) }
         case .showSetup: app.send(.showSettings)
         case .closeSetup: app.send(.closeSettings)
         case .setupAppear: tv?.send(.appear)
@@ -266,34 +353,85 @@ public final class RegzaAndroidApp {
         case .confirmPairing: tv?.send(.confirmPairing)
         case .cancelPairing: tv?.send(.cancelPairing)
         case .test: tv?.send(.test)
+        case .setGuideHost(let host): servers?.send(.setHost(.guide, host))
+        case .scanGuide: servers?.send(.scan(.guide))
+        case .unlinkGuide: servers?.send(.unlink(.guide))
         case .save: app.send(.saveSettings)
         }
     }
+
+    /// 画面に出した番組か、番組表にある番組
+    @MainActor private func program(id: Int, channelCode: String) -> (MirakurunProgram, RegzaChannel)? {
+        if let shown = shownPrograms[id] { return shown }
+        guard let channel = app.remote.state.channels.first(where: { $0.code == channelCode }),
+              let program = app.guide.guidePrograms[channelCode]?.first(where: { $0.id == id })
+        else { return nil }
+        return (program, channel)
+    }
+
+    @MainActor private func currentProgramList() -> ProgramListViewModel? {
+        guard case .channelPrograms(let channel) = app.state.path(of: app.state.tab).last else { return nil }
+        return app.programList(for: channel)
+    }
+
+    @MainActor private func currentDetail() -> ProgramDetailViewModel? {
+        guard case .programDetail(let program, let channel) = app.state.path(of: app.state.tab).last else { return nil }
+        return app.programDetail(program, channel: channel)
+    }
 }
 
-/// Android の保存先。値は Kotlin が Keystore で暗号化して保存しているものを起動時に受け取り、
-/// 変わった接続情報は RegzaAndroidSnapshot.connection から Kotlin が保存する
+/// 状態の変わり目を知らせる。読んだ値を見張り、変わったら待っている側を起こす
+/// (待ち始める前に変わっていても逃さない)
+@MainActor
+private final class Changes {
+    private var hasChanged = false
+    private var waiter: CheckedContinuation<Void, Never>?
+
+    /// 値を作り、その中で読んだものを見張る
+    func track<Value>(_ make: () -> Value) -> Value {
+        hasChanged = false
+        return withObservationTracking(make) { [weak self] in
+            // 変わる直前に呼ばれるので、変わり終わってから知らせる
+            Task { @MainActor in self?.changed() }
+        }
+    }
+
+    func wait() async {
+        if hasChanged { return }
+        await withCheckedContinuation { waiter = $0 }
+    }
+
+    private func changed() {
+        hasChanged = true
+        waiter?.resume()
+        waiter = nil
+    }
+}
+
+/// Android の保存先。値は Kotlin が保存しているものを起動時に受け取り、
+/// 変わった接続情報と番組表のアドレスは RegzaAndroidSnapshot から Kotlin が保存する
 final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
     private let lock = NSLock()
     private var connection: RegzaConnection
     private let userID: String
-    private var values = (guideHost: "", streamHost: "", ownStreamIDs: [Int]())
+    private var values: (guideHost: String, streamHost: String, ownStreamIDs: [Int])
 
-    init(connection: RegzaConnection, pairingUserID: String) {
+    init(connection: RegzaConnection, pairingUserID: String, guideHost: String) {
         self.connection = connection
         userID = pairingUserID
+        values = (guideHost, "", [])
     }
 
     func load() -> RegzaConnection { lock.withLock { connection } }
     func save(_ connection: RegzaConnection) { lock.withLock { self.connection = connection } }
     func pairingUserID() -> String { userID }
 
-    // Android にはまだ番組表とライブ視聴がないので、保存しない
     var guideHost: String {
         get { lock.withLock { values.guideHost } }
         set { lock.withLock { values.guideHost = newValue } }
     }
 
+    // Android にはまだライブ視聴がないので、保存しない
     var streamHost: String {
         get { lock.withLock { values.streamHost } }
         set { lock.withLock { values.streamHost = newValue } }
