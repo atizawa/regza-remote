@@ -25,7 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.RegzaAndroidAction
 import com.example.regzaremote.core.RegzaAndroidChannelList
-import com.example.regzaremote.core.RegzaChannel
+import com.example.regzaremote.core.BroadcastBand
 
 /** テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える (iOS と同じ ChannelListViewModel) */
 @Composable
@@ -93,7 +93,7 @@ fun ChannelScreen(list: RegzaAndroidChannelList, send: Send) {
 
 /** 地デジ・BS・CS の切り替え。番組表とチャンネルのタブで同じものを選ぶ (iOS 版と同じ) */
 @Composable
-fun BandPicker(bands: Array<RegzaChannel.Band>, band: RegzaChannel.Band?, send: Send) {
+fun BandPicker(bands: Array<BroadcastBand>, band: BroadcastBand?, send: Send) {
     if (bands.size <= 1) return
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
         bands.forEachIndexed { index, item ->

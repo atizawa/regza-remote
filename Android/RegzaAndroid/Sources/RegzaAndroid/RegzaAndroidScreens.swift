@@ -26,8 +26,8 @@ public struct RegzaAndroidChannelList {
     public var tuneError: String?
     /// 切り替え中のチャンネルのコード
     public var tuningChannelCode: String?
-    public var bands: [RegzaChannel.Band]
-    public var band: RegzaChannel.Band?
+    public var bands: [BroadcastBand]
+    public var band: BroadcastBand?
     public var rows: [ChannelItem]
 }
 
@@ -37,8 +37,8 @@ public struct RegzaAndroidGuide {
     public var hasGuide: Bool
     public var hasLoaded: Bool
     public var canSearch: Bool
-    public var bands: [RegzaChannel.Band]
-    public var band: RegzaChannel.Band?
+    public var bands: [BroadcastBand]
+    public var band: BroadcastBand?
     public var days: [GuideDay]
     /// 選んでいる日 (days の何番目か)
     public var selectedDayIndex: Int
@@ -109,7 +109,7 @@ public struct RegzaAndroidSearch {
 enum ScreenKey: Equatable {
     case remote
     case channels(ChannelListViewModel.State)
-    case guide(GuideGridViewModel.State, band: RegzaChannel.Band?, window: ClosedRange<Date>)
+    case guide(GuideGridViewModel.State, band: BroadcastBand?, window: ClosedRange<Date>)
     case reservations(ReservationListViewModel.State)
     case programs(ProgramListViewModel.State)
     case detail(ProgramDetailViewModel.State)

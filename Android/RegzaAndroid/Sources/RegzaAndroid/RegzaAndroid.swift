@@ -88,7 +88,7 @@ public enum RegzaAndroidAction {
     /// 画面が見えている間、2 秒ごとに取り直す
     case startPolling
     case stopPolling
-    case selectBand(RegzaChannel.Band)
+    case selectBand(BroadcastBand)
     // チャンネル一覧 (ChannelListViewModel)
     case showChannels
     case reloadChannels

@@ -2,18 +2,8 @@ import Foundation
 
 /// テレビに登録されているチャンネル (`GET /v2/remote/settings/channel_list`)。
 public struct RegzaChannel: Decodable, Hashable, Sendable, Identifiable {
-    public enum Band: String, CaseIterable, Sendable {
-        case terrestrial, bs, cs, other
-
-        public var label: String {
-            switch self {
-            case .terrestrial: "地デジ"
-            case .bs: "BS"
-            case .cs: "CS"
-            case .other: "その他"
-            }
-        }
-    }
+    /// 放送の種類。UI でも選ぶので、型は SharedModels に置く
+    public typealias Band = BroadcastBand
 
     /// 選局に使う ID (例: `JP-G7fe00400`)
     public var code: String
