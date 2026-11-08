@@ -87,7 +87,7 @@ public struct RemoteView: View {
         }
         // アプリで見る (ライブ視聴)。いま映っているものの詳細を開いているときは、そのシートの上から出す
         .fullScreenCover(isPresented: Binding(
-            get: { app.state.playingChannel != nil && !app.state.isShowingNowPlaying },
+            get: { app.state.playingChannelCode != nil && !app.state.isShowingNowPlaying },
             set: { if !$0 { app.send(.closePlayer) } }
         )) {
             if let player = app.player {
@@ -342,7 +342,7 @@ private enum DebugLive {
         // EPGStation は番組表を設定しているときだけ使うので、見本の番組表を設定済みにしておく
         let guide = SampleGuideRepository(guideHost: "確認用", programs: [])
         let stream = StreamUseCase(stream: EPGStationStreamRepository(store: DebugStore(streamHost: host), guide: guide))
-        return LivePlayerViewModel(remote: app.remote, guide: app.guide, stream: stream, channel: channel)
+        return LivePlayerViewModel(remote: app.remote, channels: app.channels, guide: app.guide, stream: stream, channel: channel)
     }
 }
 

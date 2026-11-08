@@ -13,9 +13,18 @@ public final class SetupUseCase {
         self.stream = stream
     }
 
-    /// 同じネットワークのテレビを、見つかった順に返す
-    public func findTVs() -> AsyncStream<RegzaDevice> {
-        devices.devices()
+    /// 同じネットワークのテレビを、見つかった順に返す (UI の型)
+    public func findTVs() -> AsyncStream<DeviceItem> {
+        let found = devices.devices()
+        return AsyncStream { continuation in
+            let task = Task {
+                for await device in found {
+                    continuation.yield(DeviceItem(host: device.host, name: device.name, supportsPIN: device.supportsPIN))
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 
     /// テレビに PIN を表示させてから確定するまでの 1 回の登録

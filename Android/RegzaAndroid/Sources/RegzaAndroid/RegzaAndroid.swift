@@ -45,7 +45,7 @@ public struct RegzaAndroidSetup {
     public var host: String
     public var user: String
     public var password: String
-    public var devices: [RegzaAndroidDevice]
+    public var devices: [DeviceItem]
     public var isScanning: Bool
     public var scanMessage: String?
     /// テレビに PIN が表示されていて、入力を待っている
@@ -74,13 +74,6 @@ public struct RegzaAndroidSetup {
     public var isGuideLinked: Bool
     /// 入力したポートが正しいか
     public var isGuideHostValid: Bool
-}
-
-/// 見つかったテレビ
-public struct RegzaAndroidDevice {
-    public var name: String
-    public var host: String
-    public var isSelected: Bool
 }
 
 // MARK: - 操作
@@ -234,7 +227,7 @@ public final class RegzaAndroidApp {
                     host: tv.draft.host,
                     user: tv.draft.user,
                     password: tv.draft.password,
-                    devices: tv.devices.map { RegzaAndroidDevice(name: $0.device.name, host: $0.device.host, isSelected: $0.isSelected) },
+                    devices: tv.devices,
                     isScanning: tv.isScanning,
                     scanMessage: tv.scanMessage,
                     isWaitingForPIN: tv.isWaitingForPIN,
@@ -345,8 +338,7 @@ public final class RegzaAndroidApp {
         case .setPIN(let pin): tv?.send(.setPIN(pin))
         case .setShowingManualEntry(let isShowing): tv?.send(.setShowingManualEntry(isShowing))
         case .scan: tv?.send(.scan)
-        case .selectDevice(let host):
-            if let row = tv?.state.devices.first(where: { $0.device.host == host }) { tv?.send(.select(row.device)) }
+        case .selectDevice(let host): tv?.send(.select(host))
         case .startPairing: tv?.send(.startPairing)
         case .confirmPairing: tv?.send(.confirmPairing)
         case .cancelPairing: tv?.send(.cancelPairing)

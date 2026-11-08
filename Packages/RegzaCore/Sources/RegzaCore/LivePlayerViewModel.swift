@@ -8,11 +8,13 @@ import Observation
 @Observable
 public final class LivePlayerViewModel {
     public let remote: RemoteViewModel
+    public let channels: ChannelUseCase
     public let guide: GuideUseCase
     public let stream: StreamUseCase
 
-    public init(remote: RemoteViewModel, guide: GuideUseCase, stream: StreamUseCase, channel: RegzaChannel) {
+    public init(remote: RemoteViewModel, channels: ChannelUseCase, guide: GuideUseCase, stream: StreamUseCase, channel: RegzaChannel) {
         self.remote = remote
+        self.channels = channels
         self.guide = guide
         self.stream = stream
         self.channel = channel
@@ -27,24 +29,18 @@ public final class LivePlayerViewModel {
 
     public struct State: Equatable, Sendable {
         /// いま見ている局
-        public var channel: RegzaChannel
+        /// いま見ている局のコードと名前
+        public var channelCode: String
+        public var channelName: String
         public var phase: Phase
         /// 見ている局でいま放送中の番組 (番組表から)
-        public var program: MirakurunProgram?
+        public var program: ProgramItem?
         /// 準備中に出す説明
         public var preparingMessage: String
         /// 見られる局がある放送の種類
         public var bands: [RegzaChannel.Band]
         /// 一覧に出す局 (選んでいる放送の種類のもの)
-        public var channels: [Row]
-    }
-
-    public struct Row: Equatable, Sendable, Identifiable {
-        public var channel: RegzaChannel
-        public var programName: String?
-        /// いま見ている局
-        public var isWatching: Bool
-        public var id: String { channel.code }
+        public var channels: [ChannelItem]
     }
 
     public enum Action: Sendable {
@@ -53,7 +49,7 @@ public final class LivePlayerViewModel {
         /// 配信を頼む
         case start
         /// 前の配信を止めて、選んだ局の配信を頼み直す
-        case switchChannel(RegzaChannel)
+        case switchChannel(String)
         /// 準備できないまま残っている配信 (ほかの端末のものも含む) を止めてから、もう一度頼む
         case retryAfterStoppingStalled
         /// 見終わった。配信を止めてチューナーを空ける
@@ -69,17 +65,16 @@ public final class LivePlayerViewModel {
 
     public var state: State {
         let now = Date()
-        let bands = bands
+        let bands = channels.liveBands
         let band = remote.state.band(among: bands)
         return State(
-            channel: channel,
+            channelCode: channel.code,
+            channelName: channel.name,
             phase: phase,
-            program: guide.currentProgram(for: channel, at: now),
+            program: guide.currentProgram(for: channel, at: now).map { guide.item($0, now: now) },
             preparingMessage: "\(channel.name) の配信を準備しています…（20 秒ほど）",
             bands: bands,
-            channels: watchableChannels.filter { $0.band == band }.map {
-                Row(channel: $0, programName: guide.currentProgram(for: $0, at: now)?.name, isWatching: $0 == channel)
-            }
+            channels: channels.liveItems(band: band, watchingCode: channel.code, now: now)
         )
     }
 
@@ -92,8 +87,8 @@ public final class LivePlayerViewModel {
             }
         case .start:
             start()
-        case .switchChannel(let newChannel):
-            guard newChannel != channel else { return }
+        case .switchChannel(let code):
+            guard code != channel.code, let newChannel = channels.channel(code: code) else { return }
             end()
             channel = newChannel
             start()
@@ -105,20 +100,6 @@ public final class LivePlayerViewModel {
         case .end:
             end()
         }
-    }
-
-    // MARK: - 見られる局
-
-    /// EPGStation で見られる局 (Mirakurun が受信している局。番組表がまだなければ CS 以外)。サブチャンネルは代表だけ
-    private var watchableChannels: [RegzaChannel] {
-        remote.state.channels.filter { channel in
-            guard channel.isRepresentative || channel.band == .cs else { return false }
-            return guide.guidePrograms.isEmpty ? channel.band != .cs : guide.guidePrograms[channel.code] != nil
-        }
-    }
-
-    private var bands: [RegzaChannel.Band] {
-        RegzaChannel.Band.allCases.filter { band in watchableChannels.contains { $0.band == band } }
     }
 
     // MARK: - 配信
@@ -193,10 +174,10 @@ extension LivePlayerViewModel: Introspectable {
         switch action {
         case "switchChannel":
             let code = try arguments.string("channel")
-            guard let row = state.channels.first(where: { $0.channel.code == code }) else {
+            guard state.channels.contains(where: { $0.code == code }) else {
                 throw IntrospectionError.unavailable("チャンネル \(code) はライブ視聴で見られません")
             }
-            send(.switchChannel(row.channel))
+            send(.switchChannel(code))
         case "retryAfterStoppingStalled": send(.retryAfterStoppingStalled)
         default: throw IntrospectionError.unknownAction(action)
         }

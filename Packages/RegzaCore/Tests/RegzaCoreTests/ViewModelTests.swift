@@ -422,7 +422,8 @@ struct LiveModels {
         let transport = FakeTransport(respond)
         let live = LiveModels(store: store, transport: transport)
         let player = LivePlayerViewModel(
-            remote: live.remote, guide: live.guide, stream: live.stream, channel: try screens.channel(code: channelCode)
+            remote: live.remote, channels: live.channels, guide: live.guide, stream: live.stream,
+            channel: try screens.channel(code: channelCode)
         )
         return (player, transport, store)
     }
@@ -598,7 +599,7 @@ struct LiveModels {
         let channel = try #require(app.remote.channels.first)
         // EPGStation が設定されていないので開かない
         app.send(.play(channelCode: channel.code))
-        #expect(app.state.playingChannel == nil)
+        #expect(app.state.playingChannelCode == nil)
         #expect(app.player == nil)
     }
 

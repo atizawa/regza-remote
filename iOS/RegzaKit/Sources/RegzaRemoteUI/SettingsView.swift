@@ -113,12 +113,12 @@ struct SettingsView: View {
                     .disabled(state.isWaitingForPIN)
                 ForEach(state.devices) { row in
                     Button {
-                        tv.send(.select(row.device))
+                        tv.send(.select(row.host))
                     } label: {
                         HStack {
                             VStack(alignment: .leading) {
-                                Text(row.device.name)
-                                Text(row.device.host)
+                                Text(row.name)
+                                Text(row.host)
                                     .font(.caption.monospacedDigit())
                                     .foregroundStyle(.secondary)
                             }

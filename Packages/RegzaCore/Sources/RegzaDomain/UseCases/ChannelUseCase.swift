@@ -19,6 +19,37 @@ public final class ChannelUseCase {
         tv.channels.first { $0.code == code }
     }
 
+    // MARK: - ライブ視聴 (EPGStation) で見られる局
+
+    /// EPGStation で見られる局 (Mirakurun が受信している局。番組表がまだなければ CS 以外)。サブチャンネルは代表だけ
+    private var liveChannels: [RegzaChannel] {
+        tv.channels.filter { channel in
+            guard channel.isRepresentative || channel.band == .cs else { return false }
+            return guide.guidePrograms.isEmpty ? channel.band != .cs : guide.guidePrograms[channel.code] != nil
+        }
+    }
+
+    /// ライブ視聴で見られる局がある放送の種類
+    public var liveBands: [RegzaChannel.Band] {
+        RegzaChannel.Band.allCases.filter { band in liveChannels.contains { $0.band == band } }
+    }
+
+    /// ライブ視聴の局の一覧 (UI の型)。見ている局は isNowPlaying にする
+    public func liveItems(band: RegzaChannel.Band?, watchingCode: String, now: Date = Date()) -> [ChannelItem] {
+        liveChannels.filter { $0.band == band }.map { channel in
+            ChannelItem(
+                code: channel.code,
+                name: channel.name,
+                numberText: channel.formattedNumber,
+                programName: guide.currentProgram(for: channel, at: now)?.name,
+                isNowPlaying: channel.code == watchingCode,
+                hasPrograms: guide.guidePrograms[channel.code] != nil,
+                canStartOver: false,
+                isSubchannel: false
+            )
+        }
+    }
+
     /// 一覧に出すチャンネル (UI の型)。サブチャンネルは代表と、いま映っているものだけにする
     public func items(band: RegzaChannel.Band?, nowPlayingCode: String?, now: Date = Date()) -> [ChannelItem] {
         let listed = RegzaChannel.channelList(tv.channels, in: band, nowPlayingChannelCode: nowPlayingCode) {

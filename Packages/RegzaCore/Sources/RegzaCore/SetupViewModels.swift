@@ -23,7 +23,7 @@ public final class TVSetupViewModel {
         /// 入力中の接続情報 (保存するまで RemoteViewModel には入れない)
         public var draft: RegzaConnection
         /// 見つかったテレビ
-        public var devices: [Device]
+        public var devices: [DeviceItem]
         public var isScanning: Bool
         public var scanMessage: String?
         /// テレビに PIN が表示されていて、入力を待っている
@@ -45,12 +45,6 @@ public final class TVSetupViewModel {
         public var canSave: Bool
     }
 
-    public struct Device: Equatable, Sendable, Identifiable {
-        public var device: RegzaDevice
-        public var isSelected: Bool
-        public var id: String { device.id }
-    }
-
     /// 操作できるときはアドレスだけ、注意が要るときだけ目立たせる
     public struct Status: Equatable, Sendable {
         public var text: String
@@ -68,7 +62,8 @@ public final class TVSetupViewModel {
         case scan
         /// 未登録なら、選んだテレビにそのまま PIN を表示させる。
         /// 登録済みなら IP アドレスだけ変える (DHCP でアドレスが変わった場合など)
-        case select(RegzaDevice)
+        /// 見つかったテレビを選ぶ (DeviceItem の host)
+        case select(String)
         case startPairing
         /// PIN で登録を確定して保存する
         case confirmPairing
@@ -79,7 +74,7 @@ public final class TVSetupViewModel {
     }
 
     private var draft: RegzaConnection
-    private var devices: [RegzaDevice] = []
+    private var devices: [DeviceItem] = []
     private var isScanning = false
     private var scanMessage: String?
     /// PIN 登録中 (テレビに PIN が表示されている間) のセッション
@@ -97,7 +92,11 @@ public final class TVSetupViewModel {
     public var state: State {
         State(
             draft: draft,
-            devices: devices.map { Device(device: $0, isSelected: draft.host == $0.host) },
+            devices: devices.map { device in
+                var device = device
+                device.isSelected = draft.host == device.host
+                return device
+            },
             isScanning: isScanning,
             scanMessage: scanMessage,
             isWaitingForPIN: isWaitingForPIN,
@@ -126,7 +125,8 @@ public final class TVSetupViewModel {
         case .scan:
             guard !isScanning else { return }
             work.run { await self.scan() }
-        case .select(let device):
+        case .select(let host):
+            guard let device = devices.first(where: { $0.host == host }) else { return }
             draft.host = device.host
             if device.supportsPIN, !isRegistered { work.run { await self.startPairing() } }
         case .startPairing: work.run { await self.startPairing() }
@@ -280,10 +280,10 @@ extension TVSetupViewModel: Introspectable {
         case "scan": send(.scan)
         case "select":
             let host = try arguments.string("host")
-            guard let device = devices.first(where: { $0.host == host }) else {
+            guard devices.contains(where: { $0.host == host }) else {
                 throw IntrospectionError.unavailable("テレビ \(host) は見つかっていません")
             }
-            send(.select(device))
+            send(.select(host))
         case "startPairing": send(.startPairing)
         case "setPIN": send(.setPIN(try arguments.string("pin")))
         case "confirmPairing": send(.confirmPairing)

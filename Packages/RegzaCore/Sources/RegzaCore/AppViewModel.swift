@@ -43,7 +43,7 @@ public final class AppViewModel {
         /// いま映っているものの詳細のシート
         public var isShowingNowPlaying = false
         /// アプリで見ている局 (ライブ視聴の全画面)。ライブ視聴の中で局を切り替えたら、その局になる
-        public var playingChannel: RegzaChannel?
+        public var playingChannelCode: String?
 
         public func path(of tab: Tab) -> [Route] { paths[tab] ?? [] }
     }
@@ -69,12 +69,12 @@ public final class AppViewModel {
     }
 
     @ObservationIgnored private let work = Work()
-    /// 画面の移り変わり (playingChannel はライブ視聴の ViewModel から求めるので、ここでは使わない)
+    /// 画面の移り変わり (playingChannelCode はライブ視聴の ViewModel から求めるので、ここでは使わない)
     private var navigation = State()
 
     public var state: State {
         var state = navigation
-        state.playingChannel = player?.state.channel
+        state.playingChannelCode = player?.state.channelCode
         return state
     }
 
@@ -141,7 +141,7 @@ public final class AppViewModel {
             next.isShowingNowPlaying = false
         case .play(let code):
             guard stream.canStream, let channel = channels.channel(code: code) else { return }
-            player = LivePlayerViewModel(remote: remote, guide: guide, stream: stream, channel: channel)
+            player = LivePlayerViewModel(remote: remote, channels: channels, guide: guide, stream: stream, channel: channel)
         case .closePlayer:
             if let player {
                 player.send(.end)

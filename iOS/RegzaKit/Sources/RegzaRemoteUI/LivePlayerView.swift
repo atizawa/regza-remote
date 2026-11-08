@@ -121,20 +121,17 @@ private struct ProgramInfo: View {
         // state は読むたびに今の時刻で番組を求める
         TimelineView(.periodic(from: .now, by: 30)) { _ in
             let state = viewModel.state
-            let channel = state.channel
             let program = state.program
             VStack(alignment: .leading, spacing: 6) {
-                Text(channel.name + (program == nil ? "" : " · 放送中"))
+                Text(state.channelName + (program == nil ? "" : " · 放送中"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.accent)
-                Text(program?.name ?? channel.name)
+                Text(program?.name ?? state.channelName)
                     .font(.title3.weight(.bold))
                     .fixedSize(horizontal: false, vertical: true)
                 if let program {
                     HStack(spacing: 4) {
-                        Text(program.start, format: .dateTime.hour().minute())
-                        Text("〜")
-                        Text(program.end, format: .dateTime.hour().minute())
+                        Text(program.timeText)
                         if let genre = program.genreName { Text("· \(genre)") }
                     }
                     .font(.subheadline)
@@ -169,16 +166,15 @@ private struct ChannelPicker: View {
                 BandPicker(bands: state.bands)
             }
             ForEach(state.channels) { row in
-                let channel = row.channel
                 Button {
-                    viewModel.send(.switchChannel(channel))
+                    viewModel.send(.switchChannel(row.code))
                 } label: {
                     HStack(spacing: 12) {
-                        Text(channel.formattedNumber)
+                        Text(row.numberText)
                             .font(.subheadline.monospacedDigit())
                             .foregroundStyle(.secondary)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(channel.name)
+                            Text(row.name)
                                 .lineLimit(1)
                             if let programName = row.programName {
                                 Text(programName)
@@ -188,7 +184,7 @@ private struct ChannelPicker: View {
                             }
                         }
                         Spacer()
-                        if row.isWatching {
+                        if row.isNowPlaying {
                             Image(systemName: "play.fill")
                                 .foregroundStyle(AppTheme.accent)
                                 .accessibilityLabel("再生中")
