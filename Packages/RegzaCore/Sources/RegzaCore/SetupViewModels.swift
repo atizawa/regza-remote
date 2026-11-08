@@ -7,12 +7,14 @@ import Observation
 @Observable
 public final class TVSetupViewModel {
     public let remote: RemoteViewModel
+    public let setup: SetupUseCase
     /// このアプリ用のユーザー ID。手入力のユーザー名は他のツールと共有している
     /// かもしれないので使い回さない (同じ ID で登録し直すと、前のパスワードが無効になる)
     public let pairingUserID: String
 
-    public init(remote: RemoteViewModel) {
+    public init(remote: RemoteViewModel, setup: SetupUseCase) {
         self.remote = remote
+        self.setup = setup
         draft = remote.connection
         pairingUserID = remote.pairingUserID()
     }
@@ -81,7 +83,7 @@ public final class TVSetupViewModel {
     private var isScanning = false
     private var scanMessage: String?
     /// PIN 登録中 (テレビに PIN が表示されている間) のセッション
-    @ObservationIgnored private var pairing: RegzaPairing?
+    @ObservationIgnored private var pairing: (any PairingSession)?
     private var isWaitingForPIN = false
     private var pin = ""
     private var isPairing = false
@@ -154,7 +156,7 @@ public final class TVSetupViewModel {
         defer { isScanning = false }
         scanMessage = nil
         devices = []
-        for await device in RegzaDiscovery.devices() {
+        for await device in setup.findTVs() {
             devices.append(device)
             // 1 台目は選んでおく。登録は利用者がボタンを押してから
             if devices.count == 1, draft.host.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -177,7 +179,7 @@ public final class TVSetupViewModel {
         defer { isPairing = false }
         pairingMessage = nil
         // 登録し直すときはアプリの ID を使い回し、テレビの登録機器が増えないようにする
-        let session = RegzaPairing(host: draft.host, user: pairingUserID)
+        let session = setup.pairing(host: draft.host, user: pairingUserID)
         do {
             try await session.start()
             pairing = session
@@ -296,14 +298,12 @@ extension TVSetupViewModel: Introspectable {
 @MainActor
 @Observable
 public final class ServerSetupViewModel {
-    public let guide: GuideViewModel
-    public let stream: StreamViewModel
+    public let setup: SetupUseCase
 
-    public init(guide: GuideViewModel, stream: StreamViewModel) {
-        self.guide = guide
-        self.stream = stream
-        guideHost = guide.guideHost
-        streamHost = stream.streamHost
+    public init(setup: SetupUseCase) {
+        self.setup = setup
+        guideHost = setup.linkedGuideHost
+        streamHost = setup.linkedStreamHost
     }
 
     public enum Server: String, CaseIterable, Sendable {
@@ -362,14 +362,14 @@ public final class ServerSetupViewModel {
     public var state: State {
         State(
             guide: ServerState(
-                host: guideHost, defaultPort: Mirakurun.defaultPort, hosts: guideHosts, isScanning: isScanningGuide,
-                message: guideMessage, status: Self.status(guideHost), isLinked: !guide.guideHost.isEmpty,
+                host: guideHost, defaultPort: ServerPort.mirakurun, hosts: guideHosts, isScanning: isScanningGuide,
+                message: guideMessage, status: Self.status(guideHost), isLinked: !setup.linkedGuideHost.isEmpty,
                 unlinkTitle: "Mirakurun との連携を解除しますか？",
                 unlinkMessage: "番組名・番組表・番組表からの録画予約が使えなくなります。ライブ視聴（EPGStation）の連携も解除されます。"
             ),
             stream: ServerState(
-                host: streamHost, defaultPort: EPGStation.defaultPort, hosts: streamHosts, isScanning: isScanningStream,
-                message: streamMessage, status: Self.status(streamHost), isLinked: !stream.streamHost.isEmpty,
+                host: streamHost, defaultPort: ServerPort.epgStation, hosts: streamHosts, isScanning: isScanningStream,
+                message: streamMessage, status: Self.status(streamHost), isLinked: !setup.linkedStreamHost.isEmpty,
                 unlinkTitle: "EPGStation との連携を解除しますか？",
                 unlinkMessage: "アプリでのライブ視聴が使えなくなります。"
             ),
@@ -398,12 +398,12 @@ public final class ServerSetupViewModel {
         isScanningGuide = true
         defer { isScanningGuide = false }
         guideMessage = nil
-        guideHosts = await Mirakurun.find()
+        guideHosts = await setup.findGuideServers()
         if let first = guideHosts.first, guideHost.trimmingCharacters(in: .whitespaces).isEmpty {
             guideHost = first
         }
         if guideHosts.isEmpty {
-            guideMessage = "見つかりませんでした。Mirakurun が動いているか、ポート \(Mirakurun.defaultPort) で待ち受けているか確認してください。"
+            guideMessage = "見つかりませんでした。Mirakurun が動いているか、ポート \(ServerPort.mirakurun) で待ち受けているか確認してください。"
         }
     }
 
@@ -411,40 +411,40 @@ public final class ServerSetupViewModel {
         isScanningStream = true
         defer { isScanningStream = false }
         streamMessage = nil
-        streamHosts = await EPGStation.find()
+        streamHosts = await setup.findStreamServers()
         if let first = streamHosts.first, streamHost.trimmingCharacters(in: .whitespaces).isEmpty {
             streamHost = first
         }
         if streamHosts.isEmpty {
-            streamMessage = "見つかりませんでした。EPGStation が動いているか、ポート \(EPGStation.defaultPort) で待ち受けているか確認してください。"
+            streamMessage = "見つかりませんでした。EPGStation が動いているか、ポート \(ServerPort.epgStation) で待ち受けているか確認してください。"
         }
     }
 
-    func suggestStreamHost(transport: any HTTPTransport = RegzaHTTP.transport) async {
+    func suggestStreamHost() async {
         guard streamHost.trimmingCharacters(in: .whitespaces).isEmpty, streamHosts.isEmpty else { return }
         // Mirakurun のアドレスからポートを除いたもの
-        let server = ServerAddress(guideHost).address
-        guard !server.isEmpty, await EPGStation(host: server, timeout: 3, transport: transport).isAvailable() else { return }
+        guard let server = await setup.streamServer(sameAs: ServerAddress(guideHost).address) else { return }
         streamHosts = [server]
         streamHost = server
         streamMessage = "Mirakurun と同じサーバーで EPGStation が見つかりました。よければ「保存」を押してください。"
     }
 
     func unlink(_ server: Server) async {
+        // EPGStation は Mirakurun から放送を受け取るので、番組表を外したらライブ視聴も外れる (SetupUseCase)
         if server == .guide {
             guideHost = ""
             guideHosts = []
-            await guide.saveGuideHost("")
+            await setup.unlinkGuide()
+        } else {
+            setup.unlinkStream()
         }
         streamHost = ""
         streamHosts = []
-        stream.saveStreamHost("")
     }
 
     /// 入力したアドレスを保存する (設定の画面の「保存」から、AppViewModel が呼ぶ)
     func save() async {
-        await guide.saveGuideHost(ServerAddress(guideHost).saved)
-        stream.saveStreamHost(ServerAddress(streamHost).saved)
+        await setup.saveServers(guideHost: ServerAddress(guideHost).saved, streamHost: ServerAddress(streamHost).saved)
     }
 }
 

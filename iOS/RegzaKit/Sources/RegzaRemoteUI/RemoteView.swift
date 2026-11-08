@@ -1,5 +1,6 @@
 #if os(iOS)
-import RegzaCore
+import RegzaApp
+import RegzaSample
 import RegzaLiveActivity
 import SwiftUI
 
@@ -11,11 +12,14 @@ public struct RemoteView: View {
 
     public init() {
         // Live Activity のボタン (App Intents) と同じ保存先とリモコンを使う
-        let app = AppViewModel(store: RegzaRemoteService.store, remote: RegzaRemoteService.remote)
+        var app = AppViewModel(store: RegzaRemoteService.store, remote: RegzaRemoteService.remote)
+        #if DEBUG
+        // 開発用: 起動引数 -SampleData YES で、テレビにつながない見本の Repository で組み立てる
+        if SampleData.isEnabled { app = SampleData.makeApp() }
+        #endif
         let liveActivity = LiveActivityModel(remote: app.remote)
         app.remote.observer = liveActivity
         #if DEBUG
-        if SampleData.isEnabled { SampleData.show(remote: app.remote, guide: app.guide, recording: app.recording) }
         if let tab = SampleData.initialTab { app.send(.selectTab(tab)) }
         // 開発用: 起動引数 -ShowSettings YES で設定画面を開いておく
         if UserDefaults.standard.bool(forKey: "ShowSettings") { app.send(.showSettings) }
@@ -25,9 +29,6 @@ public struct RemoteView: View {
     }
 
     private var model: RemoteViewModel { app.remote }
-    private var guide: GuideViewModel { app.guide }
-    private var recording: ReservationsViewModel { app.recording }
-    private var stream: StreamViewModel { app.stream }
 
     public var body: some View {
         Group {
@@ -97,32 +98,28 @@ public struct RemoteView: View {
         // 開発用: 起動引数 -LiveHost <EPGStation> -LiveChannel <チャンネルの ID> で、すぐ再生画面を開く
         .fullScreenCover(isPresented: .constant(DebugLive.channel != nil)) {
             if let host = DebugLive.host, let channel = DebugLive.channel {
-                LivePlayerView(viewModel: LivePlayerViewModel(
-                    remote: model, guide: guide, stream: stream, server: EPGStation(host: host), channel: channel
-                ))
+                LivePlayerView(viewModel: DebugLive.player(host: host, channel: channel, app: app))
             }
         }
         #endif
         .environment(app)
         .environment(model)
-        .environment(guide)
-        .environment(recording)
-        .environment(stream)
         .environment(liveActivity)
         .environment(\.showSettings, ShowSettingsAction { app.send(.showSettings) })
         .tint(AppTheme.accent)
         .sensoryFeedback(.impact(weight: .light), trigger: model.state.tapCount)
         .task {
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
-            await stream.cleanUp()
+            await app.stream.cleanUp()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
             // 終了するときも止めてみる (届かなければ次に開いたときに止める)
-            if let server = stream.streamServer() {
-                let store = model.store
+            if app.stream.canStream {
+                let store = RegzaRemoteService.store
+                let server = EPGStation(host: store.streamHost)
                 let semaphore = DispatchSemaphore(value: 0)
                 Task.detached {
-                    await StreamViewModel.cleanUp(server, store: store)
+                    await EPGStationStreamRepository.cleanUp(server, store: store)
                     semaphore.signal()
                 }
                 _ = semaphore.wait(timeout: .now() + 2)
@@ -337,6 +334,45 @@ private enum DebugLive {
         guard let code = UserDefaults.standard.string(forKey: "LiveChannel") else { return nil }
         let json = #"[{"channel":"\#(code)","name":"確認用","channel_number":1}]"#
         return (try? JSONDecoder().decode([RegzaChannel].self, from: Data(json.utf8)))?.first
+    }
+
+    /// 確かめたい EPGStation につなぐライブ視聴 (保存してある設定は変えない)
+    @MainActor
+    static func player(host: String, channel: RegzaChannel, app: AppViewModel) -> LivePlayerViewModel {
+        // EPGStation は番組表を設定しているときだけ使うので、見本の番組表を設定済みにしておく
+        let guide = SampleGuideRepository(guideHost: "確認用", programs: [])
+        let stream = StreamUseCase(stream: EPGStationStreamRepository(store: DebugStore(streamHost: host), guide: guide))
+        return LivePlayerViewModel(remote: app.remote, guide: app.guide, stream: stream, channel: channel)
+    }
+}
+
+/// 確認用のライブ視聴だけで使う、保存しない保存先
+private final class DebugStore: RegzaConnectionStore, @unchecked Sendable {
+    private let lock = NSLock()
+    private var streams: [Int] = []
+    let streamHostValue: String
+
+    init(streamHost: String) {
+        streamHostValue = streamHost
+    }
+
+    func load() -> RegzaConnection { RegzaConnection() }
+    func save(_ connection: RegzaConnection) {}
+    func pairingUserID() -> String { "" }
+
+    var guideHost: String {
+        get { "" }
+        set {}
+    }
+
+    var streamHost: String {
+        get { streamHostValue }
+        set {}
+    }
+
+    var ownStreamIDs: [Int] {
+        get { lock.withLock { streams } }
+        set { lock.withLock { streams = newValue } }
     }
 }
 #endif

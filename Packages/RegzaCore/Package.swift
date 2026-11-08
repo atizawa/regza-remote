@@ -10,6 +10,10 @@ let package = Package(
     platforms: [.iOS("26.0"), .macOS(.v14)],
     products: [
         .library(name: "RegzaCore", targets: ["RegzaCore"]),
+        // 本物の機器につなぐ組み立て (iOS・Android・CLI)
+        .library(name: "RegzaApp", targets: ["RegzaApp"]),
+        // つながない見本の組み立て (iOS の開発用の見本・テスト)
+        .library(name: "RegzaSample", targets: ["RegzaSample"]),
         .executable(name: "regza", targets: ["RegzaCLI"]),
     ],
     targets: [
@@ -17,9 +21,13 @@ let package = Package(
         .target(name: "RegzaDomain"),
         // Infrastructure: テレビ・Mirakurun・EPGStation との通信、HTTP、暗号、通信の形から Domain の型への変換 (Mappers)
         .target(name: "RegzaInfrastructure", dependencies: ["RegzaDomain"]),
-        // Presentation: iOS と Android で共有する ViewModel。Infrastructure を直接使っているところは、Repository に置き換えていく
-        .target(name: "RegzaCore", dependencies: ["RegzaDomain", "RegzaInfrastructure"]),
-        .executableTarget(name: "RegzaCLI", dependencies: ["RegzaCore"]),
-        .testTarget(name: "RegzaCoreTests", dependencies: ["RegzaCore", "RegzaDomain", "RegzaInfrastructure"]),
+        // Presentation: iOS と Android で共有する ViewModel。Domain の UseCase だけを使う (Repository や通信は知らない)
+        .target(name: "RegzaCore", dependencies: ["RegzaDomain"]),
+        // 組み立てる場所 (Composition Root): どの Repository の実装を使うかを決めて AppViewModel を作る
+        .target(name: "RegzaApp", dependencies: ["RegzaCore", "RegzaInfrastructure"]),
+        // 見本の Repository (テレビにも録画サーバーにもつながない)
+        .target(name: "RegzaSample", dependencies: ["RegzaCore"]),
+        .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp"]),
+        .testTarget(name: "RegzaCoreTests", dependencies: ["RegzaApp", "RegzaSample", "RegzaCore", "RegzaDomain", "RegzaInfrastructure"]),
     ]
 )

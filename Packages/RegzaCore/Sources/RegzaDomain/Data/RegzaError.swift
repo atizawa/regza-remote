@@ -28,3 +28,10 @@ extension RegzaError: LocalizedError {
         }
     }
 }
+
+extension RegzaError {
+    /// RegzaError 以外のエラーは通信のエラーとして扱う
+    public init(_ error: any Error) {
+        self = error as? RegzaError ?? .network(error.localizedDescription)
+    }
+}

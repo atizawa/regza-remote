@@ -57,7 +57,7 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
         // 以前のバージョンは UserDefaults に保存していた。テレビの登録をそのまま使えるよう引き継ぐ
         let defaults = UserDefaults.standard
         let id = defaults.string(forKey: Self.pairingUserIDAccount).flatMap { $0.isEmpty ? nil : $0 }
-            ?? RegzaPairing.makeUserID()
+            ?? PairingUserID.make()
         write(id, account: Self.pairingUserIDAccount)
         defaults.removeObject(forKey: Self.pairingUserIDAccount)
         return id

@@ -1,5 +1,5 @@
 import Foundation
-import RegzaCore
+import RegzaApp
 
 // regza: Mac で ViewModel を動かし、画面を通さずに状態を読んで操作する CLI (Shopify の Reflex の CLI と同じ考え方)。
 //

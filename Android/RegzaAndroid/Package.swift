@@ -46,7 +46,8 @@ let package = Package(
                 "CAndroidMainLoop",
                 "CBoringSSL",
                 "RegzaCoreJava",
-                .product(name: "RegzaCore", package: "RegzaCore"),
+                // 本物の機器につなぐ組み立て (AppViewModel を作る)
+                .product(name: "RegzaApp", package: "RegzaCore"),
                 .product(name: "SwiftJava", package: "swift-java"),
             ],
             exclude: ["swift-java.config"],

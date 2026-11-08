@@ -1,7 +1,7 @@
 #if os(iOS)
 import ActivityKit
 import Foundation
-import RegzaCore
+import RegzaApp
 
 public struct RegzaActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable, Sendable {

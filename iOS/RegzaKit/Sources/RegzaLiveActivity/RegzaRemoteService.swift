@@ -3,7 +3,7 @@ import ActivityKit
 import BackgroundTasks
 import Foundation
 import RegzaAppleStorage
-import RegzaCore
+import RegzaApp
 
 /// アプリと Live Activity のボタン (App Intents) で共有するリモコン。
 /// 操作のたびに Live Activity の表示も更新する。

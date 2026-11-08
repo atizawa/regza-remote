@@ -1,7 +1,7 @@
 #if os(iOS)
 import AppIntents
 import Foundation
-import RegzaCore
+import RegzaApp
 
 // Siri・ショートカットから使う操作。Live Activity のボタンと同じく RegzaRemoteService でテレビに送る。
 // 呼びかけの言い方 (AppShortcutsProvider) はアプリのターゲットにある

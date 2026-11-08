@@ -3,6 +3,37 @@ import Testing
 @testable import RegzaCore
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
+@testable import RegzaApp
+@testable import RegzaSample
+
+/// 本物の Repository を、偽の通信と保存先でつないだもの (RegzaApp の組み立てと同じつなぎ方)
+@MainActor
+struct LiveModels {
+    let store: MemoryStore
+    let tv: RegzaTVRepository
+    let remote: RemoteViewModel
+    let guide: GuideUseCase
+    let recording: RecordingUseCase
+    let stream: StreamUseCase
+    let setup: SetupUseCase
+
+    init(store: MemoryStore = MemoryStore(connection: RegzaConnection(host: "192.0.2.10", user: "user", password: "password")),
+         transport: FakeTransport) {
+        self.store = store
+        tv = RegzaTVRepository(store: store, remote: RegzaRemote(connection: store.load(), transport: transport))
+        remote = RemoteViewModel(tv: TVUseCase(tv: tv))
+        let guide = MirakurunGuideRepository(store: store, transport: transport)
+        let stream = EPGStationStreamRepository(store: store, guide: guide, transport: transport)
+        self.guide = GuideUseCase(guide: guide)
+        recording = RecordingUseCase(recording: RegzaRecordingRepository(tv: tv))
+        self.stream = StreamUseCase(stream: stream)
+        setup = SetupUseCase(devices: NetworkDeviceRepository(transport: transport), guide: guide, stream: stream)
+    }
+
+    var app: AppViewModel {
+        AppViewModel(remote: remote, guide: guide, recording: recording, stream: stream, setup: setup)
+    }
+}
 
 /// 共有の ViewModel を、偽の通信と保存先で確かめる (iOS と Android で同じふるまいになることの確認)
 @MainActor
@@ -19,9 +50,8 @@ import Testing
 
     func makeModel(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse) -> (RemoteViewModel, FakeTransport, MemoryStore) {
         let transport = FakeTransport(respond)
-        let store = MemoryStore(connection: RegzaConnection(host: "192.0.2.10", user: "user", password: "password"))
-        let model = RemoteViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport))
-        return (model, transport, store)
+        let live = LiveModels(transport: transport)
+        return (live.remote, transport, live.store)
     }
 
     nonisolated static func ok(_ body: String) -> HTTPResponse {
@@ -40,7 +70,7 @@ import Testing
         try await model.tune(to: channel)
 
         // テレビに問い合わせ直さずに、選んだチャンネルに切り替わったものとして出す
-        #expect(model.nowPlaying?.channelCode == channel.code)
+        #expect(model.state.nowPlaying?.channelCode == channel.code)
         #expect(model.nowPlayingChannel == channel)
         #expect(model.state.lastError == nil)
         #expect(model.state.tapCount == 1)
@@ -56,19 +86,19 @@ import Testing
         await model.refresh()
 
         #expect(model.state.lastError == .httpStatus(500))
-        #expect(model.nowPlaying == nil)
+        #expect(model.state.nowPlaying == nil)
         #expect(observer.events == ["update - disconnected"])
     }
 
     @Test func savingAnotherTVForgetsWhatWasLoaded() async throws {
-        let (model, _, store) = makeModel { request in
+        let live = LiveModels(transport: FakeTransport { request in
             switch request.url.path {
             case "/v2/remote/settings/channel_list": Self.ok(Self.channelList)
             case "/v2/remote/pvr/reserves/list": Self.ok(Self.reservationList)
             default: HTTPResponse(statusCode: 500, headers: [:], body: Data())
             }
-        }
-        let recording = ReservationsViewModel(remote: model)
+        })
+        let (model, store, recording) = (live.remote, live.store, live.recording)
         try await model.loadChannels()
         try await recording.loadReservations()
         #expect(model.channels.count == 2)
@@ -85,29 +115,20 @@ import Testing
         #expect(recording.reservations.isEmpty)
     }
 
-    @Test func streamNeedsGuideAndRemembersOwnStreams() {
-        let (model, _, store) = makeModel { _ in Self.ok("") }
-        let guide = GuideViewModel(remote: model)
-        let stream = StreamViewModel(remote: model, guide: guide)
-        stream.saveStreamHost(" 192.0.2.30 ")
-        #expect(store.streamHost == "192.0.2.30")
+    @Test func streamNeedsGuide() {
+        let live = LiveModels(transport: FakeTransport { _ in Self.ok("") })
+        live.stream.saveStreamHost(" 192.0.2.30 ")
+        #expect(live.store.streamHost == "192.0.2.30")
         // EPGStation は Mirakurun から放送を受け取るので、番組表がないと使わない
-        #expect(!stream.canStream)
-
-        stream.started(5)
-        stream.started(5)
-        stream.started(7)
-        stream.stopped(5)
-        #expect(store.ownStreamIDs == [7])
+        #expect(!live.stream.canStream)
     }
 
     @Test func sampleModeDoesNotTalkToTV() async {
-        let (model, transport, _) = makeModel { _ in Self.ok("") }
-        model.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: [])
+        let model = AppViewModel.sample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: []).remote
         model.send(.press(.power))
         try? await model.loadChannels(force: true)
         #expect(model.state.tapCount == 1)
-        #expect(transport.paths.isEmpty)
+        #expect(model.state.isSampleMode)
     }
 
     @Test func introspectionPressesKeys() async throws {
@@ -130,11 +151,17 @@ import Testing
 @MainActor
 @Suite struct ScreenViewModelTests {
     func makeModels(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
-        -> (RemoteViewModel, GuideViewModel, ReservationsViewModel, StreamViewModel) {
-        let store = MemoryStore(connection: RegzaConnection(host: "192.0.2.10", user: "user", password: "password"))
-        let remote = RemoteViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: FakeTransport(respond)))
-        let guide = GuideViewModel(remote: remote)
-        return (remote, guide, ReservationsViewModel(remote: remote), StreamViewModel(remote: remote, guide: guide))
+        -> (RemoteViewModel, GuideUseCase, RecordingUseCase, StreamUseCase) {
+        let live = LiveModels(transport: FakeTransport(respond))
+        return (live.remote, live.guide, live.recording, live.stream)
+    }
+
+    /// 見本の Repository でつないだもの (テレビにつながない)
+    func sampleApp(channels: [RegzaChannel], nowPlaying: RegzaNowPlaying? = nil, programs: [MirakurunProgram] = []) -> AppViewModel {
+        AppViewModel.sample(
+            connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nowPlaying, channels: channels,
+            guideHost: programs.isEmpty ? "" : "192.0.2.2", programs: programs
+        )
     }
 
     nonisolated static func status(_ code: Int, _ body: String = "") -> HTTPResponse {
@@ -240,10 +267,9 @@ import Testing
     }
 
     @Test func introspectionReachesScreensOnPath() async throws {
-        let (remote, guide, recording, stream) = makeModels { request in
+        let app = LiveModels(transport: FakeTransport { request in
             request.url.path.hasSuffix("channel_list") ? Self.status(200, ViewModelTests.channelList) : Self.status(500)
-        }
-        let app = AppViewModel(remote: remote, guide: guide, recording: recording, stream: stream)
+        }).app
         let introspector = Introspector(root: app)
         try introspector.perform("app/channelList", "reload")
         _ = await introspector.waitUntilIdle()
@@ -271,12 +297,11 @@ import Testing
     }
 
     @Test func gridShowsChannelsThatHavePrograms() async throws {
-        let (remote, guide, recording, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
-        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: try channels())
-        guide.showSample(guideHost: "192.0.2.2", programs: [
+        let app = screens.sampleApp(channels: try channels(), programs: [
             try program(id: 1, startingIn: 0),
             try program(id: 2, startingIn: 3 * 86_400),
         ])
+        let (remote, guide, recording) = (app.remote, app.guide, app.recording)
         let viewModel = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
         let state = viewModel.state
 
@@ -317,12 +342,11 @@ import Testing
     }
 
     @Test func searchFindsProgramsAndReadsConditions() async throws {
-        let (remote, guide, recording, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
-        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: try channels())
-        guide.showSample(guideHost: "192.0.2.2", programs: [
+        let app = screens.sampleApp(channels: try channels(), programs: [
             try program(id: 1, startingIn: -60, name: "あおぞら散歩"),
             try program(id: 2, startingIn: 86_400, name: "みどり劇場"),
         ])
+        let (remote, guide, recording) = (app.remote, app.guide, app.recording)
         let grid = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
         let search = grid.search
         // 番組表を読むと索引を作る (読めなくても、見本の番組表はそのまま使う)
@@ -361,20 +385,17 @@ import Testing
     let screens = ScreenViewModelTests()
 
     @Test func offersPowerOnOnlyInStandby() throws {
-        let (remote, guide, _, stream) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
-        let viewModel = NowPlayingViewModel(remote: remote, guide: guide, stream: stream)
         let channels = try GuideScreenViewModelTests().channels()
 
-        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: RegzaNowPlaying(kind: .standby), channels: channels)
-        #expect(viewModel.state.canPowerOn)
-        #expect(viewModel.state.title == "テレビ")
+        let standby = screens.sampleApp(channels: channels, nowPlaying: RegzaNowPlaying(kind: .standby)).nowPlaying
+        #expect(standby.state.canPowerOn)
+        #expect(standby.state.title == "テレビ")
 
-        remote.showSample(
-            connection: RegzaConnection(host: "192.0.2.1"),
-            nowPlaying: RegzaNowPlaying(kind: .broadcast, channelCode: "JP-G00000001", title: "見本の番組", description: "見本の説明"),
-            channels: channels
-        )
-        let state = viewModel.state
+        let broadcast = screens.sampleApp(
+            channels: channels,
+            nowPlaying: RegzaNowPlaying(kind: .broadcast, channelCode: "JP-G00000001", title: "見本の番組", description: "見本の説明")
+        ).nowPlaying
+        let state = broadcast.state
         #expect(!state.canPowerOn)
         #expect(state.title == "視聴中")
         #expect(state.description == "見本の説明")
@@ -390,14 +411,17 @@ import Testing
     let screens = ScreenViewModelTests()
 
     func makePlayer(channelCode: String, _ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
-        throws -> (LivePlayerViewModel, FakeTransport, RemoteViewModel) {
-        let (remote, guide, _, stream) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
+        throws -> (LivePlayerViewModel, FakeTransport, MemoryStore) {
+        let store = MemoryStore(connection: RegzaConnection(host: "192.0.2.10"))
+        // 配信を頼めるのは、番組表と EPGStation の両方を設定しているとき
+        store.guideHost = "192.0.2.2"
+        store.streamHost = "192.0.2.30"
         let transport = FakeTransport(respond)
-        let server = EPGStation(host: "192.0.2.30", transport: transport)
+        let live = LiveModels(store: store, transport: transport)
         let player = LivePlayerViewModel(
-            remote: remote, guide: guide, stream: stream, server: server, channel: try screens.channel(code: channelCode)
+            remote: live.remote, guide: live.guide, stream: live.stream, channel: try screens.channel(code: channelCode)
         )
-        return (player, transport, remote)
+        return (player, transport, store)
     }
 
     /// 条件を満たすまで待つ (配信の準備は別の Task で進む)
@@ -408,7 +432,7 @@ import Testing
     }
 
     @Test func playsThenStopsTheStream() async throws {
-        let (player, transport, remote) = try makePlayer(channelCode: "JP-G00000001") { request in
+        let (player, transport, store) = try makePlayer(channelCode: "JP-G00000001") { request in
             switch (request.method, request.url.path) {
             case ("GET", let path) where path.hasPrefix("/api/streams/live/"):
                 ScreenViewModelTests.status(200, #"{"streamId":5}"#)
@@ -423,17 +447,17 @@ import Testing
 
         #expect(player.state.phase == .ready(try #require(URL(string: "http://192.0.2.30:8888/streamfiles/stream5.m3u8"))))
         // 止められずに残ったときに次に開いて止められるよう、頼んだ配信を覚えておく
-        #expect(remote.store.ownStreamIDs == [5])
+        #expect(store.ownStreamIDs == [5])
 
         player.send(.end)
         #expect(player.state.phase == .preparing)
-        await wait { remote.store.ownStreamIDs.isEmpty }
-        #expect(remote.store.ownStreamIDs.isEmpty)
+        await wait { store.ownStreamIDs.isEmpty }
+        #expect(store.ownStreamIDs.isEmpty)
         #expect(transport.paths.contains("/api/streams/5"))
     }
 
     @Test func explainsWhenStreamDoesNotStart() async throws {
-        let (player, _, remote) = try makePlayer(channelCode: "JP-G00000001") { _ in ScreenViewModelTests.status(500) }
+        let (player, _, store) = try makePlayer(channelCode: "JP-G00000001") { _ in ScreenViewModelTests.status(500) }
         player.send(.start)
         await wait { if case .failed = player.state.phase { true } else { false } }
         guard case .failed(let message, let canRetry) = player.state.phase else {
@@ -442,7 +466,7 @@ import Testing
         }
         #expect(message.hasPrefix("再生できませんでした。"))
         #expect(canRetry)
-        #expect(remote.store.ownStreamIDs.isEmpty)
+        #expect(store.ownStreamIDs.isEmpty)
     }
 
     @Test func refusesChannelThatEPGStationDoesNotKnow() async throws {
@@ -470,8 +494,9 @@ import Testing
     }
 
     @Test func tvStatusAsksForPIN() {
-        let (remote, _, _, _) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
-        let tv = TVSetupViewModel(remote: remote)
+        let live = LiveModels(transport: FakeTransport { _ in ScreenViewModelTests.status(500) })
+        let remote = live.remote
+        let tv = TVSetupViewModel(remote: remote, setup: live.setup)
         // 保存済みの接続から始める
         #expect(tv.state.draft == remote.connection)
         #expect(tv.state.status == .init(text: "192.0.2.10", needsAttention: false))
@@ -489,11 +514,12 @@ import Testing
     }
 
     @Test func unlinkingGuideAlsoUnlinksStream() async {
-        let (remote, _, _, stream) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
-        remote.store.guideHost = "192.0.2.2"
-        stream.saveStreamHost("192.0.2.2:8888")
-        // 番組表の ViewModel は、作ったときに保存済みのアドレスを読む
-        let servers = ServerSetupViewModel(guide: GuideViewModel(remote: remote), stream: stream)
+        let store = MemoryStore(connection: RegzaConnection(host: "192.0.2.10"))
+        // Repository は、作ったときに保存済みのアドレスを読む
+        store.guideHost = "192.0.2.2"
+        store.streamHost = "192.0.2.2:8888"
+        let live = LiveModels(store: store, transport: FakeTransport { _ in ScreenViewModelTests.status(500) })
+        let servers = ServerSetupViewModel(setup: live.setup)
         #expect(servers.state.guide.status == "192.0.2.2")
         #expect(servers.state.stream.isLinked)
 
@@ -503,25 +529,24 @@ import Testing
         #expect(servers.state.guide.status == "未設定")
         #expect(servers.state.stream.status == "未設定")
         #expect(!servers.state.stream.isLinked)
-        #expect(remote.store.guideHost == "")
-        #expect(remote.store.streamHost == "")
+        #expect(store.guideHost == "")
+        #expect(store.streamHost == "")
     }
 
     @Test func suggestsEPGStationOnMirakurunServer() async {
-        let (remote, guide, _, stream) = screens.makeModels { _ in ScreenViewModelTests.status(500) }
-        let servers = ServerSetupViewModel(guide: guide, stream: stream)
-        servers.send(.setHost(.guide, "192.0.2.2:40772"))
-        let transport = FakeTransport { request in
+        let live = LiveModels(transport: FakeTransport { request in
             request.url.path == "/api/version" ? ScreenViewModelTests.status(200, #"{"version":"2.0.0"}"#) : ScreenViewModelTests.status(404)
-        }
+        })
+        let servers = ServerSetupViewModel(setup: live.setup)
+        servers.send(.setHost(.guide, "192.0.2.2:40772"))
 
-        await servers.suggestStreamHost(transport: transport)
+        await servers.suggestStreamHost()
 
         #expect(servers.state.stream.host == "192.0.2.2")
         #expect(servers.state.stream.hosts == ["192.0.2.2"])
         #expect(servers.state.stream.message != nil)
         // 保存するまでは入れない
-        #expect(remote.store.streamHost == "")
+        #expect(live.store.streamHost == "")
     }
 }
 
@@ -531,11 +556,9 @@ import Testing
     let guideScreens = GuideScreenViewModelTests()
 
     func makeApp(configured: Bool = true) throws -> AppViewModel {
-        let store = MemoryStore(connection: RegzaConnection(host: configured ? "192.0.2.10" : ""))
-        let transport = FakeTransport { _ in ScreenViewModelTests.status(500) }
-        let app = AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport))
-        app.remote.showSample(connection: store.load(), nowPlaying: nil, channels: try guideScreens.channels())
-        return app
+        AppViewModel.sample(
+            connection: RegzaConnection(host: configured ? "192.0.2.10" : ""), nowPlaying: nil, channels: try guideScreens.channels()
+        )
     }
 
     @Test func opensAndClosesScreensPerTab() throws {

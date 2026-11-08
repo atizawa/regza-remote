@@ -5,11 +5,11 @@ import Observation
 @MainActor
 @Observable
 public final class ProgramListViewModel {
-    public let guide: GuideViewModel
-    public let recording: ReservationsViewModel
+    public let guide: GuideUseCase
+    public let recording: RecordingUseCase
     public let channel: RegzaChannel
 
-    public init(guide: GuideViewModel, recording: ReservationsViewModel, channel: RegzaChannel) {
+    public init(guide: GuideUseCase, recording: RecordingUseCase, channel: RegzaChannel) {
         self.guide = guide
         self.recording = recording
         self.channel = channel
@@ -100,14 +100,14 @@ extension ProgramListViewModel: Introspectable {
 @Observable
 public final class ProgramDetailViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideViewModel
-    public let recording: ReservationsViewModel
-    public let stream: StreamViewModel
+    public let guide: GuideUseCase
+    public let recording: RecordingUseCase
+    public let stream: StreamUseCase
     public let program: MirakurunProgram
     public let channel: RegzaChannel
 
     public init(
-        remote: RemoteViewModel, guide: GuideViewModel, recording: ReservationsViewModel, stream: StreamViewModel,
+        remote: RemoteViewModel, guide: GuideUseCase, recording: RecordingUseCase, stream: StreamUseCase,
         program: MirakurunProgram, channel: RegzaChannel
     ) {
         self.remote = remote
@@ -178,7 +178,7 @@ public final class ProgramDetailViewModel {
             canTune: program.isOnAir(),
             canReserve: program.end > Date(),
             canStream: program.isOnAir() && stream.canStream,
-            canStartOver: program.isOnAir() && guide.canStartOver(channelCode: program.channelCode, programStart: program.start)
+            canStartOver: program.isOnAir() && remote.tv.canStartOver(channelCode: program.channelCode, programStart: program.start)
         )
     }
 
@@ -192,7 +192,7 @@ public final class ProgramDetailViewModel {
         case .appear:
             work.run {
                 if self.recording.reservations.isEmpty { try? await self.recording.loadReservations() }
-                await self.guide.loadTimeshiftSettings()
+                await self.remote.tv.loadTimeshiftSettings()
             }
         case .reserve(let series): work.run { await self.reserve(series: series) }
         case .cancelReservation: work.run { await self.cancelReservation() }
@@ -237,7 +237,7 @@ public final class ProgramDetailViewModel {
         defer { isTuning = false }
         do {
             if startOver {
-                try await guide.tuneAndStartOver(channel)
+                try await remote.tuneAndStartOver(channel)
                 tuneMessage = "テレビを\(channel.name)に切り替えて、最初から再生しました。"
             } else {
                 try await remote.tune(to: channel)

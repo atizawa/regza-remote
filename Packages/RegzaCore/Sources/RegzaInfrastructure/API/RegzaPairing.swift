@@ -21,7 +21,7 @@ public actor RegzaPairing {
     }
 
     /// - Parameter user: テレビに登録するユーザー ID。MAC アドレス形式 (`AA-BB-CC-DD-EE-FF`)
-    public init(host: String, user: String = RegzaPairing.makeUserID()) {
+    public init(host: String, user: String = PairingUserID.make()) {
         self.host = host
         self.user = user
         client = RegzaClient(connection: RegzaConnection(host: host, user: user))
@@ -77,13 +77,6 @@ public actor RegzaPairing {
               !password.isEmpty, password.allSatisfy({ $0.isASCII && !$0.isNewline })
         else { return nil }
         return password
-    }
-
-    /// ランダムなユーザー ID。マルチキャストにならないよう先頭バイトはローカル管理アドレスにする
-    public static func makeUserID() -> String {
-        var bytes = (0..<6).map { _ in UInt8.random(in: 0...255) }
-        bytes[0] = (bytes[0] & 0xFC) | 0x02
-        return bytes.map { String(format: "%02X", $0) }.joined(separator: "-")
     }
 }
 

@@ -6,7 +6,7 @@ import RegzaDomain
 /// テレビの v2 API は番組名を返さないので、放送中の番組名と番組表はこちらから取る。
 /// テレビと Mirakurun は同じ放送波の ID (network_id / service_id / event_id) を使っているので、変換して照らし合わせられる。
 public final class Mirakurun: Sendable {
-    public static let defaultPort = 40772
+    public static let defaultPort = ServerPort.mirakurun
 
     /// `192.168.0.2` か `192.168.0.2:40772`
     public let host: String

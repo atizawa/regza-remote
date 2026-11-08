@@ -8,15 +8,13 @@ import Observation
 @Observable
 public final class LivePlayerViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideViewModel
-    public let stream: StreamViewModel
-    public let server: EPGStation
+    public let guide: GuideUseCase
+    public let stream: StreamUseCase
 
-    public init(remote: RemoteViewModel, guide: GuideViewModel, stream: StreamViewModel, server: EPGStation, channel: RegzaChannel) {
+    public init(remote: RemoteViewModel, guide: GuideUseCase, stream: StreamUseCase, channel: RegzaChannel) {
         self.remote = remote
         self.guide = guide
         self.stream = stream
-        self.server = server
         self.channel = channel
     }
 
@@ -137,42 +135,38 @@ public final class LivePlayerViewModel {
         phase = .preparing
         if let streamID {
             self.streamID = nil
-            let server = server
-            Task {
-                if (try? await server.stop(streamID: streamID)) != nil { stream.stopped(streamID) }
-            }
+            let stream = stream
+            Task { await stream.stop(streamID: streamID) }
         }
     }
 
     private func run(_ channel: RegzaChannel) async {
         phase = .preparing
-        guard let channelID = EPGStation.channelID(channelCode: channel.code) else {
+        guard stream.isPlayable(channelCode: channel.code) else {
             phase = .failed("このチャンネルは EPGStation で見られません。", canRetry: false)
             return
         }
         var requested: Int?
         do {
-            // 前に止められずに残った、このアプリの配信を先に止める
-            await stream.cleanUp()
-            let streamID = try await server.startLiveStream(channelID: channelID)
+            // 前に止められずに残った、このアプリの配信は、頼む前に止める (StreamUseCase)
+            let streamID = try await stream.startLiveStream(channelCode: channel.code)
             requested = streamID
             self.streamID = streamID
-            stream.started(streamID)
-            try await server.waitUntilReady(streamID: streamID)
-            guard let url = server.playlistURL(streamID: streamID) else { throw RegzaError.invalidHost }
+            let url = try await stream.waitUntilReady(streamID: streamID)
+            try Task.checkCancellation()
             phase = .ready(url)
             // 見ていることを知らせ続ける (知らせないと EPGStation が配信を止める)
             while !Task.isCancelled {
                 try await Task.sleep(for: .seconds(10))
-                try? await server.keep(streamID: streamID)
+                await stream.keep(streamID: streamID)
             }
-        } catch is CancellationError {
-            return
         } catch {
+            // 局を切り替えたり閉じたりして止めた (Repository は取り消しも RegzaError にして返す)
+            guard !Task.isCancelled, !(error is CancellationError) else { return }
             // 始まらなかった配信は残さない
             if let requested, streamID == requested {
                 self.streamID = nil
-                if (try? await server.stop(streamID: requested)) != nil { stream.stopped(requested) }
+                await stream.stop(streamID: requested)
             }
             phase = .failed("""
                 再生できませんでした。\(error.localizedDescription)
@@ -206,13 +200,5 @@ extension LivePlayerViewModel: Introspectable {
         case "retryAfterStoppingStalled": send(.retryAfterStoppingStalled)
         default: throw IntrospectionError.unknownAction(action)
         }
-    }
-}
-
-extension StreamViewModel {
-    /// その局を見るライブ視聴の ViewModel。配信できないなら nil
-    public func livePlayer(for channel: RegzaChannel) -> LivePlayerViewModel? {
-        guard let server = streamServer() else { return nil }
-        return LivePlayerViewModel(remote: remote, guide: guide, stream: self, server: server, channel: channel)
     }
 }

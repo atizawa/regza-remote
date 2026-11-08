@@ -7,10 +7,10 @@ import Observation
 @Observable
 public final class ChannelListViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideViewModel
-    public let stream: StreamViewModel
+    public let guide: GuideUseCase
+    public let stream: StreamUseCase
 
-    public init(remote: RemoteViewModel, guide: GuideViewModel, stream: StreamViewModel) {
+    public init(remote: RemoteViewModel, guide: GuideUseCase, stream: StreamUseCase) {
         self.remote = remote
         self.guide = guide
         self.stream = stream
@@ -91,7 +91,7 @@ public final class ChannelListViewModel {
                     programName: program?.name,
                     isNowPlaying: channel.code == nowPlayingCode,
                     hasPrograms: guide.hasGuide && guide.guidePrograms[channel.code] != nil,
-                    canStartOver: program.map { guide.canStartOver(channelCode: channel.code, programStart: $0.start) } ?? false,
+                    canStartOver: program.map { remote.tv.canStartOver(channelCode: channel.code, programStart: $0.start) } ?? false,
                     isSubchannel: !channel.isRepresentative && channel.band != .cs
                 )
             },
@@ -105,7 +105,7 @@ public final class ChannelListViewModel {
             work.run {
                 await self.load(force: false)
                 await self.guide.loadGuidePrograms()
-                await self.guide.loadTimeshiftSettings()
+                await self.remote.tv.loadTimeshiftSettings()
             }
         case .reload: work.run { await self.load(force: true) }
         case .tune(let channel): work.run { await self.tune(to: channel, startOver: false) }
@@ -139,9 +139,9 @@ public final class ChannelListViewModel {
             if !startOver {
                 try await remote.tune(to: channel)
             } else if channel.code == remote.state.nowPlaying?.channelCode {
-                guide.startOver()
+                try await remote.startOver()
             } else {
-                try await guide.tuneAndStartOver(channel)
+                try await remote.tuneAndStartOver(channel)
             }
         } catch .commandRejected {
             tuneError = "\(channel.name) に切り替えられませんでした。テレビの電源が入っているか確認してください。"

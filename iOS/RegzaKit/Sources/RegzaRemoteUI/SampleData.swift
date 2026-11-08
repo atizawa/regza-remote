@@ -1,6 +1,7 @@
 #if os(iOS) && DEBUG
 import Foundation
 import RegzaCore
+import RegzaSample
 
 /// 開発中に、テレビや Mirakurun につながずに画面を確かめるための見本データ。
 /// 起動引数 `-SampleData YES` で使う (`-SampleKind recorded` で録画再生中、`-InitialTab guide` などで最初のタブ、
@@ -10,15 +11,19 @@ import RegzaCore
 enum SampleData {
     static var isEnabled: Bool { UserDefaults.standard.bool(forKey: "SampleData") }
 
-    /// ViewModel に見本データを出させる
+    /// 見本の Repository で、アプリ全体の ViewModel を組み立てる (テレビにつながない)
     @MainActor
-    static func show(remote: RemoteViewModel, guide: GuideViewModel, recording: ReservationsViewModel) {
-        remote.showSample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nowPlaying(), channels: channels())
+    static func makeApp() -> AppViewModel {
+        let connection = RegzaConnection(host: "192.0.2.1")
         // -SampleNoGuide YES で Mirakurun が未設定のときの画面を確かめる
-        guard !UserDefaults.standard.bool(forKey: "SampleNoGuide") else { return }
+        guard !UserDefaults.standard.bool(forKey: "SampleNoGuide") else {
+            return .sample(connection: connection, nowPlaying: nowPlaying(), channels: channels())
+        }
         let programs = programs()
-        guide.showSample(guideHost: "192.0.2.2", programs: programs)
-        recording.showSample(reservations(programs: programs))
+        return .sample(
+            connection: connection, nowPlaying: nowPlaying(), channels: channels(),
+            guideHost: "192.0.2.2", programs: programs, reservations: reservations(programs: programs)
+        )
     }
 
     static var initialTab: AppViewModel.Tab? {

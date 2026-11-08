@@ -7,9 +7,10 @@ import Observation
 @Observable
 public final class AppViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideViewModel
-    public let recording: ReservationsViewModel
-    public let stream: StreamViewModel
+    public let guide: GuideUseCase
+    public let recording: RecordingUseCase
+    public let stream: StreamUseCase
+    public let setup: SetupUseCase
 
     // MARK: - 状態と操作
 
@@ -75,22 +76,17 @@ public final class AppViewModel {
         return state
     }
 
-    public init(remote: RemoteViewModel, guide: GuideViewModel, recording: ReservationsViewModel, stream: StreamViewModel) {
+    /// 画面の ViewModel は UseCase だけを使う。どの Repository の実装を使うかは、組み立てる側 (RegzaApp や見本) が決める
+    public init(remote: RemoteViewModel, guide: GuideUseCase, recording: RecordingUseCase, stream: StreamUseCase, setup: SetupUseCase) {
         self.remote = remote
         self.guide = guide
         self.recording = recording
         self.stream = stream
+        self.setup = setup
         channelList = ChannelListViewModel(remote: remote, guide: guide, stream: stream)
         guideGrid = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
         nowPlaying = NowPlayingViewModel(remote: remote, guide: guide, stream: stream)
         reservationList = ReservationListViewModel(remote: remote, recording: recording)
-    }
-
-    /// 保存先とリモコンから、アプリ全体の ViewModel をまとめて作る
-    public convenience init(store: any RegzaConnectionStore, remote: RegzaRemote? = nil) {
-        let model = RemoteViewModel(store: store, remote: remote)
-        let guide = GuideViewModel(remote: model)
-        self.init(remote: model, guide: guide, recording: ReservationsViewModel(remote: model), stream: StreamViewModel(remote: model, guide: guide))
     }
 
     public func send(_ action: Action) {
@@ -112,7 +108,7 @@ public final class AppViewModel {
             if next.paths[next.tab]?.isEmpty == false { next.paths[next.tab]?.removeLast() }
         case .showSettings:
             let remote = remote
-            settings = (TVSetupViewModel(remote: remote), ServerSetupViewModel(guide: guide, stream: stream))
+            settings = (TVSetupViewModel(remote: remote, setup: setup), ServerSetupViewModel(setup: setup))
             // テレビが未設定なら、テレビの設定の画面から始める
             next.settingsPath = remote.connection.isConfigured ? [] : [.tv]
             next.isShowingSettings = true
@@ -138,8 +134,8 @@ public final class AppViewModel {
         case .closeNowPlaying:
             next.isShowingNowPlaying = false
         case .play(let channel):
-            guard let viewModel = stream.livePlayer(for: channel) else { return }
-            player = viewModel
+            guard stream.canStream else { return }
+            player = LivePlayerViewModel(remote: remote, guide: guide, stream: stream, channel: channel)
         case .closePlayer:
             if let player {
                 player.send(.end)

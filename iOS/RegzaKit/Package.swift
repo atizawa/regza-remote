@@ -18,14 +18,19 @@ let package = Package(
         // Apple: キーチェーンへの接続情報保存
         .target(name: "RegzaAppleStorage", dependencies: [.product(name: "RegzaCore", package: "RegzaCore")]),
         // iOS: Live Activity / Dynamic Island と、そのボタン用 App Intents
+        // テレビのリモコン (RegzaRemote) を使うので、本物の機器につなぐ組み立て (RegzaApp) に依存する
         .target(
             name: "RegzaLiveActivity",
-            dependencies: [.product(name: "RegzaCore", package: "RegzaCore"), "RegzaAppleStorage"]
+            dependencies: [.product(name: "RegzaApp", package: "RegzaCore"), "RegzaAppleStorage"]
         ),
-        // iOS: SwiftUI のリモコン画面
+        // iOS: SwiftUI のリモコン画面。アプリ全体の ViewModel は RegzaApp (開発用の見本は RegzaSample) で組み立てる
         .target(
             name: "RegzaRemoteUI",
-            dependencies: [.product(name: "RegzaCore", package: "RegzaCore"), "RegzaAppleStorage", "RegzaLiveActivity"]
+            dependencies: [
+                .product(name: "RegzaApp", package: "RegzaCore"),
+                .product(name: "RegzaSample", package: "RegzaCore"),
+                "RegzaAppleStorage", "RegzaLiveActivity",
+            ]
         ),
     ]
 )

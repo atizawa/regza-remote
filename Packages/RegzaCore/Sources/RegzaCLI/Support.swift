@@ -1,5 +1,5 @@
 import Foundation
-import RegzaCore
+import RegzaApp
 
 /// 保存しない保存先 (CLI を閉じたら消える)
 final class MemoryConnectionStore: RegzaConnectionStore, @unchecked Sendable {

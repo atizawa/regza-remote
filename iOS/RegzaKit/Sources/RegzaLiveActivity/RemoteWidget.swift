@@ -1,6 +1,6 @@
 #if os(iOS)
 import AppIntents
-import RegzaCore
+import RegzaApp
 import SwiftUI
 import WidgetKit
 

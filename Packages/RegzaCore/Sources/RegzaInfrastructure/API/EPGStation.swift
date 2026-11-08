@@ -9,7 +9,7 @@ import RegzaDomain
 ///
 /// 同時に変換できる数に上限がある構成では、上限に達していると配信が始まらない (準備できないまま残る)
 public final class EPGStation: Sendable {
-    public static let defaultPort = 8888
+    public static let defaultPort = ServerPort.epgStation
 
     /// `192.168.0.2` か `192.168.0.2:8888`
     public let host: String

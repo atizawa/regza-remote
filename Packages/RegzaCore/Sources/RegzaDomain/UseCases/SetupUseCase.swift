@@ -1,0 +1,60 @@
+import Foundation
+
+/// 設定: テレビや録画サーバーを探す・テレビへの PIN 登録・録画サーバーとの連携
+@MainActor
+public final class SetupUseCase {
+    private let devices: any DeviceRepository
+    private let guide: any GuideRepository
+    private let stream: any StreamRepository
+
+    public init(devices: any DeviceRepository, guide: any GuideRepository, stream: any StreamRepository) {
+        self.devices = devices
+        self.guide = guide
+        self.stream = stream
+    }
+
+    /// 同じネットワークのテレビを、見つかった順に返す
+    public func findTVs() -> AsyncStream<RegzaDevice> {
+        devices.devices()
+    }
+
+    /// テレビに PIN を表示させてから確定するまでの 1 回の登録
+    public func pairing(host: String, user: String) -> any PairingSession {
+        devices.pairing(host: host, user: user)
+    }
+
+    public func findGuideServers() async -> [String] {
+        await devices.findGuideServers()
+    }
+
+    public func findStreamServers() async -> [String] {
+        await devices.findStreamServers()
+    }
+
+    /// Mirakurun と同じサーバーで EPGStation が動いていれば、そのアドレスを返す
+    public func streamServer(sameAs guideServer: String) async -> String? {
+        guard !guideServer.isEmpty, await devices.isStreamServer(host: guideServer) else { return nil }
+        return guideServer
+    }
+
+    /// 保存済みの連携しているアドレス
+    public var linkedGuideHost: String { guide.guideHost }
+    public var linkedStreamHost: String { stream.streamHost }
+
+    /// 録画サーバーのアドレスを保存する
+    public func saveServers(guideHost: String, streamHost: String) async {
+        await guide.saveGuideHost(guideHost)
+        stream.saveStreamHost(streamHost)
+    }
+
+    /// 番組表 (Mirakurun) との連携をやめる。EPGStation は Mirakurun から放送を受け取るので、ライブ視聴の連携も一緒にやめる
+    public func unlinkGuide() async {
+        await guide.saveGuideHost("")
+        stream.saveStreamHost("")
+    }
+
+    /// ライブ視聴 (EPGStation) との連携をやめる
+    public func unlinkStream() {
+        stream.saveStreamHost("")
+    }
+}

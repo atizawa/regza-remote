@@ -1,6 +1,6 @@
 #if os(iOS)
 import AppIntents
-import RegzaCore
+import RegzaApp
 
 /// Live Activity / Dynamic Island のボタンから REGZA にキーを送る。
 /// LiveActivityIntent なのでアプリのプロセスで実行される。

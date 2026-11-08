@@ -1,7 +1,7 @@
 import Android
 import CBoringSSL
 import Foundation
-import RegzaCore
+import RegzaApp
 
 /// Android では RegzaCore の通信をソケットで送る。Android の URLSession (FoundationNetworking) は、
 /// 送り終えたあとも書き込みの見張りを外さず、返事を待つ間 CPU を使い続けるため。

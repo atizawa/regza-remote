@@ -6,12 +6,12 @@ import Observation
 @Observable
 public final class GuideGridViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideViewModel
-    public let recording: ReservationsViewModel
+    public let guide: GuideUseCase
+    public let recording: RecordingUseCase
     /// 番組表から開く検索。開き直しても前に探した言葉を残すので、番組表と一緒に持つ
     public let search: GuideSearchViewModel
 
-    public init(remote: RemoteViewModel, guide: GuideViewModel, recording: ReservationsViewModel) {
+    public init(remote: RemoteViewModel, guide: GuideUseCase, recording: RecordingUseCase) {
         self.remote = remote
         self.guide = guide
         self.recording = recording

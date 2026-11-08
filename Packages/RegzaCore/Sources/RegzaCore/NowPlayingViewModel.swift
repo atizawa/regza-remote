@@ -7,10 +7,10 @@ import Observation
 @Observable
 public final class NowPlayingViewModel {
     public let remote: RemoteViewModel
-    public let guide: GuideViewModel
-    public let stream: StreamViewModel
+    public let guide: GuideUseCase
+    public let stream: StreamUseCase
 
-    public init(remote: RemoteViewModel, guide: GuideViewModel, stream: StreamViewModel) {
+    public init(remote: RemoteViewModel, guide: GuideUseCase, stream: StreamUseCase) {
         self.remote = remote
         self.guide = guide
         self.stream = stream
@@ -58,18 +58,18 @@ public final class NowPlayingViewModel {
         switch action {
         case .appear:
             work.run {
-                await self.guide.loadTimeshiftSettings()
+                await self.remote.tv.loadTimeshiftSettings()
                 try? await self.remote.loadChannels()
             }
         case .powerOn: remote.send(.press(.power))
-        case .startOver: guide.startOver()
+        case .startOver: work.run { try? await self.remote.startOver() }
         }
     }
 
     private func canStartOver(_ nowPlaying: RegzaNowPlaying?) -> Bool {
         guard let nowPlaying, nowPlaying.kind == .broadcast, nowPlaying.hasTimeline else { return false }
         let start = nowPlaying.updatedAt.addingTimeInterval(-TimeInterval(nowPlaying.position))
-        return guide.canStartOver(channelCode: nowPlaying.channelCode, programStart: start)
+        return remote.tv.canStartOver(channelCode: nowPlaying.channelCode, programStart: start)
     }
 }
 

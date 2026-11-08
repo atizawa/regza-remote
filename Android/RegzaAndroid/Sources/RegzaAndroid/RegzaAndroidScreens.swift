@@ -1,5 +1,5 @@
 import Foundation
-import RegzaCore
+import RegzaApp
 
 // いま見えている画面の状態 (RegzaAndroidApp.screen / nextScreen が返す)。
 // 時刻などの表記は iOS と同じものを Swift で作り、Kotlin は並べるだけにする
