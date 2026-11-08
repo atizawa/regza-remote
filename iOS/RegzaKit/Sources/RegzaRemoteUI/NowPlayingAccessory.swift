@@ -53,7 +53,7 @@ struct NowPlayingAccessory: View {
 
     // MARK: - 表示する内容
 
-    private var nowPlaying: RegzaNowPlaying? { model.state.nowPlaying }
+    private var nowPlaying: NowPlayingItem? { model.state.nowPlaying }
 
     private var icon: String {
         switch nowPlaying?.kind {
@@ -64,13 +64,13 @@ struct NowPlayingAccessory: View {
         }
     }
 
-    /// 上の小さな行: チャンネル名や「録画」 (文言は Android と同じ RegzaNowPlaying.captionText)
+    /// 上の小さな行: チャンネル名や「録画」 (文言は Android と同じ NowPlayingItem.captionText)
     private var caption: String? {
         if model.state.isSearchingTV || model.state.lastError != nil { return nil }
         return nowPlaying?.captionText
     }
 
-    /// 下の大きな行: 番組名や状態 (文言は Android と同じ RegzaNowPlaying.headlineText)
+    /// 下の大きな行: 番組名や状態 (文言は Android と同じ NowPlayingItem.headlineText)
     private var headline: String {
         if model.state.isSearchingTV { return "テレビを探しています…" }
         if model.state.lastError != nil { return "テレビに接続できません" }

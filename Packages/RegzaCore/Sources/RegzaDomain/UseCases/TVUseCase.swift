@@ -46,6 +46,26 @@ public final class TVUseCase {
         await tv.locateMovedTV()
     }
 
+    /// いま映っているもの (UI の型)。画面に出す文言は Domain の RegzaNowPlaying の決まりで作る
+    public func item(_ nowPlaying: RegzaNowPlaying) -> NowPlayingItem {
+        NowPlayingItem(
+            kind: NowPlayingKind(rawValue: nowPlaying.kind.rawValue) ?? .unknown,
+            channelName: nowPlaying.channelName,
+            channelCode: nowPlaying.channelCode,
+            title: nowPlaying.title,
+            description: nowPlaying.description,
+            chapterName: nowPlaying.chapterName,
+            genre: nowPlaying.genre,
+            position: nowPlaying.position,
+            duration: nowPlaying.duration,
+            isAdvancing: nowPlaying.isAdvancing,
+            updatedAt: nowPlaying.updatedAt,
+            captionText: nowPlaying.captionText,
+            headlineText: nowPlaying.headlineText,
+            statusText: nowPlaying.statusText
+        )
+    }
+
     // MARK: - 最初から見る (タイムシフトマシン)
 
     public func loadTimeshiftSettings() async {

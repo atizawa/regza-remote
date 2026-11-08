@@ -66,7 +66,7 @@ public final class NowPlayingViewModel {
         }
     }
 
-    private func canStartOver(_ nowPlaying: RegzaNowPlaying?) -> Bool {
+    private func canStartOver(_ nowPlaying: NowPlayingItem?) -> Bool {
         guard let nowPlaying, nowPlaying.kind == .broadcast, nowPlaying.hasTimeline else { return false }
         let start = nowPlaying.updatedAt.addingTimeInterval(-TimeInterval(nowPlaying.position))
         return remote.tv.canStartOver(channelCode: nowPlaying.channelCode, programStart: start)

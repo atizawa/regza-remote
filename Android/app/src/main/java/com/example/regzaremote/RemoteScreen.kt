@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.RegzaAndroidAction
 import com.example.regzaremote.core.RegzaAndroidSnapshot
 import com.example.regzaremote.core.RegzaKey
-import com.example.regzaremote.core.RegzaNowPlaying
+import com.example.regzaremote.core.NowPlayingItem
 
 /**
  * リモコンの画面。並びは iOS 版と同じく、実物のリモコンの
@@ -117,10 +117,10 @@ fun RemoteScreen(state: RegzaAndroidSnapshot, sendAction: Send) {
 }
 
 @Composable
-private fun NowPlayingCard(nowPlaying: RegzaNowPlaying?) {
+private fun NowPlayingCard(nowPlaying: NowPlayingItem?) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            // 文言は iOS のミニプレーヤーと同じ (RegzaCore の RegzaNowPlaying)
+            // 文言は iOS のミニプレーヤーと同じ (TVUseCase が作る NowPlayingItem)
             val caption = nowPlaying?.captionText?.orElse(null)
             val headline = nowPlaying?.headlineText ?: "接続中…"
             if (caption != null) Text(caption, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)

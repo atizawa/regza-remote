@@ -69,7 +69,7 @@ struct NowPlayingCard: View {
     }
 
     @ViewBuilder
-    private func broadcast(_ nowPlaying: RegzaNowPlaying) -> some View {
+    private func broadcast(_ nowPlaying: NowPlayingItem) -> some View {
         sourceLabel(nowPlaying.channelName.isEmpty ? "放送" : nowPlaying.channelName,
                     systemImage: "antenna.radiowaves.left.and.right")
         if !nowPlaying.title.isEmpty {
@@ -92,7 +92,7 @@ struct NowPlayingCard: View {
     }
 
     @ViewBuilder
-    private func playback(_ nowPlaying: RegzaNowPlaying) -> some View {
+    private func playback(_ nowPlaying: NowPlayingItem) -> some View {
         sourceLabel(nowPlaying.channelName.isEmpty ? "録画番組" : "録画 · \(nowPlaying.channelName)",
                     systemImage: "play.rectangle")
         Text(nowPlaying.title)

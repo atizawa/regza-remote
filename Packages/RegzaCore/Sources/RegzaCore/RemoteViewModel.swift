@@ -23,7 +23,7 @@ public final class RemoteViewModel {
 
     public struct State: Equatable, Sendable {
         public var connection: RegzaConnection
-        public var nowPlaying: RegzaNowPlaying?
+        public var nowPlaying: NowPlayingItem?
         public var lastError: RegzaError?
         /// ボタンを押した回数 (触覚フィードバックの合図)
         public var tapCount = 0
@@ -74,7 +74,7 @@ public final class RemoteViewModel {
     public var state: State {
         State(
             connection: tv.connection,
-            nowPlaying: nowPlaying,
+            nowPlaying: nowPlaying.map(tv.item),
             lastError: lastError,
             tapCount: tapCount,
             isSearchingTV: isSearchingTV,

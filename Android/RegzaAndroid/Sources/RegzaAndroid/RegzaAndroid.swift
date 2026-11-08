@@ -3,8 +3,9 @@ import Observation
 import RegzaApp
 
 // Android アプリに見せる API。swift-java がここの public な型と関数から Java のクラスを作る
-// (Java のパッケージは com.example.regzaremote.core)。RegzaKey・RegzaNowPlaying・RegzaConnection・RegzaChannel は
-// RegzaCore の型をそのまま使う (Java のクラスは RegzaCoreJava で作る)。
+// (Java のパッケージは com.example.regzaremote.core)。画面に出すものは UI の型 (RegzaSharedModels) をそのまま渡し、
+// Domain の型はリモコンのキー (RegzaKey) と保存する接続情報 (RegzaConnection) だけを使う
+// (Java のクラスは RegzaCoreJava で作る)。
 //
 // 画面の状態と操作は iOS と同じ共有の ViewModel (AppViewModel とその下の画面の ViewModel) が持つ。
 // ViewModel は MainActor で動き、swift-java は MainActor の同期の関数を Java に出せないので、ここに窓口を置く:
@@ -31,7 +32,7 @@ public struct RegzaAndroidSnapshot {
     /// 保存すべき接続情報と番組表のアドレス。変わったら Kotlin が保存する
     public var connection: RegzaConnection
     public var guideHost: String
-    public var nowPlaying: RegzaNowPlaying?
+    public var nowPlaying: NowPlayingItem?
     /// テレビに接続できないときの説明
     public var connectionError: String?
     /// つながらないので、IP アドレスが変わっていないかテレビを探している
