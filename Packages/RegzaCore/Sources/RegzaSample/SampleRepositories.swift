@@ -1,5 +1,7 @@
 import Foundation
 import Observation
+// 見本は組み立ての一つなので、Domain の型 (見本の Repository・エンティティ) も見せる
+@_exported import RegzaDomain
 import RegzaPresentation
 
 // テレビにも録画サーバーにもつながない、見本の Repository。

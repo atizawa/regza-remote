@@ -1,4 +1,5 @@
-import Foundation
+public import Foundation
+package import RegzaDomain
 
 /// ViewModel を外から読み、操作するための口 (Shopify の Reflex の Introspection Kit と同じ考え方)。
 /// CLI や AI のエージェントが、画面を通さずに状態を JSON で読み、操作を名前と引数で送る。アプリ自身は使わない

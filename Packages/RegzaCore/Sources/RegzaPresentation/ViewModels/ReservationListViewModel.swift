@@ -1,14 +1,15 @@
-import Foundation
-import Observation
+public import Foundation
+public import Observation
+package import RegzaDomain
 
 /// 録画予約の一覧の画面の ViewModel (iOS と Android で共有)
 @MainActor
 @Observable
 public final class ReservationListViewModel {
     public let remote: RemoteViewModel
-    public let recording: any RecordingUseCaseProtocol
+    package let recording: any RecordingUseCaseProtocol
 
-    public init(remote: RemoteViewModel, recording: any RecordingUseCaseProtocol) {
+    package init(remote: RemoteViewModel, recording: any RecordingUseCaseProtocol) {
         self.remote = remote
         self.recording = recording
     }
@@ -39,7 +40,7 @@ public final class ReservationListViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let items = recording.items(channels: remote.state.channels)
+        let items = recording.items(channels: remote.channels)
         return State(
             hasLoaded: hasLoaded,
             loadErrorMessage: items.isEmpty ? loadError?.recordingMessage : nil,
@@ -107,7 +108,7 @@ extension ReservationListViewModel: Introspectable {
 
 extension RegzaError {
     /// 録画まわりの画面に出すメッセージ
-    public var recordingMessage: String {
+    package var recordingMessage: String {
         switch self {
         case .httpStatus(404), .unsupported: "この機種は対応していません。"
         default: localizedDescription

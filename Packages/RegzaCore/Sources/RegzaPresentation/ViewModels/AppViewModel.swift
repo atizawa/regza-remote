@@ -1,5 +1,6 @@
-import Foundation
-import Observation
+public import Foundation
+public import Observation
+package import RegzaDomain
 
 /// アプリ全体の ViewModel (iOS と Android で共有)。画面の移り変わり (タブ・戻る道・シート・全画面) を持ち、
 /// 開いている画面の ViewModel を作って持つ。どちらの OS の画面も、ここの状態を見て画面を出し、移り変わりは操作として送る
@@ -7,11 +8,11 @@ import Observation
 @Observable
 public final class AppViewModel {
     public let remote: RemoteViewModel
-    public let guide: any GuideUseCaseProtocol
-    public let recording: any RecordingUseCaseProtocol
-    public let stream: any StreamUseCaseProtocol
-    public let setup: any SetupUseCaseProtocol
-    public let channels: any ChannelUseCaseProtocol
+    package let guide: any GuideUseCaseProtocol
+    package let recording: any RecordingUseCaseProtocol
+    package let stream: any StreamUseCaseProtocol
+    package let setup: any SetupUseCaseProtocol
+    package let channels: any ChannelUseCaseProtocol
 
     // MARK: - 状態と操作
 
@@ -79,7 +80,7 @@ public final class AppViewModel {
     }
 
     /// 画面の ViewModel は UseCase だけを使う。どの Repository の実装を使うかは、組み立てる側 (RegzaApp や見本) が決める
-    public init(
+    package init(
         remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol,
         stream: any StreamUseCaseProtocol, setup: any SetupUseCaseProtocol
     ) {
@@ -187,6 +188,11 @@ public final class AppViewModel {
         )
         programDetails[route] = viewModel
         return viewModel
+    }
+
+    /// 前回、強制終了などで止められずに残ったライブ視聴の配信を止める (アプリを開いたときに呼ぶ)
+    public func cleanUpStreams() async {
+        await stream.cleanUp()
     }
 
     /// どの戻る道にもない画面の ViewModel を捨てる

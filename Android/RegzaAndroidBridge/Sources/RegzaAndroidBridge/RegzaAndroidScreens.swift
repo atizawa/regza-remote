@@ -115,7 +115,7 @@ public struct RegzaAndroidSearch {
 enum ScreenKey: Equatable {
     case remote
     case channels(ChannelListViewModel.State)
-    case guide(GuideGridViewModel.State, band: BroadcastBand?, window: ClosedRange<Date>)
+    case guide(GuideGridViewModel.State)
     case reservations(ReservationListViewModel.State, isLoading: Bool)
     case programs(ProgramListViewModel.State)
     case detail(ProgramDetailViewModel.State)
@@ -123,7 +123,7 @@ enum ScreenKey: Equatable {
 }
 
 extension RegzaAndroidScreen {
-    init(_ key: ScreenKey) {
+    @MainActor init(_ key: ScreenKey) {
         switch key {
         case .remote:
             self.init(kind: "remote")
@@ -138,30 +138,21 @@ extension RegzaAndroidScreen {
                 band: state.band,
                 rows: state.rows
             ))
-        case .guide(let state, let band, let window):
-            let hours = (0..<GuideGridViewModel.hours).map {
-                "\(BroadcastDay.hour(of: window.lowerBound.addingTimeInterval(TimeInterval($0 * 3600))))"
-            }
+        case .guide(let state):
+            // 表に出す時間・時刻の見出し・選んでいる日は ViewModel が作る (iOS の画面と同じ値)
             self.init(kind: "guide", guide: RegzaAndroidGuide(
                 hasGuide: state.hasGuide,
                 hasLoaded: state.hasLoaded,
                 canSearch: state.canSearch,
                 bands: state.bands,
-                band: band,
+                band: state.band,
                 days: state.days,
-                selectedDayIndex: state.days.firstIndex { $0.date == state.selectedDay } ?? 0,
-                windowStart: window.lowerBound.timeIntervalSince1970,
-                windowEnd: window.upperBound.timeIntervalSince1970,
-                hourLabels: hours,
-                isToday: state.selectedDay == nil,
-                // 表に出す時間の番組だけを渡す (1 週間分を渡すと重い)
-                columns: state.columns.map { column in
-                    GuideColumn(
-                        channelCode: column.channelCode,
-                        channelName: column.channelName,
-                        programs: column.programs.filter { $0.end > window.lowerBound && $0.start < window.upperBound }
-                    )
-                }
+                selectedDayIndex: state.selectedDayIndex,
+                windowStart: state.windowStart.timeIntervalSince1970,
+                windowEnd: state.windowEnd.timeIntervalSince1970,
+                hourLabels: state.hourLabels,
+                isToday: state.isToday,
+                columns: state.columns
             ))
         case .reservations(let state, let isLoading):
             self.init(kind: "reservations", reservations: RegzaAndroidReservations(

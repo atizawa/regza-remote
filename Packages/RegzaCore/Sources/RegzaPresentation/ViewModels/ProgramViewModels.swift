@@ -1,15 +1,16 @@
-import Foundation
-import Observation
+public import Foundation
+public import Observation
+package import RegzaDomain
 
 /// 1 チャンネルの番組表の画面の ViewModel (iOS と Android で共有)。放送中の番組から日ごとに並べる
 @MainActor
 @Observable
 public final class ProgramListViewModel {
-    public let guide: any GuideUseCaseProtocol
-    public let recording: any RecordingUseCaseProtocol
-    public let channel: RegzaChannel
+    package let guide: any GuideUseCaseProtocol
+    package let recording: any RecordingUseCaseProtocol
+    package let channel: RegzaChannel
 
-    public init(guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, channel: RegzaChannel) {
+    package init(guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, channel: RegzaChannel) {
         self.guide = guide
         self.recording = recording
         self.channel = channel
@@ -87,13 +88,13 @@ extension ProgramListViewModel: Introspectable {
 @Observable
 public final class ProgramDetailViewModel {
     public let remote: RemoteViewModel
-    public let guide: any GuideUseCaseProtocol
-    public let recording: any RecordingUseCaseProtocol
-    public let stream: any StreamUseCaseProtocol
-    public let program: MirakurunProgram
-    public let channel: RegzaChannel
+    package let guide: any GuideUseCaseProtocol
+    package let recording: any RecordingUseCaseProtocol
+    package let stream: any StreamUseCaseProtocol
+    package let program: MirakurunProgram
+    package let channel: RegzaChannel
 
-    public init(
+    package init(
         remote: RemoteViewModel, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, stream: any StreamUseCaseProtocol,
         program: MirakurunProgram, channel: RegzaChannel
     ) {

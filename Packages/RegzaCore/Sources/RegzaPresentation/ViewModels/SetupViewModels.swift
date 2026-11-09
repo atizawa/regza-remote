@@ -1,5 +1,6 @@
-import Foundation
-import Observation
+public import Foundation
+public import Observation
+package import RegzaDomain
 
 /// テレビの設定の画面の ViewModel (iOS と Android で共有)。
 /// 同じネットワークのテレビを探す・PIN で登録する・ユーザー名とパスワード・接続テスト
@@ -7,12 +8,12 @@ import Observation
 @Observable
 public final class TVSetupViewModel {
     public let remote: RemoteViewModel
-    public let setup: any SetupUseCaseProtocol
+    package let setup: any SetupUseCaseProtocol
     /// このアプリ用のユーザー ID。手入力のユーザー名は他のツールと共有している
     /// かもしれないので使い回さない (同じ ID で登録し直すと、前のパスワードが無効になる)
     public let pairingUserID: String
 
-    public init(remote: RemoteViewModel, setup: any SetupUseCaseProtocol) {
+    package init(remote: RemoteViewModel, setup: any SetupUseCaseProtocol) {
         self.remote = remote
         self.setup = setup
         draft = remote.connection
@@ -21,7 +22,11 @@ public final class TVSetupViewModel {
 
     public struct State: Equatable, Sendable {
         /// 入力中の接続情報 (保存するまで RemoteViewModel には入れない)
-        public var draft: RegzaConnection
+        public var host: String
+        public var user: String
+        public var password: String
+        /// アドレスが入っている (接続テストや PIN の登録ができる)
+        public var hasAddress: Bool
         /// 見つかったテレビ
         public var devices: [DeviceItem]
         public var isScanning: Bool
@@ -91,7 +96,10 @@ public final class TVSetupViewModel {
 
     public var state: State {
         State(
-            draft: draft,
+            host: draft.host,
+            user: draft.user,
+            password: draft.password,
+            hasAddress: draft.isConfigured,
             devices: devices.map { device in
                 var device = device
                 device.isSelected = draft.host == device.host
@@ -253,7 +261,7 @@ extension TVSetupViewModel: Introspectable {
     /// パスワードは見せない (入っているかどうかだけ)
     public var introspectionValue: Any {
         var state = state
-        if !state.draft.password.isEmpty { state.draft.password = "(入力済み)" }
+        if !state.password.isEmpty { state.password = "(入力済み)" }
         return state
     }
 
@@ -298,9 +306,9 @@ extension TVSetupViewModel: Introspectable {
 @MainActor
 @Observable
 public final class ServerSetupViewModel {
-    public let setup: any SetupUseCaseProtocol
+    package let setup: any SetupUseCaseProtocol
 
-    public init(setup: any SetupUseCaseProtocol) {
+    package init(setup: any SetupUseCaseProtocol) {
         self.setup = setup
         guideHost = setup.linkedGuideHost
         streamHost = setup.linkedStreamHost

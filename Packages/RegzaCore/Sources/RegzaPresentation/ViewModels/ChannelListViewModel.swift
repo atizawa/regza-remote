@@ -1,5 +1,6 @@
-import Foundation
-import Observation
+public import Foundation
+public import Observation
+package import RegzaDomain
 
 /// チャンネル一覧の画面の ViewModel (iOS と Android で共有)。
 /// 放送の種類ごとにチャンネルを並べ、押すとそのチャンネルに切り替える
@@ -7,11 +8,11 @@ import Observation
 @Observable
 public final class ChannelListViewModel {
     public let remote: RemoteViewModel
-    public let channels: any ChannelUseCaseProtocol
-    public let guide: any GuideUseCaseProtocol
-    public let stream: any StreamUseCaseProtocol
+    package let channels: any ChannelUseCaseProtocol
+    package let guide: any GuideUseCaseProtocol
+    package let stream: any StreamUseCaseProtocol
 
-    public init(remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol) {
+    package init(remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol) {
         self.remote = remote
         self.channels = channels
         self.guide = guide
@@ -29,9 +30,9 @@ public final class ChannelListViewModel {
         /// 切り替え中のチャンネルのコード
         public var tuningCode: String?
         /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
-        public var bands: [RegzaChannel.Band]
+        public var bands: [BroadcastBand]
         /// 出す放送の種類 (選んでいなければ、いま見ている種類)
-        public var band: RegzaChannel.Band?
+        public var band: BroadcastBand?
         public var rows: [ChannelItem]
         /// アプリで見られる (ライブ視聴が設定されている)
         public var canStream: Bool
@@ -57,12 +58,12 @@ public final class ChannelListViewModel {
     /// 画面に出すもの。自分の状態と、土台・番組表・配信の状態から作る
     public var state: State {
         let bands = channels.bands
-        let band = remote.state.band(among: bands)
+        let band = remote.band(among: bands)
         let rows = channels.items(band: band, nowPlayingCode: remote.state.nowPlaying?.channelCode)
         return State(
             isLoading: isLoading,
-            loadErrorMessage: remote.state.channels.isEmpty ? loadError.map(Self.message) : nil,
-            hasNoChannels: remote.state.channels.isEmpty,
+            loadErrorMessage: remote.channels.isEmpty ? loadError.map(Self.message) : nil,
+            hasNoChannels: remote.channels.isEmpty,
             tuneError: tuneError,
             tuningCode: tuningCode,
             bands: bands,

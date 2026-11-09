@@ -34,7 +34,13 @@ import Testing
         // 番組表があるのは地デジのテスト局１だけ。BS の局は番組表がないので出さない
         #expect(state.bands == [.terrestrial])
         #expect(state.columns.map(\.channelName) == ["テスト局１"])
-        #expect(state.columns.first?.programs.count == 2)
+        // 表に出す時間 (今日は今の時刻の正時から 24 時間) にかかる番組だけを持つ
+        #expect(state.columns.first?.programs.map(\.id) == [1])
+        #expect(state.band == .terrestrial)
+        #expect(state.isToday)
+        #expect(state.selectedDayIndex == 0)
+        #expect(state.windowEnd.timeIntervalSince(state.windowStart) == 24 * 3600)
+        #expect(state.hourLabels.count == 24)
         // 今日のあと、明日から番組表がある最後の日まで
         let today = BroadcastDay.start(of: Date())
         #expect(state.days.first?.date == nil)

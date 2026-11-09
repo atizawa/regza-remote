@@ -26,11 +26,17 @@ let package = Package(
         // Infrastructure: テレビ・Mirakurun・EPGStation との通信、HTTP、暗号、通信の形から Domain の型への変換 (Mappers)
         .target(name: "RegzaInfrastructure", dependencies: ["RegzaDomain"]),
         // Presentation: iOS と Android で共有する ViewModel。Domain の UseCase だけを使う (Repository や通信は知らない)
-        .target(name: "RegzaPresentation", dependencies: ["RegzaDomain"]),
+        // 画面 (iOS・Android) には UI の型 (SharedModels) だけを見せる。Domain は internal で読み込み、公開する部分に
+        // Domain の型を出せないようにする (Domain を使う初期化などは、同じパッケージの組み立てだけが使える package にする)
+        .target(
+            name: "RegzaPresentation",
+            dependencies: ["RegzaDomain"],
+            swiftSettings: [.enableUpcomingFeature("InternalImportsByDefault")]
+        ),
         // 組み立てる場所 (Composition Root): どの Repository の実装を使うかを決めて AppViewModel を作る
         .target(name: "RegzaApp", dependencies: ["RegzaPresentation", "RegzaInfrastructure"]),
         // 見本の Repository (テレビにも録画サーバーにもつながない)
-        .target(name: "RegzaSample", dependencies: ["RegzaPresentation"]),
+        .target(name: "RegzaSample", dependencies: ["RegzaDomain", "RegzaPresentation"]),
         .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp"]),
         .testTarget(name: "RegzaCoreTests", dependencies: ["RegzaApp", "RegzaSample", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels"]),
     ]

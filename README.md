@@ -34,6 +34,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose）
 
 ```sh
 cd Packages/RegzaCore && swift test       # 共有部分のテスト
+cd Android/RegzaAndroidBridge && swift test  # Android の窓口のテスト (Mac で動く)
 open iOS/RegzaRemote.xcodeproj            # 実機へ入れるときは下の Local.xcconfig を作る
 
 cd Android                                # Android 版（Android Studio はなくてもよい）

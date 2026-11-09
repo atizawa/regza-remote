@@ -12,8 +12,8 @@ struct NowPlayingCard: View {
         VStack(alignment: .leading, spacing: 8) {
             if model.state.isSearchingTV {
                 status("テレビが見つからないため、探しています…", systemImage: "magnifyingglass")
-            } else if let error = model.state.lastError {
-                status(error.localizedDescription, systemImage: "exclamationmark.triangle.fill", isWarning: true)
+            } else if let message = model.state.errorMessage {
+                status(message, systemImage: "exclamationmark.triangle.fill", isWarning: true)
             } else if let nowPlaying = model.state.nowPlaying {
                 switch nowPlaying.kind {
                 case .recorded: playback(nowPlaying)
@@ -115,9 +115,9 @@ struct NowPlayingCard: View {
                 }
             }
             HStack {
-                Text(Int(position).formattedDuration)
+                Text(NowPlayingItem.durationText(Int(position)))
                 Spacer()
-                Text(nowPlaying.duration.formattedDuration)
+                Text(NowPlayingItem.durationText(nowPlaying.duration))
             }
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)

@@ -13,3 +13,5 @@ app/src/main/jniLibs/
 
 # mise run build-swift が作る、iOS と共有の型の Java のつなぎ
 RegzaAndroid/Sources/RegzaSharedJava/Generated/
+# mise run build-swift が作る、窓口 (RegzaAndroidBridge) の Java のつなぎ
+RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/

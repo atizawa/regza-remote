@@ -42,6 +42,8 @@ android {
         "../.build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java",
         // iOS と共有の型 (RegzaKey・ProgramItem など) の Java のクラス
         "../.build/swift/regzashared-java",
+        // 窓口 (RegzaAndroidApp と、その状態・操作の型) の Java のクラス
+        "../.build/swift/regzabridge-java",
     )
 }
 
@@ -62,11 +64,15 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     doFirst { environment("ANDROID_HOME", sdk.get().asFile.path) }
 
     inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**") })
-    inputs.files(fileTree(androidDir.resolve("RegzaAndroid")) { exclude("Sources/RegzaSharedJava/Generated/**") })
+    inputs.files(fileTree(androidDir.resolve("RegzaAndroid")) {
+        exclude("Sources/RegzaSharedJava/Generated/**", "Sources/RegzaAndroidBridgeJava/Generated/**")
+    })
+    inputs.files(fileTree(androidDir.resolve("RegzaAndroidBridge")) { include("Package.swift", "Sources/**") })
     inputs.file(androidDir.resolve("mise.toml"))
     inputs.property("ndkVersion", android.ndkVersion)
     outputs.dir("src/main/jniLibs")
     outputs.dir(androidDir.resolve(".build/swift/regzashared-java"))
+    outputs.dir(androidDir.resolve(".build/swift/regzabridge-java"))
     outputs.dir(androidDir.resolve(".build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java"))
     outputs.dir(androidDir.resolve(".build/swift/checkouts/swift-java/SwiftKitCore/src/main"))
 }

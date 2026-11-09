@@ -2,8 +2,10 @@ import Foundation
 import Observation
 import RegzaApp
 
-// Android アプリに見せる API。swift-java がここの public な型と関数から Java のクラスを作る
-// (Java のパッケージは com.example.regzaremote.core)。画面に出すものとリモコンのキー (RegzaKey) は UI の型
+// Android アプリに見せる窓口。swift-java がここの public な型と関数から Java のクラスを作る
+// (Java のパッケージは com.example.regzaremote.core。mise run build-swift が作り、設定は
+// ../RegzaAndroid/RegzaAndroidBridge.swift-java.config)。Android 専用の部品 (Looper・BoringSSL・swift-java) に頼らないので、
+// Mac の swift test で確かめられる。画面に出すものとリモコンのキー (RegzaKey) は UI の型
 // (RegzaSharedModels) をそのまま渡し、Domain の型は見せない (UI の型の Java のクラスは RegzaSharedJava で作る)。
 //
 // 画面の状態と操作は iOS と同じ共有の ViewModel (AppViewModel とその下の画面の ViewModel) が持つ。
@@ -12,11 +14,6 @@ import RegzaApp
 //   - screen() / nextScreen(): いま見えている画面の状態を返す。番組表は大きいので、全体の状態とは分け、
 //     中身が変わったときだけ返す (2 秒ごとの取り直しで、番組表を渡し直さない)
 //   - send(_:): 操作を送る (MainActor に順に積むだけで、すぐ返る)
-
-/// このアプリ用のユーザー ID を新しく作る (MAC アドレスの形)。Kotlin の保存先が、初めて使うときに作って保存する
-public func regzaMakeUserID() -> String {
-    PairingUserID.make()
-}
 
 // MARK: - 状態
 
@@ -247,10 +244,9 @@ public final class RegzaAndroidApp {
     @MainActor private var lastScreen: ScreenKey?
 
     /// 保存してある値から作る。メインスレッドから呼ぶ (先に regzaSetUpMainActor を呼んでおく)
-    public init(
+    public convenience init(
         host: String, user: String, password: String, pairingUserID: String, guideHost: String, streamHost: String, ownStreamIDs: String
     ) {
-        _ = useSocketTransport
         let store = AndroidConnectionStore(
             connection: RegzaConnection(host: host, user: user, password: password),
             pairingUserID: pairingUserID,
@@ -258,14 +254,18 @@ public final class RegzaAndroidApp {
             streamHost: streamHost,
             ownStreamIDs: ownStreamIDs.split(separator: ",").compactMap { Int($0) }
         )
+        self.init(app: MainActor.assumeIsolated { AppViewModel(store: store) }, store: store)
+    }
+
+    /// 組み立てた ViewModel と保存先から作る (テストでは、テレビにつながない見本の ViewModel を渡す)
+    init(app: AppViewModel, store: AndroidConnectionStore) {
         self.store = store
-        app = MainActor.assumeIsolated {
-            let app = AppViewModel(store: store)
+        self.app = app
+        MainActor.assumeIsolated {
             // 未登録なら、テレビの登録の画面から始める
-            if !app.remote.state.connection.isConfigured { app.send(.showSettings) }
+            if !app.remote.state.isConfigured { app.send(.showSettings) }
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
-            Task { await app.stream.cleanUp() }
-            return app
+            Task { await app.cleanUpStreams() }
         }
         // 配信を止めて ID を消したときなどは、画面の状態が変わったあとに保存先だけが変わるので、別に知らせる
         let storeRevision = MainActor.assumeIsolated { self.storeRevision }
@@ -314,21 +314,21 @@ public final class RegzaAndroidApp {
         let settings = appState.isShowingSettings ? app.settings : nil
         let nowPlaying = appState.isShowingNowPlaying ? app.nowPlaying.state : nil
         _ = storeRevision.value
+        // 保存する値は、ViewModel ではなく保存先から読む (Android では Kotlin が保存するので、保存先の値を渡す)
+        let connection = store.load()
         return RegzaAndroidSnapshot(
             tab: appState.tab.rawValue,
             canGoBack: !appState.path(of: appState.tab).isEmpty,
             isShowingSetup: settings != nil,
-            tvHost: remote.connection.host,
-            tvUser: remote.connection.user,
-            tvPassword: remote.connection.password,
-            guideHost: app.guide.guideHost,
+            tvHost: connection.host,
+            tvUser: connection.user,
+            tvPassword: connection.password,
+            guideHost: store.guideHost,
             streamHost: store.streamHost,
             ownStreamIDs: store.ownStreamIDs.map(String.init).joined(separator: ","),
             nowPlaying: remote.nowPlaying,
-            nowPlayingBand: remote.nowPlaying.flatMap { nowPlaying in
-                nowPlaying.channelCode.isEmpty ? nil : remote.channels.first { $0.code == nowPlaying.channelCode }?.band
-            },
-            connectionError: remote.lastError?.localizedDescription,
+            nowPlayingBand: remote.nowPlayingBand,
+            connectionError: remote.errorMessage,
             isSearchingTV: remote.isSearchingTV,
             setup: settings.map { settings in
                 let tv = settings.tv.state
@@ -337,9 +337,9 @@ public final class RegzaAndroidApp {
                     page: appState.settingsPath.last?.rawValue ?? "",
                     tvStatus: tv.status.text,
                     tvNeedsAttention: tv.status.needsAttention,
-                    host: tv.draft.host,
-                    user: tv.draft.user,
-                    password: tv.draft.password,
+                    host: tv.host,
+                    user: tv.user,
+                    password: tv.password,
                     devices: tv.devices,
                     isScanning: tv.isScanning,
                     scanMessage: tv.scanMessage,
@@ -353,7 +353,7 @@ public final class RegzaAndroidApp {
                     isTesting: tv.isTesting,
                     testResult: tv.testResult,
                     canSave: tv.canSave && servers.isValid,
-                    canClose: remote.connection.isConfigured,
+                    canClose: remote.isConfigured,
                     guideHost: servers.guide.host,
                     guideStatus: servers.guide.status,
                     guideUnlinkTitle: servers.guide.unlinkTitle,
@@ -390,7 +390,7 @@ public final class RegzaAndroidApp {
                 return RegzaAndroidPlayer(
                     channelCode: state.channelCode, channelName: state.channelName, phase: phase, url: url, message: message,
                     canRetry: canRetry, program: state.program, bands: state.bands,
-                    band: app.remote.state.band(among: state.bands), channels: state.channels
+                    band: state.band, channels: state.channels
                 )
             }
         )
@@ -413,13 +413,7 @@ public final class RegzaAndroidApp {
         case .remote: return .remote
         case .channels: return .channels(app.channelList.state)
         case .reservations: return .reservations(app.reservationList.state, isLoading: app.reservationList.isBusy)
-        case .guide:
-            let grid = app.guideGrid.state
-            return .guide(
-                grid,
-                band: app.remote.state.band(among: grid.bands),
-                window: GuideGridViewModel.window(now: Date(), day: grid.selectedDay)
-            )
+        case .guide: return .guide(app.guideGrid.state)
         }
     }
 
@@ -438,7 +432,8 @@ public final class RegzaAndroidApp {
 
     // MARK: 操作
 
-    @MainActor private func perform(_ action: RegzaAndroidAction) {
+    /// 操作を ViewModel の操作に置き換えて送る (テストからは、送った順を待たずに直接呼ぶ)
+    @MainActor func perform(_ action: RegzaAndroidAction) {
         let tv = app.settings?.tv
         let servers = app.settings?.servers
         switch action {
@@ -581,12 +576,18 @@ final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
     }
 
     func load() -> RegzaConnection { lock.withLock { connection } }
-    func save(_ connection: RegzaConnection) { lock.withLock { self.connection = connection } }
+    func save(_ connection: RegzaConnection) {
+        lock.withLock { self.connection = connection }
+        onChange()
+    }
     func pairingUserID() -> String { userID }
 
     var guideHost: String {
         get { lock.withLock { values.guideHost } }
-        set { lock.withLock { values.guideHost = newValue } }
+        set {
+            lock.withLock { values.guideHost = newValue }
+            onChange()
+        }
     }
 
     var streamHost: String {

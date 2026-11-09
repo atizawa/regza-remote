@@ -26,7 +26,9 @@ import Testing
         let remote = live.remote
         let tv = TVSetupViewModel(remote: remote, setup: live.setup)
         // 保存済みの接続から始める
-        #expect(tv.state.draft == remote.connection)
+        #expect(tv.state.host == remote.connection.host)
+        #expect(tv.state.user == remote.connection.user)
+        #expect(tv.state.hasAddress)
         #expect(tv.state.status == .init(text: "192.0.2.10", needsAttention: false))
         // このアプリの ID で登録していないので、登録済みではない
         #expect(!tv.state.isRegistered)

@@ -29,7 +29,8 @@ import Testing
         // テレビに問い合わせ直さずに、選んだチャンネルに切り替わったものとして出す
         #expect(model.state.nowPlaying?.channelCode == channel.code)
         #expect(model.nowPlayingChannel == channel)
-        #expect(model.state.lastError == nil)
+        #expect(model.state.errorMessage == nil)
+        #expect(model.lastError == nil)
         #expect(model.state.tapCount == 1)
         #expect(transport.paths.last == "/v2/remote/status/channel")
         #expect(observer.events == ["update \(channel.code) connected", "tune"])
@@ -42,7 +43,8 @@ import Testing
 
         await model.refresh()
 
-        #expect(model.state.lastError == .httpStatus(500))
+        #expect(model.lastError == .httpStatus(500))
+        #expect(model.state.errorMessage == RegzaError.httpStatus(500).localizedDescription)
         #expect(model.state.nowPlaying == nil)
         #expect(observer.events == ["update - disconnected"])
     }

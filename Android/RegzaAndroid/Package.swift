@@ -1,8 +1,9 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// Android アプリから RegzaCore (iOS と共有) を使うための Swift の公開 API。
-// swift-java の JExtractSwiftPlugin が、ここの public な型と関数から Java のクラスと JNI のつなぎを作る
+// Android アプリから RegzaCore (iOS と共有) を使うための Swift のライブラリ。窓口 (状態と操作) は ../RegzaAndroidBridge にあり、
+// ここには Android 専用の部品 (MainActor を Looper で動かす・BoringSSL・ユーザー ID) と、Java のつなぎを置く。
+// swift-java の JExtractSwiftPlugin が RegzaAndroid の public な関数から Java のクラスを作る
 // (設定は Sources/RegzaAndroid/swift-java.config)。ビルドは Android/ で mise run build-swift
 let package = Package(
     name: "RegzaAndroid",
@@ -14,6 +15,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../Packages/RegzaCore"),
+        .package(path: "../RegzaAndroidBridge"),
         // まだ 1.0 前でリリースのタグがないので、確かめたコミットに固定する。
         // Java 側の SwiftKitCore も、SwiftPM が取ってきたこの版のソースを app のビルドに含める
         .package(url: "https://github.com/swiftlang/swift-java", revision: "301e3da710ede7af93e798f1ce1c7950715a5748"),
@@ -26,6 +28,17 @@ let package = Package(
             name: "RegzaSharedJava",
             dependencies: [
                 .product(name: "RegzaSharedModels", package: "RegzaCore"),
+                .product(name: "SwiftJava", package: "swift-java"),
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        // 窓口 (RegzaAndroidBridge) の Java のつなぎ。別のパッケージにあってプラグインをかけられないので、
+        // mise run build-swift が swift-java のツールで Generated/ に作る (設定は RegzaAndroidBridge.swift-java.config)
+        .target(
+            name: "RegzaAndroidBridgeJava",
+            dependencies: [
+                "RegzaSharedJava",
+                .product(name: "RegzaAndroidBridge", package: "RegzaAndroidBridge"),
                 .product(name: "SwiftJava", package: "swift-java"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
@@ -46,7 +59,8 @@ let package = Package(
                 "CAndroidMainLoop",
                 "CBoringSSL",
                 "RegzaSharedJava",
-                // 本物の機器につなぐ組み立て (AppViewModel を作る)
+                "RegzaAndroidBridgeJava",
+                // 通信の差し替えとユーザー ID に使う
                 .product(name: "RegzaApp", package: "RegzaCore"),
                 .product(name: "SwiftJava", package: "swift-java"),
             ],

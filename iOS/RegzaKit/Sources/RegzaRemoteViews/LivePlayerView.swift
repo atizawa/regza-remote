@@ -163,7 +163,7 @@ private struct ChannelPicker: View {
         let state = viewModel.state
         VStack(alignment: .leading, spacing: 0) {
             if state.bands.count > 1 {
-                BandPicker(bands: state.bands)
+                BandPicker(bands: state.bands, selected: state.band)
             }
             ForEach(state.channels) { row in
                 Button {

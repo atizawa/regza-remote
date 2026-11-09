@@ -103,6 +103,15 @@ rm -rf "$generated" .build/swift/regzashared-java && mkdir -p "$generated" .buil
   --input-swift ../Packages/RegzaCore/Sources/RegzaSharedModels \
   --output-swift "$generated" --output-java .build/swift/regzashared-java
 
+# 窓口 (RegzaAndroidBridge の RegzaAndroidApp と、その状態・操作の型) の Java のつなぎを作る。
+# Mac の swift test で確かめられるよう別のパッケージにしてあり、プラグインをかけられないので、同じくツールで作る
+bridge_generated=RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated
+rm -rf "$bridge_generated" .build/swift/regzabridge-java && mkdir -p "$bridge_generated" .build/swift/regzabridge-java
+.build/swift-tool/out/Products/Release/swift-java jextract --log-level warning \
+  --config RegzaAndroid/RegzaAndroidBridge.swift-java.config --swift-module RegzaAndroidBridge \
+  --input-swift RegzaAndroidBridge/Sources/RegzaAndroidBridge \
+  --output-swift "$bridge_generated" --output-java .build/swift/regzabridge-java
+
 # Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)。
 # HTTPS に使う BoringSSL は、SDK の静的ライブラリ (libssl.a・libcrypto.a) を RegzaAndroid に埋め込む
 static_libs=$(swift sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftStaticResourcesPath: //p')/android

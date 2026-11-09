@@ -106,7 +106,7 @@ struct SettingsView: View {
         let state = tv.state
         return Form {
             Section {
-                TextField("IPアドレス (例: 192.168.0.10)", text: binding(state.draft.host) { .setHost($0) })
+                TextField("IPアドレス (例: 192.168.0.10)", text: binding(state.host) { .setHost($0) })
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -156,10 +156,10 @@ struct SettingsView: View {
 
             Section {
                 DisclosureGroup("ユーザー名とパスワードを入力", isExpanded: binding(state.isShowingManualEntry) { .setShowingManualEntry($0) }) {
-                    TextField("ユーザー名", text: binding(state.draft.user) { .setUser($0) })
+                    TextField("ユーザー名", text: binding(state.user) { .setUser($0) })
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    SecureField("パスワード", text: binding(state.draft.password) { .setPassword($0) })
+                    SecureField("パスワード", text: binding(state.password) { .setPassword($0) })
                 }
             } footer: {
                 Text("PIN 登録に対応していない古い機種では、テレビの「外部連携設定」で設定したユーザー名とパスワードを入力してください。")
@@ -175,7 +175,7 @@ struct SettingsView: View {
                         if state.isTesting { ProgressView() }
                     }
                 }
-                .disabled(!state.draft.isConfigured || state.isTesting)
+                .disabled(!state.hasAddress || state.isTesting)
                 if let testResult = state.testResult {
                     Text(testResult)
                         .font(.footnote)
@@ -201,7 +201,7 @@ struct SettingsView: View {
                         if state.isPairing { ProgressView() }
                     }
                 }
-                .disabled(!state.draft.isConfigured || state.isPairing)
+                .disabled(!state.hasAddress || state.isPairing)
             } else {
                 TextField("テレビに表示された PIN", text: binding(state.pin) { .setPIN($0) })
                     .keyboardType(.numberPad)

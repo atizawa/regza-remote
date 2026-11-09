@@ -51,7 +51,7 @@ struct ChannelListView: View {
         } else {
             VStack(spacing: 0) {
                 if state.bands.count > 1 {
-                    BandPicker(bands: state.bands)
+                    BandPicker(bands: state.bands, selected: state.band)
                 }
                 list(state)
             }

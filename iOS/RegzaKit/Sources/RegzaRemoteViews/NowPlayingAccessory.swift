@@ -66,25 +66,25 @@ struct NowPlayingAccessory: View {
 
     /// 上の小さな行: チャンネル名や「録画」 (文言は Android と同じ NowPlayingItem.captionText)
     private var caption: String? {
-        if model.state.isSearchingTV || model.state.lastError != nil { return nil }
+        if model.state.isSearchingTV || model.state.errorMessage != nil { return nil }
         return nowPlaying?.captionText
     }
 
     /// 下の大きな行: 番組名や状態 (文言は Android と同じ NowPlayingItem.headlineText)
     private var headline: String {
         if model.state.isSearchingTV { return "テレビを探しています…" }
-        if model.state.lastError != nil { return "テレビに接続できません" }
+        if model.state.errorMessage != nil { return "テレビに接続できません" }
         return nowPlaying?.headlineText ?? "接続中…"
     }
 
     private var progress: Double? {
-        guard let nowPlaying, nowPlaying.hasTimeline, model.state.lastError == nil else { return nil }
+        guard let nowPlaying, nowPlaying.hasTimeline, model.state.errorMessage == nil else { return nil }
         return nowPlaying.progress
     }
 
     /// 右端のボタン: 録画は再生/一時停止、放送は消音、待機中は電源
     private var trailingKey: RegzaKey? {
-        guard let nowPlaying, model.state.lastError == nil else { return nil }
+        guard let nowPlaying, model.state.errorMessage == nil else { return nil }
         switch nowPlaying.kind {
         case .recorded: return nowPlaying.isAdvancing ? .pause : .play
         case .broadcast: return .mute

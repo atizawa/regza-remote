@@ -184,6 +184,16 @@ public enum RegzaKey: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// 放送の種類を切り替えるキー (地デジ・BS・CS) なら、その放送の種類
+    public var band: BroadcastBand? {
+        switch self {
+        case .terrestrial: .terrestrial
+        case .bs: .bs
+        case .cs: .cs
+        default: nil
+        }
+    }
+
     public static let numbers: [RegzaKey] = [
         .num1, .num2, .num3, .num4, .num5, .num6,
         .num7, .num8, .num9, .num10, .num11, .num12,

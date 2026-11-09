@@ -1,5 +1,6 @@
-import Foundation
-import Observation
+public import Foundation
+public import Observation
+package import RegzaDomain
 
 /// EPGStation のライブ配信をアプリで見る画面 (ライブ視聴) の ViewModel (iOS と Android で共有)。
 /// 配信を頼み、準備できたら再生する URL を出す (再生そのものは OS ごとの画面がする)。
@@ -8,11 +9,11 @@ import Observation
 @Observable
 public final class LivePlayerViewModel {
     public let remote: RemoteViewModel
-    public let channels: any ChannelUseCaseProtocol
-    public let guide: any GuideUseCaseProtocol
-    public let stream: any StreamUseCaseProtocol
+    package let channels: any ChannelUseCaseProtocol
+    package let guide: any GuideUseCaseProtocol
+    package let stream: any StreamUseCaseProtocol
 
-    public init(remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol, channel: RegzaChannel) {
+    package init(remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol, channel: RegzaChannel) {
         self.remote = remote
         self.channels = channels
         self.guide = guide
@@ -38,7 +39,9 @@ public final class LivePlayerViewModel {
         /// 準備中に出す説明
         public var preparingMessage: String
         /// 見られる局がある放送の種類
-        public var bands: [RegzaChannel.Band]
+        public var bands: [BroadcastBand]
+        /// 選んでいる放送の種類
+        public var band: BroadcastBand?
         /// 一覧に出す局 (選んでいる放送の種類のもの)
         public var channels: [ChannelItem]
     }
@@ -66,7 +69,7 @@ public final class LivePlayerViewModel {
     public var state: State {
         let now = Date()
         let bands = channels.liveBands
-        let band = remote.state.band(among: bands)
+        let band = remote.band(among: bands)
         return State(
             channelCode: channel.code,
             channelName: channel.name,
@@ -74,6 +77,7 @@ public final class LivePlayerViewModel {
             program: guide.currentProgram(for: channel, at: now).map { guide.item($0, now: now) },
             preparingMessage: "\(channel.name) の配信を準備しています…（20 秒ほど）",
             bands: bands,
+            band: band,
             channels: channels.liveItems(band: band, watchingCode: channel.code, now: now)
         )
     }

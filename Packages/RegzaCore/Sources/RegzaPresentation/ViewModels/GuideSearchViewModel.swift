@@ -1,5 +1,6 @@
-import Foundation
-import Observation
+public import Foundation
+public import Observation
+package import RegzaDomain
 
 /// 番組表の検索の画面の ViewModel (iOS と Android で共有)。
 /// 打った言葉から日付・時間帯・ジャンルを読み取り (「明日の夜のサッカー」→ 明日・18 時から・サッカー)、
@@ -8,9 +9,9 @@ import Observation
 @Observable
 public final class GuideSearchViewModel {
     public let remote: RemoteViewModel
-    public let guide: any GuideUseCaseProtocol
+    package let guide: any GuideUseCaseProtocol
 
-    public init(remote: RemoteViewModel, guide: any GuideUseCaseProtocol) {
+    package init(remote: RemoteViewModel, guide: any GuideUseCaseProtocol) {
         self.remote = remote
         self.guide = guide
     }
@@ -60,7 +61,7 @@ public final class GuideSearchViewModel {
 
     public var state: State {
         let now = Date()
-        let channels = remote.state.channels
+        let channels = remote.channels
         return State(
             text: text,
             isBlank: text.trimmingCharacters(in: .whitespaces).isEmpty,

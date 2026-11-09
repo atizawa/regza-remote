@@ -6,7 +6,7 @@ import RegzaApp
 /// Android では RegzaCore の通信をソケットで送る。Android の URLSession (FoundationNetworking) は、
 /// 送り終えたあとも書き込みの見張りを外さず、返事を待つ間 CPU を使い続けるため。
 /// HTTPS は SDK に入っている BoringSSL で暗号化する。
-/// RegzaCore を使う入り口 (下の public な関数と init) の最初で読み、1 回だけ差し替える
+/// アプリの起動時に regzaSetUpMainActor が、ViewModel を作る前に 1 回だけ差し替える
 let useSocketTransport: Void = {
     RegzaHTTP.transport = SocketTransport(tls: BoringSSLProvider())
 }()

@@ -16,8 +16,6 @@ struct GuideGridView: View {
         _viewModel = State(initialValue: viewModel)
     }
 
-    /// 今の時刻の正時から 24 時間分
-    static let hours = GuideGridViewModel.hours
     /// 文字をこれより大きくすると 1 画面に 1 局も収まらなくなるので、番組表はここで止める
     static let maximumDynamicTypeSize = DynamicTypeSize.accessibility1
 
@@ -69,15 +67,16 @@ struct GuideGridView: View {
                 Button("もう一度試す") { viewModel.send(.load) }
             }
         } else {
+            // 毎分、今の時刻の線を動かす。表に出す時間も正時ごとに進むので、state もここで読み直す
             TimelineView(.periodic(from: .now, by: 60)) { context in
-                grid(state, now: context.date)
+                grid(viewModel.state, now: context.date)
             }
             .dynamicTypeSize(...Self.maximumDynamicTypeSize)
             // 上に積むと日付の横スクロールが先に見つかり、下へスクロールしてもタブバーが小さくならないので、表の上に重ねる
             .safeAreaBar(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
                     if state.bands.count > 1 {
-                        BandPicker(bands: state.bands)
+                        BandPicker(bands: state.bands, selected: state.band)
                     }
                     DayPicker(days: state.days, selected: state.selectedDay) { viewModel.send(.selectDay($0)) }
                 }
@@ -86,10 +85,10 @@ struct GuideGridView: View {
     }
 
     private func grid(_ state: GuideGridViewModel.State, now: Date) -> some View {
-        let window = GuideGridViewModel.window(now: now, day: state.selectedDay)
+        let window = state.windowStart...state.windowEnd
         let columns = state.columns
         let metrics = metrics
-        let height = CGFloat(Self.hours * 60) * metrics.pointsPerMinute
+        let height = CGFloat(state.hourLabels.count * 60) * metrics.pointsPerMinute
         // 縦横を 1 つのスクロールにまとめ、局名の行と時刻の列はスクロール量に合わせてずらして重ねる
         return ScrollView([.horizontal, .vertical]) {
             HStack(alignment: .top, spacing: 0) {
@@ -102,7 +101,7 @@ struct GuideGridView: View {
             .frame(height: height, alignment: .top)
             .overlay(alignment: .topLeading) {
                 // 今の時刻の線 (今日を見ているときだけ)
-                if state.selectedDay == nil {
+                if state.isToday {
                     Rectangle()
                         .fill(.red)
                         .frame(height: 1)
@@ -124,7 +123,7 @@ struct GuideGridView: View {
             scrollOrigin.value = value
         }
         .overlay(alignment: .topLeading) {
-            PinnedTimeColumn(window: window, height: height, metrics: metrics, origin: scrollOrigin)
+            PinnedTimeColumn(window: window, hourLabels: state.hourLabels, height: height, metrics: metrics, origin: scrollOrigin)
                 // 表示している範囲で切る (列そのものは 24 時間分の高さがある)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .clipped()
@@ -158,11 +157,11 @@ struct GuideGridView: View {
         await waitWhileBusy(viewModel)
         #if DEBUG
         // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
-        if SampleData.isEnabled, UserDefaults.standard.bool(forKey: "SampleDetail"),
+        if UserDefaults.standard.bool(forKey: "SampleData"), UserDefaults.standard.bool(forKey: "SampleDetail"),
            let column = viewModel.state.columns.first, let program = column.programs.first(where: \.isOnAir) {
             app.send(.setPath(.guide, [.programDetail(programID: program.id, channelCode: column.channelCode)]))
         }
-        if SampleData.isEnabled, let text = UserDefaults.standard.string(forKey: "SampleSearch") {
+        if UserDefaults.standard.bool(forKey: "SampleData"), let text = UserDefaults.standard.string(forKey: "SampleSearch") {
             app.send(.setPath(.guide, [.search]))
             viewModel.search.send(.setText(text))
         }
@@ -212,12 +211,13 @@ private final class ScrollOrigin {
 /// 左に固定する時刻の列。縦のスクロールにだけ合わせて動かす
 private struct PinnedTimeColumn: View {
     let window: ClosedRange<Date>
+    let hourLabels: [String]
     let height: CGFloat
     let metrics: GuideMetrics
     let origin: ScrollOrigin
 
     var body: some View {
-        TimeColumn(window: window, metrics: metrics)
+        TimeColumn(window: window, hourLabels: hourLabels, metrics: metrics)
             .frame(height: height, alignment: .top)
             .offset(y: metrics.headerHeight + origin.value.y)
     }
@@ -248,18 +248,15 @@ private struct PinnedHeader: View {
 /// 左端の時刻 (正時ごと)
 private struct TimeColumn: View {
     let window: ClosedRange<Date>
+    /// 正時ごとの時刻 (朝 4 時より前は前の日の続きとして 24〜27 時。ViewModel が作る)
+    let hourLabels: [String]
     let metrics: GuideMetrics
-
-    /// 番組表と同じく、朝 4 時より前は前の日の続きとして 24〜27 時と書く
-    static func hourLabel(_ date: Date) -> Int {
-        BroadcastDay.hour(of: date)
-    }
 
     var body: some View {
         ZStack(alignment: .top) {
-            ForEach(0..<GuideGridView.hours, id: \.self) { hour in
+            ForEach(Array(hourLabels.enumerated()), id: \.offset) { hour, label in
                 let date = window.lowerBound.addingTimeInterval(TimeInterval(hour * 3600))
-                Text("\(Self.hourLabel(date))")
+                Text(label)
                     .font(.caption2.monospacedDigit().weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: metrics.timeColumnWidth, height: 60 * metrics.pointsPerMinute, alignment: .top)
@@ -286,7 +283,8 @@ private struct ProgramColumn: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            ForEach(column.programs.filter { $0.end > window.lowerBound && $0.start < window.upperBound }) { program in
+            // 番組は、ViewModel が表に出す時間にかかるものだけにしてある
+            ForEach(column.programs) { program in
                 let top = metrics.offset(of: program.start, in: window)
                 let bottom = metrics.offset(of: program.end, in: window)
                 Button {

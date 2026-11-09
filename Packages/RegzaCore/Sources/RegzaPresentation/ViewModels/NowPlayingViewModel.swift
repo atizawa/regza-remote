@@ -1,5 +1,6 @@
-import Foundation
-import Observation
+public import Foundation
+public import Observation
+package import RegzaDomain
 
 /// いま映っているものの詳細のシートの ViewModel (iOS と Android で共有)。
 /// 待機中なら電源を入れる、放送ならアプリで見る・最初から見る、を出す
@@ -7,10 +8,10 @@ import Observation
 @Observable
 public final class NowPlayingViewModel {
     public let remote: RemoteViewModel
-    public let guide: any GuideUseCaseProtocol
-    public let stream: any StreamUseCaseProtocol
+    package let guide: any GuideUseCaseProtocol
+    package let stream: any StreamUseCaseProtocol
 
-    public init(remote: RemoteViewModel, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol) {
+    package init(remote: RemoteViewModel, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol) {
         self.remote = remote
         self.guide = guide
         self.stream = stream
@@ -42,14 +43,14 @@ public final class NowPlayingViewModel {
     public var state: State {
         let remoteState = remote.state
         let nowPlaying = remoteState.nowPlaying
-        let isConnected = !remoteState.isSearchingTV && remoteState.lastError == nil
+        let isConnected = !remoteState.isSearchingTV && remoteState.errorMessage == nil
         let isWatching = nowPlaying?.kind == .broadcast || nowPlaying?.kind == .recorded
         let description = nowPlaying?.description ?? ""
         return State(
             title: isConnected && isWatching ? "視聴中" : "テレビ",
             description: description.isEmpty ? nil : description,
-            canPowerOn: nowPlaying?.kind == .standby && remoteState.lastError == nil,
-            playableChannelCode: stream.canStream && nowPlaying?.kind == .broadcast ? remoteState.nowPlayingChannel?.code : nil,
+            canPowerOn: nowPlaying?.kind == .standby && remoteState.errorMessage == nil,
+            playableChannelCode: stream.canStream && nowPlaying?.kind == .broadcast ? remote.nowPlayingChannel?.code : nil,
             canStartOver: canStartOver(nowPlaying)
         )
     }

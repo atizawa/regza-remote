@@ -1,5 +1,6 @@
-import Foundation
-import Observation
+public import Foundation
+public import Observation
+package import RegzaDomain
 
 /// 操作から始めた処理を数える (終わるまで ViewModel の isBusy を true にする)。
 /// Android の窓口が、読み込みの終わり (引っ張って読み直したときの印を消す) を知れるよう、変わったら知らせる
