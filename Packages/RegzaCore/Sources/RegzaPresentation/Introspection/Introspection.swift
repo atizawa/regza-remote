@@ -1,5 +1,4 @@
 import Foundation
-import Observation
 
 /// ViewModel を外から読み、操作するための口 (Shopify の Reflex の Introspection Kit と同じ考え方)。
 /// CLI や AI のエージェントが、画面を通さずに状態を JSON で読み、操作を名前と引数で送る。アプリ自身は使わない
@@ -25,24 +24,6 @@ extension Introspectable {
     public var introspectionState: JSONValue { JSONValue(reflecting: introspectionValue) }
     public var introspectionChildren: [any Introspectable] { [] }
     public var isBusy: Bool { false }
-}
-
-/// 操作から始めた処理を数える (終わるまで ViewModel の isBusy を true にする)。
-/// Android の窓口が、読み込みの終わり (引っ張って読み直したときの印を消す) を知れるよう、変わったら知らせる
-@MainActor
-@Observable
-final class Work {
-    private(set) var running = 0
-
-    var isBusy: Bool { running > 0 }
-
-    func run(_ operation: @escaping @MainActor () async -> Void) {
-        running += 1
-        Task {
-            await operation()
-            running -= 1
-        }
-    }
 }
 
 /// 同じ種類の ViewModel がいくつも開いているとき (タブごとの戻る道など) に、道の名前を変えて見せる
