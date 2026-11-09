@@ -2,6 +2,16 @@
 import RegzaApp
 
 extension RegzaAndroidApp {
+    /// AppViewModel に送る
+    public func sendAppAction(_ action: AppAction) {
+        Task { @MainActor in self.perform(action) }
+    }
+
+    /// AppViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
+    @MainActor func perform(_ action: AppAction) {
+        route { ($0 as? AppViewModel)?.send(action) != nil }
+    }
+
     /// ChannelListViewModel に送る
     public func sendChannelListAction(_ action: ChannelListAction) {
         Task { @MainActor in self.perform(action) }

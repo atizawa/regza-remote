@@ -58,7 +58,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.regzaremote.core.ChannelItem
-import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.LivePlayerAction
 import com.example.regzaremote.core.LivePlayerPhase
 import com.example.regzaremote.core.LivePlayerState
@@ -77,10 +77,10 @@ fun LivePlayerScreen(player: LivePlayerState, send: Send) {
         send(LivePlayerAction.appear())
         send(LivePlayerAction.start())
     }
-    BackHandler { send(RegzaAndroidAction.closePlayer()) }
+    BackHandler { send(AppAction.closePlayer()) }
     // 画面が消えたりほかのアプリに移ったりしたら、閉じて配信を止める。裏で見ていると知らせ続けると、
     // 見ていないのにチューナーを使い続けてしまう (Android ではピクチャインピクチャや裏での再生をしない)
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { send(RegzaAndroidAction.closePlayer()) }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { send(AppAction.closePlayer()) }
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     FullScreenWhile(isLandscape)
 
@@ -92,7 +92,7 @@ fun LivePlayerScreen(player: LivePlayerState, send: Send) {
                 // 閉じるだけの画面なので、左上の × で閉じる (映像の上には重ねない)
                 ScreenHeader(
                     "ライブ視聴",
-                    leading = { HeaderIconButton(Icons.Filled.Close, "閉じる") { send(RegzaAndroidAction.closePlayer()) } },
+                    leading = { HeaderIconButton(Icons.Filled.Close, "閉じる") { send(AppAction.closePlayer()) } },
                 )
                 Video(player, send, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
                 Column(

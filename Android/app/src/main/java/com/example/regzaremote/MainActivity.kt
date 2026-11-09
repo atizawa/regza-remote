@@ -39,7 +39,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.AppAction
+import com.example.regzaremote.core.AppTab
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RegzaAndroidScreen
 import com.example.regzaremote.core.RegzaAndroidSnapshot
@@ -137,18 +138,19 @@ private fun AppScreen(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?, 
         send(RemoteAction.startPolling())
         onStopOrDispose { send(RemoteAction.stopPolling()) }
     }
-    // タブの中で開いた画面は、戻るボタンで 1 つ戻る
-    BackHandler(enabled = state.isCanGoBack) { send(RegzaAndroidAction.back()) }
-    val tab = state.tab
-    val back = if (state.isCanGoBack) ({ send(RegzaAndroidAction.back()) }) else null
+    val tab = state.app.tab
+    // タブの path に画面を積んでいれば (タブの中で画面を開いていれば)、戻るボタンで 1 つ戻る
+    val canGoBack = state.app.path(tab).isNotEmpty()
+    BackHandler(enabled = canGoBack) { send(AppAction.pop()) }
+    val back = if (canGoBack) ({ send(AppAction.pop()) }) else null
     Scaffold(
         containerColor = AppTheme.background,
         bottomBar = {
             NavigationBar(containerColor = AppTheme.surface) {
-                TabItem("remote", "リモコン", { Icon(Icons.Filled.Home, contentDescription = null) }, tab, send)
-                TabItem("guide", "番組表", { Icon(Icons.Filled.DateRange, contentDescription = null) }, tab, send)
-                TabItem("channels", "チャンネル", { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, tab, send)
-                TabItem("reservations", "録画予約", { RecordIcon(Modifier.size(22.dp), color = LocalContentColor.current) }, tab, send)
+                TabItem(AppTab.remote(), "リモコン", { Icon(Icons.Filled.Home, contentDescription = null) }, tab, send)
+                TabItem(AppTab.guide(), "番組表", { Icon(Icons.Filled.DateRange, contentDescription = null) }, tab, send)
+                TabItem(AppTab.channels(), "チャンネル", { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, tab, send)
+                TabItem(AppTab.reservations(), "録画予約", { RecordIcon(Modifier.size(22.dp), color = LocalContentColor.current) }, tab, send)
             }
         },
     ) { padding ->
@@ -179,14 +181,15 @@ private fun TabContent(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?,
 
 @Composable
 private fun RowScope.TabItem(
-    name: String,
+    tab: AppTab,
     label: String,
     icon: @Composable () -> Unit,
-    selected: String,
+    selected: AppTab,
     send: Send,
 ) {
     NavigationBarItem(
-        selected = selected == name, onClick = { send(RegzaAndroidAction.selectTab(name)) },
+        // Swift の値なので、同じタブかは rawValue で比べる
+        selected = selected.rawValue == tab.rawValue, onClick = { send(AppAction.selectTab(tab)) },
         icon = icon, label = { Text(label) },
         // 選んでいるタブは、iOS 版と同じく強調色の文字とアイコンにする (Material の丸い地は付けない)
         colors = NavigationBarItemDefaults.colors(

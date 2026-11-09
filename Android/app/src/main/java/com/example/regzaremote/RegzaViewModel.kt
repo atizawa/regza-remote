@@ -6,7 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RegzaAndroidScreen
 import com.example.regzaremote.core.RegzaAndroidSnapshot
@@ -50,7 +50,7 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         // アプリを閉じたら、テレビの PIN 表示も取り消し、ライブ視聴の配信も止める (待たずに送るだけ)
-        core.send(RegzaAndroidAction.closeSetup())
-        core.send(RegzaAndroidAction.closePlayer())
+        send(AppAction.closeSettings())
+        send(AppAction.closePlayer())
     }
 }

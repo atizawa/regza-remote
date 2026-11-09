@@ -112,7 +112,7 @@ struct ChannelListView: View {
             .disabled(state.tuningCode != nil)
             if row.hasPrograms {
                 Button {
-                    app.send(.open(.channelPrograms(channelCode: row.code)))
+                    app.send(.push(.channelPrograms(channelCode: row.code)))
                 } label: {
                     Image(systemName: "calendar")
                         // ボタンの色 (緑) が混ざらないよう、灰色に固定する
@@ -145,7 +145,7 @@ struct ChannelListView: View {
         }
         if row.hasPrograms {
             Button("番組表", systemImage: "calendar") {
-                app.send(.open(.channelPrograms(channelCode: row.code)))
+                app.send(.push(.channelPrograms(channelCode: row.code)))
             }
         }
     }

@@ -30,7 +30,7 @@ struct GuideGridView: View {
                     // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
                     if viewModel.state.canSearch {
                         ToolbarItem(placement: .topBarTrailing) {
-                            Button("番組を探す", systemImage: "magnifyingglass") { app.send(.open(.search)) }
+                            Button("番組を探す", systemImage: "magnifyingglass") { app.send(.push(.search)) }
                         }
                     }
                 }
@@ -94,7 +94,7 @@ struct GuideGridView: View {
             HStack(alignment: .top, spacing: 0) {
                 ForEach(columns) { column in
                     ProgramColumn(column: column, window: window, metrics: metrics) { program in
-                        app.send(.open(.programDetail(programID: program.id, channelCode: column.channelCode)))
+                        app.send(.push(.programDetail(programID: program.id, channelCode: column.channelCode)))
                     }
                 }
             }

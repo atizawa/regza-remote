@@ -40,7 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.NowPlayingItem
-import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.NowPlayingAction
 import com.example.regzaremote.core.NowPlayingState
 import com.example.regzaremote.core.RemoteAction
@@ -76,7 +76,7 @@ fun NowPlayingBar(state: RegzaAndroidSnapshot, send: Send, modifier: Modifier = 
             .shadow(8.dp, RoundedCornerShape(50))
             .background(AppTheme.surface, RoundedCornerShape(50))
             .border(0.5.dp, AppTheme.separator, RoundedCornerShape(50))
-            .clickable { send(RegzaAndroidAction.showNowPlaying()) }
+            .clickable { send(AppAction.showNowPlaying()) }
             .padding(horizontal = Design.outer),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -127,7 +127,7 @@ private fun ProgressRing(progress: Float?) {
 fun NowPlayingSheet(state: RegzaAndroidSnapshot, detail: NowPlayingState, send: Send) {
     // 開いたら、最初から見られるかと、いま映っている局を読む
     LaunchedEffect(Unit) { send(NowPlayingAction.appear()) }
-    ModalBottomSheet(onDismissRequest = { send(RegzaAndroidAction.closeNowPlaying()) }, containerColor = AppTheme.background) {
+    ModalBottomSheet(onDismissRequest = { send(AppAction.closeNowPlaying()) }, containerColor = AppTheme.background) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Design.outer).padding(bottom = Design.group),
             verticalArrangement = Arrangement.spacedBy(Design.group),
@@ -143,8 +143,8 @@ fun NowPlayingSheet(state: RegzaAndroidSnapshot, detail: NowPlayingState, send: 
             detail.playableChannelCode.orElse(null)?.let { code ->
                 SheetButton("アプリで見る") {
                     // シートを閉じてから、全画面で再生する
-                    send(RegzaAndroidAction.closeNowPlaying())
-                    send(RegzaAndroidAction.play(code))
+                    send(AppAction.closeNowPlaying())
+                    send(AppAction.play(code))
                 }
             }
             if (detail.isCanStartOver) SheetButton("この番組を最初から見る") { send(NowPlayingAction.startOver()) }

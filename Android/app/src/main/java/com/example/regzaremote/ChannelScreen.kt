@@ -40,7 +40,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.BroadcastBand
 import com.example.regzaremote.core.ChannelItem
-import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.AppAction
+import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.ChannelListState
@@ -48,7 +49,7 @@ import com.example.regzaremote.core.ChannelListState
 /**
  * テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える。
  * state と操作は ChannelListViewModel の ChannelListState・ChannelListAction。
- * この画面の操作 (ChannelListAction) も、番組表を開くなどアプリ全体の操作 (RegzaAndroidAction) も send で送る
+ * この画面の操作 (ChannelListAction) も、番組表を開くなどアプリ全体の操作 (AppAction) も send で送る
  */
 @Composable
 fun ChannelScreen(state: ChannelListState, send: Send) {
@@ -122,7 +123,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
                 row.isNowPlaying -> Icon(Icons.Filled.Check, contentDescription = "視聴中", tint = AppTheme.accent, modifier = Modifier.padding(horizontal = 8.dp))
             }
             if (row.isHasPrograms) {
-                IconButton(onClick = { send(RegzaAndroidAction.openPrograms(row.code)) }) {
+                IconButton(onClick = { send(AppAction.push(AppRoute.channelPrograms(row.code))) }) {
                     Icon(Icons.Filled.DateRange, contentDescription = "${row.name} の番組表", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -135,7 +136,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
             if (canStream) {
                 DropdownMenuItem(text = { Text("アプリで見る") }, onClick = {
                     isShowingMenu = false
-                    send(RegzaAndroidAction.play(row.code))
+                    send(AppAction.play(row.code))
                 })
             }
             if (row.isCanStartOver) {
@@ -147,7 +148,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
             if (row.isHasPrograms) {
                 DropdownMenuItem(text = { Text("番組表") }, onClick = {
                     isShowingMenu = false
-                    send(RegzaAndroidAction.openPrograms(row.code))
+                    send(AppAction.push(AppRoute.channelPrograms(row.code)))
                 })
             }
         }

@@ -57,7 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RegzaAndroidSnapshot
 import com.example.regzaremote.core.RegzaKey
@@ -79,7 +79,7 @@ fun RemoteScreen(state: RegzaAndroidSnapshot, sendAction: Send) {
         // 本体が明るいグレーなので、見出しと設定のボタンは黒にする
         CompositionLocalProvider(LocalContentColor provides Color.Black) {
             ScreenHeader("リモコン") {
-                HeaderIconButton(Icons.Filled.Settings, "設定") { sendAction(RegzaAndroidAction.showSetup()) }
+                HeaderIconButton(Icons.Filled.Settings, "設定") { sendAction(AppAction.showSettings()) }
             }
         }
         Column(

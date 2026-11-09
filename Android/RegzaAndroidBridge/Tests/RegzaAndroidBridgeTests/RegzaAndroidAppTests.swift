@@ -60,7 +60,7 @@ struct RegzaAndroidAppTests {
     @Test func startsFromTVSettingsWhenNotConfigured() async throws {
         let fixture = try make(host: "")
         let snapshot = await fixture.bridge.snapshot()
-        #expect(snapshot.isShowingSetup)
+        #expect(snapshot.app.isShowingSettings)
         #expect(snapshot.setup?.path == [.tv])
     }
 
@@ -107,10 +107,10 @@ struct RegzaAndroidAppTests {
     @Test func nowPlayingDetailIsPassedWhileShowing() async throws {
         let fixture = try make()
         #expect(await fixture.bridge.snapshot().nowPlayingDetail == nil)
-        fixture.bridge.perform(.showNowPlaying)
+        fixture.bridge.perform(AppAction.showNowPlaying)
         fixture.bridge.perform(NowPlayingAction.appear)
         #expect(await fixture.bridge.snapshot().nowPlayingDetail == fixture.app.nowPlaying.state)
-        fixture.bridge.perform(.closeNowPlaying)
+        fixture.bridge.perform(AppAction.closeNowPlaying)
         #expect(await fixture.bridge.snapshot().nowPlayingDetail == nil)
     }
 
@@ -120,48 +120,45 @@ struct RegzaAndroidAppTests {
         let fixture = try make()
         #expect(await fixture.bridge.screen().kind == "remote")
 
-        fixture.bridge.perform(.selectTab("channels"))
-        #expect(await fixture.bridge.snapshot().tab == "channels")
+        fixture.bridge.perform(AppAction.selectTab(.channels))
+        #expect(await fixture.bridge.snapshot().app.tab == .channels)
         #expect(await fixture.bridge.screen().kind == "channels")
 
-        fixture.bridge.perform(.selectTab("reservations"))
+        fixture.bridge.perform(AppAction.selectTab(.reservations))
         #expect(await fixture.bridge.screen().kind == "reservations")
 
-        fixture.bridge.perform(.selectTab("guide"))
+        fixture.bridge.perform(AppAction.selectTab(.guide))
         let guide = try #require(await fixture.bridge.screen().guide)
         #expect(guide.hasGuide)
 
-        // 知らないタブの名前は無視する
-        fixture.bridge.perform(.selectTab("nothing"))
-        #expect(await fixture.bridge.snapshot().tab == "guide")
     }
 
     @Test func opensProgramsAndDetailThenGoesBack() async throws {
         let fixture = try make()
         let code = Self.channelCodes[0]
-        fixture.bridge.perform(.selectTab("channels"))
+        fixture.bridge.perform(AppAction.selectTab(.channels))
 
-        fixture.bridge.perform(.openPrograms(code))
+        fixture.bridge.perform(AppAction.push(.channelPrograms(channelCode: code)))
         let programs = try #require(await fixture.bridge.screen().programs)
         #expect(programs.channelName == "テスト局1")
-        #expect(await fixture.bridge.snapshot().canGoBack)
+        #expect(await fixture.bridge.snapshot().app.path(of: .channels).count == 1)
 
-        fixture.bridge.perform(.openProgram(code, 1))
+        fixture.bridge.perform(AppAction.push(.programDetail(programID: 1, channelCode: code)))
         let detail = try #require(await fixture.bridge.screen().detail)
         #expect(detail.program.name == "放送中の番組")
         #expect(detail.channelName == "テスト局1")
 
-        fixture.bridge.perform(RegzaAndroidAction.back)
+        fixture.bridge.perform(AppAction.pop)
         #expect(await fixture.bridge.screen().kind == "programs")
-        fixture.bridge.perform(RegzaAndroidAction.back)
+        fixture.bridge.perform(AppAction.pop)
         #expect(await fixture.bridge.screen().kind == "channels")
-        #expect(!(await fixture.bridge.snapshot().canGoBack))
+        #expect(await fixture.bridge.snapshot().app.path(of: .channels).isEmpty)
     }
 
     /// 画面ごとの操作は、その型を Action にしている ViewModel に届く
     @Test func screenActionsReachTheirViewModel() async throws {
         let fixture = try make()
-        fixture.bridge.perform(.selectTab("channels"))
+        fixture.bridge.perform(AppAction.selectTab(.channels))
         #expect(!fixture.app.channelList.isBusy)
         fixture.bridge.perform(ChannelListAction.reload)
         #expect(fixture.app.channelList.isBusy)
@@ -186,8 +183,8 @@ struct RegzaAndroidAppTests {
     @Test func screenActionsReachOpenedScreens() async throws {
         let fixture = try make()
         let code = Self.channelCodes[0]
-        fixture.bridge.perform(.selectTab("channels"))
-        fixture.bridge.perform(.openPrograms(code))
+        fixture.bridge.perform(AppAction.selectTab(.channels))
+        fixture.bridge.perform(AppAction.push(.channelPrograms(channelCode: code)))
         #expect(await fixture.bridge.screen().programs?.days == nil)
 
         fixture.bridge.perform(ProgramListAction.appear)
@@ -198,15 +195,15 @@ struct RegzaAndroidAppTests {
     /// 見つからない番組を開いても、タブの最初の画面を出す
     @Test func unknownProgramFallsBackToTabScreen() async throws {
         let fixture = try make()
-        fixture.bridge.perform(.selectTab("channels"))
-        fixture.bridge.perform(.openProgram(Self.channelCodes[0], 999))
+        fixture.bridge.perform(AppAction.selectTab(.channels))
+        fixture.bridge.perform(AppAction.push(.programDetail(programID: 999, channelCode: Self.channelCodes[0])))
         #expect(await fixture.bridge.screen().kind == "channels")
     }
 
     /// 番組表の操作 (GuideGridAction) で日付を選ぶと、番組表の state がそのまま届く
     @Test func selectsDayWithGuideAction() async throws {
         let fixture = try make()
-        fixture.bridge.perform(.selectTab("guide"))
+        fixture.bridge.perform(AppAction.selectTab(.guide))
         fixture.bridge.perform(GuideGridAction.load)
         try await waitUntil { (await fixture.bridge.screen().guide?.days.count ?? 0) > 1 }
 
@@ -221,8 +218,8 @@ struct RegzaAndroidAppTests {
     /// 検索の操作 (GuideSearchAction) で読み取った条件を外すと、検索の state がそのまま届く
     @Test func removesSearchConditionWithSearchAction() async throws {
         let fixture = try make()
-        fixture.bridge.perform(.selectTab("guide"))
-        fixture.bridge.perform(.openSearch)
+        fixture.bridge.perform(AppAction.selectTab(.guide))
+        fixture.bridge.perform(AppAction.push(.search))
         fixture.bridge.perform(GuideSearchAction.setText("明日の夜"))
         let before = try #require(await fixture.bridge.screen().search)
         #expect(before.conditions.count == 2)
@@ -238,7 +235,7 @@ struct RegzaAndroidAppTests {
     /// 設定の操作 (SettingsAction) を送ると、設定の state がそのまま届く
     @Test func settingsActionsReachSettings() async throws {
         let fixture = try make()
-        fixture.bridge.perform(.showSetup)
+        fixture.bridge.perform(AppAction.showSettings)
         #expect(await fixture.bridge.snapshot().setup?.path == [])
 
         fixture.bridge.perform(SettingsAction.openPage(.stream))
@@ -261,17 +258,17 @@ struct RegzaAndroidAppTests {
         let code = Self.channelCodes[0]
         // 見本の配信はいつも配信できないので、それで組み立てたものは開かない
         let unconfigured = try make()
-        unconfigured.bridge.perform(.play(code))
+        unconfigured.bridge.perform(AppAction.play(channelCode: code))
         #expect(await unconfigured.bridge.snapshot().player == nil)
 
         let fixture = try await makeWithStream()
-        fixture.bridge.perform(.play(code))
+        fixture.bridge.perform(AppAction.play(channelCode: code))
         let player = try #require(await fixture.bridge.snapshot().player)
         #expect(player.channelCode == code)
         #expect(player.channelName == "テスト局1")
         #expect(player.phase == .preparing)
 
-        fixture.bridge.perform(.closePlayer)
+        fixture.bridge.perform(AppAction.closePlayer)
         #expect(await fixture.bridge.snapshot().player == nil)
     }
 

@@ -16,50 +16,17 @@ public final class AppViewModel {
 
     // MARK: - 状態と操作
 
-    public enum Tab: String, CaseIterable, Sendable {
-        case remote, guide, channels, reservations
-    }
+    /// タブ
+    public typealias Tab = AppTab
 
     /// タブの中で開く画面
-    public enum Route: Hashable, Sendable {
-        /// 1 チャンネルの番組表
-        case channelPrograms(channelCode: String)
-        /// 番組の詳細 (番組の id とチャンネルのコード)。番組とチャンネルは UseCase から引く
-        case programDetail(programID: Int, channelCode: String)
-        /// 番組表の検索
-        case search
-    }
+    public typealias Route = AppRoute
 
-    public struct State: Equatable, Sendable {
-        public var tab: Tab = .remote
-        /// タブごとの戻る道 (最後が手前の画面)
-        public var paths: [Tab: [Route]] = [:]
-        public var isShowingSettings = false
-        /// いま映っているものの詳細のシート
-        public var isShowingNowPlaying = false
-        /// アプリで見ている局 (ライブ視聴の全画面)。ライブ視聴の中で局を切り替えたら、その局になる
-        public var playingChannelCode: String?
+    /// 画面に出すもの
+    public typealias State = AppState
 
-        public func path(of tab: Tab) -> [Route] { paths[tab] ?? [] }
-    }
-
-    public enum Action: Sendable {
-        case selectTab(Tab)
-        /// いまのタブで画面を開く
-        case open(Route)
-        /// タブの戻る道をまとめて変える (iOS の戻るボタンやスワイプで戻ったとき)
-        case setPath(Tab, [Route])
-        /// いまのタブで 1 つ戻る
-        case back
-        case showSettings
-        /// 設定を閉じる (保存は設定の画面の SettingsAction.save)
-        case closeSettings
-        case showNowPlaying
-        case closeNowPlaying
-        /// アプリで見る (ライブ視聴)
-        case play(channelCode: String)
-        case closePlayer
-    }
+    /// 画面からの操作
+    public typealias Action = AppAction
 
     @ObservationIgnored private let work = Work()
     /// 画面の移り変わり (playingChannelCode はライブ視聴の ViewModel から求めるので、ここでは使わない)
@@ -99,11 +66,11 @@ public final class AppViewModel {
         switch action {
         case .selectTab(let tab):
             next.tab = tab
-        case .open(let route):
+        case .push(let route):
             next.paths[next.tab, default: []].append(route)
         case .setPath(let tab, let path):
             next.paths[tab] = path
-        case .back:
+        case .pop:
             if next.paths[next.tab]?.isEmpty == false { next.paths[next.tab]?.removeLast() }
         case .showSettings:
             settings = SettingsViewModel(remote: remote, setup: setup) { [weak self] in self?.send(.closeSettings) }
@@ -250,16 +217,16 @@ extension AppViewModel: Introspectable {
             guard let tab = Tab(rawValue: try arguments.string("tab")) else { throw IntrospectionError.invalidArgument("tab") }
             send(.selectTab(tab))
         case "openPrograms":
-            send(.open(.channelPrograms(channelCode: try channel(arguments).code)))
+            send(.push(.channelPrograms(channelCode: try channel(arguments).code)))
         case "openProgram":
             let channel = try channel(arguments)
             let id = try arguments.int("program")
             guard guide.program(id: id, channelCode: channel.code) != nil else {
                 throw IntrospectionError.unavailable("番組 \(id) は番組表にありません")
             }
-            send(.open(.programDetail(programID: id, channelCode: channel.code)))
-        case "openSearch": send(.open(.search))
-        case "back": send(.back)
+            send(.push(.programDetail(programID: id, channelCode: channel.code)))
+        case "openSearch": send(.push(.search))
+        case "back": send(.pop)
         case "showSettings": send(.showSettings)
         case "closeSettings": send(.closeSettings)
         case "showNowPlaying": send(.showNowPlaying)

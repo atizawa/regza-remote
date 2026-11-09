@@ -21,7 +21,7 @@ import Testing
         let app = try makeApp()
         let channel = try #require(app.remote.channels.first)
         app.send(.selectTab(.channels))
-        app.send(.open(.channelPrograms(channelCode: channel.code)))
+        app.send(.push(.channelPrograms(channelCode: channel.code)))
         let list = try #require(app.programList(channelCode: channel.code))
         // 戻る道にある間は同じ ViewModel を使う
         #expect(app.programList(channelCode: channel.code) === list)
@@ -29,7 +29,7 @@ import Testing
         // ほかのタブの戻る道には入らない
         #expect(app.state.path(of: .guide).isEmpty)
 
-        app.send(.back)
+        app.send(.pop)
         #expect(app.state.path(of: .channels).isEmpty)
         // 閉じた画面の ViewModel は捨て、開き直すと作り直す
         #expect(app.programList(channelCode: channel.code) !== list)

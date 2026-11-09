@@ -54,7 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.ProgramItem
-import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.AppAction
+import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.ProgramDetailAction
 import com.example.regzaremote.core.ProgramDetailState
 import com.example.regzaremote.core.ProgramListAction
@@ -103,7 +104,7 @@ private fun ProgramRow(program: ProgramItem, send: Send) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable { send(RegzaAndroidAction.openProgram(program.channelCode, program.id)) }
+            .clickable { send(AppAction.push(AppRoute.programDetail(program.id, program.channelCode))) }
             .padding(start = Design.outer, end = 8.dp, top = 10.dp, bottom = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -201,7 +202,7 @@ private fun DetailActions(detail: ProgramDetailState, send: Send) {
         if (detail.isCanStream) {
             Row {
                 ActionButton("アプリで見る", AppTheme.surface, foreground = MaterialTheme.colorScheme.onSurface) {
-                    send(RegzaAndroidAction.play(detail.program.channelCode))
+                    send(AppAction.play(detail.program.channelCode))
                 }
             }
         }
@@ -364,7 +365,7 @@ private fun SearchResultRow(row: SearchResultItem, send: Send) {
     Column(
         Modifier
             .fillMaxWidth()
-            .clickable { send(RegzaAndroidAction.openProgram(program.channelCode, program.id)) }
+            .clickable { send(AppAction.push(AppRoute.programDetail(program.id, program.channelCode))) }
             .padding(horizontal = Design.outer, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {

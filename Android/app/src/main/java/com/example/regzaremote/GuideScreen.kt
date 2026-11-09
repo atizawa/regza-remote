@@ -37,7 +37,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.ProgramItem
-import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.AppAction
+import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.GuideGridState
 
@@ -49,7 +50,7 @@ fun GuideScreen(guide: GuideGridState, send: Send) {
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("番組表") {
             // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く (iOS 版と同じ)
-            if (guide.isCanSearch) HeaderIconButton(Icons.Filled.Search, "番組を探す") { send(RegzaAndroidAction.openSearch()) }
+            if (guide.isCanSearch) HeaderIconButton(Icons.Filled.Search, "番組を探す") { send(AppAction.push(AppRoute.search())) }
         }
         when {
             // Mirakurun がなくてもタブは消さず、何ができるかと設定のしかたを案内する
@@ -57,7 +58,7 @@ fun GuideScreen(guide: GuideGridState, send: Send) {
                 "番組表を使うには",
                 "録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。\n" +
                     "設定画面の「録画サーバーとの連携」で Mirakurun のアドレスを設定してください。",
-            ) { ProminentButton("設定を開く") { send(RegzaAndroidAction.showSetup()) } }
+            ) { ProminentButton("設定を開く") { send(AppAction.showSettings()) } }
             !guide.isHasLoaded -> Loading()
             guide.columns.isEmpty() -> EmptyState("番組表を取得できません", "テレビと Mirakurun につながっているか確認してください。") {
                 TextButton(onClick = { send(GuideGridAction.load()) }) { Text("もう一度試す") }
@@ -165,7 +166,7 @@ private fun GuideGrid(guide: GuideGridState, send: Send) {
                                         .offset(y = dpPerMinute * top.toFloat())
                                         .height(dpPerMinute * (bottom - top).toFloat())
                                         .fillMaxWidth()
-                                        .clickable { send(RegzaAndroidAction.openProgram(cell.channelCode, cell.id)) },
+                                        .clickable { send(AppAction.push(AppRoute.programDetail(cell.id, cell.channelCode))) },
                                 )
                             }
                         }

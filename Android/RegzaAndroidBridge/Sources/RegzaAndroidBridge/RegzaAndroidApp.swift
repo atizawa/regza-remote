@@ -13,18 +13,15 @@ import RegzaApp
 //   - snapshot() / nextSnapshot(): アプリ全体の状態 (タブ・登録の画面・接続) を返す (async なので Java の Future になる)
 //   - screen() / nextScreen(): いま見えている画面の状態を返す。番組表は大きいので、全体の状態とは分け、
 //     中身が変わったときだけ返す (2 秒ごとの取り直しで、番組表を渡し直さない)
-//   - send(_:): 操作を送る (MainActor に順に積むだけで、すぐ返る)
+//   - sendAppAction(_:)・sendChannelListAction(_:) など: 操作を送る (MainActor に順に積むだけで、すぐ返る。
+//     scripts/generate-screen-glue.sh が Action の型ごとに作る)
 
 // MARK: - 状態
 
 /// アプリ全体の状態 (いま見えている画面の中身は RegzaAndroidScreen)
 public struct RegzaAndroidSnapshot {
-    /// 選んでいるタブ ("remote"・"guide"・"channels"・"reservations")
-    public var tab: String
-    /// いまのタブで戻れる (タブの中で画面を開いている)
-    public var canGoBack: Bool
-    /// テレビの登録の画面を出している (未登録のとき、設定を開いたとき)
-    public var isShowingSetup: Bool
+    /// アプリ全体の state (AppViewModel.State をそのまま渡す)。タブ・タブごとの path・設定や詳細を出しているか
+    public var app: AppState
     /// リモコンの state (RemoteViewModel.State をそのまま渡す)。いま映っているもの・接続できないときの説明など
     public var remote: RemoteState
     /// 設定の画面の state (SettingsViewModel.State をそのまま渡す)。設定を出している間だけある
@@ -33,32 +30,6 @@ public struct RegzaAndroidSnapshot {
     public var nowPlayingDetail: NowPlayingState?
     /// アプリで見ている (ライブ視聴の画面を出している) 間だけある
     public var player: LivePlayerState?
-}
-
-// MARK: - 操作
-
-/// 画面からの操作 (共有の ViewModel の Action に送る)
-public enum RegzaAndroidAction {
-    case selectTab(String)
-    /// いまのタブで 1 つ戻る
-    case back
-    // ライブ視聴を開く・閉じる (画面の中の操作は LivePlayerAction で送る)
-    /// アプリで見る (チャンネルのコード)
-    case play(String)
-    /// 見終わった。配信を止めてチューナーを空ける
-    case closePlayer
-    /// いま映っているものの詳細を開く・閉じる (シートの中の操作は NowPlayingAction で送る)
-    case showNowPlaying
-    case closeNowPlaying
-    /// 1 チャンネルの番組表を開く (チャンネルのコード)
-    case openPrograms(String)
-    /// 番組の詳細を開く (チャンネルのコード、番組の id)
-    case openProgram(String, Int)
-    /// 番組表から検索を開く (番組表の画面の中の操作は GuideGridAction で送る)
-    case openSearch
-    // 設定 (TVSetupViewModel・ServerSetupViewModel)
-    case showSetup
-    case closeSetup
 }
 
 // MARK: - 窓口
@@ -108,11 +79,6 @@ public final class RegzaAndroidApp {
         await nextScreenOnMain()
     }
 
-    /// 操作を送る。送った順に MainActor で処理する
-    public func send(_ action: RegzaAndroidAction) {
-        Task { @MainActor in self.perform(action) }
-    }
-
     // MARK: ViewModel の state から作る
 
     @MainActor private func currentSnapshot() -> RegzaAndroidSnapshot {
@@ -129,9 +95,7 @@ public final class RegzaAndroidApp {
         let settings = appState.isShowingSettings ? app.settings : nil
         let nowPlaying = appState.isShowingNowPlaying ? app.nowPlaying.state : nil
         return RegzaAndroidSnapshot(
-            tab: appState.tab.rawValue,
-            canGoBack: !appState.path(of: appState.tab).isEmpty,
-            isShowingSetup: settings != nil,
+            app: appState,
             remote: remote,
             setup: settings?.state,
             nowPlayingDetail: nowPlaying,
@@ -175,29 +139,11 @@ public final class RegzaAndroidApp {
 
     // MARK: 操作
 
-    /// 操作を ViewModel の操作に置き換えて送る (テストからは、送った順を待たずに直接呼ぶ)
-    @MainActor func perform(_ action: RegzaAndroidAction) {
-        switch action {
-        case .selectTab(let tab):
-            if let tab = AppViewModel.Tab(rawValue: tab) { app.send(.selectTab(tab)) }
-        case .back: app.send(.back)
-        case .play(let code): app.send(.play(channelCode: code))
-        case .closePlayer: app.send(.closePlayer)
-        case .showNowPlaying: app.send(.showNowPlaying)
-        case .closeNowPlaying: app.send(.closeNowPlaying)
-        case .openPrograms(let code):
-            app.send(.open(.channelPrograms(channelCode: code)))
-        case .openProgram(let code, let id): app.send(.open(.programDetail(programID: id, channelCode: code)))
-        case .openSearch: app.send(.open(.search))
-        case .showSetup: app.send(.showSettings)
-        case .closeSetup: app.send(.closeSettings)
-        }
-    }
-
-    /// 画面ごとの操作 (ChannelListAction など) を、開いている画面の ViewModel に手前から渡してみて、受け取ったところで止める。
+    /// 操作 (AppAction・ChannelListAction など) を、AppViewModel と開いている画面の ViewModel に手前から渡してみて、受け取ったところで止める。
     /// 画面ごとの send と perform は、scripts/generate-screen-glue.sh が Generated/ScreenActions.swift に作る
     @MainActor func route(_ deliver: (AnyObject) -> Bool) {
-        for viewModel in app.openViewModels {
+        // アプリ全体の操作 (AppAction) は AppViewModel が受け取る
+        for viewModel in [app] + app.openViewModels {
             if deliver(viewModel) { return }
         }
     }

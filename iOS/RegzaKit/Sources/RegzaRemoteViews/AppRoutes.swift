@@ -23,7 +23,7 @@ struct RouteView: View {
             }
         case .search:
             GuideSearchScreen(search: app.guideGrid.search) { row in
-                app.send(.open(.programDetail(programID: row.program.id, channelCode: row.channelCode)))
+                app.send(.push(.programDetail(programID: row.program.id, channelCode: row.channelCode)))
             }
         }
     }

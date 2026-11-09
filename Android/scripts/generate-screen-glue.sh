@@ -81,9 +81,9 @@ for file in $(find "$view_models" -path '*/Action/*.swift' | sort); do
   kotlin_imports+="import com.example.regzaremote.core.$action
 "
   kotlin_invokes+="
-
     /** $view_model に送る */
-    operator fun invoke(action: $action)"
+    operator fun invoke(action: $action)
+"
   kotlin_overrides+="
     override fun invoke(action: $action) = app.send$action(action)"
 done
@@ -128,16 +128,11 @@ printf '%s\n' "$new_bridge_config" > "$bridge_config"
 printf '%s\n' "// scripts/generate-screen-glue.sh が作る (手で直さない)
 package com.example.regzaremote
 
-${kotlin_imports}import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidApp
+${kotlin_imports}import com.example.regzaremote.core.RegzaAndroidApp
 
-/** 画面から操作を送る先。アプリ全体の操作 (RegzaAndroidAction) も、画面ごとの操作 (ChannelListAction など) も send(...) で送る */
-interface Send {
-    /** アプリ全体の操作 */
-    operator fun invoke(action: RegzaAndroidAction)${kotlin_invokes}
-}
+/** 画面から操作を送る先。アプリ全体の操作 (AppAction) も、画面ごとの操作 (ChannelListAction など) も send(...) で送る */
+interface Send {${kotlin_invokes}}
 
 /** Swift の窓口 (RegzaAndroidApp) に送る */
-class AppSend(private val app: RegzaAndroidApp) : Send {
-    override fun invoke(action: RegzaAndroidAction) = app.send(action)${kotlin_overrides}
+class AppSend(private val app: RegzaAndroidApp) : Send {${kotlin_overrides}
 }" > "$kotlin_file"
