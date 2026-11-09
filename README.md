@@ -13,21 +13,32 @@ REGZA だけでもリモコン・Live Activity・Siri・チャンネル一覧と
 
 ```
 Packages/RegzaCore/           iOS と Android で共有する Swift Package（Foundation のみ）
-                              キーコード / Digest 認証 / HTTP クライアント / status.htm 解析 / RegzaRemote
+  RegzaSharedModels           画面に出す UI の型とリモコンのキー（RegzaKey）
+  RegzaDomain                 データの型・Repository の約束・UseCase
+  RegzaInfrastructure         テレビ・Mirakurun・EPGStation の通信（キーコード / Digest 認証 / HTTP クライアント / status.htm 解析）
+  RegzaPresentation           iOS と Android で共有する ViewModel（ViewModels/<画面>/ に ViewModel・State/・Action/）
+  RegzaApp                    組み立て（どの Repository を使うかを決めて ViewModel を作る）
+  RegzaSample                 テレビにつながない見本の Repository（開発・テスト用）
+  RegzaCLI                    ViewModel を動かして確かめる CLI（regza）
 iOS/RegzaKit/                 iOS だけで使う Swift Package（マルチモジュール）
-  RegzaAppleStorage           キーチェーンへの接続情報保存
+  RegzaRemoteViews            SwiftUI の画面（ViewModel の state を見て send で送るだけ）
+  RegzaRemoteUI               組み立て（RemoteView。見本のデータ・終了時の後片づけなど）
   RegzaLiveActivity           Live Activity・Dynamic Island の UI と、ボタン用 App Intent
-  RegzaRemoteUI               SwiftUI のリモコン画面
+  RegzaAppleStorage           キーチェーンへの接続情報保存
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
-Android/                      Android 版（Kotlin・Jetpack Compose）
-  RegzaAndroid/               Android に見せる Swift の API。swift-java が Java のクラスを作る
+Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）
+  RegzaAndroidBridge/         Android に見せる Swift の窓口（RegzaAndroidApp）。Mac の swift test で確かめる
+  RegzaAndroid/               Android 向けにビルドする Swift のパッケージ（Looper・BoringSSL と、swift-java が作る Java のつなぎ）
+  scripts/                    generate-screen-glue.sh（State/・Action/ から窓口のつなぎを作る）
   app/                        Kotlin・Compose のアプリ
-  mise.toml                   Swift 6.4.2 のツールチェーンと、Swift の .so を作る mise run build-swift
+  mise.toml                   Swift 6.4.2 のツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift
 ```
 
 - Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装している（Android の FoundationNetworking でも同じコードで動かすため）
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
-- Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`) は写さずにそのまま使い、Domain の型は Android に見せない
+- Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
+- 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
+- 接続情報の保存は `RegzaConnectionStore` を OS ごとに実装する。iOS はキーチェーン（`RegzaAppleStorage`）、Android は Kotlin の `AndroidStorage`（SharedPreferences。パスワードは Android Keystore の鍵で暗号化する）を、Swift の保存先 `RegzaAndroidStorage` として差し込む
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）
 
 ## 開発
@@ -59,6 +70,74 @@ xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab g
 ```
 
 画面の余白・ボタンの高さ・色は `Design`（`RemoteControls.swift`）と `AppTheme` にまとめている。余白は 16 / 12 / 24、ボタンの高さは 56 / 48 / 40 の 3 段階だけを使い、色は選択中・進行中（緑）と電源・録画（赤）だけに使う。リモコンのタブは、テレビ付属のリモコンの写真から測った色に合わせ、明るいグレーの本体にグレーのボタンと黒い文字、十字キーのあたりだけ黒い帯に黒いボタンと白い文字、銀色の決定、赤い電源ボタンの配色（`RemoteBody`・`RemoteKeyTone`）にしている。
+
+## 画面を足す手順
+
+画面の状態と操作は、iOS と Android で同じ ViewModel（`RegzaPresentation`）が持つ。ViewModel は Elm 風で、画面に出すものを `state`、画面からの操作を `send(Action)` で受ける。Android は ViewModel の State と Action の型を swift-java でそのまま Java のクラスにして使い、間の窓口（`Android/RegzaAndroidBridge`）は、`scripts/generate-screen-glue.sh` が State/ と Action/ のフォルダから作る。画面を足すときに窓口を手で書くことはない。
+
+### 1. 共有の ViewModel を作る
+
+`Packages/RegzaCore/Sources/RegzaPresentation/ViewModels/<画面>/` に置く。例はチャンネル一覧（`ChannelList/`）。
+
+```
+ViewModels/ChannelList/
+├── ChannelListViewModel.swift      ViewModel
+├── State/ChannelListState.swift    画面に出すもの
+└── Action/ChannelListAction.swift  画面からの操作
+```
+
+- ViewModel は `@MainActor @Observable public final class` にし、`public typealias State = ChannelListState` と `public typealias Action = ChannelListAction` を書く。ツールはこの 2 行で、どの ViewModel にどの型を送るかを決める
+- State/ と Action/ の型は 1 つのファイルに 1 つ置き、名前は画面の名前で始める（`LivePlayerPhase` のように State の中で使う enum も State/ に置く）。ここに置いた型だけが Java のクラスになる
+- State と Action には UI の型（`RegzaSharedModels`）だけを使い、Domain の型は使わない（Android に見せないため。ViewModel の Domain を使う init やプロパティは `package` にする）
+- 表示の判断（ボタンを出すか、押せるか、保存できるかなど）は State に入れ、画面に式を書かない。画面に置いた判断はテストでも CLI（`regza`）でも確かめられず、iOS と Android にそれぞれ書くことになる
+- 1 つの画面に Action は 1 つにする。部品に分けた ViewModel（設定のテレビの登録など）の操作は、親の Action の case に入れて送る（`SettingsAction.tv(TVSetupAction)`）。部品の ViewModel には `typealias Action` を書かない（書くと Android から直接送れてしまう）
+- CLI から動かせるよう `Introspectable` にし、テストを `Tests/RegzaCoreTests/RegzaPresentation/ViewModels/` に足す
+
+### 2. AppViewModel から開けるようにする
+
+- タブの最初の画面なら `AppViewModel` に持たせて `openViewModels` に並べる
+- タブの中で開く画面なら `AppRoute` に case を足し、`AppViewModel.viewModel(for:)` でその ViewModel を返す（`id` も足す）。開くのは `AppAction.push(route)`、戻るのは `pop`
+
+### 3. iOS の画面を作る
+
+`iOS/RegzaKit/Sources/RegzaRemoteViews/` に置き、`viewModel.state` を見て `viewModel.send(...)` で送る。`RegzaDomain` は import しない（`LayerTests` が確かめる）。
+
+### 4. Android の画面を作る
+
+```sh
+cd Android
+scripts/generate-screen-glue.sh     # ./gradlew のビルドでも毎回実行される
+```
+
+ツールが作るもの（作ったものはコミットする。古いままだと窓口のテスト `screenGlueIsUpToDate` が失敗する）:
+
+- 窓口の送る関数（`sendChannelListAction`）と state を返す関数（`channelListState(route:)`・`nextChannelListState(route:after:)`）: `RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift`
+- swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）
+- Kotlin の送り先 `Send`（`send(ChannelListAction.tune(code))` のように、どの Action も `send` で送れる）と、state の `Flow`（`app.channelListStates(route)`）: ビルドのたびに `.build/swift/screen-glue-kotlin/` に作る
+
+Kotlin の画面は、自分の ViewModel の state を受け取って描き、操作を `send` で送る。タブの最初の画面なら `MainActivity.kt` の `TabRoot`、タブの中で開く画面なら `RouteScreen` に足す。
+
+```kotlin
+rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it, back, send) }
+```
+
+### 5. 確かめる
+
+```sh
+cd Packages/RegzaCore && swift test
+cd Android/RegzaAndroidBridge && swift test
+cd Android && ./gradlew :app:assembleDebug
+```
+
+### swift-java の制約と回避策
+
+swift-java（301e3da）には次の制約がある。どれも、守れなければビルドかテストで止まるようにしている。
+
+- 型を書いていないプロパティ（`public var count = 0`）を、警告だけ出して Java にしない。State/ と Action/ の public なプロパティには型を書く（`public var count: Int = 0`）。書いていなければ `generate-screen-glue.sh` が止まる
+- Foundation の型（`URL`・`Date`・`Data`・`UUID`）を enum の値（`case ready(url: URL)`）でしか使っていないと、その型の Java のクラスを作らず、javac が失敗する。`URL` は窓口の `regzaURLString` が使うので作られる。ほかの型を enum の値だけで使うときは、窓口などで一度使う
+- Foundation の型の Java のクラスを、使うモジュールごとに作る。3 つのモジュール（`RegzaSharedModels`・`RegzaPresentation`・`RegzaAndroidBridge`）は同じ Java のパッケージに出しているので、そのままでは同じ名前の JNI の関数がぶつかってリンクできない。`mise run build-swift` が、前のモジュールにもある型のつなぎを消す（消せない混ざり方なら止まる）。モジュールごとにパッケージを分けると、ぶつからない代わりに `Date` がモジュールごとに別の型になり、モジュールをまたいで渡せなくなる
+- 同じ名前で引数の型だけ違う関数を並べられない。窓口の送る関数を `sendChannelListAction` のように型ごとの名前にしているのはこのため（Kotlin からは `Send` を通してどれも `send` で送れる）
+- swift-java が何か宣言を Java にできなかったときは、`mise run build-swift` が止まる（`Failed to import`）
 
 ## テレビ側の準備
 
@@ -165,8 +244,3 @@ App Intents で次の操作を出している（`RemoteIntents.swift`。言い�
   - 放送中は番組の終了時刻を staleDate にしているので、アプリが起こされなくても、その時刻に次の番組（`epg_info_next` の開始時刻・長さと、Mirakurun があれば番組名）の表示へ切り替わる。同じチャンネルを見続けている前提の予想なので、テレビ本体のリモコンでチャンネルを変えていたら、次にアプリが状態を取るまで違う番組が出る
 - テレビ本体のリモコンでチャンネルを変えたことは、アプリを開くか iOS がアプリを起こすまで反映されない
 - 確実に更新するには、家のサーバーからテレビの状態を見て ActivityKit のプッシュ通知を送る仕組みが必要（未実装）
-
-## Android 展開（予定）
-
-`RegzaCore` を Swift SDK for Android でビルドし、JNI 経由で Kotlin / Jetpack Compose の UI から呼ぶ。
-接続情報の保存は `RegzaConnectionStore` を Android 側で実装する。
