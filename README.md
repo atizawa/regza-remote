@@ -53,7 +53,10 @@ mise install                              # Swift のツールチェーン・JDK
 mise run setup-android-sdk                # 初回だけ。Android SDK のライセンスを確かめて同意する（Android Studio で SDK を入れていれば要らない）
 mise run install-android-swift-sdk        # 初回だけ。Swift SDK for Android（platform・build-tools・NDK は Gradle が入れる）
 ./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (buildSwift が mise run build-swift を呼ぶ)
+./gradlew :behavior-tests:test            # 振る舞いのテスト (Mac の JVM で動かす。エミュレーターは要らない)
 ```
+
+振る舞いのテスト（`Android/behavior-tests`）は、Shopify の [Reflex](https://shopify.engineering/reflex) の Android のテストと同じく、画面を描かずに ViewModel の state と操作を確かめ、エミュレーターではなく Mac の JVM で動かす。Kotlin から、アプリと同じ `send(...)` と `xxxStates(...)` を呼び、swift-java のつなぎと窓口を通って共有の ViewModel に届く道を確かめる（窓口とつなぎは macOS 向けの .dylib `RegzaJVMHost` にして読み込む）。外からの入力は見本の返事（`RegzaSample` の `SampleTransport`）で渡すので、テレビにも録画サーバーにもつながない。
 
 バンドル ID（`com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`）と署名のチームは `iOS/Config/Signing.xcconfig` にまとめている。自分でビルドして実機に入れるときは、このファイルは変えずに、同じフォルダに `Local.xcconfig` を作って自分の値で上書きする（Git には入れない）。
 
@@ -126,8 +129,10 @@ rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it,
 ```sh
 cd Packages/RegzaCore && swift test
 cd Android/RegzaAndroidBridge && swift test
-cd Android && ./gradlew :app:assembleDebug
+cd Android && ./gradlew :app:assembleDebug :behavior-tests:test
 ```
+
+画面を足したら、`Android/behavior-tests` にもその画面の振る舞いのテストを足す（操作を送り、state が期待どおりになるまで待つ）。
 
 ### swift-java の制約と回避策
 

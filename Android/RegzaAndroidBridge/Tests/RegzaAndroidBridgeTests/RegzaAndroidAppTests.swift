@@ -113,6 +113,21 @@ struct RegzaAndroidAppTests {
         #expect(await fixture.bridge.nowPlayingState(route: nil) == nil)
     }
 
+    // MARK: - 見本
+
+    /// 見本の返事で組み立てると、見本のテレビを登録し、チャンネル一覧を見本の返事から読む
+    @Test func sampleReadsSampleResponses() async throws {
+        let storage = MemoryStorage([:])
+        let bridge = RegzaAndroidApp.sample(storage: storage)
+        #expect(storage.values[AndroidStorageKey.host] == "192.0.2.10")
+        #expect(await bridge.appState(route: nil)?.isShowingSettings == false)
+
+        bridge.perform(AppAction.selectTab(.channels))
+        bridge.perform(ChannelListAction.appear)
+        try await waitUntil { (await bridge.channelListState(route: nil)?.rows.count ?? 0) > 0 }
+        #expect(await bridge.channelListState(route: nil)?.rows.first?.name == "テスト局１")
+    }
+
     // MARK: - 画面の state
 
     /// タブの最初の画面の state は、route を渡さずに型で引く

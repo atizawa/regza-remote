@@ -17,7 +17,11 @@ let package = Package(
     targets: [
         .target(
             name: "RegzaAndroidBridge",
-            dependencies: [.product(name: "RegzaApp", package: "RegzaCore")],
+            dependencies: [
+                .product(name: "RegzaApp", package: "RegzaCore"),
+                // 見本の通信で組み立てる入口 (RegzaAndroidApp.sample。JVM のテストで使う)
+                .product(name: "RegzaSample", package: "RegzaCore"),
+            ],
             // swift-java が作るつなぎと同じく、5 のモードにする
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

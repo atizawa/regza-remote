@@ -20,15 +20,15 @@ import RegzaApp
 public final class RegzaAndroidApp {
     private let app: AppViewModel
 
-    /// Kotlin の保存先 (Keystore と SharedPreferences) で組み立てる。メインスレッドから呼ぶ (先に regzaSetUpMainActor を呼んでおく)
+    /// Kotlin の保存先 (Keystore と SharedPreferences) で組み立てる。Android では先に regzaSetUpMainActor を呼んでおく
     public convenience init(storage: any RegzaAndroidStorage) {
-        self.init(app: MainActor.assumeIsolated { AppViewModel(store: AndroidConnectionStore(storage: storage)) })
+        self.init(app: onMainActor { AppViewModel(store: AndroidConnectionStore(storage: storage)) })
     }
 
     /// 組み立てた ViewModel から作る (テストでは、テレビにつながない見本の ViewModel を渡す)
     init(app: AppViewModel) {
         self.app = app
-        MainActor.assumeIsolated {
+        onMainActor {
             // 未登録なら、テレビの登録の画面から始める
             if !app.remote.state.isConfigured { app.send(.showSettings) }
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
@@ -68,6 +68,13 @@ public final class RegzaAndroidApp {
             if deliver(viewModel) { return }
         }
     }
+}
+
+/// MainActor で動かして結果を返す。アプリはメインスレッドから呼ぶのでそのまま動かし、
+/// JVM で動かすテストのようにほかのスレッドから呼ばれたときは、メインスレッドで動き終わるのを待つ
+func onMainActor<Value>(_ body: @MainActor () -> Value) -> Value {
+    if Thread.isMainThread { return MainActor.assumeIsolated(body) }
+    return DispatchQueue.main.sync { MainActor.assumeIsolated(body) }
 }
 
 /// URL を文字列にする (ライブ視聴の LivePlayerPhase.ready の URL を ExoPlayer に渡す)。
