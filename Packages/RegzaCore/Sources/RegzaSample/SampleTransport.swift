@@ -6,7 +6,12 @@ import RegzaInfrastructure
 /// 本物の Repository につなぐので、返事の読み取りまでアプリと同じ処理を通る (CLI の --sample、Android の JVM のテスト)。
 /// 全体の既定の通信 (RegzaHTTP.transport) も差し替えると、外への通信は起きない
 public struct SampleTransport: HTTPTransport {
-    public init() {}
+    /// テストごとに差し替える返事 (なければ見本の返事だけ)
+    public var fixture: SampleFixture
+
+    public init(fixture: SampleFixture = SampleFixture()) {
+        self.fixture = fixture
+    }
 
     /// 見本で登録しておくテレビと録画サーバー (CLI の --sample と Android の見本で同じものを使う)。RFC 5737 の例示用のアドレス
     public static let connection = RegzaConnection(host: "192.0.2.10", user: "sample", password: "sample")
@@ -14,6 +19,13 @@ public struct SampleTransport: HTTPTransport {
     public static let streamHost = "192.0.2.30"
 
     public func send(_ request: HTTPRequest) async throws -> HTTPResponse {
+        // 本物の通信 (SocketTransport) と同じ失敗にする
+        if let host = request.url.host, fixture.unreachable.contains(host) {
+            throw RegzaError.network("\(host) に接続できません")
+        }
+        if let response = fixture.responses[request.url.path] {
+            return HTTPResponse(statusCode: response.status, headers: [:], body: Data(response.body.json.utf8))
+        }
         let body: String
         switch request.url.path {
         case "/v2/remote/settings/channel_list":

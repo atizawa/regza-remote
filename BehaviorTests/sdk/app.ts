@@ -3,6 +3,9 @@
 // テストは相手がどちらかを知らず、ViewModel の state と操作だけを使う
 
 import type { Subprocess } from "bun";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { afterEach, beforeEach, describe } from "bun:test";
 
@@ -11,13 +14,13 @@ export const platforms: Platform[] = ["ios", "android"];
 
 /**
  * 同じテストを、iOS 側と Android 側の両方の相手で流す。テストごとに相手を見本の返事で起動し直す
- * (前のテストの操作が残らないように)
+ * (前のテストの操作が残らないように)。fixture を渡すと、まとまりの中のテストはその返事で起動する
  */
-export function describeOnBothPlatforms(title: string, body: (app: () => App) => void) {
+export function describeOnBothPlatforms(title: string, body: (app: () => App) => void, fixture?: Fixture) {
   describe.each(platforms)(`%s: ${title}`, (platform) => {
     let current: App | undefined;
     beforeEach(async () => {
-      current = await App.start(platform);
+      current = await App.start(platform, fixture);
     });
     afterEach(async () => {
       await current?.close();
@@ -44,6 +47,17 @@ const commands: Record<Platform, string[]> = {
   android: [`${repository}Android/behavior-tests/build/install/regza-android/bin/regza-android`, "--sample"],
 };
 
+/**
+ * 見本の返事の差し替え (Swift の SampleFixture と同じ形)。宛先 (URL の path) ごとの返事と、つながらないアドレス
+ */
+export interface Fixture {
+  responses?: Record<string, { status?: number; body?: unknown }>;
+  unreachable?: string[];
+}
+
+/** 見本のテレビと録画サーバーのアドレス (Swift の SampleTransport と同じ) */
+export const sample = { tv: "192.0.2.10", guide: "192.0.2.20", stream: "192.0.2.30" };
+
 /** 状態が期待どおりになるまで待つ時間 */
 const timeout = 5_000;
 
@@ -56,9 +70,15 @@ export class App {
     this.reader = process.stdout.getReader();
   }
 
-  /** 見本の返事で相手を起動する (テレビにも録画サーバーにもつながない) */
-  static async start(platform: Platform): Promise<App> {
-    const app = new App(Bun.spawn(commands[platform], { stdin: "pipe", stdout: "pipe", stderr: "inherit" }));
+  /** 見本の返事で相手を起動する (テレビにも録画サーバーにもつながない)。fixture で返事を差し替える */
+  static async start(platform: Platform, fixture?: Fixture): Promise<App> {
+    const command = [...commands[platform]];
+    if (fixture) {
+      const file = join(mkdtempSync(join(tmpdir(), "regza-fixture-")), "fixture.json");
+      writeFileSync(file, JSON.stringify(fixture));
+      command.push("--fixture", file);
+    }
+    const app = new App(Bun.spawn(command, { stdin: "pipe", stdout: "pipe", stderr: "inherit" }));
     const ready = await app.read();
     if (!ready.ready) throw new Error(`${platform} の相手が起動しませんでした: ${JSON.stringify(ready)}`);
     return app;

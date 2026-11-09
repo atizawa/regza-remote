@@ -2,6 +2,7 @@ package com.example.regzaremote
 
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RegzaContractCommand
+import java.io.File
 import kotlin.system.exitProcess
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.runBlocking
@@ -17,7 +18,12 @@ fun main(args: Array<String>): Unit = runBlocking {
         System.err.println("--sample だけに対応しています")
         exitProcess(2)
     }
-    val app = RegzaAndroidApp.sample(MemoryStorage())
+    // 見本の返事を差し替える fixture (regza と同じ --fixture <JSON のファイル>)
+    val fixture = args.indexOf("--fixture").takeIf { it >= 0 }?.let { File(args[it + 1]).readText() } ?: ""
+    val app = RegzaAndroidApp.sample(MemoryStorage(), fixture).orElse(null) ?: run {
+        println("""{"error":"fixture を読めません"}""")
+        exitProcess(1)
+    }
     println("""{"ready":true}""")
     val input = System.`in`.bufferedReader()
     while (true) {

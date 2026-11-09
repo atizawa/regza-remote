@@ -118,7 +118,7 @@ struct RegzaAndroidAppTests {
     /// 見本の返事で組み立てると、見本のテレビを登録し、チャンネル一覧を見本の返事から読む
     @Test func sampleReadsSampleResponses() async throws {
         let storage = MemoryStorage([:])
-        let bridge = RegzaAndroidApp.sample(storage: storage)
+        let bridge = try #require(RegzaAndroidApp.sample(storage: storage, fixture: ""))
         #expect(storage.values[AndroidStorageKey.host] == "192.0.2.10")
         #expect(await bridge.appState(route: nil)?.isShowingSettings == false)
 

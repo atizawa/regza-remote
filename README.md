@@ -65,6 +65,7 @@ Shopify の [Reflex](https://shopify.engineering/reflex) と同じ作りで、�
 - Android 側の相手は `regza-android`（`Android/behavior-tests`。Mac の JVM）。命令の読み方と返す JSON は `regza` と同じもの（`IntrospectionSession`）を使い、操作を送るところと state を受け取るところだけを、アプリと同じ道（Kotlin の `send` と `xxxStates` → swift-java のつなぎ → 窓口）で行う。窓口とつなぎは macOS 向けの .dylib（`RegzaJVMHost`）にして読み込む。エミュレーターは使わない
 - 外からの入力は見本の返事（`RegzaSample` の `SampleTransport`）で渡すので、テレビにも録画サーバーにもつながない
 - テストは `sdk/app.ts` の `describeOnBothPlatforms` で書き、`do`（操作を送り、state が期待どおりになるまで待つ）と `precondition`（state が期待どおりになるまで待つ）で確かめる
+- 「テレビにつながらない」「チャンネル一覧が空」のような場面は、`describeOnBothPlatforms` に fixture（`SampleFixture`。宛先ごとの返事の差し替えと、つながらないアドレス）を渡して作る。両方の相手に、起動するときに `--fixture <JSON のファイル>` で渡る
 - Mac で動かすので、Android の Foundation（Swift の Foundation は macOS と Android で実装が違う）の違いまでは確かめない
 
 バンドル ID（`com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`）と署名のチームは `iOS/Config/Signing.xcconfig` にまとめている。自分でビルドして実機に入れるときは、このファイルは変えずに、同じフォルダに `Local.xcconfig` を作って自分の値で上書きする（Git には入れない）。

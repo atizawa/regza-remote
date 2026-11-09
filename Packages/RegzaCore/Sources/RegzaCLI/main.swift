@@ -5,6 +5,7 @@ import RegzaSample
 // regza: Mac で ViewModel を動かし、画面を通さずに状態を読んで操作する CLI (Shopify の Reflex の CLI と同じ考え方)。
 //
 //   swift run regza --sample                                   見本の通信で動かす (テレビにつながない)
+//   swift run regza --sample --fixture <JSON のファイル>       見本の返事を差し替える (SampleFixture。振る舞いのテストで使う)
 //   swift run regza --host 192.0.2.10 --user U --password P    テレビにつなぐ (REGZA_HOST などの環境変数でもよい)
 //
 // 標準入力から 1 行ずつ命令を受け取り、結果を JSON で標準出力に書く:
@@ -26,7 +27,18 @@ func main() async {
         store.guideHost = SampleTransport.guideHost
         store.streamHost = SampleTransport.streamHost
     }
-    let transport: any HTTPTransport = options.sample ? SampleTransport() : SocketTransport()
+    let transport: any HTTPTransport
+    if options.sample {
+        do {
+            let fixture = try options.fixture.map { try SampleFixture(json: String(contentsOfFile: $0, encoding: .utf8)) } ?? SampleFixture()
+            transport = SampleTransport(fixture: fixture)
+        } catch {
+            print(IntrospectionSession.failure("fixture を読めません: \(error)"))
+            return
+        }
+    } else {
+        transport = SocketTransport()
+    }
     // 番組表 (Mirakurun) や録画サーバーへの通信も同じ方法で送る
     RegzaHTTP.transport = transport
     let app = AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport))
@@ -54,6 +66,7 @@ func main() async {
 
 struct Options {
     var sample = false
+    var fixture: String?
     var host = ""
     var user = ""
     var password = ""
@@ -66,6 +79,7 @@ struct Options {
         while let argument = iterator.next() {
             switch argument {
             case "--sample": sample = true
+            case "--fixture": fixture = iterator.next()
             case "--host": host = iterator.next() ?? host
             case "--user": user = iterator.next() ?? user
             case "--password": password = iterator.next() ?? password
