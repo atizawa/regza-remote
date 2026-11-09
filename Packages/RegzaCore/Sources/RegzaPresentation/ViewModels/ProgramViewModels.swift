@@ -2,7 +2,7 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// 1 チャンネルの番組表の画面の ViewModel (iOS と Android で共有)。放送中の番組から日ごとに並べる
+/// 1 チャンネルの番組表の画面の ViewModel。放送中の番組から日ごとに並べる
 @MainActor
 @Observable
 public final class ProgramListViewModel {
@@ -83,7 +83,7 @@ extension ProgramListViewModel: Introspectable {
     }
 }
 
-/// 番組の詳細の画面の ViewModel (iOS と Android で共有)。切り替え・録画予約・最初から見る
+/// 番組の詳細の画面の ViewModel。切り替え・録画予約・最初から見る
 @MainActor
 @Observable
 public final class ProgramDetailViewModel {

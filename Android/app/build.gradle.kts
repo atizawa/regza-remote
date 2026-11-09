@@ -42,9 +42,13 @@ android {
         "../.build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java",
         // iOS と共有の型 (RegzaKey・ProgramItem など) の Java のクラス
         "../.build/swift/regzashared-java",
+        // 画面の状態と操作の型 (ChannelListState など) の Java のクラス
+        "../.build/swift/regzapresentation-java",
         // 窓口 (RegzaAndroidApp と、その状態・操作の型) の Java のクラス
         "../.build/swift/regzabridge-java",
     )
+    // 画面が受け取る送り先 (Send) と、Swift の窓口に送る AppSend (scripts/generate-screen-glue.sh が作る)
+    sourceSets.getByName("main").kotlin.srcDirs("../.build/swift/screen-glue-kotlin")
 }
 
 // Swift の .so と、swift-java が作る Java のクラスを作る (mise run build-swift)。
@@ -65,14 +69,20 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
 
     inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**") })
     inputs.files(fileTree(androidDir.resolve("RegzaAndroid")) {
-        exclude("Sources/RegzaSharedJava/Generated/**", "Sources/RegzaAndroidBridgeJava/Generated/**")
+        exclude(
+            "Sources/RegzaSharedJava/Generated/**", "Sources/RegzaPresentationJava/Generated/**",
+            "Sources/RegzaAndroidBridgeJava/Generated/**",
+        )
     })
     inputs.files(fileTree(androidDir.resolve("RegzaAndroidBridge")) { include("Package.swift", "Sources/**") })
     inputs.file(androidDir.resolve("mise.toml"))
+    inputs.dir(androidDir.resolve("scripts"))
     inputs.property("ndkVersion", android.ndkVersion)
     outputs.dir("src/main/jniLibs")
     outputs.dir(androidDir.resolve(".build/swift/regzashared-java"))
+    outputs.dir(androidDir.resolve(".build/swift/regzapresentation-java"))
     outputs.dir(androidDir.resolve(".build/swift/regzabridge-java"))
+    outputs.dir(androidDir.resolve(".build/swift/screen-glue-kotlin"))
     outputs.dir(androidDir.resolve(".build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java"))
     outputs.dir(androidDir.resolve(".build/swift/checkouts/swift-java/SwiftKitCore/src/main"))
 }

@@ -78,7 +78,7 @@ public struct RegzaNowPlaying: Equatable, Sendable {
         duration > 0 ? min(1, Double(position) / Double(duration)) : 0
     }
 
-    // MARK: - 画面に出す文言 (iOS と Android で同じにする)
+    // MARK: - 画面に出す文言
 
     /// 2 行で出すときの上の小さな行。局名や「録画」。なければ nil
     public var captionText: String? {

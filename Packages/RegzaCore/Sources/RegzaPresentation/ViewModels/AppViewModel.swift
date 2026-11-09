@@ -2,7 +2,7 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// アプリ全体の ViewModel (iOS と Android で共有)。画面の移り変わり (タブ・戻る道・シート・全画面) を持ち、
+/// アプリ全体の ViewModel。画面の移り変わり (タブ・戻る道・シート・全画面) を持ち、
 /// 開いている画面の ViewModel を作って持つ。どちらの OS の画面も、ここの状態を見て画面を出し、移り変わりは操作として送る
 @MainActor
 @Observable
@@ -188,6 +188,28 @@ public final class AppViewModel {
         )
         programDetails[route] = viewModel
         return viewModel
+    }
+
+    /// いま開いている画面の ViewModel を手前から並べる。操作の型から送り先を選ぶときに使う
+    /// (同じ種類の画面が別のタブにも開いていれば、いまのタブの手前のものが先に来る)
+    public var openViewModels: [AnyObject] {
+        var result: [AnyObject] = []
+        if let player { result.append(player) }
+        if let settings { result += [settings.tv, settings.servers] }
+        if state.isShowingNowPlaying { result.append(nowPlaying) }
+        let tabs = [state.tab] + Tab.allCases.filter { $0 != state.tab }
+        for tab in tabs {
+            for route in state.path(of: tab).reversed() {
+                let screen: AnyObject? = switch route {
+                case .channelPrograms(let code): programList(channelCode: code)
+                case .programDetail(let id, let code): programDetail(programID: id, channelCode: code)
+                case .search: guideGrid.search
+                }
+                if let screen { result.append(screen) }
+            }
+        }
+        result += [channelList, guideGrid, reservationList, remote]
+        return result
     }
 
     /// 前回、強制終了などで止められずに残ったライブ視聴の配信を止める (アプリを開いたときに呼ぶ)

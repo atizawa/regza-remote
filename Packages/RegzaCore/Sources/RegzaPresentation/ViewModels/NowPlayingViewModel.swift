@@ -2,7 +2,7 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// いま映っているものの詳細のシートの ViewModel (iOS と Android で共有)。
+/// いま映っているものの詳細のシートの ViewModel。
 /// 待機中なら電源を入れる、放送ならアプリで見る・最初から見る、を出す
 @MainActor
 @Observable

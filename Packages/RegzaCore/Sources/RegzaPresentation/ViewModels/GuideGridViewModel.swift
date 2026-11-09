@@ -2,7 +2,7 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// 新聞のテレビ欄のような番組表の画面の ViewModel (iOS と Android で共有)。横に局、縦に時刻を並べる
+/// 新聞のテレビ欄のような番組表の画面の ViewModel。横に局、縦に時刻を並べる
 @MainActor
 @Observable
 public final class GuideGridViewModel {

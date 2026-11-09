@@ -2,7 +2,7 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// チャンネル一覧の画面の ViewModel (iOS と Android で共有)。
+/// チャンネル一覧の画面の ViewModel。
 /// 放送の種類ごとにチャンネルを並べ、押すとそのチャンネルに切り替える
 @MainActor
 @Observable
@@ -19,34 +19,10 @@ public final class ChannelListViewModel {
         self.stream = stream
     }
 
-    public struct State: Equatable, Sendable {
-        public var isLoading: Bool
-        /// 一覧の代わりに出す、取得できなかった説明。一覧があれば nil
-        public var loadErrorMessage: String?
-        /// まだ一覧がない (読み込み中か、取得できなかった)
-        public var hasNoChannels: Bool
-        /// 切り替えられなかったときの説明
-        public var tuneError: String?
-        /// 切り替え中のチャンネルのコード
-        public var tuningCode: String?
-        /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
-        public var bands: [BroadcastBand]
-        /// 出す放送の種類 (選んでいなければ、いま見ている種類)
-        public var band: BroadcastBand?
-        public var rows: [ChannelItem]
-        /// アプリで見られる (ライブ視聴が設定されている)
-        public var canStream: Bool
-    }
-
-    public enum Action: Sendable {
-        /// 画面を開いた。番組名と「最初から見る」を出すため、番組表とタイムシフトの設定も読む
-        case appear
-        case reload
-        /// 選局する (チャンネルのコード)
-        case tune(String)
-        /// 切り替えてから、放送中の番組を最初から再生する (チャンネルのコード)
-        case tuneFromStart(String)
-    }
+    /// 画面に出すもの
+    public typealias State = ChannelListState
+    /// 画面からの操作
+    public typealias Action = ChannelListAction
 
     // 自分で持つ状態
     private var isLoading = false

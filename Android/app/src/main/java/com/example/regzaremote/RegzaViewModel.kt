@@ -52,7 +52,8 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun send(action: RegzaAndroidAction) = core.send(action)
+    /** 画面から操作を送る先 (Swift の窓口に送る) */
+    val send: Send = AppSend(core)
 
     private fun update(snapshot: RegzaAndroidSnapshot) {
         state = snapshot

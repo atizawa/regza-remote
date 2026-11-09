@@ -2,7 +2,7 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// EPGStation のライブ配信をアプリで見る画面 (ライブ視聴) の ViewModel (iOS と Android で共有)。
+/// EPGStation のライブ配信をアプリで見る画面 (ライブ視聴) の ViewModel。
 /// 配信を頼み、準備できたら再生する URL を出す (再生そのものは OS ごとの画面がする)。
 /// 局を切り替えたり閉じたりしたら、前の配信を止めてチューナーを空ける
 @MainActor

@@ -41,37 +41,39 @@ import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.BroadcastBand
 import com.example.regzaremote.core.ChannelItem
 import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidChannelList
+import com.example.regzaremote.core.ChannelListAction
+import com.example.regzaremote.core.ChannelListState
 
 /**
- * テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える
- * (iOS 版の ChannelListView と同じ ChannelListViewModel)
+ * テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える。
+ * state と操作は ChannelListViewModel の ChannelListState・ChannelListAction。
+ * この画面の操作 (ChannelListAction) も、番組表を開くなどアプリ全体の操作 (RegzaAndroidAction) も send で送る
  */
 @Composable
-fun ChannelScreen(list: RegzaAndroidChannelList, send: Send) {
-    LaunchedEffect(Unit) { send(RegzaAndroidAction.showChannels()) }
-    val tuningCode = list.tuningChannelCode.orElse(null)
+fun ChannelScreen(state: ChannelListState, send: Send) {
+    LaunchedEffect(Unit) { send(ChannelListAction.appear()) }
+    val tuningCode = state.tuningCode.orElse(null)
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("チャンネル") {
-            HeaderIconButton(Icons.Filled.Refresh, "読み込み直す", enabled = !list.isLoading) { send(RegzaAndroidAction.reloadChannels()) }
+            HeaderIconButton(Icons.Filled.Refresh, "読み込み直す", enabled = !state.isLoading) { send(ChannelListAction.reload()) }
         }
-        val message = list.loadErrorMessage.orElse(null)
+        val message = state.loadErrorMessage.orElse(null)
         when {
             message != null -> EmptyState("チャンネルを取得できません", message) {
-                TextButton(onClick = { send(RegzaAndroidAction.reloadChannels()) }) { Text("もう一度試す") }
+                TextButton(onClick = { send(ChannelListAction.reload()) }) { Text("もう一度試す") }
             }
-            list.rows.isEmpty() -> Loading()
+            state.rows.isEmpty() -> Loading()
             else -> {
-                BandPicker(list.bands, list.band.orElse(null), send)
-                val rows = list.rows.toList()
+                BandPicker(state.bands, state.band.orElse(null), send)
+                val rows = state.rows.toList()
                 LazyColumn(contentPadding = PaddingValues(start = Design.outer, top = Design.outer, end = Design.outer, bottom = Design.outer + LocalMiniPlayerInset.current)) {
-                    list.tuneError.orElse(null)?.let { error ->
+                    state.tuneError.orElse(null)?.let { error ->
                         item { Text(error, style = MaterialTheme.typography.bodySmall, color = AppTheme.red, modifier = Modifier.padding(bottom = 8.dp)) }
                     }
                     itemsIndexed(rows, key = { _, row -> row.code }) { index, row ->
                         Column(Modifier.background(AppTheme.surface, sectionRowShape(index, rows.size))) {
-                            ChannelRow(row, tuningCode, canStream = list.isCanStream, send)
+                            ChannelRow(row, tuningCode, canStream = state.isCanStream, send)
                             if (index < rows.size - 1) RowDivider()
                         }
                     }
@@ -92,7 +94,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
                 .fillMaxWidth()
                 .combinedClickable(
                     enabled = tuningCode == null,
-                    onClick = { send(RegzaAndroidAction.tune(row.code)) },
+                    onClick = { send(ChannelListAction.tune(row.code)) },
                     onLongClick = { isShowingMenu = true },
                 )
                 .padding(start = Design.outer, end = 4.dp, top = 6.dp, bottom = 6.dp),
@@ -127,7 +129,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
         DropdownMenu(expanded = isShowingMenu, onDismissRequest = { isShowingMenu = false }) {
             DropdownMenuItem(text = { Text("切り替える") }, onClick = {
                 isShowingMenu = false
-                send(RegzaAndroidAction.tune(row.code))
+                send(ChannelListAction.tune(row.code))
             })
             if (canStream) {
                 DropdownMenuItem(text = { Text("アプリで見る") }, onClick = {
@@ -138,7 +140,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
             if (row.isCanStartOver) {
                 DropdownMenuItem(text = { Text("最初から見る") }, onClick = {
                     isShowingMenu = false
-                    send(RegzaAndroidAction.tuneFromStart(row.code))
+                    send(ChannelListAction.tuneFromStart(row.code))
                 })
             }
             if (row.isHasPrograms) {

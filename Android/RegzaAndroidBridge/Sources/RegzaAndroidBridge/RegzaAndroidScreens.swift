@@ -9,28 +9,13 @@ public struct RegzaAndroidScreen {
     /// "remote"・"guide"・"channels"・"reservations" (タブの最初の画面)、
     /// "programs" (1 チャンネルの番組表)・"detail" (番組の詳細)・"search" (番組表の検索)
     public var kind: String
-    public var channelList: RegzaAndroidChannelList?
+    /// チャンネル一覧の画面の state (ChannelListViewModel.State をそのまま渡す)
+    public var channelList: ChannelListState?
     public var guide: RegzaAndroidGuide?
     public var reservations: RegzaAndroidReservations?
     public var programs: RegzaAndroidProgramList?
     public var detail: RegzaAndroidProgramDetail?
     public var search: RegzaAndroidSearch?
-}
-
-/// チャンネル一覧の画面 (ChannelListViewModel.State)
-public struct RegzaAndroidChannelList {
-    public var isLoading: Bool
-    /// 一覧の代わりに出す、取得できなかった説明
-    public var loadErrorMessage: String?
-    /// 切り替えられなかったときの説明
-    public var tuneError: String?
-    /// 切り替え中のチャンネルのコード
-    public var tuningChannelCode: String?
-    /// アプリで見られる (ライブ視聴を設定している)
-    public var canStream: Bool
-    public var bands: [BroadcastBand]
-    public var band: BroadcastBand?
-    public var rows: [ChannelItem]
 }
 
 /// 新聞のテレビ欄のような番組表 (GuideGridViewModel.State)。選んでいる日の 24 時間分だけを入れる
@@ -128,16 +113,7 @@ extension RegzaAndroidScreen {
         case .remote:
             self.init(kind: "remote")
         case .channels(let state):
-            self.init(kind: "channels", channelList: RegzaAndroidChannelList(
-                isLoading: state.isLoading,
-                loadErrorMessage: state.loadErrorMessage,
-                tuneError: state.tuneError,
-                tuningChannelCode: state.tuningCode,
-                canStream: state.canStream,
-                bands: state.bands,
-                band: state.band,
-                rows: state.rows
-            ))
+            self.init(kind: "channels", channelList: state)
         case .guide(let state):
             // 表に出す時間・時刻の見出し・選んでいる日は ViewModel が作る (iOS の画面と同じ値)
             self.init(kind: "guide", guide: RegzaAndroidGuide(

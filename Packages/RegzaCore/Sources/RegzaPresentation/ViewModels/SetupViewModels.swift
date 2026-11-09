@@ -2,7 +2,7 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// テレビの設定の画面の ViewModel (iOS と Android で共有)。
+/// テレビの設定の画面の ViewModel。
 /// 同じネットワークのテレビを探す・PIN で登録する・ユーザー名とパスワード・接続テスト
 @MainActor
 @Observable
@@ -302,7 +302,7 @@ extension TVSetupViewModel: Introspectable {
     }
 }
 
-/// 録画サーバー (番組表の Mirakurun・ライブ視聴の EPGStation) の設定の画面の ViewModel (iOS と Android で共有)
+/// 録画サーバー (番組表の Mirakurun・ライブ視聴の EPGStation) の設定の画面の ViewModel
 @MainActor
 @Observable
 public final class ServerSetupViewModel {

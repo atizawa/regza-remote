@@ -56,18 +56,15 @@ class MainActivity : ComponentActivity() {
                         val model: RegzaViewModel = viewModel()
                         val state = model.state ?: return@LocalNetworkGate
                         val setup = state.setup.orElse(null)
-                        if (setup != null) SettingsScreen(setup, model::send) else AppScreen(state, model.screen, model::send)
+                        if (setup != null) SettingsScreen(setup, model.send) else AppScreen(state, model.screen, model.send)
                         // アプリで見る (ライブ視聴) は、どの画面の上にも全画面で重ねる
-                        state.player.orElse(null)?.let { LivePlayerScreen(it, model::send) }
+                        state.player.orElse(null)?.let { LivePlayerScreen(it, model.send) }
                     }
                 }
             }
         }
     }
 }
-
-/** 画面から送る操作 */
-typealias Send = (RegzaAndroidAction) -> Unit
 
 /**
  * 入力欄の文字。打った文字はこの画面ですぐに出し、Swift の ViewModel には操作として送る。

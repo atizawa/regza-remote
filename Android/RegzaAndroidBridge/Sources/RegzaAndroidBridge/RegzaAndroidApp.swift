@@ -167,13 +167,6 @@ public enum RegzaAndroidAction {
     case closeNowPlaying
     case powerOn
     case startOver
-    // チャンネル一覧 (ChannelListViewModel)
-    case showChannels
-    case reloadChannels
-    /// 選局する (チャンネルのコード)
-    case tune(String)
-    /// 選局して、放送中の番組を最初から再生する (チャンネルのコード)
-    case tuneFromStart(String)
     /// 1 チャンネルの番組表を開く (チャンネルのコード)
     case openPrograms(String)
     /// 番組の詳細を開く (チャンネルのコード、番組の id)
@@ -458,10 +451,6 @@ public final class RegzaAndroidApp {
         case .closeNowPlaying: app.send(.closeNowPlaying)
         case .powerOn: app.nowPlaying.send(.powerOn)
         case .startOver: app.nowPlaying.send(.startOver)
-        case .showChannels: app.channelList.send(.appear)
-        case .reloadChannels: app.channelList.send(.reload)
-        case .tune(let code): app.channelList.send(.tune(code))
-        case .tuneFromStart(let code): app.channelList.send(.tuneFromStart(code))
         case .openPrograms(let code):
             app.send(.open(.channelPrograms(channelCode: code)))
         case .openProgram(let code, let id): app.send(.open(.programDetail(programID: id, channelCode: code)))
@@ -510,6 +499,14 @@ public final class RegzaAndroidApp {
         case .scanStream: servers?.send(.scan(.stream))
         case .unlinkStream: servers?.send(.unlink(.stream))
         case .save: app.send(.saveSettings)
+        }
+    }
+
+    /// 画面ごとの操作 (ChannelListAction など) を、開いている画面の ViewModel に手前から渡してみて、受け取ったところで止める。
+    /// 画面ごとの send と perform は、scripts/generate-screen-glue.sh が Generated/ScreenActions.swift に作る
+    @MainActor func route(_ deliver: (AnyObject) -> Bool) {
+        for viewModel in app.openViewModels {
+            if deliver(viewModel) { return }
         }
     }
 

@@ -103,6 +103,19 @@ rm -rf "$generated" .build/swift/regzashared-java && mkdir -p "$generated" .buil
   --input-swift ../Packages/RegzaCore/Sources/RegzaSharedModels \
   --output-swift "$generated" --output-java .build/swift/regzashared-java
 
+# 画面の状態と操作の型 (RegzaPresentation の ChannelListState など) の Java のつなぎを作る。
+# ViewModel は Java にできない (MainActor) ので、画面ごとのフォルダの State/ と Action/ に置いた型だけを Java のクラスにする。
+# 絞り込みは入力のフォルダからのパスで比べるので、入力は絶対パスで渡す (相対パスだと、どのファイルも外れる)
+presentation_generated=RegzaAndroid/Sources/RegzaPresentationJava/Generated
+rm -rf "$presentation_generated" .build/swift/regzapresentation-java && mkdir -p "$presentation_generated" .build/swift/regzapresentation-java
+.build/swift-tool/out/Products/Release/swift-java jextract --log-level warning \
+  --config RegzaAndroid/RegzaPresentation.swift-java.config --swift-module RegzaPresentation \
+  --input-swift "$(cd ../Packages/RegzaCore/Sources/RegzaPresentation && pwd)" \
+  --output-swift "$presentation_generated" --output-java .build/swift/regzapresentation-java
+
+# 画面ごとの操作を送る窓口の send と、窓口の設定に書く画面の状態と操作の型を、State/ と Action/ から作り直す
+scripts/generate-screen-glue.sh
+
 # 窓口 (RegzaAndroidBridge の RegzaAndroidApp と、その状態・操作の型) の Java のつなぎを作る。
 # Mac の swift test で確かめられるよう別のパッケージにしてあり、プラグインをかけられないので、同じくツールで作る
 bridge_generated=RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated

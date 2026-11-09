@@ -2,7 +2,7 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// 番組表の検索の画面の ViewModel (iOS と Android で共有)。
+/// 番組表の検索の画面の ViewModel。
 /// 打った言葉から日付・時間帯・ジャンルを読み取り (「明日の夜のサッカー」→ 明日・18 時から・サッカー)、
 /// 残りの言葉で全部の番組から探す
 @MainActor

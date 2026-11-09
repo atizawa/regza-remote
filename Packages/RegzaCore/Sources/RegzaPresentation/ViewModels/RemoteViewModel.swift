@@ -13,7 +13,7 @@ package protocol RemoteViewModelObserver: AnyObject {
     func remoteViewModelDidTune(_ model: RemoteViewModel) async
 }
 
-/// アプリ全体で 1 つの ViewModel (iOS と Android で共有)。
+/// アプリ全体で 1 つの ViewModel。
 /// テレビへの接続・いま映っているもの・リモコンの操作・チャンネルと選局を受け持つ。
 /// 画面は `state` を読み、`send` で操作する。番組表や録画などのほかの ViewModel は、結果を待てる関数 (internal) も使う
 @MainActor

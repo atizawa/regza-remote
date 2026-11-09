@@ -2,7 +2,7 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// 録画予約の一覧の画面の ViewModel (iOS と Android で共有)
+/// 録画予約の一覧の画面の ViewModel
 @MainActor
 @Observable
 public final class ReservationListViewModel {
