@@ -139,6 +139,8 @@ extension LivePlayerViewModel: IntrospectableActions {
 
     public var introspectionActions: [ActionDescription] {
         [
+            ActionDescription("appear", "画面を開いた。局名と番組名を出すため、チャンネルと番組表を読む"),
+            ActionDescription("start", "配信を頼む (準備できたら再生する URL が出る)"),
             ActionDescription("switchChannel", "局を切り替える", parameters: ["channel": "channels の局の code"]),
             ActionDescription("retryAfterStoppingStalled", "準備できないまま残っている配信を止めて、もう一度頼む"),
         ]
@@ -146,6 +148,8 @@ extension LivePlayerViewModel: IntrospectableActions {
 
     public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
         switch name {
+        case "appear": return .appear
+        case "start": return .start
         case "switchChannel":
             let code = try arguments.string("channel")
             guard state.channels.contains(where: { $0.code == code }) else {
