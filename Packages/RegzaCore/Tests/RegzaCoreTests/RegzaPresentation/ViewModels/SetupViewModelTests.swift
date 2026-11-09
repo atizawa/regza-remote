@@ -38,9 +38,6 @@ import Testing
         tv.send(.setHost(" "))
         #expect(tv.state.status == .init(text: "未設定", needsAttention: true))
         #expect(!tv.state.canSave)
-        // CLI に見せる状態には、パスワードを出さない
-        tv.send(.setPassword("secret"))
-        #expect(!JSONValue(reflecting: tv.introspectionValue).json.contains("secret"))
     }
 
     @Test func unlinkingGuideAlsoUnlinksStream() async {
@@ -53,7 +50,8 @@ import Testing
         #expect(servers.state.guide.status == "192.0.2.2")
         #expect(servers.state.stream.isLinked)
 
-        await fixtures.send(servers) { $0.send(.unlink(.guide)) }
+        servers.send(.unlink(.guide))
+        while servers.isBusy { try? await Task.sleep(for: .milliseconds(10)) }
 
         // EPGStation は Mirakurun から放送を受け取るので、一緒に外す
         #expect(servers.state.guide.status == "未設定")
@@ -103,6 +101,14 @@ import Testing
         #expect(!settings.state.canSave)
     }
 
+    /// CLI と振る舞いのテストに見せる状態には、パスワードを出さない (部品の操作は「tv.〜」で送る)
+    @Test func settingsHidePassword() throws {
+        let (settings, _, _) = makeSettings(transport: FakeTransport { _ in ViewModelFixtures.status(500) })
+        try settings.perform("tv.setPassword", ["password": .string("secret")])
+        #expect(settings.state.tv.password == "secret")
+        #expect(!settings.introspectionState.json.contains("secret"))
+    }
+
     @Test func settingsSaveThenClose() async {
         let (settings, live, closed) = makeSettings(transport: FakeTransport { _ in ViewModelFixtures.status(500) })
         settings.send(.server(.setHost(.guide, "192.0.2.2")))
@@ -128,7 +134,7 @@ import Testing
             request.url.path == "/api/version" ? ViewModelFixtures.status(200, #"{"version":"2.0.0"}"#) : ViewModelFixtures.status(404)
         })
         settings.send(.server(.setHost(.guide, "192.0.2.2:40772")))
-        await fixtures.send(settings.servers) { _ in settings.send(.openPage(.stream)) }
+        await fixtures.send(settings) { $0.send(.openPage(.stream)) }
         #expect(settings.state.path == [.stream])
         #expect(settings.state.servers.stream.host == "192.0.2.2")
     }

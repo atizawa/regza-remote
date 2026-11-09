@@ -59,9 +59,8 @@ public final class NowPlayingViewModel {
     }
 }
 
-extension NowPlayingViewModel: Introspectable {
+extension NowPlayingViewModel: IntrospectableActions {
     public var introspectionName: String { "nowPlaying" }
-    public var introspectionValue: Any { state }
     public var isBusy: Bool { work.isBusy }
 
     public var introspectionActions: [ActionDescription] {
@@ -72,12 +71,12 @@ extension NowPlayingViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
-        case "appear": send(.appear)
-        case "powerOn": send(.powerOn)
-        case "startOver": send(.startOver)
-        default: throw IntrospectionError.unknownAction(action)
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        switch name {
+        case "appear": return .appear
+        case "powerOn": return .powerOn
+        case "startOver": return .startOver
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

@@ -20,8 +20,6 @@ public final class SettingsViewModel {
         self.close = close
         // テレビが未設定なら、テレビの設定の画面から始める
         path = remote.connection.isConfigured ? [] : [.tv]
-        tv.forward = { [weak self] in self?.send(.tv($0)) }
-        servers.forward = { [weak self] in self?.send(.server($0)) }
     }
 
     /// 画面に出すもの
@@ -90,28 +88,41 @@ private extension SettingsPage {
     }
 }
 
-extension SettingsViewModel: Introspectable {
+extension SettingsViewModel: IntrospectableActions {
     public var introspectionName: String { "settings" }
-    public var introspectionValue: Any { state.path }
-    public var isBusy: Bool { work.isBusy }
-    public var introspectionChildren: [any Introspectable] { [tv, servers] }
+    public var isBusy: Bool { work.isBusy || tv.isBusy || servers.isBusy }
 
-    public var introspectionActions: [ActionDescription] {
-        [
-            ActionDescription("openPage", "設定の中の画面を開く", parameters: ["page": "tv | guide | stream"]),
-            ActionDescription("save", "設定を保存して閉じる"),
-            ActionDescription("close", "設定を閉じる (保存しない)"),
-        ]
+    /// パスワードは見せない (入っているかどうかだけ)
+    nonisolated public static func introspectionJSON(of state: State) -> JSONValue {
+        var state = state
+        if !state.tv.password.isEmpty { state.tv.password = "(入力済み)" }
+        return JSONValue(reflecting: state)
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
+    /// 設定の画面の操作と、部品の操作 (テレビの登録は「tv.〜」、録画サーバーは「server.〜」)
+    public var introspectionActions: [ActionDescription] {
+        func prefixed(_ prefix: String, _ actions: [ActionDescription]) -> [ActionDescription] {
+            actions.map { ActionDescription(prefix + $0.name, $0.summary, parameters: $0.parameters) }
+        }
+        return [
+            ActionDescription("openPage", "設定の中の画面を開く", parameters: ["page": "tv | guide | stream"]),
+            ActionDescription("back", "設定の中で 1 つ戻る"),
+            ActionDescription("save", "設定を保存して閉じる"),
+            ActionDescription("close", "設定を閉じる (保存しない)"),
+        ] + prefixed("tv.", TVSetupViewModel.introspectionActions) + prefixed("server.", ServerSetupViewModel.introspectionActions)
+    }
+
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        if name.hasPrefix("tv.") { return .tv(try tv.introspectionAction(String(name.dropFirst(3)), arguments)) }
+        if name.hasPrefix("server.") { return .server(try servers.introspectionAction(String(name.dropFirst(7)), arguments)) }
+        switch name {
         case "openPage":
             guard let page = SettingsPage(rawValue: try arguments.string("page")) else { throw IntrospectionError.invalidArgument("page") }
-            send(.openPage(page))
-        case "save": send(.save)
-        case "close": send(.close)
-        default: throw IntrospectionError.unknownAction(action)
+            return .openPage(page)
+        case "back": return .back
+        case "save": return .save
+        case "close": return .close
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

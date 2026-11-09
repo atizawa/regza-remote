@@ -6,7 +6,7 @@ public import Foundation
 ///
 ///   tree                         ViewModel の道の一覧
 ///   ls [道]                      状態と操作の一覧 (道を省くと app)
-///   do 道 操作 [JSON の引数]     操作して、通信などが終わるのを待ってから状態を返す
+///   do 道 操作 [JSON の引数]     操作して、通信などが終わるのを待ってから状態を返す (閉じたら {"closed": true})
 ///   wait 秒                      待つ (定期の取得などを進める)
 ///   quit
 @MainActor
@@ -59,7 +59,10 @@ public struct IntrospectionSession {
             } catch {
                 return Self.failure("\(error)")
             }
-            return node(path, idle: await introspector.waitUntilIdle())
+            let idle = await introspector.waitUntilIdle()
+            // 閉じる操作などで、その ViewModel がなくなった
+            guard (try? introspector.find(path)) != nil else { return Self.closed(path) }
+            return node(path, idle: idle)
         case .wait(let seconds):
             try? await Task.sleep(for: .seconds(seconds))
             return #"{"waited":\#(seconds)}"#
@@ -92,6 +95,11 @@ public struct IntrospectionSession {
 
     private static func action(of viewModel: some IntrospectableActions, _ name: String, _ arguments: [String: JSONValue]) throws -> Any {
         try viewModel.action(name, arguments)
+    }
+
+    /// 操作のあと、その道の ViewModel がなくなった (閉じた) ときに返す JSON
+    nonisolated public static func closed(_ path: String) -> String {
+        JSONValue.object(["path": .string(path), "closed": .bool(true)]).json
     }
 
     nonisolated public static func failure(_ message: String) -> String {

@@ -120,9 +120,9 @@ for file in $(find "$view_models" -path '*/Action/*.swift' | sort); do
         await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? $action }
     }
 
-    /// 振る舞いのテストの Android 側の相手: $state を regza と同じ JSON にする
+    /// 振る舞いのテストの Android 側の相手: $state を regza と同じ JSON にする ($view_model の見せ方を使う)
     public func contract${state}JSON(_ state: $state?) -> String {
-        JSONValue(reflecting: state as Any).json
+        state.map { $view_model.introspectionJSON(of: \$0) }?.json ?? \"null\"
     }
 "
     kotlin_contract_sends+="

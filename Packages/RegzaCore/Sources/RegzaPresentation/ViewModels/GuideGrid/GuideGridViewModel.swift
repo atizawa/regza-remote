@@ -96,14 +96,13 @@ public final class GuideGridViewModel {
     }
 }
 
-extension GuideGridViewModel: Introspectable {
+extension GuideGridViewModel: IntrospectableActions {
     public var introspectionName: String { "guideGrid" }
     public var isBusy: Bool { work.isBusy }
     public var introspectionChildren: [any Introspectable] { [search] }
 
     /// 番組表は 1 週間分あると大きいので、局ごとに番組の数と放送中の番組名だけを見せる
-    public var introspectionValue: Any {
-        let state = state
+    nonisolated public static func introspectionJSON(of state: State) -> JSONValue {
         let now = Date()
         return JSONValue.object([
             "hasGuide": .bool(state.hasGuide),
@@ -132,17 +131,17 @@ extension GuideGridViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
-        case "load": send(.load)
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        switch name {
+        case "load": return .load
         case "selectDay":
-            guard arguments["day"] != nil else { return send(.selectDay(nil)) }
+            guard arguments["day"] != nil else { return .selectDay(nil) }
             let text = try arguments.string("day")
             guard let day = state.days.compactMap(\.date).first(where: { $0.formatted(.iso8601) == text }) else {
                 throw IntrospectionError.invalidArgument("day")
             }
-            send(.selectDay(day))
-        default: throw IntrospectionError.unknownAction(action)
+            return .selectDay(day)
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

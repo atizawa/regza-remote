@@ -56,20 +56,19 @@ public final class ProgramListViewModel {
     }
 }
 
-extension ProgramListViewModel: Introspectable {
+extension ProgramListViewModel: IntrospectableActions {
     public var introspectionName: String { "programList" }
-    public var introspectionValue: Any { state }
     public var isBusy: Bool { work.isBusy }
 
     public var introspectionActions: [ActionDescription] {
         [ActionDescription("appear", "画面を開いたときと同じく読み込む"), ActionDescription("reload", "番組を読み直す")]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
-        case "appear": send(.appear)
-        case "reload": send(.reload)
-        default: throw IntrospectionError.unknownAction(action)
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        switch name {
+        case "appear": return .appear
+        case "reload": return .reload
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

@@ -1,10 +1,11 @@
 import java.nio.file.Files
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-// 振る舞いのテスト (Shopify の Reflex と同じく、画面を描かずに ViewModel の state と操作を確かめる)。
-// エミュレーターではなく Mac の JVM で動かす。アプリと同じ道 (Kotlin の Send と xxxStates → swift-java のつなぎ → 窓口 →
-// 共有の ViewModel) を通るよう、窓口とつなぎを macOS 向けにビルドした .dylib を読み込む。
-// 外からの入力は見本の返事 (RegzaAndroidApp.sample の SampleTransport) で渡すので、テレビにも録画サーバーにもつながない
+// 振る舞いのテスト (../../BehaviorTests。Shopify の Reflex と同じ作り) の Android 側の相手 (regza-android)。
+// iOS 側の相手 (regza) と同じ約束事 (1 行ずつの命令と JSON) を話し、操作を送るところと state を受け取るところだけを、
+// アプリと同じ道 (Kotlin の Send と xxxStates → swift-java のつなぎ → 窓口 → 共有の ViewModel) で行う。
+// エミュレーターではなく Mac の JVM で動かし、窓口とつなぎは macOS 向けにビルドした .dylib を読み込む。
+// 見本の返事 (RegzaAndroidApp.sample の SampleTransport) で組み立てるので、テレビにも録画サーバーにもつながない
 plugins {
     alias(libs.plugins.kotlin.jvm)
     // 振る舞いのテスト (BehaviorTests) の Android 側の相手 (ContractDriver) を、起動できる形にする
@@ -31,7 +32,6 @@ sourceSets.main {
 dependencies {
     implementation(project(":swiftkit-core"))
     implementation(libs.kotlinx.coroutines.core)
-    testImplementation(libs.kotlin.test.junit)
 }
 
 java {
@@ -73,11 +73,3 @@ val buildJvmHost = tasks.register<Exec>("buildJvmHost") {
 // installDist で作る起動の台本にも、.dylib の場所を渡す
 application.applicationDefaultJvmArgs = listOf("-Djava.library.path=$jvmHostLibs:/usr/lib/swift", "--enable-native-access=ALL-UNNAMED")
 tasks.named("installDist") { dependsOn(buildJvmHost) }
-
-tasks.test {
-    dependsOn(buildJvmHost)
-    // Swift の標準ライブラリは macOS に入っているものを使う
-    systemProperty("java.library.path", "$jvmHostLibs:/usr/lib/swift")
-    jvmArgs("--enable-native-access=ALL-UNNAMED")
-    testLogging { events("passed", "failed") }
-}

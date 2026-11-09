@@ -155,7 +155,8 @@ public final class AppViewModel {
         for tab in tabs {
             result += state.path(of: tab).reversed().compactMap(viewModel(for:))
         }
-        result += [channelList, guideGrid, reservationList, remote]
+        // 番組表の検索は、開く前から番組表と一緒にある (CLI からも見える)
+        result += [channelList, guideGrid, guideGrid.search, reservationList, remote]
         return result
     }
 
@@ -176,7 +177,6 @@ public final class AppViewModel {
 
 extension AppViewModel: IntrospectableActions {
     public var introspectionName: String { "app" }
-    public var introspectionValue: Any { state }
     public var isBusy: Bool { work.isBusy }
     /// 土台・タブの画面・戻る道の画面 (`channels-0` のように、タブと奥行きで名前を付ける)
     public var introspectionChildren: [any Introspectable] {

@@ -43,6 +43,8 @@ private suspend fun perform(app: RegzaAndroidApp, command: RegzaContractCommand)
         return """{"error":"$type の操作は Android の相手から送れません"}"""
     }
     val idle = app.contractWaitUntilIdle().await()
+    // 閉じる操作などで、その ViewModel がなくなった
+    app.contractClosed(command.path).await().orElse(null)?.let { return it }
     return list(app, command.path, idle)
 }
 

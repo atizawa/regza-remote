@@ -237,9 +237,9 @@ extension RegzaAndroidApp {
         await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? AppAction }
     }
 
-    /// 振る舞いのテストの Android 側の相手: AppState を regza と同じ JSON にする
+    /// 振る舞いのテストの Android 側の相手: AppState を regza と同じ JSON にする (AppViewModel の見せ方を使う)
     public func contractAppStateJSON(_ state: AppState?) -> String {
-        JSONValue(reflecting: state as Any).json
+        state.map { AppViewModel.introspectionJSON(of: $0) }?.json ?? "null"
     }
 
     /// 振る舞いのテストの Android 側の相手: 約束事の操作を ChannelListAction にする (アプリと同じ道で送るため)。できなければ nil
@@ -247,8 +247,98 @@ extension RegzaAndroidApp {
         await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? ChannelListAction }
     }
 
-    /// 振る舞いのテストの Android 側の相手: ChannelListState を regza と同じ JSON にする
+    /// 振る舞いのテストの Android 側の相手: ChannelListState を regza と同じ JSON にする (ChannelListViewModel の見せ方を使う)
     public func contractChannelListStateJSON(_ state: ChannelListState?) -> String {
-        JSONValue(reflecting: state as Any).json
+        state.map { ChannelListViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を GuideGridAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractGuideGridAction(path: String, action: String, arguments: String) async -> GuideGridAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? GuideGridAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: GuideGridState を regza と同じ JSON にする (GuideGridViewModel の見せ方を使う)
+    public func contractGuideGridStateJSON(_ state: GuideGridState?) -> String {
+        state.map { GuideGridViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を GuideSearchAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractGuideSearchAction(path: String, action: String, arguments: String) async -> GuideSearchAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? GuideSearchAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: GuideSearchState を regza と同じ JSON にする (GuideSearchViewModel の見せ方を使う)
+    public func contractGuideSearchStateJSON(_ state: GuideSearchState?) -> String {
+        state.map { GuideSearchViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を LivePlayerAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractLivePlayerAction(path: String, action: String, arguments: String) async -> LivePlayerAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? LivePlayerAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: LivePlayerState を regza と同じ JSON にする (LivePlayerViewModel の見せ方を使う)
+    public func contractLivePlayerStateJSON(_ state: LivePlayerState?) -> String {
+        state.map { LivePlayerViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を NowPlayingAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractNowPlayingAction(path: String, action: String, arguments: String) async -> NowPlayingAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? NowPlayingAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: NowPlayingState を regza と同じ JSON にする (NowPlayingViewModel の見せ方を使う)
+    public func contractNowPlayingStateJSON(_ state: NowPlayingState?) -> String {
+        state.map { NowPlayingViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を ProgramDetailAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractProgramDetailAction(path: String, action: String, arguments: String) async -> ProgramDetailAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? ProgramDetailAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: ProgramDetailState を regza と同じ JSON にする (ProgramDetailViewModel の見せ方を使う)
+    public func contractProgramDetailStateJSON(_ state: ProgramDetailState?) -> String {
+        state.map { ProgramDetailViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を ProgramListAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractProgramListAction(path: String, action: String, arguments: String) async -> ProgramListAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? ProgramListAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: ProgramListState を regza と同じ JSON にする (ProgramListViewModel の見せ方を使う)
+    public func contractProgramListStateJSON(_ state: ProgramListState?) -> String {
+        state.map { ProgramListViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を RemoteAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractRemoteAction(path: String, action: String, arguments: String) async -> RemoteAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? RemoteAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: RemoteState を regza と同じ JSON にする (RemoteViewModel の見せ方を使う)
+    public func contractRemoteStateJSON(_ state: RemoteState?) -> String {
+        state.map { RemoteViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を ReservationListAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractReservationListAction(path: String, action: String, arguments: String) async -> ReservationListAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? ReservationListAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: ReservationListState を regza と同じ JSON にする (ReservationListViewModel の見せ方を使う)
+    public func contractReservationListStateJSON(_ state: ReservationListState?) -> String {
+        state.map { ReservationListViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を SettingsAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractSettingsAction(path: String, action: String, arguments: String) async -> SettingsAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? SettingsAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: SettingsState を regza と同じ JSON にする (SettingsViewModel の見せ方を使う)
+    public func contractSettingsStateJSON(_ state: SettingsState?) -> String {
+        state.map { SettingsViewModel.introspectionJSON(of: $0) }?.json ?? "null"
     }
 }

@@ -72,9 +72,8 @@ public final class ReservationListViewModel {
     }
 }
 
-extension ReservationListViewModel: Introspectable {
+extension ReservationListViewModel: IntrospectableActions {
     public var introspectionName: String { "reservationList" }
-    public var introspectionValue: Any { state }
     public var isBusy: Bool { work.isBusy }
 
     public var introspectionActions: [ActionDescription] {
@@ -84,16 +83,16 @@ extension ReservationListViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
-        case "load": send(.load)
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        switch name {
+        case "load": return .load
         case "cancel":
             let id = try arguments.string("reservation")
             guard recording.reservations.contains(where: { $0.id == id }) else {
                 throw IntrospectionError.unavailable("予約 \(id) はありません")
             }
-            send(.cancel(id))
-        default: throw IntrospectionError.unknownAction(action)
+            return .cancel(id)
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

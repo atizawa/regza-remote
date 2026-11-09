@@ -34,13 +34,24 @@ extension Introspectable {
 /// CLI (perform) と Android の振る舞いのテストの相手 (置き換えた Action を Android と同じ道で送る) の両方で使う
 @MainActor
 public protocol IntrospectableActions: Introspectable {
+    associatedtype State
     associatedtype Action
+    var state: State { get }
     /// 名前と引数の操作を Action にする (その状態ではできない操作なら投げる)
     func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action
     func send(_ action: Action)
+    /// CLI と振る舞いのテストに見せる state の JSON。既定は state をそのまま JSON にする
+    /// (大きいものは要約し、パスワードは伏せる。Android 側の相手も、受け取った state をこれで JSON にする)
+    nonisolated static func introspectionJSON(of state: State) -> JSONValue
 }
 
 extension IntrospectableActions {
+    public var introspectionValue: Any { Self.introspectionJSON(of: state) }
+
+    nonisolated public static func introspectionJSON(of state: State) -> JSONValue {
+        JSONValue(reflecting: state)
+    }
+
     public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
         send(try self.action(action, arguments))
     }

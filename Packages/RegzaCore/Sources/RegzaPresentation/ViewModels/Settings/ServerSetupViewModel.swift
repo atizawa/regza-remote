@@ -52,9 +52,6 @@ public final class ServerSetupViewModel {
         )
     }
 
-    /// CLI からの操作を送る先。設定の ViewModel を通す (SettingsViewModel が入れる)
-    @ObservationIgnored var forward: ((ServerSetupAction) -> Void)?
-
     /// 操作は設定の ViewModel (SettingsViewModel) から送る
     func send(_ action: ServerSetupAction) {
         switch action {
@@ -126,13 +123,12 @@ public final class ServerSetupViewModel {
     }
 }
 
-extension ServerSetupViewModel: Introspectable {
-    public var introspectionName: String { "servers" }
-    public var introspectionValue: Any { state }
-    public var isBusy: Bool { work.isBusy }
+// 設定の画面 (SettingsViewModel) が、CLI の操作「server.〜」として見せる (部品なので、ここだけでは道を持たない)
+extension ServerSetupViewModel {
+    var isBusy: Bool { work.isBusy }
 
-    public var introspectionActions: [ActionDescription] {
-        let server = Server.allCases.map(\.rawValue).joined(separator: " | ")
+    static var introspectionActions: [ActionDescription] {
+        let server = ServerSetupServer.allCases.map(\.rawValue).joined(separator: " | ")
         return [
             ActionDescription("setHost", "アドレスを入れる", parameters: ["server": server, "host": "192.0.2.2 か 192.0.2.2:40772"]),
             ActionDescription("scan", "同じネットワークで探す", parameters: ["server": server]),
@@ -141,18 +137,17 @@ extension ServerSetupViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        func deliver(_ action: ServerSetupAction) { (forward ?? send)(action) }
-        func server() throws -> Server {
-            guard let server = Server(rawValue: try arguments.string("server")) else { throw IntrospectionError.invalidArgument("server") }
+    func introspectionAction(_ name: String, _ arguments: [String: JSONValue]) throws -> ServerSetupAction {
+        func server() throws -> ServerSetupServer {
+            guard let server = ServerSetupServer(rawValue: try arguments.string("server")) else { throw IntrospectionError.invalidArgument("server") }
             return server
         }
-        switch action {
-        case "setHost": deliver(.setHost(try server(), try arguments.string("host")))
-        case "scan": deliver(.scan(try server()))
-        case "suggestStreamHost": deliver(.suggestStreamHost)
-        case "unlink": deliver(.unlink(try server()))
-        default: throw IntrospectionError.unknownAction(action)
+        switch name {
+        case "setHost": return .setHost(try server(), try arguments.string("host"))
+        case "scan": return .scan(try server())
+        case "suggestStreamHost": return .suggestStreamHost
+        case "unlink": return .unlink(try server())
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

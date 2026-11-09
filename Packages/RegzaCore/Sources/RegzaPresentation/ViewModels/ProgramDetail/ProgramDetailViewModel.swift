@@ -129,9 +129,8 @@ public final class ProgramDetailViewModel {
     }
 }
 
-extension ProgramDetailViewModel: Introspectable {
+extension ProgramDetailViewModel: IntrospectableActions {
     public var introspectionName: String { "programDetail" }
-    public var introspectionValue: Any { state }
     public var isBusy: Bool { work.isBusy }
 
     public var introspectionActions: [ActionDescription] {
@@ -143,23 +142,23 @@ extension ProgramDetailViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
         let state = state
-        switch action {
-        case "appear": send(.appear)
+        switch name {
+        case "appear": return .appear
         case "reserve":
             guard state.canReserve else { throw IntrospectionError.unavailable("終わった番組は予約できません") }
-            send(.reserve(series: try arguments.bool("series")))
+            return .reserve(series: try arguments.bool("series"))
         case "cancelReservation":
             guard state.isReserved else { throw IntrospectionError.unavailable("この番組は予約していません") }
-            send(.cancelReservation)
+            return .cancelReservation
         case "tune":
             let startOver = try arguments.bool("startOver")
             guard startOver ? state.canStartOver : state.canTune else {
                 throw IntrospectionError.unavailable(startOver ? "この番組は最初から見られません" : "放送中の番組ではありません")
             }
-            send(.tune(startOver: startOver))
-        default: throw IntrospectionError.unknownAction(action)
+            return .tune(startOver: startOver)
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

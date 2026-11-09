@@ -244,9 +244,8 @@ public final class RemoteViewModel {
 
 // MARK: - Introspection
 
-extension RemoteViewModel: Introspectable {
+extension RemoteViewModel: IntrospectableActions {
     public var introspectionName: String { "remote" }
-    public var introspectionValue: Any { state }
     public var isBusy: Bool { work.isBusy }
 
     public var introspectionActions: [ActionDescription] {
@@ -262,28 +261,28 @@ extension RemoteViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        switch name {
         case "press":
             let name = try arguments.string("key")
             guard let key = RegzaKey.allCases.first(where: { "\($0)" == name }) else { throw IntrospectionError.invalidArgument("key") }
-            send(.press(key))
-        case "seek": send(.seek(try arguments.int("seconds")))
+            return .press(key)
+        case "seek": return .seek(try arguments.int("seconds"))
         case "selectBand":
-            guard arguments["band"] != nil else { return send(.selectBand(nil)) }
+            guard arguments["band"] != nil else { return .selectBand(nil) }
             guard let band = BroadcastBand(rawValue: try arguments.string("band")) else { throw IntrospectionError.invalidArgument("band") }
-            send(.selectBand(band))
-        case "loadChannels": send(.loadChannels(force: try arguments.bool("force")))
+            return .selectBand(band)
+        case "loadChannels": return .loadChannels(force: try arguments.bool("force"))
         case "tune":
             let code = try arguments.string("channel")
             guard channels.contains(where: { $0.code == code }) else {
                 throw IntrospectionError.unavailable("チャンネル \(code) はテレビに登録されていません")
             }
-            send(.tune(code))
-        case "refresh": send(.refresh)
-        case "startPolling": send(.startPolling)
-        case "stopPolling": send(.stopPolling)
-        default: throw IntrospectionError.unknownAction(action)
+            return .tune(code)
+        case "refresh": return .refresh
+        case "startPolling": return .startPolling
+        case "stopPolling": return .stopPolling
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

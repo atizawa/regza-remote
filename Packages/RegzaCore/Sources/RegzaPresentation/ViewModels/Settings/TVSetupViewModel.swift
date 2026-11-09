@@ -69,9 +69,6 @@ public final class TVSetupViewModel {
         )
     }
 
-    /// CLI からの操作を送る先。設定の ViewModel を通す (SettingsViewModel が入れる)
-    @ObservationIgnored var forward: ((TVSetupAction) -> Void)?
-
     /// 操作は設定の ViewModel (SettingsViewModel) から送る
     func send(_ action: TVSetupAction) {
         switch action {
@@ -206,18 +203,11 @@ public final class TVSetupViewModel {
     }
 }
 
-extension TVSetupViewModel: Introspectable {
-    public var introspectionName: String { "tv" }
-    public var isBusy: Bool { work.isBusy }
+// 設定の画面 (SettingsViewModel) が、CLI の操作「tv.〜」として見せる (部品なので、ここだけでは道を持たない)
+extension TVSetupViewModel {
+    var isBusy: Bool { work.isBusy }
 
-    /// パスワードは見せない (入っているかどうかだけ)
-    public var introspectionValue: Any {
-        var state = state
-        if !state.password.isEmpty { state.password = "(入力済み)" }
-        return state
-    }
-
-    public var introspectionActions: [ActionDescription] {
+    static var introspectionActions: [ActionDescription] {
         [
             ActionDescription("setHost", "テレビの IP アドレスを入れる", parameters: ["host": "IP アドレス"]),
             ActionDescription("setUser", "ユーザー名を入れる (PIN 登録に対応していない機種)", parameters: ["user": "ユーザー名"]),
@@ -232,25 +222,24 @@ extension TVSetupViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        func deliver(_ action: TVSetupAction) { (forward ?? send)(action) }
-        switch action {
-        case "setHost": deliver(.setHost(try arguments.string("host")))
-        case "setUser": deliver(.setUser(try arguments.string("user")))
-        case "setPassword": deliver(.setPassword(try arguments.string("password")))
-        case "scan": deliver(.scan)
+    func introspectionAction(_ name: String, _ arguments: [String: JSONValue]) throws -> TVSetupAction {
+        switch name {
+        case "setHost": return .setHost(try arguments.string("host"))
+        case "setUser": return .setUser(try arguments.string("user"))
+        case "setPassword": return .setPassword(try arguments.string("password"))
+        case "scan": return .scan
         case "select":
             let host = try arguments.string("host")
             guard devices.contains(where: { $0.host == host }) else {
                 throw IntrospectionError.unavailable("テレビ \(host) は見つかっていません")
             }
-            deliver(.select(host))
-        case "startPairing": deliver(.startPairing)
-        case "setPIN": deliver(.setPIN(try arguments.string("pin")))
-        case "confirmPairing": deliver(.confirmPairing)
-        case "cancelPairing": deliver(.cancelPairing)
-        case "test": deliver(.test)
-        default: throw IntrospectionError.unknownAction(action)
+            return .select(host)
+        case "startPairing": return .startPairing
+        case "setPIN": return .setPIN(try arguments.string("pin"))
+        case "confirmPairing": return .confirmPairing
+        case "cancelPairing": return .cancelPairing
+        case "test": return .test
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

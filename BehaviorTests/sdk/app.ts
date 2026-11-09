@@ -4,8 +4,27 @@
 
 import type { Subprocess } from "bun";
 
+import { afterEach, beforeEach, describe } from "bun:test";
+
 export type Platform = "ios" | "android";
 export const platforms: Platform[] = ["ios", "android"];
+
+/**
+ * 同じテストを、iOS 側と Android 側の両方の相手で流す。テストごとに相手を見本の返事で起動し直す
+ * (前のテストの操作が残らないように)
+ */
+export function describeOnBothPlatforms(title: string, body: (app: () => App) => void) {
+  describe.each(platforms)(`%s: ${title}`, (platform) => {
+    let current: App | undefined;
+    beforeEach(async () => {
+      current = await App.start(platform);
+    });
+    afterEach(async () => {
+      await current?.close();
+    });
+    body(() => current!);
+  });
+}
 
 /** ViewModel の状態と操作の一覧 (regza の ls・do が返すもの) */
 export interface Node {
@@ -61,10 +80,21 @@ export class App {
     }
   }
 
-  /** 操作を送り、状態が条件を満たすまで待って返す (Reflex の do)。条件を省けば、通信などが終わった状態を返す */
-  async do(path: string, action: string, args: Record<string, unknown> = {}, until?: (node: Node) => boolean): Promise<Node> {
-    const node = this.check(await this.command(`do ${path} ${action} ${JSON.stringify(args)}`));
+  /**
+   * 操作を送り、状態が条件を満たすまで待って返す (Reflex の do)。条件を省けば、通信などが終わった状態を返す。
+   * 閉じる操作などでその ViewModel がなくなったときは null
+   */
+  async do(path: string, action: string, args: Record<string, unknown> = {}, until?: (node: Node) => boolean): Promise<Node | null> {
+    const result = await this.command(`do ${path} ${action} ${JSON.stringify(args)}`);
+    if (result.closed) return null;
+    const node = this.check(result);
     return until ? this.precondition(path, until) : node;
+  }
+
+  /** 道の ViewModel がない (閉じている) ことを確かめる */
+  async absent(path: string): Promise<boolean> {
+    const result = await this.command(`ls ${path}`);
+    return typeof result.error === "string";
   }
 
   /** 操作を送り、失敗の説明を返す (できない操作を確かめるため) */

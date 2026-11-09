@@ -70,6 +70,11 @@ extension RegzaAndroidApp {
         await session.introspector.waitUntilIdle()
     }
 
+    /// 操作のあと、その道の ViewModel がなくなった (閉じた) ときに返す JSON (regza の do と同じ)。まだあれば nil
+    public func contractClosed(path: String) async -> String? {
+        await MainActor.run { (try? session.introspector.find(path)) == nil ? IntrospectionSession.closed(path) : nil }
+    }
+
     /// 道の状態と操作の一覧の JSON (regza の ls と同じ形)。state は Kotlin がアプリと同じ道で受け取ったものを使う
     public func contractNode(path: String, stateJSON: String, idle: Bool) async -> String {
         let state = try? JSONDecoder().decode(JSONValue.self, from: Data(stateJSON.utf8))

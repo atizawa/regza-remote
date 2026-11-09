@@ -127,12 +127,11 @@ public final class GuideSearchViewModel {
     }
 }
 
-extension GuideSearchViewModel: Introspectable {
+extension GuideSearchViewModel: IntrospectableActions {
     public var introspectionName: String { "search" }
 
     /// 結果は多くなることがあるので、番組の id・名前・局・時刻・理由だけを見せる
-    public var introspectionValue: Any {
-        let state = state
+    nonisolated public static func introspectionJSON(of state: State) -> JSONValue {
         return JSONValue.object([
             "text": .string(state.text),
             "isLiteral": .bool(state.isLiteral),
@@ -162,16 +161,16 @@ extension GuideSearchViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
-        case "setText": send(.setText(try arguments.string("text")))
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        switch name {
+        case "setText": return .setText(try arguments.string("text"))
         case "removeCondition":
             let index = try arguments.int("index")
             let conditions = state.conditions
             guard conditions.indices.contains(index) else { throw IntrospectionError.invalidArgument("index") }
-            send(.removeCondition(conditions[index].condition))
-        case "searchLiterally": send(.searchLiterally)
-        default: throw IntrospectionError.unknownAction(action)
+            return .removeCondition(conditions[index].condition)
+        case "searchLiterally": return .searchLiterally
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }

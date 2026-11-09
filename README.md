@@ -53,10 +53,19 @@ mise install                              # Swift のツールチェーン・JDK
 mise run setup-android-sdk                # 初回だけ。Android SDK のライセンスを確かめて同意する（Android Studio で SDK を入れていれば要らない）
 mise run install-android-swift-sdk        # 初回だけ。Swift SDK for Android（platform・build-tools・NDK は Gradle が入れる）
 ./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (buildSwift が mise run build-swift を呼ぶ)
-./gradlew :behavior-tests:test            # 振る舞いのテスト (Mac の JVM で動かす。エミュレーターは要らない)
+
+cd BehaviorTests && mise run test         # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
 ```
 
-振る舞いのテスト（`Android/behavior-tests`）は、Shopify の [Reflex](https://shopify.engineering/reflex) の Android のテストと同じく、画面を描かずに ViewModel の state と操作を確かめ、エミュレーターではなく Mac の JVM で動かす。Kotlin から、アプリと同じ `send(...)` と `xxxStates(...)` を呼び、swift-java のつなぎと窓口を通って共有の ViewModel に届く道を確かめる（窓口とつなぎは macOS 向けの .dylib `RegzaJVMHost` にして読み込む）。外からの入力は見本の返事（`RegzaSample` の `SampleTransport`）で渡すので、テレビにも録画サーバーにもつながない。
+### 振る舞いのテスト
+
+Shopify の [Reflex](https://shopify.engineering/reflex) と同じ作りで、画面を描かずに ViewModel の state と操作を確かめる。テストは `BehaviorTests/`（Bun・TypeScript）に 1 回だけ書き、iOS 側と Android 側の 2 つの相手に同じテストを流す。片方だけ通る状態は失敗になる。テストは相手がどちらかを知らず、CLI と同じ約束事（`tree`・`ls`・`do`・`wait` の 1 行ずつの命令と JSON）だけを使う。
+
+- iOS 側の相手は `regza`（iOS と同じ共有の組み立てを Mac で動かす）
+- Android 側の相手は `regza-android`（`Android/behavior-tests`。Mac の JVM）。命令の読み方と返す JSON は `regza` と同じもの（`IntrospectionSession`）を使い、操作を送るところと state を受け取るところだけを、アプリと同じ道（Kotlin の `send` と `xxxStates` → swift-java のつなぎ → 窓口）で行う。窓口とつなぎは macOS 向けの .dylib（`RegzaJVMHost`）にして読み込む。エミュレーターは使わない
+- 外からの入力は見本の返事（`RegzaSample` の `SampleTransport`）で渡すので、テレビにも録画サーバーにもつながない
+- テストは `sdk/app.ts` の `describeOnBothPlatforms` で書き、`do`（操作を送り、state が期待どおりになるまで待つ）と `precondition`（state が期待どおりになるまで待つ）で確かめる
+- Mac で動かすので、Android の Foundation（Swift の Foundation は macOS と Android で実装が違う）の違いまでは確かめない
 
 バンドル ID（`com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`）と署名のチームは `iOS/Config/Signing.xcconfig` にまとめている。自分でビルドして実機に入れるときは、このファイルは変えずに、同じフォルダに `Local.xcconfig` を作って自分の値で上書きする（Git には入れない）。
 
@@ -94,7 +103,8 @@ ViewModels/ChannelList/
 - State と Action には UI の型（`RegzaSharedModels`）だけを使い、Domain の型は使わない（Android に見せないため。ViewModel の Domain を使う init やプロパティは `package` にする）
 - 表示の判断（ボタンを出すか、押せるか、保存できるかなど）は State に入れ、画面に式を書かない。画面に置いた判断はテストでも CLI（`regza`）でも確かめられず、iOS と Android にそれぞれ書くことになる
 - 1 つの画面に Action は 1 つにする。部品に分けた ViewModel（設定のテレビの登録など）の操作は、親の Action の case に入れて送る（`SettingsAction.tv(TVSetupAction)`）。部品の ViewModel には `typealias Action` を書かない（書くと Android から直接送れてしまう）
-- CLI から動かせるよう `Introspectable` にし、テストを `Tests/RegzaCoreTests/RegzaPresentation/ViewModels/` に足す
+- CLI と振る舞いのテストから動かせるよう `IntrospectableActions` にし、名前と引数の操作を Action にする `action(_:_:)` を書く（CLI も Android 側の相手もこれを使うので、置き換えは 1 か所だけ）。state を要約したり伏せたりするときは `introspectionJSON(of:)` に書く
+- テストを `Tests/RegzaCoreTests/RegzaPresentation/ViewModels/` に足す
 
 ### 2. AppViewModel から開けるようにする
 
@@ -129,10 +139,11 @@ rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it,
 ```sh
 cd Packages/RegzaCore && swift test
 cd Android/RegzaAndroidBridge && swift test
-cd Android && ./gradlew :app:assembleDebug :behavior-tests:test
+cd Android && ./gradlew :app:assembleDebug
+cd BehaviorTests && mise run test
 ```
 
-画面を足したら、`Android/behavior-tests` にもその画面の振る舞いのテストを足す（操作を送り、state が期待どおりになるまで待つ）。
+画面を足したら、`BehaviorTests/tests/` にもその画面の振る舞いのテストを足す（操作を送り、state が期待どおりになるまで待つ）。
 
 ### swift-java の制約と回避策
 

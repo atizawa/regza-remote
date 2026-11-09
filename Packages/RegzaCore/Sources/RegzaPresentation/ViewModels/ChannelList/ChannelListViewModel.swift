@@ -104,7 +104,6 @@ public final class ChannelListViewModel {
 
 extension ChannelListViewModel: IntrospectableActions {
     public var introspectionName: String { "channelList" }
-    public var introspectionValue: Any { state }
     public var isBusy: Bool { work.isBusy }
 
     public var introspectionActions: [ActionDescription] {

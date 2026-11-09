@@ -132,9 +132,8 @@ public final class LivePlayerViewModel {
     }
 }
 
-extension LivePlayerViewModel: Introspectable {
+extension LivePlayerViewModel: IntrospectableActions {
     public var introspectionName: String { "player" }
-    public var introspectionValue: Any { state }
     /// 配信の準備中も忙しいとする (CLI の do で、再生できるか失敗するまで待てるように)
     public var isBusy: Bool { work.isBusy || (session != nil && phase == .preparing) }
 
@@ -145,16 +144,16 @@ extension LivePlayerViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        switch name {
         case "switchChannel":
             let code = try arguments.string("channel")
             guard state.channels.contains(where: { $0.code == code }) else {
                 throw IntrospectionError.unavailable("チャンネル \(code) はライブ視聴で見られません")
             }
-            send(.switchChannel(code))
-        case "retryAfterStoppingStalled": send(.retryAfterStoppingStalled)
-        default: throw IntrospectionError.unknownAction(action)
+            return .switchChannel(code)
+        case "retryAfterStoppingStalled": return .retryAfterStoppingStalled
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 }
