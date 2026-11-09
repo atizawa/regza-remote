@@ -1,5 +1,5 @@
 #if os(iOS)
-import RegzaCore
+import RegzaPresentation
 import RegzaLiveActivity
 import SwiftUI
 

@@ -1,6 +1,6 @@
 #if canImport(Security)
 import Foundation
-import RegzaCore
+import RegzaPresentation
 import Security
 
 /// ホストとユーザー名は UserDefaults、パスワードと PIN 登録用のユーザー ID はキーチェーンに保存する。

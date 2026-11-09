@@ -1,6 +1,6 @@
 // 組み立てる場所 (Composition Root)。どの Repository の実装を使うかを決め、アプリ全体の ViewModel を作る。
 // iOS・Android・CLI は、ここから作った AppViewModel を使う (画面の ViewModel は UseCase しか知らない)
-@_exported import RegzaCore
+@_exported import RegzaPresentation
 @_exported import RegzaInfrastructure
 
 extension AppViewModel {

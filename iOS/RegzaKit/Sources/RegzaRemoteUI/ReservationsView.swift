@@ -1,5 +1,5 @@
 #if os(iOS)
-import RegzaCore
+import RegzaPresentation
 import SwiftUI
 
 /// テレビの録画予約の一覧

@@ -11,5 +11,5 @@ local.properties
 .build/
 app/src/main/jniLibs/
 
-# mise run build-swift が作る RegzaCore の Java のつなぎ
-RegzaAndroid/Sources/RegzaCoreJava/Generated/
+# mise run build-swift が作る、iOS と共有の型の Java のつなぎ
+RegzaAndroid/Sources/RegzaSharedJava/Generated/

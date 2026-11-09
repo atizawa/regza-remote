@@ -9,7 +9,9 @@ let package = Package(
     name: "RegzaCore",
     platforms: [.iOS("26.0"), .macOS(.v14)],
     products: [
-        .library(name: "RegzaCore", targets: ["RegzaCore"]),
+        .library(name: "RegzaPresentation", targets: ["RegzaPresentation"]),
+        // Domain と UI の型だけ (Android で、これらの型の Java のつなぎを作るのに使う)
+        .library(name: "RegzaDomain", targets: ["RegzaDomain"]),
         // 本物の機器につなぐ組み立て (iOS・Android・CLI)
         .library(name: "RegzaApp", targets: ["RegzaApp"]),
         // つながない見本の組み立て (iOS の開発用の見本・テスト)
@@ -24,12 +26,12 @@ let package = Package(
         // Infrastructure: テレビ・Mirakurun・EPGStation との通信、HTTP、暗号、通信の形から Domain の型への変換 (Mappers)
         .target(name: "RegzaInfrastructure", dependencies: ["RegzaDomain"]),
         // Presentation: iOS と Android で共有する ViewModel。Domain の UseCase だけを使う (Repository や通信は知らない)
-        .target(name: "RegzaCore", dependencies: ["RegzaDomain"]),
+        .target(name: "RegzaPresentation", dependencies: ["RegzaDomain"]),
         // 組み立てる場所 (Composition Root): どの Repository の実装を使うかを決めて AppViewModel を作る
-        .target(name: "RegzaApp", dependencies: ["RegzaCore", "RegzaInfrastructure"]),
+        .target(name: "RegzaApp", dependencies: ["RegzaPresentation", "RegzaInfrastructure"]),
         // 見本の Repository (テレビにも録画サーバーにもつながない)
-        .target(name: "RegzaSample", dependencies: ["RegzaCore"]),
+        .target(name: "RegzaSample", dependencies: ["RegzaPresentation"]),
         .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp"]),
-        .testTarget(name: "RegzaCoreTests", dependencies: ["RegzaApp", "RegzaSample", "RegzaCore", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels"]),
+        .testTarget(name: "RegzaCoreTests", dependencies: ["RegzaApp", "RegzaSample", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels"]),
     ]
 )

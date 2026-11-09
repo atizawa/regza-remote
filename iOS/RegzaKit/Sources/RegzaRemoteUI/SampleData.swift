@@ -1,6 +1,6 @@
 #if os(iOS) && DEBUG
 import Foundation
-import RegzaCore
+import RegzaPresentation
 import RegzaSample
 
 /// 開発中に、テレビや Mirakurun につながずに画面を確かめるための見本データ。

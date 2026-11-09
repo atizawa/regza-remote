@@ -1,7 +1,7 @@
 #if os(iOS)
 import Foundation
 import Observation
-import RegzaCore
+import RegzaPresentation
 import RegzaLiveActivity
 
 /// ロック画面と Dynamic Island の表示 (Live Activity) の ViewModel。iOS だけのもの。

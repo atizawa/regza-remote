@@ -1,6 +1,6 @@
 #if os(iOS)
 import AVKit
-import RegzaCore
+import RegzaPresentation
 import RegzaLiveActivity
 import SwiftUI
 

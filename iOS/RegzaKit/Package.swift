@@ -16,7 +16,7 @@ let package = Package(
     ],
     targets: [
         // Apple: キーチェーンへの接続情報保存
-        .target(name: "RegzaAppleStorage", dependencies: [.product(name: "RegzaCore", package: "RegzaCore")]),
+        .target(name: "RegzaAppleStorage", dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore")]),
         // iOS: Live Activity / Dynamic Island と、そのボタン用 App Intents
         // テレビのリモコン (RegzaRemote) を使うので、本物の機器につなぐ組み立て (RegzaApp) に依存する
         .target(

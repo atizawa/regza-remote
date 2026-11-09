@@ -1,5 +1,5 @@
 import Foundation
-@testable import RegzaCore
+@testable import RegzaPresentation
 @testable import RegzaDomain
 
 @MainActor

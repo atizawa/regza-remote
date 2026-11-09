@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import RegzaCore
+@testable import RegzaPresentation
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 #if canImport(Darwin)

@@ -19,13 +19,13 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-java", revision: "301e3da710ede7af93e798f1ce1c7950715a5748"),
     ],
     targets: [
-        // RegzaCore (iOS と共有) の型の Java のつなぎ。RegzaCore は iOS と共有の Packages/RegzaCore にあって
+        // iOS と共有の型 (RegzaDomain と RegzaSharedModels) の Java のつなぎ。iOS と共有の Packages/RegzaCore には
         // プラグインをかけられないので、mise run build-swift が swift-java のツールで Generated/ に作る
-        // (設定は RegzaCore.swift-java.config)。ここにはプラグインをかけない
+        // (設定は RegzaDomain.swift-java.config と RegzaSharedModels.swift-java.config)。ここにはプラグインをかけない
         .target(
-            name: "RegzaCoreJava",
+            name: "RegzaSharedJava",
             dependencies: [
-                .product(name: "RegzaCore", package: "RegzaCore"),
+                .product(name: "RegzaDomain", package: "RegzaCore"),
                 .product(name: "SwiftJava", package: "swift-java"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
@@ -45,7 +45,7 @@ let package = Package(
             dependencies: [
                 "CAndroidMainLoop",
                 "CBoringSSL",
-                "RegzaCoreJava",
+                "RegzaSharedJava",
                 // 本物の機器につなぐ組み立て (AppViewModel を作る)
                 .product(name: "RegzaApp", package: "RegzaCore"),
                 .product(name: "SwiftJava", package: "swift-java"),

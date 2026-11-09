@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import RegzaCore
+import RegzaPresentation
 
 // テレビにも録画サーバーにもつながない、見本の Repository。
 // 開発用の見本の画面 (iOS の起動引数 -SampleData)、テスト、プレビューで使う
