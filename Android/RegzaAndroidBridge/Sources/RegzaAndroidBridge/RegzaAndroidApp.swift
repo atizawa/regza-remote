@@ -41,8 +41,8 @@ public struct RegzaAndroidSnapshot {
     public var connectionError: String?
     /// つながらないので、IP アドレスが変わっていないかテレビを探している
     public var isSearchingTV: Bool
-    /// 登録の画面を出している間だけある
-    public var setup: RegzaAndroidSetup?
+    /// 設定の画面の state (SettingsViewModel.State をそのまま渡す)。設定を出している間だけある
+    public var setup: SettingsState?
     /// ミニプレーヤーを押して開いた、いま映っているものの詳細。開いている間だけある
     public var nowPlayingDetail: RegzaAndroidNowPlaying?
     /// アプリで見ている (ライブ視聴の画面を出している) 間だけある
@@ -57,63 +57,6 @@ public struct RegzaAndroidNowPlaying {
     public var description: String?
     public var canPowerOn: Bool
     public var canStartOver: Bool
-}
-
-/// テレビの登録と録画サーバーの設定の画面 (TVSetupViewModel.State と ServerSetupViewModel.State)
-public struct RegzaAndroidSetup {
-    /// 開いている設定の画面 ("tv"・"guide")。設定の最初の画面なら空
-    public var page: String
-    /// 設定の最初の画面に出す、テレビの状態 (「登録済み」など) と、気を付けてほしい状態か
-    public var tvStatus: String
-    public var tvNeedsAttention: Bool
-    public var host: String
-    public var user: String
-    public var password: String
-    public var devices: [DeviceItem]
-    public var isScanning: Bool
-    public var scanMessage: String?
-    /// テレビに PIN が表示されていて、入力を待っている
-    public var isWaitingForPIN: Bool
-    public var pin: String
-    public var isPairing: Bool
-    public var pairingMessage: String?
-    /// このアプリの ID で登録済みか
-    public var isRegistered: Bool
-    /// PIN で登録して保存できた (登録の画面を閉じる)
-    public var hasRegistered: Bool
-    /// ユーザー名とパスワードの入力欄を開いているか
-    public var isShowingManualEntry: Bool
-    public var isTesting: Bool
-    public var testResult: String?
-    /// 保存できるか
-    public var canSave: Bool
-    /// 登録の画面を閉じられる (登録済みのテレビがある)
-    public var canClose: Bool
-    /// 番組表 (Mirakurun) のアドレス
-    public var guideHost: String
-    /// 設定の最初の画面に出す、番組表の状態
-    public var guideStatus: String
-    /// 連携を解除するか確かめるときの見出しと説明
-    public var guideUnlinkTitle: String
-    public var guideUnlinkMessage: String
-    public var guideHosts: [String]
-    public var isScanningGuide: Bool
-    public var guideMessage: String?
-    /// 保存済みで、連携を解除できるか
-    public var isGuideLinked: Bool
-    /// 入力したポートが正しいか (番組表とライブ視聴の両方)
-    public var isGuideHostValid: Bool
-    /// Mirakurun のアドレスが入っている (EPGStation は Mirakurun から放送を受け取るので、先に番組表を設定する)
-    public var hasGuideDraft: Bool
-    /// ライブ視聴 (EPGStation) のアドレスと、その設定の画面に出すもの
-    public var streamHost: String
-    public var streamHosts: [String]
-    public var isScanningStream: Bool
-    public var streamMessage: String?
-    public var streamStatus: String
-    public var isStreamLinked: Bool
-    public var streamUnlinkTitle: String
-    public var streamUnlinkMessage: String
 }
 
 // MARK: - 操作
@@ -150,29 +93,6 @@ public enum RegzaAndroidAction {
     // 設定 (TVSetupViewModel・ServerSetupViewModel)
     case showSetup
     case closeSetup
-    /// 設定の中の画面を開く ("tv"・"guide"・"stream")
-    case openSetupPage(String)
-    /// 設定の最初の画面に戻る
-    case closeSetupPage
-    case setupAppear
-    case setHost(String)
-    case setUser(String)
-    case setPassword(String)
-    case setPIN(String)
-    case setShowingManualEntry(Bool)
-    case scan
-    case selectDevice(String)
-    case startPairing
-    case confirmPairing
-    case cancelPairing
-    case test
-    case setGuideHost(String)
-    case scanGuide
-    case unlinkGuide
-    case setStreamHost(String)
-    case scanStream
-    case unlinkStream
-    case save
 }
 
 // MARK: - 窓口
@@ -275,50 +195,7 @@ public final class RegzaAndroidApp {
             nowPlayingBand: remote.nowPlayingBand,
             connectionError: remote.errorMessage,
             isSearchingTV: remote.isSearchingTV,
-            setup: settings.map { settings in
-                let tv = settings.tv.state
-                let servers = settings.servers.state
-                return RegzaAndroidSetup(
-                    page: appState.settingsPath.last?.rawValue ?? "",
-                    tvStatus: tv.status.text,
-                    tvNeedsAttention: tv.status.needsAttention,
-                    host: tv.host,
-                    user: tv.user,
-                    password: tv.password,
-                    devices: tv.devices,
-                    isScanning: tv.isScanning,
-                    scanMessage: tv.scanMessage,
-                    isWaitingForPIN: tv.isWaitingForPIN,
-                    pin: tv.pin,
-                    isPairing: tv.isPairing,
-                    pairingMessage: tv.pairingMessage,
-                    isRegistered: tv.isRegistered,
-                    hasRegistered: tv.hasRegistered,
-                    isShowingManualEntry: tv.isShowingManualEntry,
-                    isTesting: tv.isTesting,
-                    testResult: tv.testResult,
-                    canSave: tv.canSave && servers.isValid,
-                    canClose: remote.isConfigured,
-                    guideHost: servers.guide.host,
-                    guideStatus: servers.guide.status,
-                    guideUnlinkTitle: servers.guide.unlinkTitle,
-                    guideUnlinkMessage: servers.guide.unlinkMessage,
-                    guideHosts: servers.guide.hosts,
-                    isScanningGuide: servers.guide.isScanning,
-                    guideMessage: servers.guide.message,
-                    isGuideLinked: servers.guide.isLinked,
-                    isGuideHostValid: servers.isValid,
-                    hasGuideDraft: servers.hasGuideDraft,
-                    streamHost: servers.stream.host,
-                    streamHosts: servers.stream.hosts,
-                    isScanningStream: servers.stream.isScanning,
-                    streamMessage: servers.stream.message,
-                    streamStatus: servers.stream.status,
-                    isStreamLinked: servers.stream.isLinked,
-                    streamUnlinkTitle: servers.stream.unlinkTitle,
-                    streamUnlinkMessage: servers.stream.unlinkMessage
-                )
-            },
+            setup: settings?.state,
             nowPlayingDetail: nowPlaying.map {
                 RegzaAndroidNowPlaying(
                     title: $0.title, playableChannelCode: $0.playableChannelCode, description: $0.description,
@@ -367,8 +244,6 @@ public final class RegzaAndroidApp {
 
     /// 操作を ViewModel の操作に置き換えて送る (テストからは、送った順を待たずに直接呼ぶ)
     @MainActor func perform(_ action: RegzaAndroidAction) {
-        let tv = app.settings?.tv
-        let servers = app.settings?.servers
         switch action {
         case .selectTab(let tab):
             if let tab = AppViewModel.Tab(rawValue: tab) { app.send(.selectTab(tab)) }
@@ -392,31 +267,6 @@ public final class RegzaAndroidApp {
         case .openSearch: app.send(.open(.search))
         case .showSetup: app.send(.showSettings)
         case .closeSetup: app.send(.closeSettings)
-        case .openSetupPage(let page):
-            guard let page = AppViewModel.SettingsPage(rawValue: page) else { return }
-            app.send(.setSettingsPath([page]))
-            // Mirakurun と同じサーバーで EPGStation が動いていれば、候補として出す
-            if page == .stream { servers?.send(.suggestStreamHost) }
-        case .closeSetupPage: app.send(.setSettingsPath([]))
-        case .setupAppear: tv?.send(.appear)
-        case .setHost(let host): tv?.send(.setHost(host))
-        case .setUser(let user): tv?.send(.setUser(user))
-        case .setPassword(let password): tv?.send(.setPassword(password))
-        case .setPIN(let pin): tv?.send(.setPIN(pin))
-        case .setShowingManualEntry(let isShowing): tv?.send(.setShowingManualEntry(isShowing))
-        case .scan: tv?.send(.scan)
-        case .selectDevice(let host): tv?.send(.select(host))
-        case .startPairing: tv?.send(.startPairing)
-        case .confirmPairing: tv?.send(.confirmPairing)
-        case .cancelPairing: tv?.send(.cancelPairing)
-        case .test: tv?.send(.test)
-        case .setGuideHost(let host): servers?.send(.setHost(.guide, host))
-        case .scanGuide: servers?.send(.scan(.guide))
-        case .unlinkGuide: servers?.send(.unlink(.guide))
-        case .setStreamHost(let host): servers?.send(.setHost(.stream, host))
-        case .scanStream: servers?.send(.scan(.stream))
-        case .unlinkStream: servers?.send(.unlink(.stream))
-        case .save: app.send(.saveSettings)
         }
     }
 

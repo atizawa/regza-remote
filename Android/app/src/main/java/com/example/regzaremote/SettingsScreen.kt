@@ -45,44 +45,52 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidSetup
+import com.example.regzaremote.core.ServerSetupAction
+import com.example.regzaremote.core.ServerSetupServer
+import com.example.regzaremote.core.ServerSetupServerState
+import com.example.regzaremote.core.SettingsAction
+import com.example.regzaremote.core.SettingsPage
+import com.example.regzaremote.core.SettingsState
+import com.example.regzaremote.core.TVSetupAction
 
 /**
- * 設定 (iOS 版の SettingsView と同じ TVSetupViewModel・ServerSetupViewModel)。
+ * 設定 (state と操作は SettingsViewModel の SettingsState・SettingsAction)。
  * 最初の画面にテレビと録画サーバーの状態を並べ、押すとそれぞれの設定の画面を開く
- * (テレビが未設定なら、AppViewModel がテレビの設定の画面から開く)
+ * (テレビが未設定なら、SettingsViewModel がテレビの設定の画面から開く)
  */
 @Composable
-fun SettingsScreen(setup: RegzaAndroidSetup, send: Send) {
-    // PIN で登録できたら (保存も済んでいる) 閉じる
-    LaunchedEffect(setup.isHasRegistered) { if (setup.isHasRegistered) send(RegzaAndroidAction.closeSetup()) }
-    when (setup.page) {
+fun SettingsScreen(setup: SettingsState, send: Send) {
+    when (setup.path.lastOrNull()?.rawValue) {
         "tv" -> TVSettingsPage(setup, send)
-        "guide" -> GuideSettingsPage(setup, send)
-        "stream" -> StreamSettingsPage(setup, send)
+        "guide" -> ServerSettingsPage(guidePage, setup.servers.guide, setup, send)
+        "stream" -> ServerSettingsPage(streamPage, setup.servers.stream, setup, send)
         else -> SettingsTopPage(setup, send)
     }
 }
 
+/** テレビの登録の操作を送る */
+private fun tv(action: TVSetupAction) = SettingsAction.tv(action)
+
 @Composable
-private fun SettingsTopPage(setup: RegzaAndroidSetup, send: Send) {
+private fun SettingsTopPage(setup: SettingsState, send: Send) {
     // 登録済みのテレビがあれば、戻るボタンでも閉じる
-    BackHandler(enabled = setup.isCanClose) { send(RegzaAndroidAction.closeSetup()) }
-    SettingsPage(
+    BackHandler(enabled = setup.isCanClose) { send(SettingsAction.close()) }
+    val servers = setup.servers
+    SettingsFrame(
         header = {
             // キャンセルは左上の ×、保存は右上の ✓ (iOS 版と同じ)
             ScreenHeader(
                 "設定",
-                leading = if (setup.isCanClose) ({ HeaderIconButton(Icons.Filled.Close, "閉じる") { send(RegzaAndroidAction.closeSetup()) } }) else null,
+                leading = if (setup.isCanClose) ({ HeaderIconButton(Icons.Filled.Close, "閉じる") { send(SettingsAction.close()) } }) else null,
             ) {
-                HeaderIconButton(Icons.Filled.Check, "保存", enabled = setup.isCanSave, tint = AppTheme.accent) { send(RegzaAndroidAction.save()) }
+                HeaderIconButton(Icons.Filled.Check, "保存", enabled = setup.isCanSave, tint = AppTheme.accent) { send(SettingsAction.save()) }
             }
         },
     ) {
         FormSection("テレビ") {
-            NavigationRow("REGZA", setup.tvStatus, valueColor = if (setup.isTvNeedsAttention) AppTheme.orange else null) {
-                send(RegzaAndroidAction.openSetupPage("tv"))
+            val status = setup.tv.status
+            NavigationRow("REGZA", status.text, valueColor = if (status.isNeedsAttention) AppTheme.orange else null) {
+                send(SettingsAction.openPage(SettingsPage.tv()))
             }
         }
         FormSection(
@@ -90,37 +98,38 @@ private fun SettingsTopPage(setup: RegzaAndroidSetup, send: Send) {
             footer = "Mirakurun や EPGStation を使っている場合だけ設定してください。設定すると、番組名・番組表・番組表からの録画予約や、" +
                 "アプリでのライブ視聴が使えます。\nライブ視聴（EPGStation）は、番組表（Mirakurun）を設定すると設定できます。",
         ) {
-            NavigationRow("番組表（Mirakurun）", setup.guideStatus) { send(RegzaAndroidAction.openSetupPage("guide")) }
+            NavigationRow("番組表（Mirakurun）", servers.guide.status) { send(SettingsAction.openPage(SettingsPage.guide())) }
             RowDivider()
             // EPGStation は Mirakurun から放送を受け取るので、Mirakurun を設定してから設定できるようにする
             NavigationRow(
-                "ライブ視聴（EPGStation）", if (setup.isHasGuideDraft) setup.streamStatus else "先に番組表を設定",
-                enabled = setup.isHasGuideDraft,
-            ) { send(RegzaAndroidAction.openSetupPage("stream")) }
+                "ライブ視聴（EPGStation）", if (servers.isHasGuideDraft) servers.stream.status else "先に番組表を設定",
+                enabled = servers.isHasGuideDraft,
+            ) { send(SettingsAction.openPage(SettingsPage.stream())) }
         }
     }
 }
 
 /** テレビを探す・PIN で登録する・ユーザー名とパスワード・接続テスト */
 @Composable
-private fun TVSettingsPage(setup: RegzaAndroidSetup, send: Send) {
-    BackHandler { send(RegzaAndroidAction.closeSetupPage()) }
+private fun TVSettingsPage(setup: SettingsState, send: Send) {
+    val state = setup.tv
+    BackHandler { send(SettingsAction.back()) }
     // 未設定なら開いたときに探し始める
-    LaunchedEffect(Unit) { send(RegzaAndroidAction.setupAppear()) }
-    val isBusy = setup.isPairing || setup.isWaitingForPIN
+    LaunchedEffect(Unit) { send(tv(TVSetupAction.appear())) }
+    val isBusy = state.isPairing || state.isWaitingForPIN
 
-    SettingsPage(header = { ScreenHeader("REGZA", onBack = { send(RegzaAndroidAction.closeSetupPage()) }) }) {
+    SettingsFrame(header = { ScreenHeader("REGZA", onBack = { send(SettingsAction.back()) }) }) {
         FormSection(
             "テレビ",
             footer = "スマートフォンとテレビを同じ Wi-Fi につないでください。見つからないときは、テレビの「設定」→「ネットワーク」で IP アドレスを確認して入力してください。",
         ) {
             FormTextField(
-                setup.host, { send(RegzaAndroidAction.setHost(it)) }, "IPアドレス (例: 192.168.0.10)",
-                enabled = !setup.isWaitingForPIN, keyboardType = KeyboardType.Uri,
+                state.host, { send(tv(TVSetupAction.setHost(it))) }, "IPアドレス (例: 192.168.0.10)",
+                enabled = !state.isWaitingForPIN, keyboardType = KeyboardType.Uri,
             )
-            setup.devices.forEach { device ->
+            state.devices.forEach { device ->
                 RowDivider()
-                FormRow(onClick = if (isBusy) null else ({ send(RegzaAndroidAction.selectDevice(device.host)) })) {
+                FormRow(onClick = if (isBusy) null else ({ send(tv(TVSetupAction.select(device.host))) })) {
                     Column(Modifier.weight(1f)) {
                         Text(device.name)
                         Note(device.host)
@@ -130,142 +139,122 @@ private fun TVSettingsPage(setup: RegzaAndroidSetup, send: Send) {
             }
             RowDivider()
             ActionRow(
-                if (setup.isScanning) "テレビを探しています…" else "テレビを探す", isBusy = setup.isScanning,
-                enabled = !setup.isScanning && !setup.isWaitingForPIN,
-            ) { send(RegzaAndroidAction.scan()) }
-            setup.scanMessage.orElse(null)?.let { RowDivider(); MessageRow(it) }
+                if (state.isScanning) "テレビを探しています…" else "テレビを探す", isBusy = state.isScanning,
+                enabled = !state.isScanning && !state.isWaitingForPIN,
+            ) { send(tv(TVSetupAction.scan())) }
+            state.scanMessage.orElse(null)?.let { RowDivider(); MessageRow(it) }
         }
 
         FormSection(
             "PIN で登録",
-            footer = if (setup.isWaitingForPIN) "テレビの画面に表示されている PIN を入力してください。"
+            footer = if (state.isWaitingForPIN) "テレビの画面に表示されている PIN を入力してください。"
             else "テレビの電源を入れてからボタンを押すと、テレビの画面に PIN が表示されます。",
         ) {
-            if (!setup.isWaitingForPIN) {
+            if (!state.isWaitingForPIN) {
                 ActionRow(
-                    if (setup.isRegistered) "もう一度登録する" else "テレビに PIN を表示", isBusy = setup.isPairing,
-                    enabled = setup.host.isNotBlank() && !setup.isPairing,
-                ) { send(RegzaAndroidAction.startPairing()) }
+                    if (state.isRegistered) "もう一度登録する" else "テレビに PIN を表示", isBusy = state.isPairing,
+                    enabled = state.isHasAddress && !state.isPairing,
+                ) { send(tv(TVSetupAction.startPairing())) }
             } else {
                 // テレビに PIN が出たら、すぐ打てるようにする
                 val focus = remember { FocusRequester() }
                 LaunchedEffect(Unit) { focus.requestFocus() }
                 FormTextField(
-                    setup.pin, { send(RegzaAndroidAction.setPIN(it)) }, "テレビに表示された PIN",
+                    state.pin, { send(tv(TVSetupAction.setPIN(it))) }, "テレビに表示された PIN",
                     keyboardType = KeyboardType.NumberPassword, modifier = Modifier.focusRequester(focus),
                 )
                 RowDivider()
-                ActionRow("登録", isBusy = setup.isPairing, enabled = setup.pin.isNotBlank() && !setup.isPairing) {
-                    send(RegzaAndroidAction.confirmPairing())
+                // PIN で登録できたら、SettingsViewModel が設定を閉じる
+                ActionRow("登録", isBusy = state.isPairing, enabled = state.pin.isNotBlank() && !state.isPairing) {
+                    send(tv(TVSetupAction.confirmPairing()))
                 }
                 RowDivider()
-                ActionRow("やめる", enabled = !setup.isPairing) { send(RegzaAndroidAction.cancelPairing()) }
+                ActionRow("やめる", enabled = !state.isPairing) { send(tv(TVSetupAction.cancelPairing())) }
             }
-            setup.pairingMessage.orElse(null)?.let { RowDivider(); MessageRow(it) }
+            state.pairingMessage.orElse(null)?.let { RowDivider(); MessageRow(it) }
         }
 
         FormSection(footer = "PIN 登録に対応していない古い機種では、テレビの「外部連携設定」で設定したユーザー名とパスワードを入力してください。") {
-            FormRow(onClick = { send(RegzaAndroidAction.setShowingManualEntry(!setup.isShowingManualEntry)) }) {
+            FormRow(onClick = { send(tv(TVSetupAction.setShowingManualEntry(!state.isShowingManualEntry))) }) {
                 Text("ユーザー名とパスワードを入力", Modifier.weight(1f))
                 Icon(
                     Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = AppTheme.accent,
-                    modifier = Modifier.rotate(if (setup.isShowingManualEntry) 180f else 0f),
+                    modifier = Modifier.rotate(if (state.isShowingManualEntry) 180f else 0f),
                 )
             }
-            if (setup.isShowingManualEntry) {
+            if (state.isShowingManualEntry) {
                 RowDivider()
-                FormTextField(setup.user, { send(RegzaAndroidAction.setUser(it)) }, "ユーザー名")
+                FormTextField(state.user, { send(tv(TVSetupAction.setUser(it))) }, "ユーザー名")
                 RowDivider()
-                FormTextField(setup.password, { send(RegzaAndroidAction.setPassword(it)) }, "パスワード", isPassword = true)
+                FormTextField(state.password, { send(tv(TVSetupAction.setPassword(it))) }, "パスワード", isPassword = true)
             }
         }
 
         FormSection {
-            ActionRow("接続テスト", isBusy = setup.isTesting, enabled = setup.host.isNotBlank() && !setup.isTesting) {
-                send(RegzaAndroidAction.test())
+            ActionRow("接続テスト", isBusy = state.isTesting, enabled = state.isHasAddress && !state.isTesting) {
+                send(tv(TVSetupAction.test()))
             }
-            setup.testResult.orElse(null)?.let { RowDivider(); MessageRow(it) }
+            state.testResult.orElse(null)?.let { RowDivider(); MessageRow(it) }
         }
     }
 }
 
-/** 録画サーバー (Mirakurun・EPGStation) の設定の画面に出すもの */
+/** 録画サーバー (Mirakurun・EPGStation) の設定の画面の文言 */
 private class ServerPage(
+    val server: () -> ServerSetupServer,
     val title: String,
     val header: String,
     val footer: String,
     val name: String,
-    val host: String,
-    val hosts: Array<String>,
-    val isScanning: Boolean,
-    val message: String?,
-    val isLinked: Boolean,
-    val unlinkTitle: String,
-    val unlinkMessage: String,
-    val setHost: (String) -> RegzaAndroidAction,
-    val scan: RegzaAndroidAction,
-    val unlink: RegzaAndroidAction,
 )
 
 /** 番組表 (Mirakurun) の設定 */
-@Composable
-private fun GuideSettingsPage(setup: RegzaAndroidSetup, send: Send) {
-    ServerSettingsPage(
-        ServerPage(
-            title = "番組表（Mirakurun）", header = "番組表 (Mirakurun)",
-            footer = "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。",
-            name = "Mirakurun", host = setup.guideHost, hosts = setup.guideHosts, isScanning = setup.isScanningGuide,
-            message = setup.guideMessage.orElse(null), isLinked = setup.isGuideLinked,
-            unlinkTitle = setup.guideUnlinkTitle, unlinkMessage = setup.guideUnlinkMessage,
-            setHost = { RegzaAndroidAction.setGuideHost(it) }, scan = RegzaAndroidAction.scanGuide(), unlink = RegzaAndroidAction.unlinkGuide(),
-        ),
-        isHostValid = setup.isGuideHostValid, send = send,
-    )
-}
+private val guidePage = ServerPage(
+    server = { ServerSetupServer.guide() },
+    title = "番組表（Mirakurun）", header = "番組表 (Mirakurun)",
+    footer = "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。",
+    name = "Mirakurun",
+)
 
 /** ライブ視聴 (EPGStation) の設定 */
-@Composable
-private fun StreamSettingsPage(setup: RegzaAndroidSetup, send: Send) {
-    ServerSettingsPage(
-        ServerPage(
-            title = "ライブ視聴（EPGStation）", header = "ライブ視聴 (EPGStation)",
-            footer = "EPGStation を動かしている場合に設定すると、放送中の番組をスマートフォンで見られます。家の Wi-Fi の中だけで使えます。",
-            name = "EPGStation", host = setup.streamHost, hosts = setup.streamHosts, isScanning = setup.isScanningStream,
-            message = setup.streamMessage.orElse(null), isLinked = setup.isStreamLinked,
-            unlinkTitle = setup.streamUnlinkTitle, unlinkMessage = setup.streamUnlinkMessage,
-            setHost = { RegzaAndroidAction.setStreamHost(it) }, scan = RegzaAndroidAction.scanStream(), unlink = RegzaAndroidAction.unlinkStream(),
-        ),
-        isHostValid = setup.isGuideHostValid, send = send,
-    )
-}
+private val streamPage = ServerPage(
+    server = { ServerSetupServer.stream() },
+    title = "ライブ視聴（EPGStation）", header = "ライブ視聴 (EPGStation)",
+    footer = "EPGStation を動かしている場合に設定すると、放送中の番組をスマートフォンで見られます。家の Wi-Fi の中だけで使えます。",
+    name = "EPGStation",
+)
 
 /** 録画サーバーの設定の画面。保存済みなら、連携を解除するボタンも出す */
 @Composable
-private fun ServerSettingsPage(page: ServerPage, isHostValid: Boolean, send: Send) {
-    BackHandler { send(RegzaAndroidAction.closeSetupPage()) }
+private fun ServerSettingsPage(page: ServerPage, state: ServerSetupServerState, setup: SettingsState, send: Send) {
+    fun server(action: (ServerSetupServer) -> ServerSetupAction) = SettingsAction.server(action(page.server()))
+    BackHandler { send(SettingsAction.back()) }
     var isConfirmingUnlink by remember { mutableStateOf(false) }
 
-    SettingsPage(header = { ScreenHeader(page.title, onBack = { send(RegzaAndroidAction.closeSetupPage()) }) }) {
+    SettingsFrame(header = { ScreenHeader(page.title, onBack = { send(SettingsAction.back()) }) }) {
         FormSection(page.header, footer = page.footer) {
-            FormTextField(page.host, { send(page.setHost(it)) }, "IPアドレス (例: 192.168.0.2)", keyboardType = KeyboardType.Uri)
-            if (!isHostValid) {
+            FormTextField(
+                state.host, { host -> send(server { ServerSetupAction.setHost(it, host) }) }, "IPアドレス (例: 192.168.0.2)",
+                keyboardType = KeyboardType.Uri,
+            )
+            if (!setup.servers.isValid) {
                 MessageRow("ポートは 1〜65535 の数字で入れてください。", color = AppTheme.red)
             }
-            page.hosts.forEach { host ->
+            state.hosts.forEach { host ->
                 RowDivider()
-                FormRow(onClick = { send(page.setHost(host)) }) {
+                FormRow(onClick = { send(server { ServerSetupAction.setHost(it, host) }) }) {
                     Text(host, Modifier.weight(1f))
-                    if (host == page.host) Icon(Icons.Filled.Check, contentDescription = "選択中", tint = AppTheme.accent)
+                    if (host == state.host) Icon(Icons.Filled.Check, contentDescription = "選択中", tint = AppTheme.accent)
                 }
             }
             RowDivider()
             ActionRow(
-                if (page.isScanning) "${page.name} を探しています…" else "${page.name} を探す", isBusy = page.isScanning,
-                enabled = !page.isScanning,
-            ) { send(page.scan) }
-            page.message?.let { RowDivider(); MessageRow(it) }
+                if (state.isScanning) "${page.name} を探しています…" else "${page.name} を探す", isBusy = state.isScanning,
+                enabled = !state.isScanning,
+            ) { send(server { ServerSetupAction.scan(it) }) }
+            state.message.orElse(null)?.let { RowDivider(); MessageRow(it) }
         }
-        if (page.isLinked) {
+        if (state.isLinked) {
             FormSection {
                 ActionRow("連携を解除", color = AppTheme.red) { isConfirmingUnlink = true }
             }
@@ -275,14 +264,13 @@ private fun ServerSettingsPage(page: ServerPage, isHostValid: Boolean, send: Sen
     if (isConfirmingUnlink) {
         AlertDialog(
             onDismissRequest = { isConfirmingUnlink = false },
-            title = { Text(page.unlinkTitle) },
-            text = { Text(page.unlinkMessage) },
+            title = { Text(state.unlinkTitle) },
+            text = { Text(state.unlinkMessage) },
             confirmButton = {
                 TextButton(onClick = {
                     isConfirmingUnlink = false
-                    // すぐにアドレスを消して反映し、設定の最初の画面に戻る
-                    send(page.unlink)
-                    send(RegzaAndroidAction.closeSetupPage())
+                    // すぐにアドレスを消して反映する (SettingsViewModel が設定の最初の画面に戻る)
+                    send(server { ServerSetupAction.unlink(it) })
                 }) { Text("連携を解除", color = AppTheme.red) }
             },
             dismissButton = { TextButton(onClick = { isConfirmingUnlink = false }) { Text("やめる") } },
@@ -292,7 +280,7 @@ private fun ServerSettingsPage(page: ServerPage, isHostValid: Boolean, send: Sen
 
 /** 設定の画面の枠。見出しの下に、まとまりを縦に並べてスクロールする */
 @Composable
-private fun SettingsPage(header: @Composable () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+private fun SettingsFrame(header: @Composable () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     // Android 15 からは画面の端まで描くので、タブの画面 (Scaffold) と同じく、ステータスバーと
     // ナビゲーションバー・キーボードの分を空ける
     Column(Modifier.fillMaxSize().safeDrawingPadding()) {

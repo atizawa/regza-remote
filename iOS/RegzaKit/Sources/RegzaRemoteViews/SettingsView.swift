@@ -3,30 +3,27 @@ import RegzaPresentation
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var tv: TVSetupViewModel
-    @State private var servers: ServerSetupViewModel
-    @Environment(AppViewModel.self) private var app
-    @Environment(\.dismiss) private var dismiss
+    @State private var settings: SettingsViewModel
     @FocusState private var isPINFocused: Bool
     /// 連携を解除するか確かめている設定
-    @State private var unlinking: ServerSetupViewModel.Server?
+    @State private var unlinking: ServerSetupServer?
 
-    init(tv: TVSetupViewModel, servers: ServerSetupViewModel) {
-        _tv = State(initialValue: tv)
-        _servers = State(initialValue: servers)
+    init(settings: SettingsViewModel) {
+        _settings = State(initialValue: settings)
     }
 
     /// 設定の画面。テレビの設定と、録画サーバー (Mirakurun・EPGStation) の設定を別の画面に分ける
-    private typealias Page = AppViewModel.SettingsPage
+    private typealias Page = SettingsPage
 
-    /// 開いている設定の画面 (テレビが未設定なら、AppViewModel がテレビの設定の画面から開く)
+    /// 開いている設定の画面 (テレビが未設定なら、SettingsViewModel がテレビの設定の画面から開く)
     private var path: Binding<[Page]> {
-        Binding(get: { app.state.settingsPath }, set: { app.send(.setSettingsPath($0)) })
+        Binding(get: { settings.state.path }, set: { settings.send(.setPath($0)) })
     }
 
     var body: some View {
-        let tvState = tv.state
-        let serverState = servers.state
+        let state = settings.state
+        let tvState = state.tv
+        let serverState = state.servers
         NavigationStack(path: path) {
             Form {
                 Section("テレビ") {
@@ -71,39 +68,34 @@ struct SettingsView: View {
                     serverPage(.guide, title: "番組表（Mirakurun）")
                 case .stream:
                     serverPage(.stream, title: "ライブ視聴（EPGStation）")
-                        .onAppear { servers.send(.suggestStreamHost) }
                 }
             }
             // iOS 26 の標準に合わせ、キャンセルは ×、保存は ✓ (強調色) のボタンにする
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .cancel) { dismiss() }
+                    Button(role: .cancel) { settings.send(.close) }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    // 保存できたら AppViewModel が設定を閉じる
-                    Button(role: .confirm) { app.send(.saveSettings) }
-                        .disabled(!tvState.canSave || !serverState.isValid)
+                    // 保存できたら SettingsViewModel が設定を閉じる
+                    Button(role: .confirm) { settings.send(.save) }
+                        .disabled(!state.canSave)
                 }
             }
             // テレビに PIN が出たら、すぐ打てるようにする
             .onChange(of: tvState.isWaitingForPIN) { _, isWaiting in
                 if isWaiting { isPINFocused = true }
             }
-            // PIN で登録できたら (保存も済んでいる) 閉じる
-            .onChange(of: tvState.hasRegistered) { _, hasRegistered in
-                if hasRegistered { dismiss() }
-            }
         }
     }
 
     /// 入力欄を ViewModel につなぐ (打つたびに操作として送る)
-    private func binding<Value>(_ value: Value, _ action: @escaping (Value) -> TVSetupViewModel.Action) -> Binding<Value> {
-        Binding(get: { value }, set: { tv.send(action($0)) })
+    private func binding<Value>(_ value: Value, _ action: @escaping (Value) -> TVSetupAction) -> Binding<Value> {
+        Binding(get: { value }, set: { settings.send(.tv(action($0))) })
     }
 
     /// テレビを探す・PIN で登録する・ユーザー名とパスワード・接続テスト
     private var tvPage: some View {
-        let state = tv.state
+        let state = settings.state.tv
         return Form {
             Section {
                 TextField("IPアドレス (例: 192.168.0.10)", text: binding(state.host) { .setHost($0) })
@@ -113,7 +105,7 @@ struct SettingsView: View {
                     .disabled(state.isWaitingForPIN)
                 ForEach(state.devices) { row in
                     Button {
-                        tv.send(.select(row.host))
+                        settings.send(.tv(.select(row.host)))
                     } label: {
                         HStack {
                             VStack(alignment: .leading) {
@@ -132,7 +124,7 @@ struct SettingsView: View {
                     .disabled(state.isWaitingForPIN)
                 }
                 Button {
-                    tv.send(.scan)
+                    settings.send(.tv(.scan))
                 } label: {
                     HStack {
                         Label(state.isScanning ? "テレビを探しています…" : "テレビを探す", systemImage: "magnifyingglass")
@@ -167,7 +159,7 @@ struct SettingsView: View {
 
             Section {
                 Button {
-                    tv.send(.test)
+                    settings.send(.tv(.test))
                 } label: {
                     HStack {
                         Text("接続テスト")
@@ -186,14 +178,14 @@ struct SettingsView: View {
         .navigationTitle("REGZA")
         .navigationBarTitleDisplayMode(.inline)
         // 未設定なら開いたときに探し始める
-        .onAppear { tv.send(.appear) }
+        .onAppear { settings.send(.tv(.appear)) }
     }
 
-    private func pairingSection(_ state: TVSetupViewModel.State) -> some View {
+    private func pairingSection(_ state: TVSetupState) -> some View {
         Section {
             if !state.isWaitingForPIN {
                 Button {
-                    tv.send(.startPairing)
+                    settings.send(.tv(.startPairing))
                 } label: {
                     HStack {
                         Label(state.isRegistered ? "もう一度登録する" : "テレビに PIN を表示", systemImage: "number.square")
@@ -209,7 +201,7 @@ struct SettingsView: View {
                     .font(.title3.monospacedDigit())
                     .focused($isPINFocused)
                 Button {
-                    tv.send(.confirmPairing)
+                    settings.send(.tv(.confirmPairing))
                 } label: {
                     HStack {
                         Text("登録")
@@ -219,7 +211,7 @@ struct SettingsView: View {
                 }
                 .disabled(state.pin.isEmpty || state.isPairing)
                 Button("やめる", role: .cancel) {
-                    tv.send(.cancelPairing)
+                    settings.send(.tv(.cancelPairing))
                 }
                 .disabled(state.isPairing)
             }
@@ -240,8 +232,8 @@ struct SettingsView: View {
     }
 
     /// 録画サーバーの設定の画面。保存済みなら、連携を解除するボタンも出す
-    private func serverPage(_ server: ServerSetupViewModel.Server, title: String) -> some View {
-        let state = servers.state[server]
+    private func serverPage(_ server: ServerSetupServer, title: String) -> some View {
+        let state = settings.state.servers[server]
         return Form {
             serverSection(server, state)
             if state.isLinked { unlinkSection(server, state) }
@@ -250,16 +242,16 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func serverSection(_ server: ServerSetupViewModel.Server, _ state: ServerSetupViewModel.ServerState) -> some View {
+    private func serverSection(_ server: ServerSetupServer, _ state: ServerSetupServerState) -> some View {
         let name = server == .guide ? "Mirakurun" : "EPGStation"
         return Section {
             ServerAddressField(
-                host: Binding(get: { state.host }, set: { servers.send(.setHost(server, $0)) }),
+                host: Binding(get: { state.host }, set: { settings.send(.server(.setHost(server, $0))) }),
                 defaultPort: state.defaultPort
             )
             ForEach(state.hosts, id: \.self) { host in
                 Button {
-                    servers.send(.setHost(server, host))
+                    settings.send(.server(.setHost(server, host)))
                 } label: {
                     HStack {
                         Text(host).monospacedDigit()
@@ -272,7 +264,7 @@ struct SettingsView: View {
                 .tint(.primary)
             }
             Button {
-                servers.send(.scan(server))
+                settings.send(.server(.scan(server)))
             } label: {
                 HStack {
                     Label(state.isScanning ? "\(name) を探しています…" : "\(name) を探す", systemImage: "magnifyingglass")
@@ -296,7 +288,7 @@ struct SettingsView: View {
     }
 
     /// 録画サーバーとの連携をやめる。確かめたうえで、すぐにアドレスを消して反映する
-    private func unlinkSection(_ server: ServerSetupViewModel.Server, _ state: ServerSetupViewModel.ServerState) -> some View {
+    private func unlinkSection(_ server: ServerSetupServer, _ state: ServerSetupServerState) -> some View {
         Section {
             Button("連携を解除", role: .destructive) { unlinking = server }
                 .confirmationDialog(
@@ -304,11 +296,8 @@ struct SettingsView: View {
                     isPresented: Binding(get: { unlinking == server }, set: { if !$0 { unlinking = nil } }),
                     titleVisibility: .visible
                 ) {
-                    Button("連携を解除", role: .destructive) {
-                        servers.send(.unlink(server))
-                        let page: Page = server == .guide ? .guide : .stream
-                        app.send(.setSettingsPath(app.state.settingsPath.filter { $0 != page }))
-                    }
+                    // SettingsViewModel が、その設定の画面を閉じる
+                    Button("連携を解除", role: .destructive) { settings.send(.server(.unlink(server))) }
                 } message: {
                     Text(state.unlinkMessage)
                 }

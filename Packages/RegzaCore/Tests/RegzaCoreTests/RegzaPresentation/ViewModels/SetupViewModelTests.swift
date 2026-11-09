@@ -78,4 +78,58 @@ import Testing
         // 保存するまでは入れない
         #expect(live.store.streamHost == "")
     }
+
+    // MARK: - 設定の画面 (SettingsViewModel)
+
+    /// 設定の画面と、閉じた回数
+    func makeSettings(store: MemoryStore = MemoryStore(connection: RegzaConnection(host: "192.0.2.10")), transport: FakeTransport)
+        -> (SettingsViewModel, LiveModels, () -> Int) {
+        let live = LiveModels(store: store, transport: transport)
+        var closed = 0
+        let settings = SettingsViewModel(remote: live.remote, setup: live.setup) { closed += 1 }
+        return (settings, live, { closed })
+    }
+
+    @Test func settingsCombineSaveConditions() {
+        let (settings, _, _) = makeSettings(transport: FakeTransport { _ in ViewModelFixtures.status(500) })
+        #expect(settings.state.path.isEmpty)
+        #expect(settings.state.canSave)
+        // 録画サーバーのポートが正しくなければ保存できない
+        settings.send(.server(.setHost(.guide, "192.0.2.2:70000")))
+        #expect(!settings.state.canSave)
+        settings.send(.server(.setHost(.guide, "192.0.2.2")))
+        // テレビのアドレスがなければ保存できない
+        settings.send(.tv(.setHost(" ")))
+        #expect(!settings.state.canSave)
+    }
+
+    @Test func settingsSaveThenClose() async {
+        let (settings, live, closed) = makeSettings(transport: FakeTransport { _ in ViewModelFixtures.status(500) })
+        settings.send(.server(.setHost(.guide, "192.0.2.2")))
+        await fixtures.send(settings) { $0.send(.save) }
+        #expect(live.store.guideHost == "192.0.2.2")
+        #expect(closed() == 1)
+    }
+
+    @Test func unlinkingClosesItsPage() async {
+        let store = MemoryStore(connection: RegzaConnection(host: "192.0.2.10"))
+        store.guideHost = "192.0.2.2"
+        let (settings, _, _) = makeSettings(store: store, transport: FakeTransport { _ in ViewModelFixtures.status(500) })
+        settings.send(.openPage(.guide))
+        #expect(settings.state.path == [.guide])
+
+        await fixtures.send(settings) { $0.send(.server(.unlink(.guide))) }
+        #expect(settings.state.path.isEmpty)
+        #expect(!settings.state.servers.guide.isLinked)
+    }
+
+    @Test func openingStreamPageSuggestsEPGStation() async {
+        let (settings, _, _) = makeSettings(transport: FakeTransport { request in
+            request.url.path == "/api/version" ? ViewModelFixtures.status(200, #"{"version":"2.0.0"}"#) : ViewModelFixtures.status(404)
+        })
+        settings.send(.server(.setHost(.guide, "192.0.2.2:40772")))
+        await fixtures.send(settings.servers) { _ in settings.send(.openPage(.stream)) }
+        #expect(settings.state.path == [.stream])
+        #expect(settings.state.servers.stream.host == "192.0.2.2")
+    }
 }

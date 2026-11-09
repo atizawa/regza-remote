@@ -72,7 +72,7 @@ public struct AppView: View {
         }
         .sheet(isPresented: Binding(get: { app.state.isShowingSettings }, set: { if !$0 { app.send(.closeSettings) } })) {
             if let settings = app.settings {
-                SettingsView(tv: settings.tv, servers: settings.servers)
+                SettingsView(settings: settings)
             }
         }
         // アプリで見る (ライブ視聴)。いま映っているものの詳細を開いているときは、そのシートの上から出す

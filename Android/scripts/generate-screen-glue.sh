@@ -2,9 +2,11 @@
 # 画面ごとのフォルダの State/ と Action/ に置いた型から、窓口のつなぎを作る (画面を足しても手で書かずに済むようにする)。
 #
 #   - RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift
-#     Action/ の型ごとに、窓口 (RegzaAndroidApp) の送る関数を作る。送り先は、その型を Action にしている ViewModel
-#     (ViewModel のファイルの「typealias Action = 型」で決める)。swift-java は同じ名前の関数を並べられないので、
-#     名前は型ごとに変える (sendChannelListAction など)
+#     画面の Action (ViewModel のファイルに「typealias Action = 型」と書いた型) ごとに、窓口 (RegzaAndroidApp) の送る関数を作る。
+#     送り先は、その型を Action にしている ViewModel。swift-java は同じ名前の関数を並べられないので、
+#     名前は型ごとに変える (sendChannelListAction など)。
+#     ほかの Action の中で使う部品の操作 (SettingsAction.tv の TVSetupAction など) は Java のクラスにするだけで、送る関数は作らない
+#     (1 つの画面には 1 つの Action で送る)。どちらでもない型が Action/ にあれば止める
 #   - .build/swift/screen-glue-kotlin/Send.kt
 #     画面が受け取る送り先 (Send)。どの操作も send(...) で送れるよう型ごとの invoke を並べ、Swift の窓口に送る AppSend も作る
 #     (ビルドのたびに作るので保存しない)
@@ -42,8 +44,10 @@ kotlin_imports=""
 kotlin_invokes=""
 kotlin_overrides=""
 for file in $(find "$view_models" -path '*/State/*.swift' | sort); do
-  # 状態は struct のほか、段階などを表す enum も置ける
-  stubs+=("\"public $(type_in "$file" 'struct|enum' with_kind) {}\"")
+  # 状態は struct のほか、段階などを表す enum も置ける (raw value が String の enum は、そのことも書く)
+  type_in "$file" 'struct|enum' > /dev/null
+  read -r kind name raw < <(sed -En 's/^public (struct|enum) ([A-Za-z0-9_]+)(: String)?.*/\1 \2 \3/p' "$file")
+  stubs+=("\"public $kind $name${raw:+: String} {}\"")
 done
 for file in $(find "$view_models" -path '*/Action/*.swift' | sort); do
   action=$(type_in "$file" enum)
@@ -51,6 +55,12 @@ for file in $(find "$view_models" -path '*/Action/*.swift' | sort); do
   # Action/ のあるフォルダの ViewModel のうち、この型を Action にしているもの
   screen_dir=$(dirname "$(dirname "$file")")
   view_model_file=$(grep -l "typealias Action = $action\$" "$screen_dir"/*.swift || true)
+  if [ -z "$view_model_file" ]; then
+    # 同じフォルダのほかの Action の部品なら、送る関数は作らない
+    grep -lq "($action)" $(ls "$screen_dir"/Action/*.swift | grep -v "/$action.swift\$") 2>/dev/null ||
+      fail "$file の $action を Action にしている ViewModel (「typealias Action = $action」) も、使っている Action も $screen_dir にありません"
+    continue
+  fi
   [ "$(printf '%s\n' "$view_model_file" | grep -c .)" = 1 ] ||
     fail "$screen_dir に「typealias Action = $action」と書いた ViewModel を 1 つだけ置いてください"
   view_model=$(type_in "$view_model_file" "final class")

@@ -39,8 +39,8 @@ import Testing
         let app = try makeApp(configured: false)
         app.send(.showSettings)
         #expect(app.state.isShowingSettings)
-        #expect(app.state.settingsPath == [.tv])
-        #expect(app.settings != nil)
+        // テレビが未設定なら、テレビの設定の画面から始める
+        #expect(app.settings?.state.path == [.tv])
         app.send(.closeSettings)
         #expect(!app.state.isShowingSettings)
         #expect(app.settings == nil)

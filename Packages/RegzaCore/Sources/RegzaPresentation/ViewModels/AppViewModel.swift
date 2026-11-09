@@ -30,17 +30,11 @@ public final class AppViewModel {
         case search
     }
 
-    /// 設定のシートの中で開く画面
-    public enum SettingsPage: String, Hashable, Sendable {
-        case tv, guide, stream
-    }
-
     public struct State: Equatable, Sendable {
         public var tab: Tab = .remote
         /// タブごとの戻る道 (最後が手前の画面)
         public var paths: [Tab: [Route]] = [:]
         public var isShowingSettings = false
-        public var settingsPath: [SettingsPage] = []
         /// いま映っているものの詳細のシート
         public var isShowingNowPlaying = false
         /// アプリで見ている局 (ライブ視聴の全画面)。ライブ視聴の中で局を切り替えたら、その局になる
@@ -58,9 +52,7 @@ public final class AppViewModel {
         /// いまのタブで 1 つ戻る
         case back
         case showSettings
-        case setSettingsPath([SettingsPage])
-        /// 設定を保存して閉じる
-        case saveSettings
+        /// 設定を閉じる (保存は設定の画面の SettingsAction.save)
         case closeSettings
         case showNowPlaying
         case closeNowPlaying
@@ -114,28 +106,14 @@ public final class AppViewModel {
         case .back:
             if next.paths[next.tab]?.isEmpty == false { next.paths[next.tab]?.removeLast() }
         case .showSettings:
-            let remote = remote
-            settings = (TVSetupViewModel(remote: remote, setup: setup), ServerSetupViewModel(setup: setup))
-            // テレビが未設定なら、テレビの設定の画面から始める
-            next.settingsPath = remote.connection.isConfigured ? [] : [.tv]
+            settings = SettingsViewModel(remote: remote, setup: setup) { [weak self] in self?.send(.closeSettings) }
             next.isShowingSettings = true
-        case .setSettingsPath(let path):
-            next.settingsPath = path
-        case .saveSettings:
-            guard let settings else { return }
-            work.run {
-                await settings.servers.save()
-                await settings.tv.save()
-                self.send(.closeSettings)
-            }
         case .closeSettings:
-            // PIN を入れずに閉じたら、テレビの PIN 表示を消しておく
             if let settings {
-                settings.tv.send(.close)
+                settings.dismiss()
                 self.settings = nil
             }
             next.isShowingSettings = false
-            next.settingsPath = []
         case .showNowPlaying:
             next.isShowingNowPlaying = true
         case .closeNowPlaying:
@@ -159,7 +137,7 @@ public final class AppViewModel {
     /// いま映っているものの詳細のシート
     public let nowPlaying: NowPlayingViewModel
     /// 設定のシートを開いている間だけある
-    public private(set) var settings: (tv: TVSetupViewModel, servers: ServerSetupViewModel)?
+    public private(set) var settings: SettingsViewModel?
     /// ライブ視聴を開いている間だけある
     public private(set) var player: LivePlayerViewModel?
 
@@ -195,7 +173,7 @@ public final class AppViewModel {
     public var openViewModels: [AnyObject] {
         var result: [AnyObject] = []
         if let player { result.append(player) }
-        if let settings { result += [settings.tv, settings.servers] }
+        if let settings { result.append(settings) }
         if state.isShowingNowPlaying { result.append(nowPlaying) }
         let tabs = [state.tab] + Tab.allCases.filter { $0 != state.tab }
         for tab in tabs {
@@ -235,7 +213,7 @@ extension AppViewModel: Introspectable {
     public var introspectionChildren: [any Introspectable] {
         var children: [any Introspectable] = [remote, guideGrid, channelList, reservationList]
         if state.isShowingNowPlaying { children.append(nowPlaying) }
-        if let settings { children += [settings.tv, settings.servers] }
+        if let settings { children.append(settings) }
         if let player { children.append(player) }
         for tab in Tab.allCases {
             for (depth, route) in state.path(of: tab).enumerated() {
@@ -258,8 +236,6 @@ extension AppViewModel: Introspectable {
             ActionDescription("openSearch", "いまのタブで番組表の検索を開く"),
             ActionDescription("back", "いまのタブで 1 つ戻る"),
             ActionDescription("showSettings", "設定を開く"),
-            ActionDescription("openSettingsPage", "設定の中の画面を開く", parameters: ["page": "tv | guide | stream"]),
-            ActionDescription("saveSettings", "設定を保存して閉じる"),
             ActionDescription("closeSettings", "設定を閉じる (保存しない)"),
             ActionDescription("showNowPlaying", "いま映っているものの詳細を開く"),
             ActionDescription("closeNowPlaying", "いま映っているものの詳細を閉じる"),
@@ -285,10 +261,6 @@ extension AppViewModel: Introspectable {
         case "openSearch": send(.open(.search))
         case "back": send(.back)
         case "showSettings": send(.showSettings)
-        case "openSettingsPage":
-            guard let page = SettingsPage(rawValue: try arguments.string("page")) else { throw IntrospectionError.invalidArgument("page") }
-            send(.setSettingsPath(state.settingsPath + [page]))
-        case "saveSettings": send(.saveSettings)
         case "closeSettings": send(.closeSettings)
         case "showNowPlaying": send(.showNowPlaying)
         case "closeNowPlaying": send(.closeNowPlaying)

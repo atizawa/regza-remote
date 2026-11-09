@@ -68,7 +68,7 @@ struct RegzaAndroidAppTests {
         let fixture = try make(host: "")
         let snapshot = await fixture.bridge.snapshot()
         #expect(snapshot.isShowingSetup)
-        #expect(snapshot.setup?.page == "tv")
+        #expect(snapshot.setup?.path == [.tv])
     }
 
     @Test func snapshotCarriesConnectionAndSavedValues() async throws {
@@ -134,9 +134,9 @@ struct RegzaAndroidAppTests {
         #expect(detail.program.name == "放送中の番組")
         #expect(detail.channelName == "テスト局1")
 
-        fixture.bridge.perform(.back)
+        fixture.bridge.perform(RegzaAndroidAction.back)
         #expect(await fixture.bridge.screen().kind == "programs")
-        fixture.bridge.perform(.back)
+        fixture.bridge.perform(RegzaAndroidAction.back)
         #expect(await fixture.bridge.screen().kind == "channels")
         #expect(!(await fixture.bridge.snapshot().canGoBack))
     }
@@ -218,24 +218,23 @@ struct RegzaAndroidAppTests {
 
     // MARK: - 設定
 
-    @Test func settingsPagesOpenAndClose() async throws {
+    /// 設定の操作 (SettingsAction) を送ると、設定の state がそのまま届く
+    @Test func settingsActionsReachSettings() async throws {
         let fixture = try make()
         fixture.bridge.perform(.showSetup)
-        #expect(await fixture.bridge.snapshot().setup?.page == "")
+        #expect(await fixture.bridge.snapshot().setup?.path == [])
 
-        fixture.bridge.perform(.openSetupPage("stream"))
-        fixture.bridge.perform(.setStreamHost("192.0.2.30"))
+        fixture.bridge.perform(SettingsAction.openPage(.stream))
+        fixture.bridge.perform(SettingsAction.server(.setHost(.stream, "192.0.2.30")))
         let setup = try #require(await fixture.bridge.snapshot().setup)
-        #expect(setup.page == "stream")
-        #expect(setup.streamHost == "192.0.2.30")
-        #expect(setup.hasGuideDraft)
+        #expect(setup.path == [.stream])
+        #expect(setup.servers.stream.host == "192.0.2.30")
+        #expect(setup == fixture.app.settings?.state)
 
-        fixture.bridge.perform(.closeSetupPage)
-        #expect(await fixture.bridge.snapshot().setup?.page == "")
-        fixture.bridge.perform(.openSetupPage("nothing"))
-        #expect(await fixture.bridge.snapshot().setup?.page == "")
+        fixture.bridge.perform(SettingsAction.setPath([]))
+        #expect(await fixture.bridge.snapshot().setup?.path == [])
 
-        fixture.bridge.perform(.closeSetup)
+        fixture.bridge.perform(SettingsAction.close)
         #expect(await fixture.bridge.snapshot().setup == nil)
     }
 
