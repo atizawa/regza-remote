@@ -59,18 +59,24 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.regzaremote.core.ChannelItem
 import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidPlayer
+import com.example.regzaremote.core.LivePlayerAction
+import com.example.regzaremote.core.LivePlayerPhase
+import com.example.regzaremote.core.LivePlayerState
+import com.example.regzaremote.core.RegzaAndroidBridge
 import kotlinx.coroutines.delay
 
 /**
- * EPGStation のライブ配信をアプリで見る画面 (iOS 版の LivePlayerView と同じ LivePlayerViewModel)。
+ * EPGStation のライブ配信をアプリで見る画面 (state と操作は LivePlayerViewModel の LivePlayerState・LivePlayerAction)。
  * 縦向きでは映像の下に今の番組の情報と局の一覧を出し、局を押すとその局の配信に切り替える。横向きでは映像だけを出す。
  * 閉じたり局を切り替えたりしたら、前の配信を止めてチューナーを空ける (LivePlayerViewModel)
  */
 @Composable
-fun LivePlayerScreen(player: RegzaAndroidPlayer, send: Send) {
+fun LivePlayerScreen(player: LivePlayerState, send: Send) {
     // 画面を出したら、局名と番組を読み、配信を頼む
-    LaunchedEffect(Unit) { send(RegzaAndroidAction.startPlayer()) }
+    LaunchedEffect(Unit) {
+        send(LivePlayerAction.appear())
+        send(LivePlayerAction.start())
+    }
     BackHandler { send(RegzaAndroidAction.closePlayer()) }
     // 画面が消えたりほかのアプリに移ったりしたら、閉じて配信を止める。裏で見ていると知らせ続けると、
     // 見ていないのにチューナーを使い続けてしまう (Android ではピクチャインピクチャや裏での再生をしない)
@@ -117,25 +123,26 @@ private fun FullScreenWhile(isFullScreen: Boolean) {
 
 /** 映像の場所。準備中・再生・失敗を出し分ける */
 @Composable
-private fun Video(player: RegzaAndroidPlayer, send: Send, modifier: Modifier) {
+private fun Video(player: LivePlayerState, send: Send, modifier: Modifier) {
     Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
-        val url = player.url.orElse(null)
-        when {
-            player.phase == "ready" && url != null -> HlsPlayer(url)
-            player.phase == "failed" -> Column(
+        val phase = player.phase
+        when (phase.discriminator) {
+            LivePlayerPhase.Discriminator.READY -> HlsPlayer(RegzaAndroidBridge.regzaURLString(phase.asReady.get().url))
+            LivePlayerPhase.Discriminator.FAILED -> Column(
                 Modifier.padding(Design.outer).verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(player.message, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f), textAlign = TextAlign.Center)
-                if (player.isCanRetry) {
-                    ProminentButton("準備できていない配信を止めて、もう一度試す") { send(RegzaAndroidAction.retryPlayer()) }
+                val failed = phase.asFailed.get()
+                Text(failed.message, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f), textAlign = TextAlign.Center)
+                if (failed.canRetry) {
+                    ProminentButton("準備できていない配信を止めて、もう一度試す") { send(LivePlayerAction.retryAfterStoppingStalled()) }
                 }
             }
-            else -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LivePlayerPhase.Discriminator.PREPARING -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CircularProgressIndicator(color = Color.White)
                 Text(
-                    player.message, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f),
+                    player.preparingMessage, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = Design.outer),
                 )
             }
@@ -233,7 +240,7 @@ private fun PlayPauseButton(isPlaying: Boolean, modifier: Modifier, onClick: () 
 
 /** 見ている局の今の番組 (Mirakurun の番組表から) */
 @Composable
-private fun ProgramInfo(player: RegzaAndroidPlayer) {
+private fun ProgramInfo(player: LivePlayerState) {
     val program = player.program.orElse(null)
     Column(Modifier.padding(horizontal = Design.outer), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
@@ -261,11 +268,11 @@ private fun ProgramInfo(player: RegzaAndroidPlayer) {
 
 /** 見られる局の一覧。押すとその局に切り替える */
 @Composable
-private fun ChannelPicker(player: RegzaAndroidPlayer, send: Send) {
+private fun ChannelPicker(player: LivePlayerState, send: Send) {
     Column {
         BandPicker(player.bands, player.band.orElse(null), send)
         player.channels.forEach { row ->
-            ChannelRow(row) { send(RegzaAndroidAction.switchPlayerChannel(row.code)) }
+            ChannelRow(row) { send(LivePlayerAction.switchChannel(row.code)) }
             RowDivider()
         }
     }

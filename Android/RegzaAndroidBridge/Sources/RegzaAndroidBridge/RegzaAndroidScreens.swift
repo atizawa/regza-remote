@@ -11,33 +11,12 @@ public struct RegzaAndroidScreen {
     public var kind: String
     /// チャンネル一覧の画面の state (ChannelListViewModel.State をそのまま渡す)
     public var channelList: ChannelListState?
-    public var guide: RegzaAndroidGuide?
+    /// 番組表の画面の state (GuideGridViewModel.State をそのまま渡す)
+    public var guide: GuideGridState?
     public var reservations: RegzaAndroidReservations?
     public var programs: RegzaAndroidProgramList?
     public var detail: RegzaAndroidProgramDetail?
     public var search: RegzaAndroidSearch?
-}
-
-/// 新聞のテレビ欄のような番組表 (GuideGridViewModel.State)。選んでいる日の 24 時間分だけを入れる
-public struct RegzaAndroidGuide {
-    /// 番組表 (Mirakurun) が設定されている
-    public var hasGuide: Bool
-    public var hasLoaded: Bool
-    public var canSearch: Bool
-    public var bands: [BroadcastBand]
-    public var band: BroadcastBand?
-    public var days: [GuideDay]
-    /// 選んでいる日 (days の何番目か)
-    public var selectedDayIndex: Int
-    /// 表に出す時間 (1970 年からの秒)。今日は今の時刻の正時から、ほかの日は朝 4 時から 24 時間。
-    /// Date にすると、Date の Java のつなぎを Domain と窓口の両方で作ってしまうので、数値で渡す
-    public var windowStart: Double
-    public var windowEnd: Double
-    /// 表の左端に出す時刻 (朝 4 時より前は 24〜27 時と書く)
-    public var hourLabels: [String]
-    /// 今日を見ている (今の時刻の線を出す)
-    public var isToday: Bool
-    public var columns: [GuideColumn]
 }
 
 /// 1 チャンネルの番組表 (ProgramListViewModel.State)
@@ -115,21 +94,7 @@ extension RegzaAndroidScreen {
         case .channels(let state):
             self.init(kind: "channels", channelList: state)
         case .guide(let state):
-            // 表に出す時間・時刻の見出し・選んでいる日は ViewModel が作る (iOS の画面と同じ値)
-            self.init(kind: "guide", guide: RegzaAndroidGuide(
-                hasGuide: state.hasGuide,
-                hasLoaded: state.hasLoaded,
-                canSearch: state.canSearch,
-                bands: state.bands,
-                band: state.band,
-                days: state.days,
-                selectedDayIndex: state.selectedDayIndex,
-                windowStart: state.windowStart.timeIntervalSince1970,
-                windowEnd: state.windowEnd.timeIntervalSince1970,
-                hourLabels: state.hourLabels,
-                isToday: state.isToday,
-                columns: state.columns
-            ))
+            self.init(kind: "guide", guide: state)
         case .reservations(let state, let isLoading):
             self.init(kind: "reservations", reservations: RegzaAndroidReservations(
                 hasLoaded: state.hasLoaded,
@@ -174,3 +139,7 @@ extension RegzaAndroidScreen {
         }
     }
 }
+
+/// URL を文字列にする (ライブ視聴の LivePlayerPhase.ready の URL を ExoPlayer に渡す)。
+/// swift-java は enum の値にしか使っていない型の Java のクラスを作らないので、ここで URL を使って作らせる役目もある
+public func regzaURLString(_ url: URL) -> String { url.absoluteString }

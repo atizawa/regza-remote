@@ -91,6 +91,33 @@ libcxx=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/sysroot/usr/lib/aarch
 # swift-java のプラグインは、Swift から消した型の Java のクラスを消さないので、毎回作り直す
 rm -rf .build/swift/plugins/outputs/regzaandroid
 
+# swift-java は Date や URL などの Foundation の型のつなぎを、使うモジュールごとに Foundation+SwiftJava.swift に作る。
+# どのモジュールも Java のパッケージが同じなので、前に作ったモジュールにもある型は消してそちらを使う
+# (残すと同じ名前の関数がぶつかってリンクできない)。引数: Swift のつなぎの置き場、Java の置き場、前に作った Java の置き場…
+drop_duplicate_foundation() {
+  local swift_dir=$1 java_dir=$2 file type dir dropped="" kept=""
+  shift 2
+  file="$swift_dir/Foundation+SwiftJava.swift"
+  [ -f "$file" ] || return 0
+  for type in $(sed -n 's/^@_cdecl("Java_com_example_regzaremote_core_\([A-Za-z0-9]*\)__.*/\1/p' "$file" | sort -u); do
+    for dir in "$@"; do
+      if [ -f "$dir/com/example/regzaremote/core/$type.java" ]; then
+        rm "$java_dir/com/example/regzaremote/core/$type.java"
+        dropped+=" $type"
+        continue 2
+      fi
+    done
+    kept+=" $type"
+  done
+  [ -z "$dropped" ] && return 0
+  # Swift のつなぎは 1 つのファイルにまとめて作られるので、一部の型だけは消せない
+  if [ -n "$kept" ]; then
+    echo "$file に、ほかのモジュールにもある型 ($dropped) とない型 ($kept) が混ざっていて消せません。" >&2
+    exit 1
+  fi
+  rm "$file"
+}
+
 # 共有の UI の型 (RegzaSharedModels の RegzaKey・ProgramItem など) の Java のつなぎを作る。iOS と共有のパッケージには
 # プラグインをかけられないので、Mac で動く swift-java のツールで、Packages/RegzaCore/Sources/RegzaSharedModels を直接読む
 # Android 向けのビルドとはビルドの設定が違い、同じ置き場だと互いのキャッシュを捨て合うので、置き場を分ける
@@ -112,6 +139,7 @@ rm -rf "$presentation_generated" .build/swift/regzapresentation-java && mkdir -p
   --config RegzaAndroid/RegzaPresentation.swift-java.config --swift-module RegzaPresentation \
   --input-swift "$(cd ../Packages/RegzaCore/Sources/RegzaPresentation && pwd)" \
   --output-swift "$presentation_generated" --output-java .build/swift/regzapresentation-java
+drop_duplicate_foundation "$presentation_generated" .build/swift/regzapresentation-java .build/swift/regzashared-java
 
 # 画面ごとの操作を送る窓口の send と、窓口の設定に書く画面の状態と操作の型を、State/ と Action/ から作り直す
 scripts/generate-screen-glue.sh
@@ -124,6 +152,7 @@ rm -rf "$bridge_generated" .build/swift/regzabridge-java && mkdir -p "$bridge_ge
   --config RegzaAndroid/RegzaAndroidBridge.swift-java.config --swift-module RegzaAndroidBridge \
   --input-swift RegzaAndroidBridge/Sources/RegzaAndroidBridge \
   --output-swift "$bridge_generated" --output-java .build/swift/regzabridge-java
+drop_duplicate_foundation "$bridge_generated" .build/swift/regzabridge-java .build/swift/regzashared-java .build/swift/regzapresentation-java
 
 # Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)。
 # HTTPS に使う BoringSSL は、SDK の静的ライブラリ (libssl.a・libcrypto.a) を RegzaAndroid に埋め込む

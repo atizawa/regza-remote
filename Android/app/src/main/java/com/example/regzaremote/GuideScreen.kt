@@ -38,13 +38,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidGuide
+import com.example.regzaremote.core.GuideGridAction
+import com.example.regzaremote.core.GuideGridState
 
-/** 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる (iOS と同じ GuideGridViewModel) */
+/** 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる (state と操作は GuideGridViewModel の GuideGridState・GuideGridAction) */
 @Composable
-fun GuideScreen(guide: RegzaAndroidGuide, send: Send) {
+fun GuideScreen(guide: GuideGridState, send: Send) {
     // 開いたら読み込む (予約した番組に印を付けるため、予約も読む)
-    LaunchedEffect(Unit) { send(RegzaAndroidAction.showGuide()) }
+    LaunchedEffect(Unit) { send(GuideGridAction.load()) }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("番組表") {
             // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く (iOS 版と同じ)
@@ -59,7 +60,7 @@ fun GuideScreen(guide: RegzaAndroidGuide, send: Send) {
             ) { ProminentButton("設定を開く") { send(RegzaAndroidAction.showSetup()) } }
             !guide.isHasLoaded -> Loading()
             guide.columns.isEmpty() -> EmptyState("番組表を取得できません", "テレビと Mirakurun につながっているか確認してください。") {
-                TextButton(onClick = { send(RegzaAndroidAction.showGuide()) }) { Text("もう一度試す") }
+                TextButton(onClick = { send(GuideGridAction.load()) }) { Text("もう一度試す") }
             }
             else -> {
                 BandPicker(guide.bands, guide.band.orElse(null), send)
@@ -72,7 +73,7 @@ fun GuideScreen(guide: RegzaAndroidGuide, send: Send) {
 
 /** 日付の選択。今日・明日・9(月) … を横に並べ、土曜は青、日曜は赤にする (テレビ欄と同じ) */
 @Composable
-private fun DayPicker(guide: RegzaAndroidGuide, send: Send) {
+private fun DayPicker(guide: GuideGridState, send: Send) {
     Row(
         Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Design.outer).padding(bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -90,7 +91,7 @@ private fun DayPicker(guide: RegzaAndroidGuide, send: Send) {
                 color = if (isSelected) Color.White else color,
                 modifier = Modifier
                     .background(if (isSelected) AppTheme.accent else AppTheme.fill, CircleShape)
-                    .clickable { send(RegzaAndroidAction.selectDay(index.toLong())) }
+                    .clickable { send(GuideGridAction.selectDay(day.date)) }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
             )
         }
@@ -122,13 +123,13 @@ private val dpPerMinute = 2.4.dp
 
 /** 縦横にスクロールする表。局名の行は横に、時刻の列は縦に、表と一緒に動かす */
 @Composable
-private fun GuideGrid(guide: RegzaAndroidGuide, send: Send) {
+private fun GuideGrid(guide: GuideGridState, send: Send) {
     val columns = remember(guide) {
         guide.columns.map { column -> GridColumn(column.channelName, column.programs.map { it.toCell() }) }
     }
     val hours = remember(guide) { guide.hourLabels.toList() }
-    val windowStart = guide.windowStart
-    val minutes = ((guide.windowEnd - windowStart) / 60).toInt()
+    val windowStart = guide.windowStart.timeIntervalSince1970
+    val minutes = ((guide.windowEnd.timeIntervalSince1970 - windowStart) / 60).toInt()
     val horizontal = rememberScrollState()
     val vertical = rememberScrollState()
 

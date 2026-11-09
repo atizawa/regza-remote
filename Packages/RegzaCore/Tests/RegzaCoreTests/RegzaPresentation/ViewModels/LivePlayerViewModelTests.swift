@@ -47,7 +47,7 @@ import Testing
         player.send(.start)
         await wait { if case .ready = player.state.phase { true } else { false } }
 
-        #expect(player.state.phase == .ready(try #require(URL(string: "http://192.0.2.30:8888/streamfiles/stream5.m3u8"))))
+        #expect(player.state.phase == .ready(url: try #require(URL(string: "http://192.0.2.30:8888/streamfiles/stream5.m3u8"))))
         // 止められずに残ったときに次に開いて止められるよう、頼んだ配信を覚えておく
         #expect(store.ownStreamIDs == [5])
 
@@ -75,7 +75,7 @@ import Testing
         let (player, transport, _) = try makePlayer(channelCode: "unknown") { _ in ViewModelFixtures.status(200, "{}") }
         player.send(.start)
         await wait { player.state.phase != .preparing }
-        #expect(player.state.phase == .failed("このチャンネルは EPGStation で見られません。", canRetry: false))
+        #expect(player.state.phase == .failed(message: "このチャンネルは EPGStation で見られません。", canRetry: false))
         #expect(transport.paths.isEmpty)
     }
 }

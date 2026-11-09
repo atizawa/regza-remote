@@ -21,43 +21,14 @@ public final class LivePlayerViewModel {
         self.channel = channel
     }
 
-    public enum Phase: Equatable, Sendable {
-        case preparing
-        /// 再生できる (HLS のプレイリストの URL)
-        case ready(URL)
-        case failed(String, canRetry: Bool)
-    }
+    /// 配信の段階
+    public typealias Phase = LivePlayerPhase
 
-    public struct State: Equatable, Sendable {
-        /// いま見ている局
-        /// いま見ている局のコードと名前
-        public var channelCode: String
-        public var channelName: String
-        public var phase: Phase
-        /// 見ている局でいま放送中の番組 (番組表から)
-        public var program: ProgramItem?
-        /// 準備中に出す説明
-        public var preparingMessage: String
-        /// 見られる局がある放送の種類
-        public var bands: [BroadcastBand]
-        /// 選んでいる放送の種類
-        public var band: BroadcastBand?
-        /// 一覧に出す局 (選んでいる放送の種類のもの)
-        public var channels: [ChannelItem]
-    }
+    /// 画面に出すもの
+    public typealias State = LivePlayerState
 
-    public enum Action: Sendable {
-        /// 画面を開いた。局名と番組名を出すため、チャンネルと番組表を読む
-        case appear
-        /// 配信を頼む
-        case start
-        /// 前の配信を止めて、選んだ局の配信を頼み直す
-        case switchChannel(String)
-        /// 準備できないまま残っている配信 (ほかの端末のものも含む) を止めてから、もう一度頼む
-        case retryAfterStoppingStalled
-        /// 見終わった。配信を止めてチューナーを空ける
-        case end
-    }
+    /// 画面からの操作
+    public typealias Action = LivePlayerAction
 
     private var channel: RegzaChannel
     private var phase = Phase.preparing
@@ -128,7 +99,7 @@ public final class LivePlayerViewModel {
     private func run(_ channel: RegzaChannel) async {
         phase = .preparing
         guard stream.isPlayable(channelCode: channel.code) else {
-            phase = .failed("このチャンネルは EPGStation で見られません。", canRetry: false)
+            phase = .failed(message: "このチャンネルは EPGStation で見られません。", canRetry: false)
             return
         }
         var requested: Int?
@@ -139,7 +110,7 @@ public final class LivePlayerViewModel {
             self.streamID = streamID
             let url = try await stream.waitUntilReady(streamID: streamID)
             try Task.checkCancellation()
-            phase = .ready(url)
+            phase = .ready(url: url)
             // 見ていることを知らせ続ける (知らせないと EPGStation が配信を止める)
             while !Task.isCancelled {
                 try await Task.sleep(for: .seconds(10))
@@ -153,7 +124,7 @@ public final class LivePlayerViewModel {
                 self.streamID = nil
                 await stream.stop(streamID: requested)
             }
-            phase = .failed("""
+            phase = .failed(message: """
                 再生できませんでした。\(error.localizedDescription)
                 EPGStation で同時に変換できる数の上限に達していると始まりません。ほかの画面で見ている配信を閉じるか、準備できないまま残っている配信を止めてから試してください。
                 """, canRetry: true)

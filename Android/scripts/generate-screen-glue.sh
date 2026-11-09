@@ -8,8 +8,10 @@
 #   - .build/swift/screen-glue-kotlin/Send.kt
 #     画面が受け取る送り先 (Send)。どの操作も send(...) で送れるよう型ごとの invoke を並べ、Swift の窓口に送る AppSend も作る
 #     (ビルドのたびに作るので保存しない)
-#   - RegzaAndroid/RegzaAndroidBridge.swift-java.config の "RegzaPresentation" の行
-#     窓口の Java のクラスを作るときに、State/ と Action/ の型を知らせる
+#   - swift-java の設定の、ほかのモジュールの型の一覧 (importedModuleStubs の行)
+#     RegzaPresentation.swift-java.config と RegzaAndroidBridge.swift-java.config の "RegzaSharedModels" の行に
+#     RegzaSharedModels の型を、RegzaAndroidBridge.swift-java.config の "RegzaPresentation" の行に State/ と Action/ の型を書く
+#     (書いていない型を使うところは、swift-java が黙って飛ばす)
 #
 # mise run build-swift が毎回作り直す。--check を付けると作り直さずに、作ったものが古くないかだけを確かめる
 # (窓口のテストが Mac で確かめる)
@@ -17,18 +19,21 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 view_models=../Packages/RegzaCore/Sources/RegzaPresentation/ViewModels
+shared_models=../Packages/RegzaCore/Sources/RegzaSharedModels
+presentation_config=RegzaAndroid/RegzaPresentation.swift-java.config
 actions_file=RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift
-config_file=RegzaAndroid/RegzaAndroidBridge.swift-java.config
+bridge_config=RegzaAndroid/RegzaAndroidBridge.swift-java.config
 kotlin_file=.build/swift/screen-glue-kotlin/Send.kt
 
 fail() { echo "generate-screen-glue: $*" >&2; exit 1; }
 
-# ファイルにある型の名前 (1 つのファイルに 1 つだけ置く)
+# ファイルにある型の名前 (1 つのファイルに 1 つだけ置く)。kind は struct・enum などで、"struct|enum" のように並べてもよい。
+# 種類も知りたいときは with_kind を付ける ("struct 名前" の形で返す)
 type_in() {
   local file=$1 kind=$2 names
-  names=$(sed -n "s/^public $kind \([A-Za-z0-9_]*\).*/\1/p" "$file")
-  [ "$(printf '%s\n' "$names" | grep -c .)" = 1 ] || fail "$file には public $kind を 1 つだけ置いてください"
-  echo "$names"
+  names=$(sed -En "s/^public ($kind) ([A-Za-z0-9_]+).*/\1 \2/p" "$file")
+  [ "$(printf '%s\n' "$names" | grep -c .)" = 1 ] || fail "$file には public ${kind//|/・} を 1 つだけ置いてください"
+  if [ "${3:-}" = with_kind ]; then echo "$names"; else echo "${names##* }"; fi
 }
 
 stubs=()
@@ -37,7 +42,8 @@ kotlin_imports=""
 kotlin_invokes=""
 kotlin_overrides=""
 for file in $(find "$view_models" -path '*/State/*.swift' | sort); do
-  stubs+=("\"public struct $(type_in "$file" struct) {}\"")
+  # 状態は struct のほか、段階などを表す enum も置ける
+  stubs+=("\"public $(type_in "$file" 'struct|enum' with_kind) {}\"")
 done
 for file in $(find "$view_models" -path '*/Action/*.swift' | sort); do
   action=$(type_in "$file" enum)
@@ -74,18 +80,38 @@ import RegzaApp
 
 extension RegzaAndroidApp {${actions}}"
 
-stub_line="    \"RegzaPresentation\": [$(IFS=,; echo "${stubs[*]}" | sed 's/,/, /g')]"
-grep -q '^    "RegzaPresentation": ' "$config_file" || fail "$config_file に \"RegzaPresentation\" の行がありません"
-new_config=$(awk -v line="$stub_line" '/^    "RegzaPresentation": /{ print line; next } { print }' "$config_file")
+# RegzaSharedModels の型 (raw value が String の enum は、そのことも書く)
+shared_stubs=()
+for file in $(find "$shared_models" -name '*.swift' | sort); do
+  while read -r kind name raw; do
+    shared_stubs+=("\"public $kind $name${raw:+: String} {}\"")
+  done < <(sed -En 's/^public (struct|enum) ([A-Za-z0-9_]+)(: String)?.*/\1 \2 \3/p' "$file")
+done
+
+# 設定の "モジュール名": [...] の行を、型の一覧に置き換えたものを返す
+with_stubs() {
+  local file=$1 module=$2 line
+  shift 2
+  line="    \"$module\": [$(IFS=,; echo "$*" | sed 's/{}",/{}", /g')]"
+  grep -q "^    \"$module\": " "$file" || fail "$file に \"$module\" の行がありません"
+  # 次の行が続くなら、置き換える前と同じく行の終わりに , を付ける
+  awk -v module="    \"$module\": " -v line="$line" \
+    'index($0, module) == 1 { print line (/,$/ ? "," : ""); next } { print }' "$file"
+}
+new_presentation_config=$(printf '%s\n' "$(with_stubs "$presentation_config" RegzaSharedModels "${shared_stubs[@]}")")
+new_bridge_config=$(with_stubs "$bridge_config" RegzaSharedModels "${shared_stubs[@]}" | {
+  tmp=$(mktemp); cat > "$tmp"; with_stubs "$tmp" RegzaPresentation "${stubs[@]}"; rm -f "$tmp"; })
 
 if [ "${1:-}" = --check ]; then
-  [ "$new_actions" = "$(cat "$actions_file" 2>/dev/null)" ] && [ "$new_config" = "$(cat "$config_file")" ] ||
+  [ "$new_actions" = "$(cat "$actions_file" 2>/dev/null)" ] &&
+    [ "$new_presentation_config" = "$(cat "$presentation_config")" ] && [ "$new_bridge_config" = "$(cat "$bridge_config")" ] ||
     fail "窓口のつなぎが古くなっています。Android で scripts/generate-screen-glue.sh を実行してください"
   exit 0
 fi
 mkdir -p "$(dirname "$actions_file")" "$(dirname "$kotlin_file")"
 printf '%s\n' "$new_actions" > "$actions_file"
-printf '%s\n' "$new_config" > "$config_file"
+printf '%s\n' "$new_presentation_config" > "$presentation_config"
+printf '%s\n' "$new_bridge_config" > "$bridge_config"
 printf '%s\n' "// scripts/generate-screen-glue.sh が作る (手で直さない)
 package com.example.regzaremote
 

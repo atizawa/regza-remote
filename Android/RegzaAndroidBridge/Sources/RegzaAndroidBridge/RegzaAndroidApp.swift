@@ -46,27 +46,7 @@ public struct RegzaAndroidSnapshot {
     /// ミニプレーヤーを押して開いた、いま映っているものの詳細。開いている間だけある
     public var nowPlayingDetail: RegzaAndroidNowPlaying?
     /// アプリで見ている (ライブ視聴の画面を出している) 間だけある
-    public var player: RegzaAndroidPlayer?
-}
-
-/// ライブ視聴の画面 (LivePlayerViewModel.State)
-public struct RegzaAndroidPlayer {
-    public var channelCode: String
-    public var channelName: String
-    /// "preparing" (配信の準備中)・"ready" (url を再生する)・"failed" (message を出す)
-    public var phase: String
-    /// 再生する HLS のプレイリストの URL
-    public var url: String?
-    /// 準備中や失敗の説明
-    public var message: String
-    /// 準備できないまま残っている配信を止めて、もう一度試せる
-    public var canRetry: Bool
-    /// 見ている局でいま放送中の番組
-    public var program: ProgramItem?
-    public var bands: [BroadcastBand]
-    public var band: BroadcastBand?
-    /// 切り替えられる局 (選んでいる放送の種類のもの)
-    public var channels: [ChannelItem]
+    public var player: LivePlayerState?
 }
 
 /// いま映っているものの詳細のシート (NowPlayingViewModel.State)
@@ -151,15 +131,9 @@ public enum RegzaAndroidAction {
     case startPolling
     case stopPolling
     case selectBand(BroadcastBand)
-    // ライブ視聴 (LivePlayerViewModel)
+    // ライブ視聴を開く・閉じる (画面の中の操作は LivePlayerAction で送る)
     /// アプリで見る (チャンネルのコード)
     case play(String)
-    /// ライブ視聴の画面を出した。局名と番組を読み、配信を頼む
-    case startPlayer
-    /// 前の配信を止めて、選んだ局を見る (チャンネルのコード)
-    case switchPlayerChannel(String)
-    /// 準備できないまま残っている配信を止めてから、もう一度頼む
-    case retryPlayer
     /// 見終わった。配信を止めてチューナーを空ける
     case closePlayer
     // いま映っているものの詳細 (NowPlayingViewModel)
@@ -171,10 +145,7 @@ public enum RegzaAndroidAction {
     case openPrograms(String)
     /// 番組の詳細を開く (チャンネルのコード、番組の id)
     case openProgram(String, Int)
-    // 番組表 (GuideGridViewModel)
-    case showGuide
-    /// 日付を選ぶ (RegzaAndroidGuide.days の何番目か)
-    case selectDay(Int)
+    /// 番組表から検索を開く (番組表の画面の中の操作は GuideGridAction で送る)
     case openSearch
     // 番組表の検索 (GuideSearchViewModel)
     case setSearchText(String)
@@ -373,19 +344,7 @@ public final class RegzaAndroidApp {
                     canPowerOn: $0.canPowerOn, canStartOver: $0.canStartOver
                 )
             },
-            player: app.player.map { player in
-                let state = player.state
-                let (phase, url, message, canRetry): (String, String?, String, Bool) = switch state.phase {
-                case .preparing: ("preparing", nil, state.preparingMessage, false)
-                case .ready(let url): ("ready", url.absoluteString, "", false)
-                case .failed(let message, let canRetry): ("failed", nil, message, canRetry)
-                }
-                return RegzaAndroidPlayer(
-                    channelCode: state.channelCode, channelName: state.channelName, phase: phase, url: url, message: message,
-                    canRetry: canRetry, program: state.program, bands: state.bands,
-                    band: state.band, channels: state.channels
-                )
-            }
+            player: app.player?.state
         )
     }
 
@@ -439,11 +398,6 @@ public final class RegzaAndroidApp {
         case .stopPolling: app.remote.send(.stopPolling)
         case .selectBand(let band): app.remote.send(.selectBand(band))
         case .play(let code): app.send(.play(channelCode: code))
-        case .startPlayer:
-            app.player?.send(.appear)
-            app.player?.send(.start)
-        case .switchPlayerChannel(let code): app.player?.send(.switchChannel(code))
-        case .retryPlayer: app.player?.send(.retryAfterStoppingStalled)
         case .closePlayer: app.send(.closePlayer)
         case .showNowPlaying:
             app.send(.showNowPlaying)
@@ -454,10 +408,6 @@ public final class RegzaAndroidApp {
         case .openPrograms(let code):
             app.send(.open(.channelPrograms(channelCode: code)))
         case .openProgram(let code, let id): app.send(.open(.programDetail(programID: id, channelCode: code)))
-        case .showGuide: app.guideGrid.send(.load)
-        case .selectDay(let index):
-            let days = app.guideGrid.state.days
-            if days.indices.contains(index) { app.guideGrid.send(.selectDay(days[index].date)) }
         case .openSearch: app.send(.open(.search))
         case .setSearchText(let text): app.guideGrid.search.send(.setText(text))
         case .removeCondition(let index):

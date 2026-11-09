@@ -173,20 +173,19 @@ struct RegzaAndroidAppTests {
         #expect(await fixture.bridge.screen().kind == "channels")
     }
 
-    /// 日付は days の何番目かで選ぶ (範囲の外は無視する)
-    @Test func selectsDayByIndex() async throws {
+    /// 番組表の操作 (GuideGridAction) で日付を選ぶと、番組表の state がそのまま届く
+    @Test func selectsDayWithGuideAction() async throws {
         let fixture = try make()
         fixture.bridge.perform(.selectTab("guide"))
-        fixture.app.guideGrid.send(.load)
+        fixture.bridge.perform(GuideGridAction.load)
         try await waitUntil { (await fixture.bridge.screen().guide?.days.count ?? 0) > 1 }
 
-        fixture.bridge.perform(.selectDay(1))
+        let day = try #require(await fixture.bridge.screen().guide?.days[1])
+        fixture.bridge.perform(GuideGridAction.selectDay(day.date))
         let guide = try #require(await fixture.bridge.screen().guide)
+        #expect(guide == fixture.app.guideGrid.state)
         #expect(guide.selectedDayIndex == 1)
         #expect(!guide.isToday)
-
-        fixture.bridge.perform(.selectDay(99))
-        #expect(await fixture.bridge.screen().guide?.selectedDayIndex == 1)
     }
 
     /// 検索で読み取った条件は、conditions の何番目かで外す
@@ -243,7 +242,7 @@ struct RegzaAndroidAppTests {
         let player = try #require(await fixture.bridge.snapshot().player)
         #expect(player.channelCode == code)
         #expect(player.channelName == "テスト局1")
-        #expect(player.phase == "preparing")
+        #expect(player.phase == .preparing)
 
         fixture.bridge.perform(.closePlayer)
         #expect(await fixture.bridge.snapshot().player == nil)
