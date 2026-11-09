@@ -239,6 +239,8 @@ public final class RegzaAndroidApp {
     private let store: AndroidConnectionStore
     private let app: AppViewModel
     @MainActor private let snapshotChanges = Changes()
+    /// 保存先の値 (配信の ID など) が変わった回数。画面の状態とは別に変わるので、読んで見張り、変わったら Kotlin に渡し直す
+    @MainActor private let storeRevision = StoreRevision()
     @MainActor private let screenChanges = Changes()
     /// 前に返した画面の状態 (同じなら返さない)
     @MainActor private var lastScreen: ScreenKey?
@@ -264,6 +266,9 @@ public final class RegzaAndroidApp {
             Task { await app.stream.cleanUp() }
             return app
         }
+        // 配信を止めて ID を消したときなどは、画面の状態が変わったあとに保存先だけが変わるので、別に知らせる
+        let storeRevision = MainActor.assumeIsolated { self.storeRevision }
+        store.onChange = { Task { @MainActor in storeRevision.value += 1 } }
     }
 
     /// いまのアプリ全体の状態
@@ -307,6 +312,7 @@ public final class RegzaAndroidApp {
         let remote = app.remote.state
         let settings = appState.isShowingSettings ? app.settings : nil
         let nowPlaying = appState.isShowingNowPlaying ? app.nowPlaying.state : nil
+        _ = storeRevision.value
         return RegzaAndroidSnapshot(
             tab: appState.tab.rawValue,
             canGoBack: !appState.path(of: appState.tab).isEmpty,
@@ -520,6 +526,13 @@ public final class RegzaAndroidApp {
     }
 }
 
+/// 保存先の値が変わった回数 (見張るためだけに使う)
+@MainActor
+@Observable
+private final class StoreRevision {
+    var value = 0
+}
+
 /// 状態の変わり目を知らせる。読んだ値を見張り、変わったら待っている側を起こす
 /// (待ち始める前に変わっていても逃さない)
 @MainActor
@@ -555,6 +568,8 @@ final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
     private var connection: RegzaConnection
     private let userID: String
     private var values: (guideHost: String, streamHost: String, ownStreamIDs: [Int])
+    /// 録画サーバーのアドレスや配信の ID が変わったら呼ぶ (Kotlin に保存し直してもらう)
+    var onChange: @Sendable () -> Void = {}
 
     init(connection: RegzaConnection, pairingUserID: String, guideHost: String, streamHost: String, ownStreamIDs: [Int]) {
         self.connection = connection
@@ -573,11 +588,17 @@ final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
 
     var streamHost: String {
         get { lock.withLock { values.streamHost } }
-        set { lock.withLock { values.streamHost = newValue } }
+        set {
+            lock.withLock { values.streamHost = newValue }
+            onChange()
+        }
     }
 
     var ownStreamIDs: [Int] {
         get { lock.withLock { values.ownStreamIDs } }
-        set { lock.withLock { values.ownStreamIDs = newValue } }
+        set {
+            lock.withLock { values.ownStreamIDs = newValue }
+            onChange()
+        }
     }
 }
