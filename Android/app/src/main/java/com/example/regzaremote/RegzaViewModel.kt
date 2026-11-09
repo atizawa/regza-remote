@@ -19,15 +19,8 @@ import kotlinx.coroutines.launch
  * 画面の回転などで Activity が作り直されても残るので、Swift の ViewModel もここで 1 つだけ作る
  */
 class RegzaViewModel(application: Application) : AndroidViewModel(application) {
-    private val store = ConnectionStore(application)
-
-    /** 保存してある接続情報 (変わったときだけ保存し直す) */
-    private var saved: Connection? = store.load()
-
-    private val core = RegzaAndroidApp.init(
-        saved?.host ?: "", saved?.user ?: "", saved?.password ?: "", store.pairingUserID(), store.guideHost,
-        store.streamHost, store.ownStreamIDs,
-    )
+    /** 接続情報などは、Swift が Kotlin の保存先 (AndroidStorage) を使って読み書きする */
+    private val core = RegzaAndroidApp.init(AndroidStorage(application))
 
     /** アプリ全体の状態 (タブ・登録の画面・接続)。Swift から最初の状態を受け取るまでは null */
     var state by mutableStateOf<RegzaAndroidSnapshot?>(null)
@@ -42,7 +35,7 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             var snapshot = core.snapshot().await()
             while (true) {
-                update(snapshot)
+                state = snapshot
                 snapshot = core.nextSnapshot().await()
             }
         }
@@ -54,23 +47,6 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
 
     /** 画面から操作を送る先 (Swift の窓口に送る) */
     val send: Send = AppSend(core)
-
-    private fun update(snapshot: RegzaAndroidSnapshot) {
-        state = snapshot
-        save(snapshot)
-    }
-
-    /** PIN で登録したときや設定を保存したときなど、Swift の側で変わったものを保存する */
-    private fun save(snapshot: RegzaAndroidSnapshot) {
-        val changed = Connection(snapshot.tvHost, snapshot.tvUser, snapshot.tvPassword)
-        if (changed.host.isNotEmpty() && changed != saved) {
-            store.save(changed)
-            saved = changed
-        }
-        if (snapshot.guideHost != store.guideHost) store.guideHost = snapshot.guideHost
-        if (snapshot.streamHost != store.streamHost) store.streamHost = snapshot.streamHost
-        if (snapshot.ownStreamIDs != store.ownStreamIDs) store.ownStreamIDs = snapshot.ownStreamIDs
-    }
 
     override fun onCleared() {
         // アプリを閉じたら、テレビの PIN 表示も取り消し、ライブ視聴の配信も止める (待たずに送るだけ)

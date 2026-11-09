@@ -25,15 +25,6 @@ public struct RegzaAndroidSnapshot {
     public var canGoBack: Bool
     /// テレビの登録の画面を出している (未登録のとき、設定を開いたとき)
     public var isShowingSetup: Bool
-    /// 保存すべきテレビの接続情報 (アドレス・ユーザー名・パスワード) と番組表のアドレス。変わったら Kotlin が保存する
-    public var tvHost: String
-    public var tvUser: String
-    public var tvPassword: String
-    public var guideHost: String
-    /// ライブ視聴に使う EPGStation のアドレス。変わったら Kotlin が保存する
-    public var streamHost: String
-    /// このアプリが頼んだ配信の ID (「1,2」のようにつなぐ)。強制終了で止められなかった配信を、次に開いたときに止めるため Kotlin が保存する
-    public var ownStreamIDs: String
     /// リモコンの state (RemoteViewModel.State をそのまま渡す)。いま映っているもの・接続できないときの説明など
     public var remote: RemoteState
     /// 設定の画面の state (SettingsViewModel.State をそのまま渡す)。設定を出している間だけある
@@ -74,32 +65,19 @@ public enum RegzaAndroidAction {
 
 /// アプリ全体の窓口。アプリに 1 つ作り、画面の状態を読んで操作を送る
 public final class RegzaAndroidApp {
-    private let store: AndroidConnectionStore
     private let app: AppViewModel
     @MainActor private let snapshotChanges = Changes()
-    /// 保存先の値 (配信の ID など) が変わった回数。画面の状態とは別に変わるので、読んで見張り、変わったら Kotlin に渡し直す
-    @MainActor private let storeRevision = StoreRevision()
     @MainActor private let screenChanges = Changes()
     /// 前に返した画面の状態 (同じなら返さない)
     @MainActor private var lastScreen: ScreenKey?
 
-    /// 保存してある値から作る。メインスレッドから呼ぶ (先に regzaSetUpMainActor を呼んでおく)
-    public convenience init(
-        host: String, user: String, password: String, pairingUserID: String, guideHost: String, streamHost: String, ownStreamIDs: String
-    ) {
-        let store = AndroidConnectionStore(
-            connection: RegzaConnection(host: host, user: user, password: password),
-            pairingUserID: pairingUserID,
-            guideHost: guideHost,
-            streamHost: streamHost,
-            ownStreamIDs: ownStreamIDs.split(separator: ",").compactMap { Int($0) }
-        )
-        self.init(app: MainActor.assumeIsolated { AppViewModel(store: store) }, store: store)
+    /// Kotlin の保存先 (Keystore と SharedPreferences) で組み立てる。メインスレッドから呼ぶ (先に regzaSetUpMainActor を呼んでおく)
+    public convenience init(storage: any RegzaAndroidStorage) {
+        self.init(app: MainActor.assumeIsolated { AppViewModel(store: AndroidConnectionStore(storage: storage)) })
     }
 
-    /// 組み立てた ViewModel と保存先から作る (テストでは、テレビにつながない見本の ViewModel を渡す)
-    init(app: AppViewModel, store: AndroidConnectionStore) {
-        self.store = store
+    /// 組み立てた ViewModel から作る (テストでは、テレビにつながない見本の ViewModel を渡す)
+    init(app: AppViewModel) {
         self.app = app
         MainActor.assumeIsolated {
             // 未登録なら、テレビの登録の画面から始める
@@ -107,9 +85,6 @@ public final class RegzaAndroidApp {
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
             Task { await app.cleanUpStreams() }
         }
-        // 配信を止めて ID を消したときなどは、画面の状態が変わったあとに保存先だけが変わるので、別に知らせる
-        let storeRevision = MainActor.assumeIsolated { self.storeRevision }
-        store.onChange = { Task { @MainActor in storeRevision.value += 1 } }
     }
 
     /// いまのアプリ全体の状態
@@ -153,19 +128,10 @@ public final class RegzaAndroidApp {
         let remote = app.remote.state
         let settings = appState.isShowingSettings ? app.settings : nil
         let nowPlaying = appState.isShowingNowPlaying ? app.nowPlaying.state : nil
-        _ = storeRevision.value
-        // 保存する値は、ViewModel ではなく保存先から読む (Android では Kotlin が保存するので、保存先の値を渡す)
-        let connection = store.load()
         return RegzaAndroidSnapshot(
             tab: appState.tab.rawValue,
             canGoBack: !appState.path(of: appState.tab).isEmpty,
             isShowingSetup: settings != nil,
-            tvHost: connection.host,
-            tvUser: connection.user,
-            tvPassword: connection.password,
-            guideHost: store.guideHost,
-            streamHost: store.streamHost,
-            ownStreamIDs: store.ownStreamIDs.map(String.init).joined(separator: ","),
             remote: remote,
             setup: settings?.state,
             nowPlayingDetail: nowPlaying,
@@ -238,13 +204,6 @@ public final class RegzaAndroidApp {
 
 }
 
-/// 保存先の値が変わった回数 (見張るためだけに使う)
-@MainActor
-@Observable
-private final class StoreRevision {
-    var value = 0
-}
-
 /// 状態の変わり目を知らせる。読んだ値を見張り、変わったら待っている側を起こす
 /// (待ち始める前に変わっていても逃さない)
 @MainActor
@@ -270,53 +229,5 @@ private final class Changes {
         hasChanged = true
         waiter?.resume()
         waiter = nil
-    }
-}
-
-/// Android の保存先。値は Kotlin が保存しているものを起動時に受け取り、
-/// 変わった接続情報・録画サーバーのアドレス・配信の ID は RegzaAndroidSnapshot から Kotlin が保存する
-final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
-    private let lock = NSLock()
-    private var connection: RegzaConnection
-    private let userID: String
-    private var values: (guideHost: String, streamHost: String, ownStreamIDs: [Int])
-    /// 録画サーバーのアドレスや配信の ID が変わったら呼ぶ (Kotlin に保存し直してもらう)
-    var onChange: @Sendable () -> Void = {}
-
-    init(connection: RegzaConnection, pairingUserID: String, guideHost: String, streamHost: String, ownStreamIDs: [Int]) {
-        self.connection = connection
-        userID = pairingUserID
-        values = (guideHost, streamHost, ownStreamIDs)
-    }
-
-    func load() -> RegzaConnection { lock.withLock { connection } }
-    func save(_ connection: RegzaConnection) {
-        lock.withLock { self.connection = connection }
-        onChange()
-    }
-    func pairingUserID() -> String { userID }
-
-    var guideHost: String {
-        get { lock.withLock { values.guideHost } }
-        set {
-            lock.withLock { values.guideHost = newValue }
-            onChange()
-        }
-    }
-
-    var streamHost: String {
-        get { lock.withLock { values.streamHost } }
-        set {
-            lock.withLock { values.streamHost = newValue }
-            onChange()
-        }
-    }
-
-    var ownStreamIDs: [Int] {
-        get { lock.withLock { values.ownStreamIDs } }
-        set {
-            lock.withLock { values.ownStreamIDs = newValue }
-            onChange()
-        }
     }
 }

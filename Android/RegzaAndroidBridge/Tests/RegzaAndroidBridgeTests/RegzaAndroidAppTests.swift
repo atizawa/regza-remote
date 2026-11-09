@@ -28,38 +28,31 @@ struct RegzaAndroidAppTests {
         return try JSONDecoder().decode([MirakurunProgram].self, from: Data("[\(items.joined(separator: ","))]".utf8))
     }
 
-    /// 窓口と、その中の ViewModel と保存先
+    /// 窓口と、その中の ViewModel
     struct Fixture {
         let bridge: RegzaAndroidApp
         let app: AppViewModel
-        let store: AndroidConnectionStore
     }
 
-    func make(host: String = "192.0.2.1", guide: Bool = true, streamHost: String = "", ownStreamIDs: [Int] = []) throws -> Fixture {
-        let connection = RegzaConnection(host: host)
-        let store = AndroidConnectionStore(
-            connection: connection, pairingUserID: "00:00:5e:00:53:00", guideHost: guide ? "192.0.2.2" : "", streamHost: streamHost,
-            ownStreamIDs: ownStreamIDs
-        )
+    func make(host: String = "192.0.2.1", guide: Bool = true) throws -> Fixture {
         let app = AppViewModel.sample(
-            connection: connection, nowPlaying: nil, channels: try Self.channels(),
+            connection: RegzaConnection(host: host), nowPlaying: nil, channels: try Self.channels(),
             guideHost: guide ? "192.0.2.2" : "", programs: guide ? try Self.programs() : []
         )
-        return Fixture(bridge: RegzaAndroidApp(app: app, store: store), app: app, store: store)
+        return Fixture(bridge: RegzaAndroidApp(app: app), app: app)
     }
 
     /// 本物の Repository を偽の通信でつなぎ、ライブ視聴 (EPGStation) も設定してあるものを組み立てる (配信は頼まない)
     func makeWithStream() async throws -> Fixture {
-        let store = AndroidConnectionStore(
-            connection: RegzaConnection(host: "192.0.2.1"), pairingUserID: "", guideHost: "192.0.2.2", streamHost: "192.0.2.30",
-            ownStreamIDs: []
-        )
+        let store = AndroidConnectionStore(storage: MemoryStorage([
+            AndroidStorageKey.host: "192.0.2.1", AndroidStorageKey.guideHost: "192.0.2.2", AndroidStorageKey.streamHost: "192.0.2.30",
+        ]))
         let transport = ChannelListTransport()
         let app = AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport), transport: transport)
         // 局を引けるよう、チャンネル一覧を読んでおく
         app.remote.send(.loadChannels(force: false))
         _ = await Introspector(root: app).waitUntilIdle()
-        return Fixture(bridge: RegzaAndroidApp(app: app, store: store), app: app, store: store)
+        return Fixture(bridge: RegzaAndroidApp(app: app), app: app)
     }
 
     // MARK: - アプリ全体の状態
@@ -71,24 +64,36 @@ struct RegzaAndroidAppTests {
         #expect(snapshot.setup?.path == [.tv])
     }
 
-    @Test func snapshotCarriesConnectionAndSavedValues() async throws {
-        let fixture = try make(streamHost: "192.0.2.30", ownStreamIDs: [1, 2])
-        let snapshot = await fixture.bridge.snapshot()
-        #expect(!snapshot.isShowingSetup)
-        #expect(snapshot.tab == "remote")
-        #expect(snapshot.tvHost == "192.0.2.1")
-        #expect(snapshot.guideHost == "192.0.2.2")
-        #expect(snapshot.streamHost == "192.0.2.30")
-        #expect(snapshot.ownStreamIDs == "1,2")
+    // MARK: - 保存先
+
+    /// 保存してある値を読み、PIN 登録に使う ID がなければ作って保存する
+    @Test func storeReadsSavedValues() {
+        let storage = MemoryStorage([
+            AndroidStorageKey.host: "192.0.2.1", AndroidStorageKey.user: "user", AndroidStorageKey.password: "secret",
+            AndroidStorageKey.guideHost: "192.0.2.2", AndroidStorageKey.ownStreamIDs: "1,2",
+        ])
+        let store = AndroidConnectionStore(storage: storage)
+        #expect(store.load() == RegzaConnection(host: "192.0.2.1", user: "user", password: "secret"))
+        #expect(store.guideHost == "192.0.2.2")
+        #expect(store.streamHost == "")
+        #expect(store.ownStreamIDs == [1, 2])
+        #expect(!store.pairingUserID().isEmpty)
+        #expect(storage.values[AndroidStorageKey.pairingUserID] == store.pairingUserID())
+        // 作った ID は次に開いたときも同じ
+        #expect(AndroidConnectionStore(storage: storage).pairingUserID() == store.pairingUserID())
     }
 
-    /// 配信を止めて ID を消したときのように、画面の状態は変わらず保存先だけが変わっても、Kotlin に渡し直す
-    @Test func savedValueChangeWakesSnapshot() async throws {
-        let fixture = try make(ownStreamIDs: [3])
-        _ = await fixture.bridge.snapshot()
-        fixture.store.ownStreamIDs = []
-        let next = await fixture.bridge.nextSnapshot()
-        #expect(next.ownStreamIDs == "")
+    /// 変わった値は、メインスレッドで Kotlin の保存先に書く
+    @Test func storeWritesChangedValues() async throws {
+        let storage = MemoryStorage([:])
+        let store = AndroidConnectionStore(storage: storage)
+        store.save(RegzaConnection(host: "192.0.2.1", user: "user", password: "secret"))
+        store.streamHost = "192.0.2.30"
+        store.ownStreamIDs = [3, 4]
+        try await waitUntil { storage.values[AndroidStorageKey.ownStreamIDs] == "3,4" }
+        #expect(storage.values[AndroidStorageKey.host] == "192.0.2.1")
+        #expect(storage.values[AndroidStorageKey.password] == "secret")
+        #expect(storage.values[AndroidStorageKey.streamHost] == "192.0.2.30")
     }
 
     @Test func keysAreSentToTheRemote() async throws {
@@ -294,4 +299,16 @@ struct ChannelListTransport: HTTPTransport {
         }
         return HTTPResponse(statusCode: 200, headers: [:], body: Data(body.utf8))
     }
+}
+
+/// メモリに置くだけの保存先 (Kotlin の保存先の代わり)
+final class MemoryStorage: RegzaAndroidStorage {
+    var values: [String: String]
+
+    init(_ values: [String: String]) {
+        self.values = values
+    }
+
+    func value(forKey key: String) -> String? { values[key] }
+    func setValue(_ value: String, forKey key: String) { values[key] = value }
 }
