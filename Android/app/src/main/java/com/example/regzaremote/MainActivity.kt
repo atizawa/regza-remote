@@ -57,6 +57,8 @@ class MainActivity : ComponentActivity() {
                         val state = model.state ?: return@LocalNetworkGate
                         val setup = state.setup.orElse(null)
                         if (setup != null) SettingsScreen(setup, model::send) else AppScreen(state, model.screen, model::send)
+                        // アプリで見る (ライブ視聴) は、どの画面の上にも全画面で重ねる
+                        state.player.orElse(null)?.let { LivePlayerScreen(it, model::send) }
                     }
                 }
             }

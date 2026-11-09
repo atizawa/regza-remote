@@ -135,6 +135,13 @@ fun NowPlayingSheet(state: RegzaAndroidSnapshot, detail: RegzaAndroidNowPlaying,
                     modifier = Modifier.padding(horizontal = 4.dp))
             }
             if (detail.isCanPowerOn) SheetButton("電源を入れる") { send(RegzaAndroidAction.powerOn()) }
+            detail.playableChannelCode.orElse(null)?.let { code ->
+                SheetButton("アプリで見る") {
+                    // シートを閉じてから、全画面で再生する
+                    send(RegzaAndroidAction.closeNowPlaying())
+                    send(RegzaAndroidAction.play(code))
+                }
+            }
             if (detail.isCanStartOver) SheetButton("この番組を最初から見る") { send(RegzaAndroidAction.startOver()) }
         }
     }

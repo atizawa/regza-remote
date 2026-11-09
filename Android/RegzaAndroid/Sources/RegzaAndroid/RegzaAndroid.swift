@@ -32,6 +32,10 @@ public struct RegzaAndroidSnapshot {
     /// 保存すべき接続情報と番組表のアドレス。変わったら Kotlin が保存する
     public var connection: RegzaConnection
     public var guideHost: String
+    /// ライブ視聴に使う EPGStation のアドレス。変わったら Kotlin が保存する
+    public var streamHost: String
+    /// このアプリが頼んだ配信の ID (「1,2」のようにつなぐ)。強制終了で止められなかった配信を、次に開いたときに止めるため Kotlin が保存する
+    public var ownStreamIDs: String
     public var nowPlaying: NowPlayingItem?
     /// いま見ている放送の種類 (リモコンの地デジ・BS・CS の印。チャンネル一覧から分かるときだけ)
     public var nowPlayingBand: BroadcastBand?
@@ -43,11 +47,35 @@ public struct RegzaAndroidSnapshot {
     public var setup: RegzaAndroidSetup?
     /// ミニプレーヤーを押して開いた、いま映っているものの詳細。開いている間だけある
     public var nowPlayingDetail: RegzaAndroidNowPlaying?
+    /// アプリで見ている (ライブ視聴の画面を出している) 間だけある
+    public var player: RegzaAndroidPlayer?
+}
+
+/// ライブ視聴の画面 (LivePlayerViewModel.State)
+public struct RegzaAndroidPlayer {
+    public var channelCode: String
+    public var channelName: String
+    /// "preparing" (配信の準備中)・"ready" (url を再生する)・"failed" (message を出す)
+    public var phase: String
+    /// 再生する HLS のプレイリストの URL
+    public var url: String?
+    /// 準備中や失敗の説明
+    public var message: String
+    /// 準備できないまま残っている配信を止めて、もう一度試せる
+    public var canRetry: Bool
+    /// 見ている局でいま放送中の番組
+    public var program: ProgramItem?
+    public var bands: [BroadcastBand]
+    public var band: BroadcastBand?
+    /// 切り替えられる局 (選んでいる放送の種類のもの)
+    public var channels: [ChannelItem]
 }
 
 /// いま映っているものの詳細のシート (NowPlayingViewModel.State)
 public struct RegzaAndroidNowPlaying {
     public var title: String
+    /// アプリで見られる、いま映っている局
+    public var playableChannelCode: String?
     public var description: String?
     public var canPowerOn: Bool
     public var canStartOver: Bool
@@ -95,8 +123,19 @@ public struct RegzaAndroidSetup {
     public var guideMessage: String?
     /// 保存済みで、連携を解除できるか
     public var isGuideLinked: Bool
-    /// 入力したポートが正しいか
+    /// 入力したポートが正しいか (番組表とライブ視聴の両方)
     public var isGuideHostValid: Bool
+    /// Mirakurun のアドレスが入っている (EPGStation は Mirakurun から放送を受け取るので、先に番組表を設定する)
+    public var hasGuideDraft: Bool
+    /// ライブ視聴 (EPGStation) のアドレスと、その設定の画面に出すもの
+    public var streamHost: String
+    public var streamHosts: [String]
+    public var isScanningStream: Bool
+    public var streamMessage: String?
+    public var streamStatus: String
+    public var isStreamLinked: Bool
+    public var streamUnlinkTitle: String
+    public var streamUnlinkMessage: String
 }
 
 // MARK: - 操作
@@ -114,6 +153,17 @@ public enum RegzaAndroidAction {
     case startPolling
     case stopPolling
     case selectBand(BroadcastBand)
+    // ライブ視聴 (LivePlayerViewModel)
+    /// アプリで見る (チャンネルのコード)
+    case play(String)
+    /// ライブ視聴の画面を出した。局名と番組を読み、配信を頼む
+    case startPlayer
+    /// 前の配信を止めて、選んだ局を見る (チャンネルのコード)
+    case switchPlayerChannel(String)
+    /// 準備できないまま残っている配信を止めてから、もう一度頼む
+    case retryPlayer
+    /// 見終わった。配信を止めてチューナーを空ける
+    case closePlayer
     // いま映っているものの詳細 (NowPlayingViewModel)
     case showNowPlaying
     case closeNowPlaying
@@ -157,7 +207,7 @@ public enum RegzaAndroidAction {
     // 設定 (TVSetupViewModel・ServerSetupViewModel)
     case showSetup
     case closeSetup
-    /// 設定の中の画面を開く ("tv"・"guide")
+    /// 設定の中の画面を開く ("tv"・"guide"・"stream")
     case openSetupPage(String)
     /// 設定の最初の画面に戻る
     case closeSetupPage
@@ -176,6 +226,9 @@ public enum RegzaAndroidAction {
     case setGuideHost(String)
     case scanGuide
     case unlinkGuide
+    case setStreamHost(String)
+    case scanStream
+    case unlinkStream
     case save
 }
 
@@ -191,18 +244,24 @@ public final class RegzaAndroidApp {
     @MainActor private var lastScreen: ScreenKey?
 
     /// 保存してある値から作る。メインスレッドから呼ぶ (先に regzaSetUpMainActor を呼んでおく)
-    public init(host: String, user: String, password: String, pairingUserID: String, guideHost: String) {
+    public init(
+        host: String, user: String, password: String, pairingUserID: String, guideHost: String, streamHost: String, ownStreamIDs: String
+    ) {
         _ = useSocketTransport
         let store = AndroidConnectionStore(
             connection: RegzaConnection(host: host, user: user, password: password),
             pairingUserID: pairingUserID,
-            guideHost: guideHost
+            guideHost: guideHost,
+            streamHost: streamHost,
+            ownStreamIDs: ownStreamIDs.split(separator: ",").compactMap { Int($0) }
         )
         self.store = store
         app = MainActor.assumeIsolated {
             let app = AppViewModel(store: store)
             // 未登録なら、テレビの登録の画面から始める
             if !app.remote.state.connection.isConfigured { app.send(.showSettings) }
+            // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
+            Task { await app.stream.cleanUp() }
             return app
         }
     }
@@ -254,6 +313,8 @@ public final class RegzaAndroidApp {
             isShowingSetup: settings != nil,
             connection: remote.connection,
             guideHost: app.guide.guideHost,
+            streamHost: store.streamHost,
+            ownStreamIDs: store.ownStreamIDs.map(String.init).joined(separator: ","),
             nowPlaying: remote.nowPlaying,
             nowPlayingBand: remote.nowPlaying.flatMap { nowPlaying in
                 nowPlaying.channelCode.isEmpty ? nil : remote.channels.first { $0.code == nowPlaying.channelCode }?.band
@@ -292,12 +353,35 @@ public final class RegzaAndroidApp {
                     isScanningGuide: servers.guide.isScanning,
                     guideMessage: servers.guide.message,
                     isGuideLinked: servers.guide.isLinked,
-                    isGuideHostValid: servers.isValid
+                    isGuideHostValid: servers.isValid,
+                    hasGuideDraft: servers.hasGuideDraft,
+                    streamHost: servers.stream.host,
+                    streamHosts: servers.stream.hosts,
+                    isScanningStream: servers.stream.isScanning,
+                    streamMessage: servers.stream.message,
+                    streamStatus: servers.stream.status,
+                    isStreamLinked: servers.stream.isLinked,
+                    streamUnlinkTitle: servers.stream.unlinkTitle,
+                    streamUnlinkMessage: servers.stream.unlinkMessage
                 )
             },
             nowPlayingDetail: nowPlaying.map {
                 RegzaAndroidNowPlaying(
-                    title: $0.title, description: $0.description, canPowerOn: $0.canPowerOn, canStartOver: $0.canStartOver
+                    title: $0.title, playableChannelCode: $0.playableChannelCode, description: $0.description,
+                    canPowerOn: $0.canPowerOn, canStartOver: $0.canStartOver
+                )
+            },
+            player: app.player.map { player in
+                let state = player.state
+                let (phase, url, message, canRetry): (String, String?, String, Bool) = switch state.phase {
+                case .preparing: ("preparing", nil, state.preparingMessage, false)
+                case .ready(let url): ("ready", url.absoluteString, "", false)
+                case .failed(let message, let canRetry): ("failed", nil, message, canRetry)
+                }
+                return RegzaAndroidPlayer(
+                    channelCode: state.channelCode, channelName: state.channelName, phase: phase, url: url, message: message,
+                    canRetry: canRetry, program: state.program, bands: state.bands,
+                    band: app.remote.state.band(among: state.bands), channels: state.channels
                 )
             }
         )
@@ -357,6 +441,13 @@ public final class RegzaAndroidApp {
         case .startPolling: app.remote.send(.startPolling)
         case .stopPolling: app.remote.send(.stopPolling)
         case .selectBand(let band): app.remote.send(.selectBand(band))
+        case .play(let code): app.send(.play(channelCode: code))
+        case .startPlayer:
+            app.player?.send(.appear)
+            app.player?.send(.start)
+        case .switchPlayerChannel(let code): app.player?.send(.switchChannel(code))
+        case .retryPlayer: app.player?.send(.retryAfterStoppingStalled)
+        case .closePlayer: app.send(.closePlayer)
         case .showNowPlaying:
             app.send(.showNowPlaying)
             app.nowPlaying.send(.appear)
@@ -391,7 +482,10 @@ public final class RegzaAndroidApp {
         case .showSetup: app.send(.showSettings)
         case .closeSetup: app.send(.closeSettings)
         case .openSetupPage(let page):
-            if let page = AppViewModel.SettingsPage(rawValue: page) { app.send(.setSettingsPath([page])) }
+            guard let page = AppViewModel.SettingsPage(rawValue: page) else { return }
+            app.send(.setSettingsPath([page]))
+            // Mirakurun と同じサーバーで EPGStation が動いていれば、候補として出す
+            if page == .stream { servers?.send(.suggestStreamHost) }
         case .closeSetupPage: app.send(.setSettingsPath([]))
         case .setupAppear: tv?.send(.appear)
         case .setHost(let host): tv?.send(.setHost(host))
@@ -408,6 +502,9 @@ public final class RegzaAndroidApp {
         case .setGuideHost(let host): servers?.send(.setHost(.guide, host))
         case .scanGuide: servers?.send(.scan(.guide))
         case .unlinkGuide: servers?.send(.unlink(.guide))
+        case .setStreamHost(let host): servers?.send(.setHost(.stream, host))
+        case .scanStream: servers?.send(.scan(.stream))
+        case .unlinkStream: servers?.send(.unlink(.stream))
         case .save: app.send(.saveSettings)
         }
     }
@@ -452,17 +549,17 @@ private final class Changes {
 }
 
 /// Android の保存先。値は Kotlin が保存しているものを起動時に受け取り、
-/// 変わった接続情報と番組表のアドレスは RegzaAndroidSnapshot から Kotlin が保存する
+/// 変わった接続情報・録画サーバーのアドレス・配信の ID は RegzaAndroidSnapshot から Kotlin が保存する
 final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
     private let lock = NSLock()
     private var connection: RegzaConnection
     private let userID: String
     private var values: (guideHost: String, streamHost: String, ownStreamIDs: [Int])
 
-    init(connection: RegzaConnection, pairingUserID: String, guideHost: String) {
+    init(connection: RegzaConnection, pairingUserID: String, guideHost: String, streamHost: String, ownStreamIDs: [Int]) {
         self.connection = connection
         userID = pairingUserID
-        values = (guideHost, "", [])
+        values = (guideHost, streamHost, ownStreamIDs)
     }
 
     func load() -> RegzaConnection { lock.withLock { connection } }
@@ -474,7 +571,6 @@ final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
         set { lock.withLock { values.guideHost = newValue } }
     }
 
-    // Android にはまだライブ視聴がないので、保存しない
     var streamHost: String {
         get { lock.withLock { values.streamHost } }
         set { lock.withLock { values.streamHost = newValue } }

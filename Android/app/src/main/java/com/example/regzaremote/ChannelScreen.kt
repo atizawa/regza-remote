@@ -71,7 +71,7 @@ fun ChannelScreen(list: RegzaAndroidChannelList, send: Send) {
                     }
                     itemsIndexed(rows, key = { _, row -> row.code }) { index, row ->
                         Column(Modifier.background(AppTheme.surface, sectionRowShape(index, rows.size))) {
-                            ChannelRow(row, tuningCode, canStartOver = row.isCanStartOver, send)
+                            ChannelRow(row, tuningCode, canStream = list.isCanStream, send)
                             if (index < rows.size - 1) RowDivider()
                         }
                     }
@@ -84,7 +84,7 @@ fun ChannelScreen(list: RegzaAndroidChannelList, send: Send) {
 /** 押すとすぐ切り替わるので、切り替え以外は長押しのメニューにまとめる (iOS 版と同じ) */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStartOver: Boolean, send: Send) {
+private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean, send: Send) {
     var isShowingMenu by remember { mutableStateOf(false) }
     Box {
         Row(
@@ -129,7 +129,13 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStartOver: Bool
                 isShowingMenu = false
                 send(RegzaAndroidAction.tune(row.code))
             })
-            if (canStartOver) {
+            if (canStream) {
+                DropdownMenuItem(text = { Text("アプリで見る") }, onClick = {
+                    isShowingMenu = false
+                    send(RegzaAndroidAction.play(row.code))
+                })
+            }
+            if (row.isCanStartOver) {
                 DropdownMenuItem(text = { Text("最初から見る") }, onClick = {
                     isShowingMenu = false
                     send(RegzaAndroidAction.tuneFromStart(row.code))

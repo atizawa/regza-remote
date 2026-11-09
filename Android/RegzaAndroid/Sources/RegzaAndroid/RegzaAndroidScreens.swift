@@ -26,6 +26,8 @@ public struct RegzaAndroidChannelList {
     public var tuneError: String?
     /// 切り替え中のチャンネルのコード
     public var tuningChannelCode: String?
+    /// アプリで見られる (ライブ視聴を設定している)
+    public var canStream: Bool
     public var bands: [BroadcastBand]
     public var band: BroadcastBand?
     public var rows: [ChannelItem]
@@ -78,6 +80,8 @@ public struct RegzaAndroidProgramDetail {
     public var isSeriesReservation: Bool
     public var canTune: Bool
     public var canReserve: Bool
+    /// アプリで見られる (放送中で、ライブ視聴を設定している)
+    public var canStream: Bool
     public var canStartOver: Bool
 }
 
@@ -129,6 +133,7 @@ extension RegzaAndroidScreen {
                 loadErrorMessage: state.loadErrorMessage,
                 tuneError: state.tuneError,
                 tuningChannelCode: state.tuningCode,
+                canStream: state.canStream,
                 bands: state.bands,
                 band: state.band,
                 rows: state.rows
@@ -187,6 +192,7 @@ extension RegzaAndroidScreen {
                 isSeriesReservation: state.reservationIsSeries == true,
                 canTune: state.canTune,
                 canReserve: state.canReserve,
+                canStream: state.canStream,
                 canStartOver: state.canStartOver
             ))
         case .search(let state):

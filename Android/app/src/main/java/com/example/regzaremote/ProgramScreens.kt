@@ -192,6 +192,13 @@ private fun DetailActions(detail: RegzaAndroidProgramDetail, send: Send) {
             }
             if (detail.isCanReserve) ReserveMenu(detail, send)
         }
+        if (detail.isCanStream) {
+            Row {
+                ActionButton("アプリで見る", AppTheme.surface, foreground = MaterialTheme.colorScheme.onSurface) {
+                    send(RegzaAndroidAction.play(detail.program.channelCode))
+                }
+            }
+        }
         if (detail.isCanStartOver) {
             Row {
                 ActionButton("最初から見る", AppTheme.surface, foreground = MaterialTheme.colorScheme.onSurface, enabled = !detail.isTuning) {

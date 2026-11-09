@@ -82,5 +82,9 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // ライブ視聴: EPGStation の HLS の配信を再生する
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.exoplayer.hls)
+    implementation(libs.androidx.media3.ui)
     implementation(libs.kotlinx.coroutines.android)
 }

@@ -41,6 +41,16 @@ class ConnectionStore(context: Context) {
         get() = preferences.getString(GUIDE_HOST, null) ?: ""
         set(value) = preferences.edit().putString(GUIDE_HOST, value).apply()
 
+    /** ライブ視聴に使う EPGStation のアドレス。未設定なら空 */
+    var streamHost: String
+        get() = preferences.getString(STREAM_HOST, null) ?: ""
+        set(value) = preferences.edit().putString(STREAM_HOST, value).apply()
+
+    /** このアプリが頼んだライブ視聴の配信の ID (「1,2」のようにつなぐ)。強制終了で止められなかった配信を、次に開いたときに止める */
+    var ownStreamIDs: String
+        get() = preferences.getString(OWN_STREAM_IDS, null) ?: ""
+        set(value) = preferences.edit().putString(OWN_STREAM_IDS, value).apply()
+
     /**
      * PIN 登録に使うこのアプリ用のユーザー ID。無ければ作って保存する。
      * 登録し直すときも同じ ID を使うと、テレビ側で上書きされて登録が増えない。
@@ -86,6 +96,8 @@ class ConnectionStore(context: Context) {
         const val PASSWORD = "password"
         const val PAIRING_USER_ID = "pairingUserID"
         const val GUIDE_HOST = "guideHost"
+        const val STREAM_HOST = "streamHost"
+        const val OWN_STREAM_IDS = "ownStreamIDs"
         const val KEYSTORE = "AndroidKeyStore"
         const val KEY_ALIAS = "regza.connection"
         const val TRANSFORMATION = "AES/GCM/NoPadding"

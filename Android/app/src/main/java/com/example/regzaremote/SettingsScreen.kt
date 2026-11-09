@@ -60,6 +60,7 @@ fun SettingsScreen(setup: RegzaAndroidSetup, send: Send) {
     when (setup.page) {
         "tv" -> TVSettingsPage(setup, send)
         "guide" -> GuideSettingsPage(setup, send)
+        "stream" -> StreamSettingsPage(setup, send)
         else -> SettingsTopPage(setup, send)
     }
 }
@@ -86,9 +87,16 @@ private fun SettingsTopPage(setup: RegzaAndroidSetup, send: Send) {
         }
         FormSection(
             "録画サーバーとの連携",
-            footer = "Mirakurun を使っている場合だけ設定してください。設定すると、番組名・番組表・番組表からの録画予約が使えます。",
+            footer = "Mirakurun や EPGStation を使っている場合だけ設定してください。設定すると、番組名・番組表・番組表からの録画予約や、" +
+                "アプリでのライブ視聴が使えます。\nライブ視聴（EPGStation）は、番組表（Mirakurun）を設定すると設定できます。",
         ) {
             NavigationRow("番組表（Mirakurun）", setup.guideStatus) { send(RegzaAndroidAction.openSetupPage("guide")) }
+            RowDivider()
+            // EPGStation は Mirakurun から放送を受け取るので、Mirakurun を設定してから設定できるようにする
+            NavigationRow(
+                "ライブ視聴（EPGStation）", if (setup.isHasGuideDraft) setup.streamStatus else "先に番組表を設定",
+                enabled = setup.isHasGuideDraft,
+            ) { send(RegzaAndroidAction.openSetupPage("stream")) }
         }
     }
 }
@@ -181,39 +189,83 @@ private fun TVSettingsPage(setup: RegzaAndroidSetup, send: Send) {
     }
 }
 
-/** 番組表 (Mirakurun) の設定。保存済みなら、連携を解除するボタンも出す */
+/** 録画サーバー (Mirakurun・EPGStation) の設定の画面に出すもの */
+private class ServerPage(
+    val title: String,
+    val header: String,
+    val footer: String,
+    val name: String,
+    val host: String,
+    val hosts: Array<String>,
+    val isScanning: Boolean,
+    val message: String?,
+    val isLinked: Boolean,
+    val unlinkTitle: String,
+    val unlinkMessage: String,
+    val setHost: (String) -> RegzaAndroidAction,
+    val scan: RegzaAndroidAction,
+    val unlink: RegzaAndroidAction,
+)
+
+/** 番組表 (Mirakurun) の設定 */
 @Composable
 private fun GuideSettingsPage(setup: RegzaAndroidSetup, send: Send) {
+    ServerSettingsPage(
+        ServerPage(
+            title = "番組表（Mirakurun）", header = "番組表 (Mirakurun)",
+            footer = "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。",
+            name = "Mirakurun", host = setup.guideHost, hosts = setup.guideHosts, isScanning = setup.isScanningGuide,
+            message = setup.guideMessage.orElse(null), isLinked = setup.isGuideLinked,
+            unlinkTitle = setup.guideUnlinkTitle, unlinkMessage = setup.guideUnlinkMessage,
+            setHost = { RegzaAndroidAction.setGuideHost(it) }, scan = RegzaAndroidAction.scanGuide(), unlink = RegzaAndroidAction.unlinkGuide(),
+        ),
+        isHostValid = setup.isGuideHostValid, send = send,
+    )
+}
+
+/** ライブ視聴 (EPGStation) の設定 */
+@Composable
+private fun StreamSettingsPage(setup: RegzaAndroidSetup, send: Send) {
+    ServerSettingsPage(
+        ServerPage(
+            title = "ライブ視聴（EPGStation）", header = "ライブ視聴 (EPGStation)",
+            footer = "EPGStation を動かしている場合に設定すると、放送中の番組をスマートフォンで見られます。家の Wi-Fi の中だけで使えます。",
+            name = "EPGStation", host = setup.streamHost, hosts = setup.streamHosts, isScanning = setup.isScanningStream,
+            message = setup.streamMessage.orElse(null), isLinked = setup.isStreamLinked,
+            unlinkTitle = setup.streamUnlinkTitle, unlinkMessage = setup.streamUnlinkMessage,
+            setHost = { RegzaAndroidAction.setStreamHost(it) }, scan = RegzaAndroidAction.scanStream(), unlink = RegzaAndroidAction.unlinkStream(),
+        ),
+        isHostValid = setup.isGuideHostValid, send = send,
+    )
+}
+
+/** 録画サーバーの設定の画面。保存済みなら、連携を解除するボタンも出す */
+@Composable
+private fun ServerSettingsPage(page: ServerPage, isHostValid: Boolean, send: Send) {
     BackHandler { send(RegzaAndroidAction.closeSetupPage()) }
     var isConfirmingUnlink by remember { mutableStateOf(false) }
 
-    SettingsPage(header = { ScreenHeader("番組表（Mirakurun）", onBack = { send(RegzaAndroidAction.closeSetupPage()) }) }) {
-        FormSection(
-            "番組表 (Mirakurun)",
-            footer = "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。",
-        ) {
-            FormTextField(
-                setup.guideHost, { send(RegzaAndroidAction.setGuideHost(it)) }, "IPアドレス (例: 192.168.0.2)",
-                keyboardType = KeyboardType.Uri,
-            )
-            if (!setup.isGuideHostValid) {
+    SettingsPage(header = { ScreenHeader(page.title, onBack = { send(RegzaAndroidAction.closeSetupPage()) }) }) {
+        FormSection(page.header, footer = page.footer) {
+            FormTextField(page.host, { send(page.setHost(it)) }, "IPアドレス (例: 192.168.0.2)", keyboardType = KeyboardType.Uri)
+            if (!isHostValid) {
                 MessageRow("ポートは 1〜65535 の数字で入れてください。", color = AppTheme.red)
             }
-            setup.guideHosts.forEach { host ->
+            page.hosts.forEach { host ->
                 RowDivider()
-                FormRow(onClick = { send(RegzaAndroidAction.setGuideHost(host)) }) {
+                FormRow(onClick = { send(page.setHost(host)) }) {
                     Text(host, Modifier.weight(1f))
-                    if (host == setup.guideHost) Icon(Icons.Filled.Check, contentDescription = "選択中", tint = AppTheme.accent)
+                    if (host == page.host) Icon(Icons.Filled.Check, contentDescription = "選択中", tint = AppTheme.accent)
                 }
             }
             RowDivider()
             ActionRow(
-                if (setup.isScanningGuide) "Mirakurun を探しています…" else "Mirakurun を探す", isBusy = setup.isScanningGuide,
-                enabled = !setup.isScanningGuide,
-            ) { send(RegzaAndroidAction.scanGuide()) }
-            setup.guideMessage.orElse(null)?.let { RowDivider(); MessageRow(it) }
+                if (page.isScanning) "${page.name} を探しています…" else "${page.name} を探す", isBusy = page.isScanning,
+                enabled = !page.isScanning,
+            ) { send(page.scan) }
+            page.message?.let { RowDivider(); MessageRow(it) }
         }
-        if (setup.isGuideLinked) {
+        if (page.isLinked) {
             FormSection {
                 ActionRow("連携を解除", color = AppTheme.red) { isConfirmingUnlink = true }
             }
@@ -223,13 +275,13 @@ private fun GuideSettingsPage(setup: RegzaAndroidSetup, send: Send) {
     if (isConfirmingUnlink) {
         AlertDialog(
             onDismissRequest = { isConfirmingUnlink = false },
-            title = { Text(setup.guideUnlinkTitle) },
-            text = { Text(setup.guideUnlinkMessage) },
+            title = { Text(page.unlinkTitle) },
+            text = { Text(page.unlinkMessage) },
             confirmButton = {
                 TextButton(onClick = {
                     isConfirmingUnlink = false
                     // すぐにアドレスを消して反映し、設定の最初の画面に戻る
-                    send(RegzaAndroidAction.unlinkGuide())
+                    send(page.unlink)
                     send(RegzaAndroidAction.closeSetupPage())
                 }) { Text("連携を解除", color = AppTheme.red) }
             },
@@ -269,9 +321,9 @@ private fun FormRow(onClick: (() -> Unit)? = null, content: @Composable RowScope
 
 /** 別の画面を開く行。右に今の状態を出す */
 @Composable
-private fun NavigationRow(title: String, value: String, valueColor: Color? = null, onClick: () -> Unit) {
-    FormRow(onClick = onClick) {
-        Text(title, Modifier.weight(1f))
+private fun NavigationRow(title: String, value: String, valueColor: Color? = null, enabled: Boolean = true, onClick: () -> Unit) {
+    FormRow(onClick = if (enabled) onClick else null) {
+        Text(title, Modifier.weight(1f), color = if (enabled) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, color = valueColor ?: MaterialTheme.colorScheme.onSurfaceVariant)
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }

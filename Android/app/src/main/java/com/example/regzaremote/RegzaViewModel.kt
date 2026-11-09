@@ -26,6 +26,7 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val core = RegzaAndroidApp.init(
         saved?.host ?: "", saved?.user ?: "", saved?.password ?: "", store.pairingUserID(), store.guideHost,
+        store.streamHost, store.ownStreamIDs,
     )
 
     /** アプリ全体の状態 (タブ・登録の画面・接続)。Swift から最初の状態を受け取るまでは null */
@@ -67,10 +68,13 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
             saved = changed
         }
         if (snapshot.guideHost != store.guideHost) store.guideHost = snapshot.guideHost
+        if (snapshot.streamHost != store.streamHost) store.streamHost = snapshot.streamHost
+        if (snapshot.ownStreamIDs != store.ownStreamIDs) store.ownStreamIDs = snapshot.ownStreamIDs
     }
 
     override fun onCleared() {
-        // アプリを閉じたら、テレビの PIN 表示も取り消す (待たずに送るだけ)
+        // アプリを閉じたら、テレビの PIN 表示も取り消し、ライブ視聴の配信も止める (待たずに送るだけ)
         core.send(RegzaAndroidAction.closeSetup())
+        core.send(RegzaAndroidAction.closePlayer())
     }
 }

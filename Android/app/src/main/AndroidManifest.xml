@@ -6,12 +6,16 @@
     <!-- Android 17 から、同じ LAN の機器 (テレビ・Mirakurun) への通信には、ユーザーの許可が要る -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
+    <!-- ライブ視聴の配信 (EPGStation) は家の LAN の中の http なので、暗号化していない通信を許す -->
     <application
         android:name=".RegzaApplication"
+        android:usesCleartextTraffic="true"
         android:label="REGZA リモコン"
         android:theme="@android:style/Theme.Material.NoActionBar">
+        <!-- 回転しても作り直さない (ライブ視聴の再生を途切れさせない) -->
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
