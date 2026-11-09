@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.BroadcastBand
 import com.example.regzaremote.core.ChannelItem
 import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.ChannelListState
 
@@ -164,7 +165,7 @@ fun BandPicker(bands: Array<BroadcastBand>, band: BroadcastBand?, send: Send) {
             SegmentedButton(
                 // Swift の値なので、同じ種類かは rawValue で比べる
                 selected = item.rawValue == band?.rawValue,
-                onClick = { send(RegzaAndroidAction.selectBand(item)) },
+                onClick = { send(RemoteAction.selectBand(java.util.Optional.of(item))) },
                 shape = SegmentedButtonDefaults.itemShape(index, bands.size),
                 // iOS の切り替えと同じく、チェックの印は付けない
                 icon = {},

@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RegzaAndroidScreen
 import com.example.regzaremote.core.RegzaAndroidSnapshot
 
@@ -133,8 +134,8 @@ private fun AppScreen(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?, 
     // 画面が見えている間だけ、いま映っているものを取り直す (チャンネルのタブでも、いま見ている局の印に使う)。
     // 裏に回ったらテレビに問い合わせない
     LifecycleStartEffect(Unit) {
-        send(RegzaAndroidAction.startPolling())
-        onStopOrDispose { send(RegzaAndroidAction.stopPolling()) }
+        send(RemoteAction.startPolling())
+        onStopOrDispose { send(RemoteAction.stopPolling()) }
     }
     // タブの中で開いた画面は、戻るボタンで 1 つ戻る
     BackHandler(enabled = state.isCanGoBack) { send(RegzaAndroidAction.back()) }

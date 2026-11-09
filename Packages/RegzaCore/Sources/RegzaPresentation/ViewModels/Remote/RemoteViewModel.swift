@@ -24,41 +24,11 @@ public final class RemoteViewModel {
     /// 後処理。組み立て (RegzaApp) が、OS ごとの後処理につなぐ入れ物を入れる
     @ObservationIgnored package var observer: (any RemoteViewModelObserver)?
 
-    public struct State: Equatable, Sendable {
-        /// テレビを登録してある
-        public var isConfigured: Bool
-        public var nowPlaying: NowPlayingItem?
-        /// テレビに接続できないときの説明。つながっていれば nil
-        public var errorMessage: String?
-        /// ボタンを押した回数 (触覚フィードバックの合図)
-        public var tapCount = 0
-        /// つながらないので、IP アドレスが変わっていないかテレビを探している
-        public var isSearchingTV = false
-        /// 開発用の見本データを表示している (テレビにはつながない)
-        public var isSampleMode = false
-        /// 番組表とチャンネル一覧で選んでいる放送の種類 (地デジ・BS・CS)。タブを行き来しても同じものを出す。未選択なら nil
-        public var selectedBand: BroadcastBand?
-        /// いま見ている放送の種類 (リモコンの地デジ・BS・CS の印)。チャンネル一覧から分かるときだけ
-        public var nowPlayingBand: BroadcastBand?
-    }
+    /// 画面に出すもの
+    public typealias State = RemoteState
 
-    public enum Action: Sendable {
-        /// リモコンのボタンを押す
-        case press(RegzaKey)
-        /// 録画の再生位置を移す (秒)
-        case seek(Int)
-        case selectBand(BroadcastBand?)
-        case loadChannels(force: Bool)
-        /// 選局する (チャンネルの code)
-        case tune(String)
-        /// いま映っているものを取り直す
-        case refresh
-        /// 画面が見えている間、2 秒ごとに取り直す
-        case startPolling
-        case stopPolling
-        /// テレビとのやり取りの外で起きたエラーの説明を出す (iOS の Live Activity を始められなかったときなど)
-        case report(String)
-    }
+    /// 画面からの操作
+    public typealias Action = RemoteAction
 
     private var nowPlaying: RegzaNowPlaying?
     /// テレビに接続できなかった理由 (ほかの ViewModel とテストが読む。画面は state.errorMessage を読む)

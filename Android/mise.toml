@@ -91,6 +91,18 @@ libcxx=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/sysroot/usr/lib/aarch
 # swift-java のプラグインは、Swift から消した型の Java のクラスを消さないので、毎回作り直す
 rm -rf .build/swift/plugins/outputs/regzaandroid
 
+# swift-java の jextract を動かす。Java にできない宣言 (型を書いていないプロパティや、知らない型を使うものなど) は
+# 警告を出すだけで黙って飛ばすので、飛ばしたものがあればビルドを止める
+jextract() {
+  local log
+  log=$(.build/swift-tool/out/Products/Release/swift-java jextract --log-level warning "$@" 2>&1) || { echo "$log" >&2; exit 1; }
+  if grep -q "Failed to import" <<< "$log"; then
+    echo "swift-java が Java にできなかった宣言があります:" >&2
+    grep -o "Failed to import: [^;]*;[^(]*" <<< "$log" | sort -u >&2
+    exit 1
+  fi
+}
+
 # swift-java は Date や URL などの Foundation の型のつなぎを、使うモジュールごとに Foundation+SwiftJava.swift に作る。
 # どのモジュールも Java のパッケージが同じなので、前に作ったモジュールにもある型は消してそちらを使う
 # (残すと同じ名前の関数がぶつかってリンクできない)。引数: Swift のつなぎの置き場、Java の置き場、前に作った Java の置き場…
@@ -125,7 +137,7 @@ swift build --package-path RegzaAndroid --scratch-path .build/swift-tool -c rele
 generated=RegzaAndroid/Sources/RegzaSharedJava/Generated
 rm -rf "$generated" .build/swift/regzashared-java && mkdir -p "$generated" .build/swift/regzashared-java
 # UI で使う型は、すべてそのまま Java のクラスにする
-.build/swift-tool/out/Products/Release/swift-java jextract --log-level warning \
+jextract \
   --config RegzaAndroid/RegzaSharedModels.swift-java.config --swift-module RegzaSharedModels \
   --input-swift ../Packages/RegzaCore/Sources/RegzaSharedModels \
   --output-swift "$generated" --output-java .build/swift/regzashared-java
@@ -135,7 +147,7 @@ rm -rf "$generated" .build/swift/regzashared-java && mkdir -p "$generated" .buil
 # 絞り込みは入力のフォルダからのパスで比べるので、入力は絶対パスで渡す (相対パスだと、どのファイルも外れる)
 presentation_generated=RegzaAndroid/Sources/RegzaPresentationJava/Generated
 rm -rf "$presentation_generated" .build/swift/regzapresentation-java && mkdir -p "$presentation_generated" .build/swift/regzapresentation-java
-.build/swift-tool/out/Products/Release/swift-java jextract --log-level warning \
+jextract \
   --config RegzaAndroid/RegzaPresentation.swift-java.config --swift-module RegzaPresentation \
   --input-swift "$(cd ../Packages/RegzaCore/Sources/RegzaPresentation && pwd)" \
   --output-swift "$presentation_generated" --output-java .build/swift/regzapresentation-java
@@ -148,7 +160,7 @@ scripts/generate-screen-glue.sh
 # Mac の swift test で確かめられるよう別のパッケージにしてあり、プラグインをかけられないので、同じくツールで作る
 bridge_generated=RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated
 rm -rf "$bridge_generated" .build/swift/regzabridge-java && mkdir -p "$bridge_generated" .build/swift/regzabridge-java
-.build/swift-tool/out/Products/Release/swift-java jextract --log-level warning \
+jextract \
   --config RegzaAndroid/RegzaAndroidBridge.swift-java.config --swift-module RegzaAndroidBridge \
   --input-swift RegzaAndroidBridge/Sources/RegzaAndroidBridge \
   --output-swift "$bridge_generated" --output-java .build/swift/regzabridge-java

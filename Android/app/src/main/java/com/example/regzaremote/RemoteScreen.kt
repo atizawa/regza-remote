@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.RegzaAndroidAction
+import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RegzaAndroidSnapshot
 import com.example.regzaremote.core.RegzaKey
 
@@ -69,9 +70,9 @@ import com.example.regzaremote.core.RegzaKey
  */
 @Composable
 fun RemoteScreen(state: RegzaAndroidSnapshot, sendAction: Send) {
-    val nowPlaying = state.nowPlaying.orElse(null)
-    val press: (RegzaKey) -> Unit = { sendAction(RegzaAndroidAction.press(it)) }
-    val band = state.nowPlayingBand.orElse(null)?.rawValue
+    val nowPlaying = state.remote.nowPlaying.orElse(null)
+    val press: (RegzaKey) -> Unit = { sendAction(RemoteAction.press(it)) }
+    val band = state.remote.nowPlayingBand.orElse(null)?.rawValue
     var isShowingMore by rememberSaveable { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(RemoteBody.background)) {

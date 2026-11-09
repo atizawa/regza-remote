@@ -44,6 +44,9 @@ kotlin_imports=""
 kotlin_invokes=""
 kotlin_overrides=""
 for file in $(find "$view_models" -path '*/State/*.swift' | sort); do
+  # swift-java は型を書いていないプロパティ (public var count = 0 など) を黙って飛ばすので、型を書いてもらう
+  untyped=$(grep -nE '^ *public (var|let) [A-Za-z0-9_]+ *=' "$file" || true)
+  [ -z "$untyped" ] || fail "$file のプロパティに型を書いてください (swift-java が飛ばします): $untyped"
   # 状態は struct のほか、段階などを表す enum も置ける (raw value が String の enum は、そのことも書く)
   type_in "$file" 'struct|enum' > /dev/null
   read -r kind name raw < <(sed -En 's/^public (struct|enum) ([A-Za-z0-9_]+)(: String)?.*/\1 \2 \3/p' "$file")

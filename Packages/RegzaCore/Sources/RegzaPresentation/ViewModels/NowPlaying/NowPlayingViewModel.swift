@@ -17,26 +17,11 @@ public final class NowPlayingViewModel {
         self.stream = stream
     }
 
-    public struct State: Equatable, Sendable {
-        /// 番組を映しているときだけ「視聴中」にする。待機中などはカードに状態が出るので、見出しはテレビとだけ書く
-        public var title: String
-        /// 番組の説明 (なければ nil)
-        public var description: String?
-        /// 待機中なので電源を入れられる (開いている間はミニプレーヤーの電源ボタンが隠れるので、ここでも出す)
-        public var canPowerOn: Bool
-        /// アプリで見られる、いま映っている局
-        public var playableChannelCode: String?
-        /// いま映っている放送を最初から見られるか
-        public var canStartOver: Bool
-    }
+    /// 画面に出すもの
+    public typealias State = NowPlayingState
 
-    public enum Action: Sendable {
-        /// シートを開いた。最初から見られるかを知るためタイムシフトの設定を、いま映っている局を知るためチャンネルを読む
-        case appear
-        case powerOn
-        /// いま映っている番組を最初から再生する
-        case startOver
-    }
+    /// 画面からの操作
+    public typealias Action = NowPlayingAction
 
     @ObservationIgnored private let work = Work()
 

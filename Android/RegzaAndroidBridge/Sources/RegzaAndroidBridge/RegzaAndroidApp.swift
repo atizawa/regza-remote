@@ -34,29 +34,14 @@ public struct RegzaAndroidSnapshot {
     public var streamHost: String
     /// このアプリが頼んだ配信の ID (「1,2」のようにつなぐ)。強制終了で止められなかった配信を、次に開いたときに止めるため Kotlin が保存する
     public var ownStreamIDs: String
-    public var nowPlaying: NowPlayingItem?
-    /// いま見ている放送の種類 (リモコンの地デジ・BS・CS の印。チャンネル一覧から分かるときだけ)
-    public var nowPlayingBand: BroadcastBand?
-    /// テレビに接続できないときの説明
-    public var connectionError: String?
-    /// つながらないので、IP アドレスが変わっていないかテレビを探している
-    public var isSearchingTV: Bool
+    /// リモコンの state (RemoteViewModel.State をそのまま渡す)。いま映っているもの・接続できないときの説明など
+    public var remote: RemoteState
     /// 設定の画面の state (SettingsViewModel.State をそのまま渡す)。設定を出している間だけある
     public var setup: SettingsState?
-    /// ミニプレーヤーを押して開いた、いま映っているものの詳細。開いている間だけある
-    public var nowPlayingDetail: RegzaAndroidNowPlaying?
+    /// ミニプレーヤーを押して開いた、いま映っているものの詳細の state (NowPlayingViewModel.State をそのまま渡す)。開いている間だけある
+    public var nowPlayingDetail: NowPlayingState?
     /// アプリで見ている (ライブ視聴の画面を出している) 間だけある
     public var player: LivePlayerState?
-}
-
-/// いま映っているものの詳細のシート (NowPlayingViewModel.State)
-public struct RegzaAndroidNowPlaying {
-    public var title: String
-    /// アプリで見られる、いま映っている局
-    public var playableChannelCode: String?
-    public var description: String?
-    public var canPowerOn: Bool
-    public var canStartOver: Bool
 }
 
 // MARK: - 操作
@@ -66,24 +51,14 @@ public enum RegzaAndroidAction {
     case selectTab(String)
     /// いまのタブで 1 つ戻る
     case back
-    // リモコン (RemoteViewModel)
-    case press(RegzaKey)
-    /// 録画の再生位置を変える (秒)
-    case seek(Int)
-    /// 画面が見えている間、2 秒ごとに取り直す
-    case startPolling
-    case stopPolling
-    case selectBand(BroadcastBand)
     // ライブ視聴を開く・閉じる (画面の中の操作は LivePlayerAction で送る)
     /// アプリで見る (チャンネルのコード)
     case play(String)
     /// 見終わった。配信を止めてチューナーを空ける
     case closePlayer
-    // いま映っているものの詳細 (NowPlayingViewModel)
+    /// いま映っているものの詳細を開く・閉じる (シートの中の操作は NowPlayingAction で送る)
     case showNowPlaying
     case closeNowPlaying
-    case powerOn
-    case startOver
     /// 1 チャンネルの番組表を開く (チャンネルのコード)
     case openPrograms(String)
     /// 番組の詳細を開く (チャンネルのコード、番組の id)
@@ -191,17 +166,9 @@ public final class RegzaAndroidApp {
             guideHost: store.guideHost,
             streamHost: store.streamHost,
             ownStreamIDs: store.ownStreamIDs.map(String.init).joined(separator: ","),
-            nowPlaying: remote.nowPlaying,
-            nowPlayingBand: remote.nowPlayingBand,
-            connectionError: remote.errorMessage,
-            isSearchingTV: remote.isSearchingTV,
+            remote: remote,
             setup: settings?.state,
-            nowPlayingDetail: nowPlaying.map {
-                RegzaAndroidNowPlaying(
-                    title: $0.title, playableChannelCode: $0.playableChannelCode, description: $0.description,
-                    canPowerOn: $0.canPowerOn, canStartOver: $0.canStartOver
-                )
-            },
+            nowPlayingDetail: nowPlaying,
             player: app.player?.state
         )
     }
@@ -248,19 +215,10 @@ public final class RegzaAndroidApp {
         case .selectTab(let tab):
             if let tab = AppViewModel.Tab(rawValue: tab) { app.send(.selectTab(tab)) }
         case .back: app.send(.back)
-        case .press(let key): app.remote.send(.press(key))
-        case .seek(let position): app.remote.send(.seek(position))
-        case .startPolling: app.remote.send(.startPolling)
-        case .stopPolling: app.remote.send(.stopPolling)
-        case .selectBand(let band): app.remote.send(.selectBand(band))
         case .play(let code): app.send(.play(channelCode: code))
         case .closePlayer: app.send(.closePlayer)
-        case .showNowPlaying:
-            app.send(.showNowPlaying)
-            app.nowPlaying.send(.appear)
+        case .showNowPlaying: app.send(.showNowPlaying)
         case .closeNowPlaying: app.send(.closeNowPlaying)
-        case .powerOn: app.nowPlaying.send(.powerOn)
-        case .startOver: app.nowPlaying.send(.startOver)
         case .openPrograms(let code):
             app.send(.open(.channelPrograms(channelCode: code)))
         case .openProgram(let code, let id): app.send(.open(.programDetail(programID: id, channelCode: code)))

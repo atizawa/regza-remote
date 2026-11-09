@@ -42,6 +42,16 @@ extension RegzaAndroidApp {
         route { ($0 as? LivePlayerViewModel)?.send(action) != nil }
     }
 
+    /// NowPlayingViewModel に送る
+    public func sendNowPlayingAction(_ action: NowPlayingAction) {
+        Task { @MainActor in self.perform(action) }
+    }
+
+    /// NowPlayingViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
+    @MainActor func perform(_ action: NowPlayingAction) {
+        route { ($0 as? NowPlayingViewModel)?.send(action) != nil }
+    }
+
     /// ProgramDetailViewModel に送る
     public func sendProgramDetailAction(_ action: ProgramDetailAction) {
         Task { @MainActor in self.perform(action) }
@@ -60,6 +70,16 @@ extension RegzaAndroidApp {
     /// ProgramListViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
     @MainActor func perform(_ action: ProgramListAction) {
         route { ($0 as? ProgramListViewModel)?.send(action) != nil }
+    }
+
+    /// RemoteViewModel に送る
+    public func sendRemoteAction(_ action: RemoteAction) {
+        Task { @MainActor in self.perform(action) }
+    }
+
+    /// RemoteViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
+    @MainActor func perform(_ action: RemoteAction) {
+        route { ($0 as? RemoteViewModel)?.send(action) != nil }
     }
 
     /// ReservationListViewModel に送る

@@ -26,6 +26,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +41,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.NowPlayingItem
 import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidNowPlaying
+import com.example.regzaremote.core.NowPlayingAction
+import com.example.regzaremote.core.NowPlayingState
+import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RegzaAndroidSnapshot
 import java.time.Instant
 import java.time.ZoneId
@@ -52,12 +55,12 @@ import java.time.format.DateTimeFormatter
  */
 @Composable
 fun NowPlayingBar(state: RegzaAndroidSnapshot, send: Send, modifier: Modifier = Modifier) {
-    val nowPlaying = state.nowPlaying.orElse(null)
-    val hasError = state.connectionError.isPresent
+    val nowPlaying = state.remote.nowPlaying.orElse(null)
+    val hasError = state.remote.errorMessage.isPresent
     // 文言は iOS と同じ NowPlayingItem.captionText・headlineText
-    val caption = if (state.isSearchingTV || hasError) null else nowPlaying?.captionText?.orElse(null)
+    val caption = if (state.remote.isSearchingTV || hasError) null else nowPlaying?.captionText?.orElse(null)
     val headline = when {
-        state.isSearchingTV -> "テレビを探しています…"
+        state.remote.isSearchingTV -> "テレビを探しています…"
         hasError -> "テレビに接続できません"
         else -> nowPlaying?.headlineText ?: "接続中…"
     }
@@ -86,7 +89,7 @@ fun NowPlayingBar(state: RegzaAndroidSnapshot, send: Send, modifier: Modifier = 
             Text(headline, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (key != null) {
-            TextButton(onClick = { send(RegzaAndroidAction.press(key)) }) {
+            TextButton(onClick = { send(RemoteAction.press(key)) }) {
                 Text(if (key.rawValue == "power") "電源を入れる" else key.label, fontWeight = FontWeight.SemiBold)
             }
         }
@@ -118,10 +121,12 @@ private fun ProgressRing(progress: Float?) {
     }
 }
 
-/** ミニプレーヤーを押したときの詳細 (iOS 版の NowPlayingDetailView)。録画ならシークもできる */
+/** ミニプレーヤーを押したときの詳細 (state と操作は NowPlayingViewModel の NowPlayingState・NowPlayingAction)。録画ならシークもできる */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NowPlayingSheet(state: RegzaAndroidSnapshot, detail: RegzaAndroidNowPlaying, send: Send) {
+fun NowPlayingSheet(state: RegzaAndroidSnapshot, detail: NowPlayingState, send: Send) {
+    // 開いたら、最初から見られるかと、いま映っている局を読む
+    LaunchedEffect(Unit) { send(NowPlayingAction.appear()) }
     ModalBottomSheet(onDismissRequest = { send(RegzaAndroidAction.closeNowPlaying()) }, containerColor = AppTheme.background) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Design.outer).padding(bottom = Design.group),
@@ -134,7 +139,7 @@ fun NowPlayingSheet(state: RegzaAndroidSnapshot, detail: RegzaAndroidNowPlaying,
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp))
             }
-            if (detail.isCanPowerOn) SheetButton("電源を入れる") { send(RegzaAndroidAction.powerOn()) }
+            if (detail.isCanPowerOn) SheetButton("電源を入れる") { send(NowPlayingAction.powerOn()) }
             detail.playableChannelCode.orElse(null)?.let { code ->
                 SheetButton("アプリで見る") {
                     // シートを閉じてから、全画面で再生する
@@ -142,7 +147,7 @@ fun NowPlayingSheet(state: RegzaAndroidSnapshot, detail: RegzaAndroidNowPlaying,
                     send(RegzaAndroidAction.play(code))
                 }
             }
-            if (detail.isCanStartOver) SheetButton("この番組を最初から見る") { send(RegzaAndroidAction.startOver()) }
+            if (detail.isCanStartOver) SheetButton("この番組を最初から見る") { send(NowPlayingAction.startOver()) }
         }
     }
 }
@@ -164,8 +169,8 @@ private fun SheetButton(title: String, onClick: () -> Unit) {
 /** テレビから取得した視聴状況 (iOS 版の NowPlayingCard)。録画再生中はシークできる */
 @Composable
 private fun NowPlayingCard(state: RegzaAndroidSnapshot, send: Send) {
-    val nowPlaying = state.nowPlaying.orElse(null)
-    val error = state.connectionError.orElse(null)
+    val nowPlaying = state.remote.nowPlaying.orElse(null)
+    val error = state.remote.errorMessage.orElse(null)
     Column(
         Modifier
             .fillMaxWidth()
@@ -174,7 +179,7 @@ private fun NowPlayingCard(state: RegzaAndroidSnapshot, send: Send) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         when {
-            state.isSearchingTV -> Status("テレビが見つからないため、探しています…")
+            state.remote.isSearchingTV -> Status("テレビが見つからないため、探しています…")
             error != null -> Status(error, isWarning = true)
             nowPlaying == null -> Status("接続中…")
             nowPlaying.kind.rawValue == "recorded" -> Playback(nowPlaying, send)
@@ -229,7 +234,7 @@ private fun Playback(nowPlaying: NowPlayingItem, send: Send) {
         Slider(
             value = position, onValueChange = { seekPosition = it }, valueRange = 0f..nowPlaying.duration.toFloat(),
             onValueChangeFinished = {
-                seekPosition?.let { send(RegzaAndroidAction.seek(it.toLong())) }
+                seekPosition?.let { send(RemoteAction.seek(it.toLong())) }
                 seekPosition = null
             },
             colors = SliderDefaults.colors(thumbColor = AppTheme.accent, activeTrackColor = AppTheme.accent),

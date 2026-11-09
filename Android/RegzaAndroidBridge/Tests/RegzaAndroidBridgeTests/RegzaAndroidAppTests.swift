@@ -91,10 +91,22 @@ struct RegzaAndroidAppTests {
         #expect(next.ownStreamIDs == "")
     }
 
-    @Test func keysAreSentToTheRemote() throws {
+    @Test func keysAreSentToTheRemote() async throws {
         let fixture = try make()
-        fixture.bridge.perform(.press(.power))
+        fixture.bridge.perform(RemoteAction.press(.power))
         #expect(fixture.app.remote.state.tapCount == 1)
+        #expect(await fixture.bridge.snapshot().remote == fixture.app.remote.state)
+    }
+
+    /// いま映っているものの詳細は、開いている間だけ state をそのまま渡す
+    @Test func nowPlayingDetailIsPassedWhileShowing() async throws {
+        let fixture = try make()
+        #expect(await fixture.bridge.snapshot().nowPlayingDetail == nil)
+        fixture.bridge.perform(.showNowPlaying)
+        fixture.bridge.perform(NowPlayingAction.appear)
+        #expect(await fixture.bridge.snapshot().nowPlayingDetail == fixture.app.nowPlaying.state)
+        fixture.bridge.perform(.closeNowPlaying)
+        #expect(await fixture.bridge.snapshot().nowPlayingDetail == nil)
     }
 
     // MARK: - 見えている画面
