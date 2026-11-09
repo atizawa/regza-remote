@@ -14,28 +14,15 @@ public final class ReservationListViewModel {
         self.recording = recording
     }
 
-    public struct State: Equatable, Sendable {
-        public var hasLoaded: Bool
-        /// 一覧の代わりに出す、取得できなかった説明。一覧があれば nil
-        public var loadErrorMessage: String?
-        /// 取り消せなかったときの説明
-        public var cancelError: String?
-        /// 録画の予定があるもの (時刻順)
-        public var scheduled: [ReservationItem]
-        /// 次の回を待っている連ドラ予約
-        public var waiting: [ReservationItem]
+    /// 画面に出すもの
+    public typealias State = ReservationListState
 
-        public var isEmpty: Bool { scheduled.isEmpty && waiting.isEmpty }
-    }
-
-    public enum Action: Sendable {
-        case load
-        /// 予約を取り消す (ReservationItem の id)
-        case cancel(String)
-    }
+    /// 画面からの操作
+    public typealias Action = ReservationListAction
 
     private var loadError: RegzaError?
     private var hasLoaded = false
+    private var isLoading = false
     private var cancelError: String?
     @ObservationIgnored private let work = Work()
 
@@ -43,6 +30,7 @@ public final class ReservationListViewModel {
         let items = recording.items(channels: remote.channels)
         return State(
             hasLoaded: hasLoaded,
+            isLoading: isLoading,
             loadErrorMessage: items.isEmpty ? loadError?.recordingMessage : nil,
             cancelError: cancelError,
             scheduled: items.filter(\.isScheduled),
@@ -58,7 +46,11 @@ public final class ReservationListViewModel {
     }
 
     private func load() async {
-        defer { hasLoaded = true }
+        isLoading = true
+        defer {
+            hasLoaded = true
+            isLoading = false
+        }
         // 局名を出すためにチャンネル一覧も読む (取れなくても予約は出す)
         try? await remote.loadChannels()
         do {

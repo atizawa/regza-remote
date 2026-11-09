@@ -31,4 +31,14 @@ extension RegzaAndroidApp {
     @MainActor func perform(_ action: LivePlayerAction) {
         route { ($0 as? LivePlayerViewModel)?.send(action) != nil }
     }
+
+    /// ReservationListViewModel に送る
+    public func sendReservationListAction(_ action: ReservationListAction) {
+        Task { @MainActor in self.perform(action) }
+    }
+
+    /// ReservationListViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
+    @MainActor func perform(_ action: ReservationListAction) {
+        route { ($0 as? ReservationListViewModel)?.send(action) != nil }
+    }
 }

@@ -25,6 +25,8 @@ import Testing
 
         let state = viewModel.state
         #expect(state.hasLoaded)
+        // 読み終わったら、引っ張って読み直したときの印を消す
+        #expect(!state.isLoading)
         #expect(state.scheduled.map(\.id) == ["1"])
         #expect(state.waiting.map(\.id) == ["2"])
         #expect(state.scheduled.first?.channelName == "テスト局１")

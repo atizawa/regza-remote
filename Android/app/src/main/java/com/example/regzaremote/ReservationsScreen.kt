@@ -38,20 +38,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidReservations
+import com.example.regzaremote.core.ReservationListAction
+import com.example.regzaremote.core.ReservationListState
 import com.example.regzaremote.core.ReservationItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
 /**
- * テレビの録画予約の一覧 (iOS 版の ReservationsView と同じ ReservationListViewModel)。
+ * テレビの録画予約の一覧 (state と操作は ReservationListViewModel の ReservationListState・ReservationListAction)。
  * 引っ張ると読み直し、左へスワイプすると取り消す (取り消しは確かめてから送る)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReservationsScreen(list: RegzaAndroidReservations, send: Send) {
-    LaunchedEffect(Unit) { send(RegzaAndroidAction.showReservations()) }
+fun ReservationsScreen(list: ReservationListState, send: Send) {
+    LaunchedEffect(Unit) { send(ReservationListAction.load()) }
     // 取り消すか確かめている予約
     var cancelling by remember { mutableStateOf<ReservationItem?>(null) }
     // 引っ張って読み直している間。すぐに読み終わると読み込み中の状態が届かないこともあるので、
@@ -70,14 +70,14 @@ fun ReservationsScreen(list: RegzaAndroidReservations, send: Send) {
         val message = list.loadErrorMessage.orElse(null)
         when {
             message != null -> EmptyState("録画予約を取得できません", message) {
-                TextButton(onClick = { send(RegzaAndroidAction.showReservations()) }) { Text("もう一度試す") }
+                TextButton(onClick = { send(ReservationListAction.load()) }) { Text("もう一度試す") }
             }
             !list.isHasLoaded -> Loading()
             else -> PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = {
                     isRefreshing = true
-                    send(RegzaAndroidAction.showReservations())
+                    send(ReservationListAction.load())
                 },
                 modifier = Modifier.fillMaxSize(),
             ) {
@@ -110,7 +110,7 @@ fun ReservationsScreen(list: RegzaAndroidReservations, send: Send) {
             text = { if (reservation.isSeries) Text("連ドラ予約なので、次の回以降も録画されなくなります。") },
             confirmButton = {
                 TextButton(onClick = {
-                    send(RegzaAndroidAction.cancelReservation(reservation.id))
+                    send(ReservationListAction.cancel(reservation.id))
                     cancelling = null
                 }) { Text(if (reservation.isSeries) "連ドラ予約を取り消す" else "予約を取り消す", color = AppTheme.red) }
             },

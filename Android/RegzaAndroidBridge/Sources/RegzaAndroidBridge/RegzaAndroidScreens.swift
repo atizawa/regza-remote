@@ -13,7 +13,8 @@ public struct RegzaAndroidScreen {
     public var channelList: ChannelListState?
     /// 番組表の画面の state (GuideGridViewModel.State をそのまま渡す)
     public var guide: GuideGridState?
-    public var reservations: RegzaAndroidReservations?
+    /// 録画予約の一覧の画面の state (ReservationListViewModel.State をそのまま渡す)
+    public var reservations: ReservationListState?
     public var programs: RegzaAndroidProgramList?
     public var detail: RegzaAndroidProgramDetail?
     public var search: RegzaAndroidSearch?
@@ -49,19 +50,6 @@ public struct RegzaAndroidProgramDetail {
     public var canStartOver: Bool
 }
 
-/// 録画予約の一覧 (ReservationListViewModel.State)
-public struct RegzaAndroidReservations {
-    public var hasLoaded: Bool
-    /// 読み込み中 (引っ張って読み直したときの印を、終わったら消す)
-    public var isLoading: Bool
-    public var loadErrorMessage: String?
-    public var cancelError: String?
-    /// 録画の予定があるもの (時刻順)
-    public var scheduled: [ReservationItem]
-    /// 次の回を待っている連ドラ予約
-    public var waiting: [ReservationItem]
-}
-
 /// 番組表の検索 (GuideSearchViewModel.State)
 public struct RegzaAndroidSearch {
     public var text: String
@@ -80,7 +68,7 @@ enum ScreenKey: Equatable {
     case remote
     case channels(ChannelListViewModel.State)
     case guide(GuideGridViewModel.State)
-    case reservations(ReservationListViewModel.State, isLoading: Bool)
+    case reservations(ReservationListViewModel.State)
     case programs(ProgramListViewModel.State)
     case detail(ProgramDetailViewModel.State)
     case search(GuideSearchViewModel.State)
@@ -95,15 +83,8 @@ extension RegzaAndroidScreen {
             self.init(kind: "channels", channelList: state)
         case .guide(let state):
             self.init(kind: "guide", guide: state)
-        case .reservations(let state, let isLoading):
-            self.init(kind: "reservations", reservations: RegzaAndroidReservations(
-                hasLoaded: state.hasLoaded,
-                isLoading: isLoading,
-                loadErrorMessage: state.loadErrorMessage,
-                cancelError: state.cancelError,
-                scheduled: state.scheduled,
-                waiting: state.waiting
-            ))
+        case .reservations(let state):
+            self.init(kind: "reservations", reservations: state)
         case .programs(let state):
             self.init(kind: "programs", programs: RegzaAndroidProgramList(
                 channelName: state.channelName,

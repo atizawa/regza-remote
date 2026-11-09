@@ -162,10 +162,6 @@ public enum RegzaAndroidAction {
     case cancelProgramReservation
     /// 選局する (true なら放送中の番組を最初から)
     case tuneProgram(Bool)
-    // 録画予約の一覧 (ReservationListViewModel)
-    case showReservations
-    /// 予約を取り消す (予約の id)
-    case cancelReservation(String)
     // 設定 (TVSetupViewModel・ServerSetupViewModel)
     case showSetup
     case closeSetup
@@ -364,7 +360,7 @@ public final class RegzaAndroidApp {
         switch state.tab {
         case .remote: return .remote
         case .channels: return .channels(app.channelList.state)
-        case .reservations: return .reservations(app.reservationList.state, isLoading: app.reservationList.isBusy)
+        case .reservations: return .reservations(app.reservationList.state)
         case .guide: return .guide(app.guideGrid.state)
         }
     }
@@ -420,8 +416,6 @@ public final class RegzaAndroidApp {
         case .reserve(let series): currentDetail()?.send(.reserve(series: series))
         case .cancelProgramReservation: currentDetail()?.send(.cancelReservation)
         case .tuneProgram(let startOver): currentDetail()?.send(.tune(startOver: startOver))
-        case .showReservations: app.reservationList.send(.load)
-        case .cancelReservation(let id): app.reservationList.send(.cancel(id))
         case .showSetup: app.send(.showSettings)
         case .closeSetup: app.send(.closeSettings)
         case .openSetupPage(let page):
