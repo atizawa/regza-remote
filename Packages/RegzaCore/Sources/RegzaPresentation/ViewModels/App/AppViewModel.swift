@@ -174,7 +174,7 @@ public final class AppViewModel {
 
 // MARK: - Introspection
 
-extension AppViewModel: Introspectable {
+extension AppViewModel: IntrospectableActions {
     public var introspectionName: String { "app" }
     public var introspectionValue: Any { state }
     public var isBusy: Bool { work.isBusy }
@@ -213,31 +213,32 @@ extension AppViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        switch name {
         case "selectTab":
             guard let tab = Tab(rawValue: try arguments.string("tab")) else { throw IntrospectionError.invalidArgument("tab") }
-            send(.selectTab(tab))
+            return .selectTab(tab)
         case "openPrograms":
-            send(.push(.channelPrograms(channelCode: try channel(arguments).code)))
+            return .push(.channelPrograms(channelCode: try channel(arguments).code))
         case "openProgram":
             let channel = try channel(arguments)
             let id = try arguments.int("program")
             guard guide.program(id: id, channelCode: channel.code) != nil else {
                 throw IntrospectionError.unavailable("番組 \(id) は番組表にありません")
             }
-            send(.push(.programDetail(programID: id, channelCode: channel.code)))
-        case "openSearch": send(.push(.search))
-        case "back": send(.pop)
-        case "showSettings": send(.showSettings)
-        case "closeSettings": send(.closeSettings)
-        case "showNowPlaying": send(.showNowPlaying)
-        case "closeNowPlaying": send(.closeNowPlaying)
+            return .push(.programDetail(programID: id, channelCode: channel.code))
+        case "openSearch": return .push(.search)
+        case "back": return .pop
+        case "showSettings": return .showSettings
+        case "closeSettings": return .closeSettings
+        case "showNowPlaying": return .showNowPlaying
+        case "closeNowPlaying": return .closeNowPlaying
         case "play":
-            send(.play(channelCode: try channel(arguments).code))
-            if player == nil { throw IntrospectionError.unavailable("ライブ視聴が設定されていません") }
-        case "closePlayer": send(.closePlayer)
-        default: throw IntrospectionError.unknownAction(action)
+            let channel = try channel(arguments)
+            guard stream.canStream else { throw IntrospectionError.unavailable("ライブ視聴が設定されていません") }
+            return .play(channelCode: channel.code)
+        case "closePlayer": return .closePlayer
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 

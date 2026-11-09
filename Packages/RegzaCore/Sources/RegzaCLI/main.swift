@@ -17,81 +17,39 @@ import RegzaSample
 @MainActor
 func main() async {
     let options = Options(CommandLine.arguments.dropFirst(), environment: ProcessInfo.processInfo.environment)
-    let store = MemoryConnectionStore(connection: RegzaConnection(host: options.host, user: options.user, password: options.password))
-    // 見本では、番組表 (Mirakurun) と録画サーバー (EPGStation) も見本の返事を使う
+    // 見本では、テレビと番組表 (Mirakurun)・録画サーバー (EPGStation) も見本の返事を使う (Android の見本と同じ登録)
+    let store = MemoryConnectionStore(
+        connection: options.sample && options.host.isEmpty
+            ? SampleTransport.connection : RegzaConnection(host: options.host, user: options.user, password: options.password)
+    )
     if options.sample {
-        store.guideHost = "192.0.2.20"
-        store.streamHost = "192.0.2.30"
+        store.guideHost = SampleTransport.guideHost
+        store.streamHost = SampleTransport.streamHost
     }
     let transport: any HTTPTransport = options.sample ? SampleTransport() : SocketTransport()
     // 番組表 (Mirakurun) や録画サーバーへの通信も同じ方法で送る
     RegzaHTTP.transport = transport
     let app = AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport))
-    let introspector = Introspector(root: app)
-    if !options.host.isEmpty {
+    let session = IntrospectionSession(root: app)
+    if !options.host.isEmpty, !options.sample {
         // チャンネル一覧などを使う操作のため、先に読んでおく
         app.remote.send(.loadChannels(force: false))
-        _ = await introspector.waitUntilIdle()
+        _ = await session.introspector.waitUntilIdle()
     }
 
     print(#"{"ready":true}"#)
+    // パイプにつないで動かす (振る舞いのテストなど) ときも、すぐ相手に届くようにする
+    fflush(stdout)
     do {
         for try await line in FileHandle.standardInput.bytes.lines {
-            let words = line.split(separator: " ", maxSplits: 3, omittingEmptySubsequences: true).map(String.init)
-            guard let command = words.first else { continue }
-            if command == "quit" { break }
-            print(await run(command, Array(words.dropFirst()), introspector))
+            guard let command = IntrospectionSession.parse(line) else { continue }
+            if command == .quit { break }
+            print(await session.run(command))
             fflush(stdout)
         }
     } catch {
-        print(JSONValue.object(["error": .string("\(error)")]).json)
+        print(IntrospectionSession.failure("\(error)"))
     }
-}
-
-@MainActor
-func run(_ command: String, _ arguments: [String], _ introspector: Introspector) async -> String {
-    do {
-        switch command {
-        case "tree":
-            return JSONValue.array(introspector.paths().map(JSONValue.string)).json
-        case "ls":
-            return try encode(introspector.node(arguments.first ?? "app"))
-        case "do":
-            guard arguments.count >= 2 else { return failure("do 道 操作 [JSON の引数]") }
-            let parameters: [String: JSONValue]
-            if arguments.count > 2 {
-                guard case .object(let object) = try JSONDecoder().decode(JSONValue.self, from: Data(arguments[2].utf8)) else {
-                    return failure("引数は JSON のオブジェクトで渡す")
-                }
-                parameters = object
-            } else {
-                parameters = [:]
-            }
-            try introspector.perform(arguments[0], arguments[1], parameters)
-            let idle = await introspector.waitUntilIdle()
-            var node = try introspector.node(arguments[0])
-            if !idle { node.isBusy = true }
-            return try encode(node)
-        case "wait":
-            let seconds = arguments.first.flatMap(Double.init) ?? 1
-            try await Task.sleep(for: .seconds(seconds))
-            return #"{"waited":\#(seconds)}"#
-        default:
-            return failure("命令は tree・ls・do・wait・quit")
-        }
-    } catch {
-        return failure("\(error)")
-    }
-}
-
-func encode(_ node: IntrospectionNode) throws -> String {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-    return String(decoding: try encoder.encode(node), as: UTF8.self)
-}
-
-func failure(_ message: String) -> String {
-    JSONValue.object(["error": .string(message)]).json
 }
 
 struct Options {
@@ -114,7 +72,6 @@ struct Options {
             default: break
             }
         }
-        if sample, host.isEmpty { host = "192.0.2.10" }
     }
 }
 

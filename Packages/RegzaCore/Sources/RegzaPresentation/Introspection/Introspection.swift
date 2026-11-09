@@ -19,12 +19,31 @@ public protocol Introspectable: AnyObject {
     var introspectionChildren: [any Introspectable] { get }
     /// 通信などの途中か (CLI は終わるのを待ってから次の操作を送る)
     var isBusy: Bool { get }
+    /// 道の名前を変えて見せているときの、元の ViewModel (ふつうは自分)
+    var introspectionTarget: any Introspectable { get }
 }
 
 extension Introspectable {
     public var introspectionState: JSONValue { JSONValue(reflecting: introspectionValue) }
     public var introspectionChildren: [any Introspectable] { [] }
     public var isBusy: Bool { false }
+    public var introspectionTarget: any Introspectable { self }
+}
+
+/// 名前と引数の操作を、画面の Action の型に置き換えられる ViewModel。置き換えは 1 か所 (action(_:_:)) に書き、
+/// CLI (perform) と Android の振る舞いのテストの相手 (置き換えた Action を Android と同じ道で送る) の両方で使う
+@MainActor
+public protocol IntrospectableActions: Introspectable {
+    associatedtype Action
+    /// 名前と引数の操作を Action にする (その状態ではできない操作なら投げる)
+    func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action
+    func send(_ action: Action)
+}
+
+extension IntrospectableActions {
+    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
+        send(try self.action(action, arguments))
+    }
 }
 
 /// 同じ種類の ViewModel がいくつも開いているとき (タブごとの戻る道など) に、道の名前を変えて見せる
@@ -43,6 +62,7 @@ final class IntrospectionAlias: Introspectable {
     var introspectionActions: [ActionDescription] { target.introspectionActions }
     var introspectionChildren: [any Introspectable] { target.introspectionChildren }
     var isBusy: Bool { target.isBusy }
+    var introspectionTarget: any Introspectable { target.introspectionTarget }
     func perform(_ action: String, _ arguments: [String: JSONValue]) throws { try target.perform(action, arguments) }
 }
 

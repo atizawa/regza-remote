@@ -228,3 +228,27 @@ extension RegzaAndroidApp {
         await nextState(route: route, after: after) { @MainActor in ($0 as? SettingsViewModel)?.state }
     }
 }
+
+// MARK: - 振る舞いのテストの Android 側の相手
+
+extension RegzaAndroidApp {
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を AppAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractAppAction(path: String, action: String, arguments: String) async -> AppAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? AppAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: AppState を regza と同じ JSON にする
+    public func contractAppStateJSON(_ state: AppState?) -> String {
+        JSONValue(reflecting: state as Any).json
+    }
+
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を ChannelListAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractChannelListAction(path: String, action: String, arguments: String) async -> ChannelListAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? ChannelListAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: ChannelListState を regza と同じ JSON にする
+    public func contractChannelListStateJSON(_ state: ChannelListState?) -> String {
+        JSONValue(reflecting: state as Any).json
+    }
+}

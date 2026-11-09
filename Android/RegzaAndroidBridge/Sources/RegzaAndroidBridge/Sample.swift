@@ -11,10 +11,13 @@ extension RegzaAndroidApp {
         let transport = SampleTransport()
         RegzaHTTP.transport = transport
         if storage.value(forKey: AndroidStorageKey.host) == nil {
-            storage.setValue("192.0.2.10", forKey: AndroidStorageKey.host)
-            storage.setValue("sample", forKey: AndroidStorageKey.user)
-            storage.setValue("sample", forKey: AndroidStorageKey.password)
-            storage.setValue("192.0.2.2", forKey: AndroidStorageKey.guideHost)
+            // CLI の --sample と同じ見本のテレビと録画サーバーを登録する
+            let connection = SampleTransport.connection
+            storage.setValue(connection.host, forKey: AndroidStorageKey.host)
+            storage.setValue(connection.user, forKey: AndroidStorageKey.user)
+            storage.setValue(connection.password, forKey: AndroidStorageKey.password)
+            storage.setValue(SampleTransport.guideHost, forKey: AndroidStorageKey.guideHost)
+            storage.setValue(SampleTransport.streamHost, forKey: AndroidStorageKey.streamHost)
         }
         return RegzaAndroidApp(app: onMainActor {
             let store = AndroidConnectionStore(storage: storage)

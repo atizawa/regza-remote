@@ -1,4 +1,5 @@
 import Foundation
+import RegzaDomain
 import RegzaInfrastructure
 
 /// テレビにも録画サーバーにもつながずに動かすための、見本の返事をする通信。実在の機器の情報は入れない。
@@ -6,6 +7,11 @@ import RegzaInfrastructure
 /// 全体の既定の通信 (RegzaHTTP.transport) も差し替えると、外への通信は起きない
 public struct SampleTransport: HTTPTransport {
     public init() {}
+
+    /// 見本で登録しておくテレビと録画サーバー (CLI の --sample と Android の見本で同じものを使う)。RFC 5737 の例示用のアドレス
+    public static let connection = RegzaConnection(host: "192.0.2.10", user: "sample", password: "sample")
+    public static let guideHost = "192.0.2.20"
+    public static let streamHost = "192.0.2.30"
 
     public func send(_ request: HTTPRequest) async throws -> HTTPResponse {
         let body: String

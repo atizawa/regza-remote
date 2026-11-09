@@ -46,6 +46,9 @@ kotlin_imports=""
 kotlin_invokes=""
 kotlin_flows=""
 states=""
+contracts=""
+kotlin_contract_sends=""
+kotlin_contract_states=""
 kotlin_overrides=""
 for file in $(find "$view_models" -path '*/State/*.swift' | sort); do
   # swift-java は型を書いていないプロパティ (public var count = 0 など) を黙って飛ばすので、型を書いてもらう
@@ -109,6 +112,24 @@ for file in $(find "$view_models" -path '*/Action/*.swift' | sort); do
 "
   kotlin_imports+="import com.example.regzaremote.core.$state
 "
+  # 振る舞いのテストの Android 側の相手の口 (約束事の操作を Action にできる ViewModel だけ。IntrospectableActions)
+  if grep -q "IntrospectableActions" "$view_model_file"; then
+    contracts+="
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を $action にする (アプリと同じ道で送るため)。できなければ nil
+    public func contract$action(path: String, action: String, arguments: String) async -> $action? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? $action }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: $state を regza と同じ JSON にする
+    public func contract${state}JSON(_ state: $state?) -> String {
+        JSONValue(reflecting: state as Any).json
+    }
+"
+    kotlin_contract_sends+="
+        \"$view_model\" -> send(contract$action(path, action, arguments).await().orElse(null) ?: return false)"
+    kotlin_contract_states+="
+    \"$view_model\" -> contract${state}JSON($state_function(Optional.ofNullable(route)).await())"
+  fi
   kotlin_flows+="
 /** $view_model の state を、変わるたびに流す (route を渡せばその画面の ViewModel の。開いていなければ null) */
 fun RegzaAndroidApp.${state_function}s(route: AppRoute? = null): Flow<$state?> = flow {
@@ -130,7 +151,11 @@ extension RegzaAndroidApp {${actions}}
 
 // MARK: - state
 
-extension RegzaAndroidApp {${states}}"
+extension RegzaAndroidApp {${states}}
+
+// MARK: - 振る舞いのテストの Android 側の相手
+
+extension RegzaAndroidApp {${contracts}}"
 
 # RegzaSharedModels の型 (raw value が String の enum は、そのことも書く)
 shared_stubs=()
@@ -180,4 +205,17 @@ interface Send {${kotlin_invokes}}
 /** Swift の窓口 (RegzaAndroidApp) に送る */
 class AppSend(private val app: RegzaAndroidApp) : Send {${kotlin_overrides}
 }
-${kotlin_flows}" > "$kotlin_file"
+${kotlin_flows}
+/** 振る舞いのテストの Android 側の相手: 道の ViewModel の型ごとに、約束事の操作をアプリと同じ道 (send) で送る。送れなければ false */
+suspend fun RegzaAndroidApp.contractSend(type: String, path: String, action: String, arguments: String): Boolean {
+    val send = AppSend(this)
+    when (type) {${kotlin_contract_sends}
+        else -> return false
+    }
+    return true
+}
+
+/** 振る舞いのテストの Android 側の相手: 道の ViewModel の型ごとに、アプリと同じ道 (xxxState) で state を受け取り、regza と同じ JSON にする */
+suspend fun RegzaAndroidApp.contractStateJSON(type: String, route: AppRoute?): String? = when (type) {${kotlin_contract_states}
+    else -> null
+}" > "$kotlin_file"

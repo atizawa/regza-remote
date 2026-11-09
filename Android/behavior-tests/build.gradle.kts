@@ -7,6 +7,13 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // 外からの入力は見本の返事 (RegzaAndroidApp.sample の SampleTransport) で渡すので、テレビにも録画サーバーにもつながない
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    // 振る舞いのテスト (BehaviorTests) の Android 側の相手 (ContractDriver) を、起動できる形にする
+    application
+}
+
+application {
+    mainClass.set("com.example.regzaremote.ContractDriverKt")
+    applicationName = "regza-android"
 }
 
 val androidDir = rootDir
@@ -62,6 +69,10 @@ val buildJvmHost = tasks.register<Exec>("buildJvmHost") {
         }
     }
 }
+
+// installDist で作る起動の台本にも、.dylib の場所を渡す
+application.applicationDefaultJvmArgs = listOf("-Djava.library.path=$jvmHostLibs:/usr/lib/swift", "--enable-native-access=ALL-UNNAMED")
+tasks.named("installDist") { dependsOn(buildJvmHost) }
 
 tasks.test {
     dependsOn(buildJvmHost)

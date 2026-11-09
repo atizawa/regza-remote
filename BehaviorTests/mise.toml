@@ -1,0 +1,12 @@
+# 振る舞いのテスト (Shopify の Reflex と同じ作り) に使う道具。このフォルダの中でだけ使う
+[tools]
+bun = "1.4.4"
+
+[tasks.test]
+description = "両方の相手 (iOS 側の regza と Android 側の regza-android) をビルドして、同じ振る舞いのテストを流す"
+run = '''
+set -euo pipefail
+(cd ../Packages/RegzaCore && swift build --product regza)
+(cd ../Android && mise exec -- ./gradlew -q :behavior-tests:installDist)
+bun test
+'''

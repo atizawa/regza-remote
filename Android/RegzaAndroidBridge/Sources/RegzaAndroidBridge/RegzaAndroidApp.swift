@@ -18,7 +18,7 @@ import RegzaApp
 
 /// アプリ全体の窓口。アプリに 1 つ作り、ViewModel の state を読んで操作を送る
 public final class RegzaAndroidApp {
-    private let app: AppViewModel
+    let app: AppViewModel
 
     /// Kotlin の保存先 (Keystore と SharedPreferences) で組み立てる。Android では先に regzaSetUpMainActor を呼んでおく
     public convenience init(storage: any RegzaAndroidStorage) {

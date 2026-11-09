@@ -102,7 +102,7 @@ public final class ChannelListViewModel {
     }
 }
 
-extension ChannelListViewModel: Introspectable {
+extension ChannelListViewModel: IntrospectableActions {
     public var introspectionName: String { "channelList" }
     public var introspectionValue: Any { state }
     public var isBusy: Bool { work.isBusy }
@@ -116,16 +116,16 @@ extension ChannelListViewModel: Introspectable {
         ]
     }
 
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
-        case "appear": send(.appear)
-        case "reload": send(.reload)
-        case "tune": send(.tune(try row(arguments).code))
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        switch name {
+        case "appear": return .appear
+        case "reload": return .reload
+        case "tune": return .tune(try row(arguments).code)
         case "tuneFromStart":
             let row = try row(arguments)
             guard row.canStartOver else { throw IntrospectionError.unavailable("\(row.name) の番組は最初から見られません") }
-            send(.tuneFromStart(row.code))
-        default: throw IntrospectionError.unknownAction(action)
+            return .tuneFromStart(row.code)
+        default: throw IntrospectionError.unknownAction(name)
         }
     }
 
