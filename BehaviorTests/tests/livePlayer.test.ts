@@ -14,4 +14,13 @@ describeOnBothPlatforms("ライブ視聴", (app) => {
     await app().do("app", "closePlayer");
     expect(await app().absent("app/player")).toBe(true);
   });
+
+  test("配信を止めても、画面は閉じない (閉じるのは closePlayer)", async () => {
+    await app().do("app/channelList", "appear", {}, (node) => node.state.rows.length > 0);
+    await app().do("app", "play", { channel: "JP-G00000001" });
+    await app().do("app/player", "appear");
+    await app().do("app/player", "start", {}, (node) => node.state.phase.ready !== undefined);
+    await app().do("app/player", "end");
+    expect(await app().absent("app/player")).toBe(false);
+  });
 });

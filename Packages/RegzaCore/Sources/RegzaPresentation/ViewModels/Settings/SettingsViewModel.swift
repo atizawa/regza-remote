@@ -107,6 +107,7 @@ extension SettingsViewModel: IntrospectableActions {
         return [
             ActionDescription("openPage", "設定の中の画面を開く", parameters: ["page": "tv | guide | stream"]),
             ActionDescription("back", "設定の中で 1 つ戻る"),
+            ActionDescription("setPath", "設定の中の画面の並びをまとめて変える (iOS で戻るスワイプをしたときと同じ)", parameters: ["path": "[tv | guide | stream]"]),
             ActionDescription("save", "設定を保存して閉じる"),
             ActionDescription("close", "設定を閉じる (保存しない)"),
         ] + prefixed("tv.", TVSetupViewModel.introspectionActions) + prefixed("server.", ServerSetupViewModel.introspectionActions)
@@ -120,6 +121,12 @@ extension SettingsViewModel: IntrospectableActions {
             guard let page = SettingsPage(rawValue: try arguments.string("page")) else { throw IntrospectionError.invalidArgument("page") }
             return .openPage(page)
         case "back": return .back
+        case "setPath":
+            guard case .array(let pages) = arguments["path"] ?? .array([]) else { throw IntrospectionError.invalidArgument("path") }
+            return .setPath(try pages.map { page in
+                guard case .string(let name) = page, let page = SettingsPage(rawValue: name) else { throw IntrospectionError.invalidArgument("path") }
+                return page
+            })
         case "save": return .save
         case "close": return .close
         default: throw IntrospectionError.unknownAction(name)

@@ -19,4 +19,10 @@ describeOnBothPlatforms("設定", (app) => {
     const settings = await app().do("app/settings", "tv.setPassword", { password: "secret" });
     expect(JSON.stringify(settings!.state)).not.toContain("secret");
   });
+
+  test("設定の中の画面の並びをまとめて書き戻す", async () => {
+    await app().do("app", "showSettings");
+    await app().do("app/settings", "setPath", { path: ["guide"] }, (node) => node.state.path.join() === "guide");
+    await app().do("app/settings", "setPath", { path: [] }, (node) => node.state.path.length === 0);
+  });
 });

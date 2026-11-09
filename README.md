@@ -104,7 +104,7 @@ ViewModels/ChannelList/
 - State と Action には UI の型（`RegzaSharedModels`）だけを使い、Domain の型は使わない（Android に見せないため。ViewModel の Domain を使う init やプロパティは `package` にする）
 - 表示の判断（ボタンを出すか、押せるか、保存できるかなど）は State に入れ、画面に式を書かない。画面に置いた判断はテストでも CLI（`regza`）でも確かめられず、iOS と Android にそれぞれ書くことになる
 - 1 つの画面に Action は 1 つにする。部品に分けた ViewModel（設定のテレビの登録など）の操作は、親の Action の case に入れて送る（`SettingsAction.tv(TVSetupAction)`）。部品の ViewModel には `typealias Action` を書かない（書くと Android から直接送れてしまう）
-- CLI と振る舞いのテストから動かせるよう `IntrospectableActions` にし、名前と引数の操作を Action にする `action(_:_:)` を書く（CLI も Android 側の相手もこれを使うので、置き換えは 1 か所だけ）。state を要約したり伏せたりするときは `introspectionJSON(of:)` に書く
+- CLI と振る舞いのテストから動かせるよう `IntrospectableActions` にし、名前と引数の操作を Action にする `action(_:_:)` を書く（CLI も Android 側の相手もこれを使うので、置き換えは 1 か所だけ）。state を要約したり伏せたりするときは `introspectionJSON(of:)` に書く。Action のどの case も `action(_:_:)` で作れるようにする（アプリの画面から送れる操作は、どれも約束事からも送れる。`ContractCoverageTests` が漏れを確かめる）
 - テストを `Tests/RegzaCoreTests/RegzaPresentation/ViewModels/` に足す
 
 ### 2. AppViewModel から開けるようにする

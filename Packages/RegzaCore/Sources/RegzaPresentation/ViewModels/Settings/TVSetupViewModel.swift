@@ -209,6 +209,8 @@ extension TVSetupViewModel {
 
     static var introspectionActions: [ActionDescription] {
         [
+            ActionDescription("appear", "テレビの登録の画面を開いた (未設定なら探し始める)"),
+            ActionDescription("setShowingManualEntry", "ユーザー名とパスワードの入力欄を開く・閉じる", parameters: ["isShowing": "true | false"]),
             ActionDescription("setHost", "テレビの IP アドレスを入れる", parameters: ["host": "IP アドレス"]),
             ActionDescription("setUser", "ユーザー名を入れる (PIN 登録に対応していない機種)", parameters: ["user": "ユーザー名"]),
             ActionDescription("setPassword", "パスワードを入れる (PIN 登録に対応していない機種)", parameters: ["password": "パスワード"]),
@@ -219,11 +221,14 @@ extension TVSetupViewModel {
             ActionDescription("confirmPairing", "PIN で登録して保存する"),
             ActionDescription("cancelPairing", "PIN の登録をやめる"),
             ActionDescription("test", "入力した接続情報でつながるか試す"),
+            ActionDescription("close", "テレビの登録の画面を閉じた (PIN を入れずに閉じたら、テレビの PIN 表示を消す)"),
         ]
     }
 
     func introspectionAction(_ name: String, _ arguments: [String: JSONValue]) throws -> TVSetupAction {
         switch name {
+        case "appear": return .appear
+        case "setShowingManualEntry": return .setShowingManualEntry(try arguments.bool("isShowing"))
         case "setHost": return .setHost(try arguments.string("host"))
         case "setUser": return .setUser(try arguments.string("user"))
         case "setPassword": return .setPassword(try arguments.string("password"))
@@ -239,6 +244,7 @@ extension TVSetupViewModel {
         case "confirmPairing": return .confirmPairing
         case "cancelPairing": return .cancelPairing
         case "test": return .test
+        case "close": return .close
         default: throw IntrospectionError.unknownAction(name)
         }
     }

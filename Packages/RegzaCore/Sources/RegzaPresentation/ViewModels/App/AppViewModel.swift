@@ -204,6 +204,10 @@ extension AppViewModel: IntrospectableActions {
             ActionDescription("openProgram", "いまのタブで番組の詳細を開く", parameters: ["channel": "チャンネルの code", "program": "番組の id"]),
             ActionDescription("openSearch", "いまのタブで番組表の検索を開く"),
             ActionDescription("back", "いまのタブで 1 つ戻る"),
+            ActionDescription(
+                "setPath", "タブの path をまとめて変える (iOS で戻るスワイプをしたときと同じ)",
+                parameters: ["tab": Tab.allCases.map(\.rawValue).joined(separator: " | "), "path": "ls の paths と同じ形の画面の並び"]
+            ),
             ActionDescription("showSettings", "設定を開く"),
             ActionDescription("closeSettings", "設定を閉じる (保存しない)"),
             ActionDescription("showNowPlaying", "いま映っているものの詳細を開く"),
@@ -229,6 +233,10 @@ extension AppViewModel: IntrospectableActions {
             return .push(.programDetail(programID: id, channelCode: channel.code))
         case "openSearch": return .push(.search)
         case "back": return .pop
+        case "setPath":
+            guard let tab = Tab(rawValue: try arguments.string("tab")) else { throw IntrospectionError.invalidArgument("tab") }
+            guard case .array(let routes) = arguments["path"] ?? .array([]) else { throw IntrospectionError.invalidArgument("path") }
+            return .setPath(tab, try routes.map(Self.route))
         case "showSettings": return .showSettings
         case "closeSettings": return .closeSettings
         case "showNowPlaying": return .showNowPlaying
@@ -240,6 +248,22 @@ extension AppViewModel: IntrospectableActions {
         case "closePlayer": return .closePlayer
         default: throw IntrospectionError.unknownAction(name)
         }
+    }
+
+    /// ls の paths と同じ形の画面 ({"channelPrograms": {"channelCode": …}} や "search")
+    private static func route(_ value: JSONValue) throws -> Route {
+        switch value {
+        case .string("search"): return .search
+        case .object(let object):
+            if case .object(let values)? = object["channelPrograms"] {
+                return .channelPrograms(channelCode: try values.string("channelCode"))
+            }
+            if case .object(let values)? = object["programDetail"] {
+                return .programDetail(programID: try values.int("programID"), channelCode: try values.string("channelCode"))
+            }
+        default: break
+        }
+        throw IntrospectionError.invalidArgument("path")
     }
 
     /// 引数 channel の code のチャンネル

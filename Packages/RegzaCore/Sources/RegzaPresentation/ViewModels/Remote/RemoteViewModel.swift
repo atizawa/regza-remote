@@ -258,6 +258,7 @@ extension RemoteViewModel: IntrospectableActions {
             ActionDescription("refresh", "いま映っているものを取り直す"),
             ActionDescription("startPolling", "2 秒ごとに取り直す"),
             ActionDescription("stopPolling", "取り直しをやめる"),
+            ActionDescription("report", "テレビとのやり取りの外で起きたエラーの説明を出す (iOS の Live Activity を始められなかったときなど)", parameters: ["message": "説明"]),
         ]
     }
 
@@ -282,6 +283,7 @@ extension RemoteViewModel: IntrospectableActions {
         case "refresh": return .refresh
         case "startPolling": return .startPolling
         case "stopPolling": return .stopPolling
+        case "report": return .report(try arguments.string("message"))
         default: throw IntrospectionError.unknownAction(name)
         }
     }

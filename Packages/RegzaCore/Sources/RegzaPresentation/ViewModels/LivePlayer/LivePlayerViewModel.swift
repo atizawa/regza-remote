@@ -143,6 +143,7 @@ extension LivePlayerViewModel: IntrospectableActions {
             ActionDescription("start", "配信を頼む (準備できたら再生する URL が出る)"),
             ActionDescription("switchChannel", "局を切り替える", parameters: ["channel": "channels の局の code"]),
             ActionDescription("retryAfterStoppingStalled", "準備できないまま残っている配信を止めて、もう一度頼む"),
+            ActionDescription("end", "見終わった。配信を止めてチューナーを空ける (画面は閉じない。閉じるのは app の closePlayer)"),
         ]
     }
 
@@ -157,6 +158,7 @@ extension LivePlayerViewModel: IntrospectableActions {
             }
             return .switchChannel(code)
         case "retryAfterStoppingStalled": return .retryAfterStoppingStalled
+        case "end": return .end
         default: throw IntrospectionError.unknownAction(name)
         }
     }

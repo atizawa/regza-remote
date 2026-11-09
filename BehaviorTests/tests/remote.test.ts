@@ -20,4 +20,9 @@ describeOnBothPlatforms("リモコン", (app) => {
     const before = (await app().ls("app/remote")).state.tapCount;
     await app().do("app/remote", "press", { key: "power" }, (node) => node.state.tapCount > before);
   });
+
+  test("テレビとのやり取りの外で起きたエラーを知らせると、説明を出す", async () => {
+    const remote = await app().do("app/remote", "report", { message: "Live Activity を始められませんでした" }, (node) => node.state.errorMessage !== null);
+    expect(remote!.state.errorMessage).toBe("Live Activity を始められませんでした");
+  });
 });

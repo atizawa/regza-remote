@@ -28,4 +28,19 @@ describeOnBothPlatforms("チャンネル一覧", (app) => {
     await app().do("app", "back");
     expect(await app().absent("app/channels-0")).toBe(true);
   });
+
+  test("path をまとめて書き戻すと (iOS で戻るスワイプをしたときと同じ)、その画面まで戻る", async () => {
+    await app().do("app", "selectTab", { tab: "channels" });
+    await app().do("app/channelList", "appear", {}, (node) => node.state.rows.length > 0);
+    await app().do("app/guideGrid", "load", {}, (node) => node.state.columns.length > 0);
+    await app().do("app", "openPrograms", { channel: "JP-G00000001" });
+    await app().do("app", "openProgram", { channel: "JP-G00000001", program: 1001 });
+    const opened = (await app().ls("app")).state.paths.channels;
+    expect(opened.length).toBe(2);
+
+    // 番組表の画面まで戻す
+    await app().do("app", "setPath", { tab: "channels", path: [opened[0]] }, (node) => node.state.paths.channels.length === 1);
+    expect(await app().absent("app/channels-1")).toBe(true);
+    expect((await app().ls("app/channels-0")).state.channelName).toBe("テスト局１");
+  });
 });
