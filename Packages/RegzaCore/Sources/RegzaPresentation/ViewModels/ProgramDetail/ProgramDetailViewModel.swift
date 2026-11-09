@@ -2,87 +2,6 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// 1 チャンネルの番組表の画面の ViewModel。放送中の番組から日ごとに並べる
-@MainActor
-@Observable
-public final class ProgramListViewModel {
-    package let guide: any GuideUseCaseProtocol
-    package let recording: any RecordingUseCaseProtocol
-    package let channel: RegzaChannel
-
-    package init(guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, channel: RegzaChannel) {
-        self.guide = guide
-        self.recording = recording
-        self.channel = channel
-    }
-
-    public struct State: Equatable, Sendable {
-        public var channelCode: String
-        public var channelName: String
-        /// 日ごとの番組。読み込む前は nil
-        public var days: [ProgramDay]?
-        /// 取得できなかった説明
-        public var loadErrorMessage: String?
-    }
-
-    public enum Action: Sendable {
-        /// 画面を開いた。予約した番組に印を付けるため、予約も読む
-        case appear
-        case reload
-    }
-
-    private var programs: [MirakurunProgram]?
-    private var loadError: RegzaError?
-    @ObservationIgnored private let work = Work()
-
-    public var state: State {
-        State(
-            channelCode: channel.code,
-            channelName: channel.name,
-            days: programs.map { guide.days($0) },
-            loadErrorMessage: programs == nil ? loadError?.localizedDescription : nil
-        )
-    }
-
-    public func send(_ action: Action) {
-        switch action {
-        case .appear:
-            work.run {
-                if self.programs == nil { await self.load() }
-                if self.recording.reservations.isEmpty { try? await self.recording.loadReservations() }
-            }
-        case .reload: work.run { await self.load() }
-        }
-    }
-
-    private func load() async {
-        do {
-            programs = try await guide.programs(for: channel)
-            loadError = nil
-        } catch {
-            loadError = error
-        }
-    }
-}
-
-extension ProgramListViewModel: Introspectable {
-    public var introspectionName: String { "programList" }
-    public var introspectionValue: Any { state }
-    public var isBusy: Bool { work.isBusy }
-
-    public var introspectionActions: [ActionDescription] {
-        [ActionDescription("appear", "画面を開いたときと同じく読み込む"), ActionDescription("reload", "番組を読み直す")]
-    }
-
-    public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
-        switch action {
-        case "appear": send(.appear)
-        case "reload": send(.reload)
-        default: throw IntrospectionError.unknownAction(action)
-        }
-    }
-}
-
 /// 番組の詳細の画面の ViewModel。切り替え・録画予約・最初から見る
 @MainActor
 @Observable
@@ -107,46 +26,14 @@ public final class ProgramDetailViewModel {
     }
 
     /// 予約・取り消しの途中のもの
-    public enum Reserving: Sendable {
-        case single, series, cancel
-    }
+    /// 予約・取り消しの途中のもの
+    public typealias Reserving = ProgramDetailReserving
 
-    public struct State: Equatable, Sendable {
-        public var program: ProgramItem
-        /// 番組内容・出演者など
-        public var texts: [ProgramTextItem]
-        public var channelCode: String
-        public var channelName: String
-        public var isTuning: Bool
-        public var reserving: Reserving?
-        /// 予約・取り消しが終わった回数 (触覚フィードバックの合図)
-        public var reserveCount: Int
-        /// 画面に出す説明。予約の説明を優先する
-        public var message: String?
-        /// 予約済みの説明 (「連ドラ予約済み（毎週）」など)。予約していなければ nil
-        public var reservedText: String?
-        /// 予約が連ドラ予約か。予約していなければ nil
-        public var reservationIsSeries: Bool?
-        /// 放送中なら切り替えられる
-        public var canTune: Bool
-        /// 終わっていなければ予約できる
-        public var canReserve: Bool
-        /// アプリで見られる
-        public var canStream: Bool
-        public var canStartOver: Bool
+    /// 画面に出すもの
+    public typealias State = ProgramDetailState
 
-        public var isReserved: Bool { reservationIsSeries != nil }
-    }
-
-    public enum Action: Sendable {
-        /// 画面を開いた。予約済みか、最初から見られるかを出すため
-        case appear
-        /// 録画予約する。`series` なら連ドラ予約 (次の回以降も録画する)
-        case reserve(series: Bool)
-        case cancelReservation
-        /// 切り替える。`startOver` なら、切り替えてから番組を最初から再生する
-        case tune(startOver: Bool)
-    }
+    /// 画面からの操作
+    public typealias Action = ProgramDetailAction
 
     private var isTuning = false
     private var tuneMessage: String?

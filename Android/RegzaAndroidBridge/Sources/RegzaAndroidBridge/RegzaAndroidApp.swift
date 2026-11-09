@@ -152,16 +152,6 @@ public enum RegzaAndroidAction {
     /// 読み取った条件を外す (RegzaAndroidSearch.conditions の何番目か)
     case removeCondition(Int)
     case searchLiterally
-    // 1 チャンネルの番組表 (ProgramListViewModel)
-    case showPrograms
-    case reloadPrograms
-    // 番組の詳細 (ProgramDetailViewModel)
-    case showDetail
-    /// 録画予約する (true なら連ドラ予約)
-    case reserve(Bool)
-    case cancelProgramReservation
-    /// 選局する (true なら放送中の番組を最初から)
-    case tuneProgram(Bool)
     // 設定 (TVSetupViewModel・ServerSetupViewModel)
     case showSetup
     case closeSetup
@@ -410,12 +400,6 @@ public final class RegzaAndroidApp {
             let conditions = app.guideGrid.search.state.conditions
             if conditions.indices.contains(index) { app.guideGrid.search.send(.removeCondition(conditions[index].condition)) }
         case .searchLiterally: app.guideGrid.search.send(.searchLiterally)
-        case .showPrograms: currentProgramList()?.send(.appear)
-        case .reloadPrograms: currentProgramList()?.send(.reload)
-        case .showDetail: currentDetail()?.send(.appear)
-        case .reserve(let series): currentDetail()?.send(.reserve(series: series))
-        case .cancelProgramReservation: currentDetail()?.send(.cancelReservation)
-        case .tuneProgram(let startOver): currentDetail()?.send(.tune(startOver: startOver))
         case .showSetup: app.send(.showSettings)
         case .closeSetup: app.send(.closeSettings)
         case .openSetupPage(let page):
@@ -454,15 +438,6 @@ public final class RegzaAndroidApp {
         }
     }
 
-    @MainActor private func currentProgramList() -> ProgramListViewModel? {
-        guard case .channelPrograms(let code) = app.state.path(of: app.state.tab).last else { return nil }
-        return app.programList(channelCode: code)
-    }
-
-    @MainActor private func currentDetail() -> ProgramDetailViewModel? {
-        guard case .programDetail(let id, let code) = app.state.path(of: app.state.tab).last else { return nil }
-        return app.programDetail(programID: id, channelCode: code)
-    }
 }
 
 /// 保存先の値が変わった回数 (見張るためだけに使う)

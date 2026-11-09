@@ -32,6 +32,26 @@ extension RegzaAndroidApp {
         route { ($0 as? LivePlayerViewModel)?.send(action) != nil }
     }
 
+    /// ProgramDetailViewModel に送る
+    public func sendProgramDetailAction(_ action: ProgramDetailAction) {
+        Task { @MainActor in self.perform(action) }
+    }
+
+    /// ProgramDetailViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
+    @MainActor func perform(_ action: ProgramDetailAction) {
+        route { ($0 as? ProgramDetailViewModel)?.send(action) != nil }
+    }
+
+    /// ProgramListViewModel に送る
+    public func sendProgramListAction(_ action: ProgramListAction) {
+        Task { @MainActor in self.perform(action) }
+    }
+
+    /// ProgramListViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
+    @MainActor func perform(_ action: ProgramListAction) {
+        route { ($0 as? ProgramListViewModel)?.send(action) != nil }
+    }
+
     /// ReservationListViewModel に送る
     public func sendReservationListAction(_ action: ReservationListAction) {
         Task { @MainActor in self.perform(action) }

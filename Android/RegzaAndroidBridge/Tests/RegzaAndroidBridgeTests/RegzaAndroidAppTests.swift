@@ -165,6 +165,19 @@ struct RegzaAndroidAppTests {
         #expect(process.terminationStatus == 0, "\(message)")
     }
 
+    /// 戻る道の画面の操作は、いまのタブで開いている画面の ViewModel に届く
+    @Test func screenActionsReachOpenedScreens() async throws {
+        let fixture = try make()
+        let code = Self.channelCodes[0]
+        fixture.bridge.perform(.selectTab("channels"))
+        fixture.bridge.perform(.openPrograms(code))
+        #expect(await fixture.bridge.screen().programs?.days == nil)
+
+        fixture.bridge.perform(ProgramListAction.appear)
+        try await waitUntil { await fixture.bridge.screen().programs?.days != nil }
+        #expect(await fixture.bridge.screen().programs == fixture.app.programList(channelCode: code)?.state)
+    }
+
     /// 見つからない番組を開いても、タブの最初の画面を出す
     @Test func unknownProgramFallsBackToTabScreen() async throws {
         let fixture = try make()

@@ -55,24 +55,28 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.RegzaAndroidAction
-import com.example.regzaremote.core.RegzaAndroidProgramDetail
-import com.example.regzaremote.core.RegzaAndroidProgramList
+import com.example.regzaremote.core.ProgramDetailAction
+import com.example.regzaremote.core.ProgramDetailState
+import com.example.regzaremote.core.ProgramListAction
+import com.example.regzaremote.core.ProgramListState
 import com.example.regzaremote.core.RegzaAndroidSearch
 import com.example.regzaremote.core.SearchResultItem
 
-/** 1 チャンネルの番組表 (iOS 版の ChannelProgramsView と同じ ProgramListViewModel)。日付ごとのまとまりに分けて並べる */
+/** 1 チャンネルの番組表 (state と操作は ProgramListViewModel の ProgramListState・ProgramListAction)。日付ごとのまとまりに分けて並べる */
 @Composable
-fun ProgramListScreen(list: RegzaAndroidProgramList, onBack: (() -> Unit)?, send: Send) {
-    LaunchedEffect(list.channelName) { send(RegzaAndroidAction.showPrograms()) }
+fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Send) {
+    LaunchedEffect(list.channelCode) { send(ProgramListAction.appear()) }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(list.channelName, onBack)
         val message = list.loadErrorMessage.orElse(null)
+        // 読み込む前は nil
+        val days = list.days.orElse(null)
         when {
-            list.isLoaded && list.days.isEmpty() -> EmptyState("番組表がありません", "Mirakurun がこのチャンネルの番組表を持っていません。")
-            list.isLoaded -> LazyColumn(
+            days != null && days.isEmpty() -> EmptyState("番組表がありません", "Mirakurun がこのチャンネルの番組表を持っていません。")
+            days != null -> LazyColumn(
                 contentPadding = PaddingValues(start = Design.outer, top = Design.outer, end = Design.outer, bottom = Design.outer + LocalMiniPlayerInset.current),
             ) {
-                list.days.forEach { day ->
+                days.forEach { day ->
                     item(key = "day-${day.label}") { SectionHeader(day.label, Modifier.padding(top = 8.dp, bottom = 6.dp)) }
                     val programs = day.programs.toList()
                     itemsIndexed(programs, key = { _, program -> program.id }) { index, program ->
@@ -85,7 +89,7 @@ fun ProgramListScreen(list: RegzaAndroidProgramList, onBack: (() -> Unit)?, send
                 }
             }
             message != null -> EmptyState("番組表を取得できません", message) {
-                TextButton(onClick = { send(RegzaAndroidAction.reloadPrograms()) }) { Text("もう一度試す") }
+                TextButton(onClick = { send(ProgramListAction.reload()) }) { Text("もう一度試す") }
             }
             else -> Loading()
         }
@@ -119,11 +123,11 @@ private fun ProgramRow(program: ProgramItem, send: Send) {
     }
 }
 
-/** 番組の詳細 (iOS 版の ProgramDetailView と同じ ProgramDetailViewModel)。切り替えて見る・録画予約・最初から見る */
+/** 番組の詳細 (state と操作は ProgramDetailViewModel の ProgramDetailState・ProgramDetailAction)。切り替えて見る・録画予約・最初から見る */
 @Composable
-fun ProgramDetailScreen(detail: RegzaAndroidProgramDetail, onBack: (() -> Unit)?, send: Send) {
+fun ProgramDetailScreen(detail: ProgramDetailState, onBack: (() -> Unit)?, send: Send) {
     val program = detail.program
-    LaunchedEffect(program.id) { send(RegzaAndroidAction.showDetail()) }
+    LaunchedEffect(program.id) { send(ProgramDetailAction.appear()) }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("番組の詳細", onBack)
         Column(
@@ -148,7 +152,7 @@ fun ProgramDetailScreen(detail: RegzaAndroidProgramDetail, onBack: (() -> Unit)?
 
 /** 局名・番組名・時刻。番組名をいちばん大きくする */
 @Composable
-private fun DetailHeader(detail: RegzaAndroidProgramDetail) {
+private fun DetailHeader(detail: ProgramDetailState) {
     val program = detail.program
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -181,13 +185,13 @@ private fun DetailHeader(detail: RegzaAndroidProgramDetail) {
 
 /** 主な操作。見る・切り替えは緑、録画は赤で塗る */
 @Composable
-private fun DetailActions(detail: RegzaAndroidProgramDetail, send: Send) {
+private fun DetailActions(detail: ProgramDetailState, send: Send) {
     Column(verticalArrangement = Arrangement.spacedBy(Design.item)) {
         Row(horizontalArrangement = Arrangement.spacedBy(Design.item)) {
             if (detail.isCanTune) {
                 ActionButton("切り替えて見る", AppTheme.accent, isBusy = detail.isTuning, enabled = !detail.isTuning,
                     icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp)) }) {
-                    send(RegzaAndroidAction.tuneProgram(false))
+                    send(ProgramDetailAction.tune(false))
                 }
             }
             if (detail.isCanReserve) ReserveMenu(detail, send)
@@ -202,7 +206,7 @@ private fun DetailActions(detail: RegzaAndroidProgramDetail, send: Send) {
         if (detail.isCanStartOver) {
             Row {
                 ActionButton("最初から見る", AppTheme.surface, foreground = MaterialTheme.colorScheme.onSurface, enabled = !detail.isTuning) {
-                    send(RegzaAndroidAction.tuneProgram(true))
+                    send(ProgramDetailAction.tune(true))
                 }
             }
         }
@@ -211,35 +215,37 @@ private fun DetailActions(detail: RegzaAndroidProgramDetail, send: Send) {
 
 /** 「録画予約」を押すと、この回だけか連ドラ予約かを選ぶ。予約済みならメニューから取り消す */
 @Composable
-private fun RowScope.ReserveMenu(detail: RegzaAndroidProgramDetail, send: Send) {
+private fun RowScope.ReserveMenu(detail: ProgramDetailState, send: Send) {
+    // 予約・取り消しの途中
+    val isReserving = detail.reserving.isPresent
     var isShowingMenu by remember { mutableStateOf(false) }
     Box(Modifier.weight(1f)) {
         Row {
             if (detail.isReserved) {
-                ActionButton("予約済み", AppTheme.surface, foreground = AppTheme.red, isBusy = detail.isReserving, enabled = !detail.isReserving,
+                ActionButton("予約済み", AppTheme.surface, foreground = AppTheme.red, isBusy = isReserving, enabled = !isReserving,
                     icon = { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp)) }) { isShowingMenu = true }
             } else {
-                ActionButton("録画予約", AppTheme.red, isBusy = detail.isReserving, enabled = !detail.isReserving,
+                ActionButton("録画予約", AppTheme.red, isBusy = isReserving, enabled = !isReserving,
                     icon = { RecordIcon(Modifier.size(18.dp), color = Color.White) }) { isShowingMenu = true }
             }
         }
         DropdownMenu(expanded = isShowingMenu, onDismissRequest = { isShowingMenu = false }) {
             if (detail.isReserved) {
                 DropdownMenuItem(
-                    text = { Text(if (detail.isSeriesReservation) "連ドラ予約を取り消す" else "予約を取り消す", color = AppTheme.red) },
+                    text = { Text(if (detail.reservationIsSeries.orElse(false)) "連ドラ予約を取り消す" else "予約を取り消す", color = AppTheme.red) },
                     onClick = {
                         isShowingMenu = false
-                        send(RegzaAndroidAction.cancelProgramReservation())
+                        send(ProgramDetailAction.cancelReservation())
                     },
                 )
             } else {
                 DropdownMenuItem(text = { Text("この回だけ録画") }, onClick = {
                     isShowingMenu = false
-                    send(RegzaAndroidAction.reserve(false))
+                    send(ProgramDetailAction.reserve(false))
                 })
                 DropdownMenuItem(text = { Text("連ドラ予約（毎回録画）") }, onClick = {
                     isShowingMenu = false
-                    send(RegzaAndroidAction.reserve(true))
+                    send(ProgramDetailAction.reserve(true))
                 })
             }
         }

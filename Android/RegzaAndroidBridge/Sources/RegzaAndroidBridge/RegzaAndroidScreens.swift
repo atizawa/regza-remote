@@ -15,39 +15,11 @@ public struct RegzaAndroidScreen {
     public var guide: GuideGridState?
     /// 録画予約の一覧の画面の state (ReservationListViewModel.State をそのまま渡す)
     public var reservations: ReservationListState?
-    public var programs: RegzaAndroidProgramList?
-    public var detail: RegzaAndroidProgramDetail?
+    /// 1 チャンネルの番組表の画面の state (ProgramListViewModel.State をそのまま渡す)
+    public var programs: ProgramListState?
+    /// 番組の詳細の画面の state (ProgramDetailViewModel.State をそのまま渡す)
+    public var detail: ProgramDetailState?
     public var search: RegzaAndroidSearch?
-}
-
-/// 1 チャンネルの番組表 (ProgramListViewModel.State)
-public struct RegzaAndroidProgramList {
-    public var channelName: String
-    /// 読み込み済み (まだなら読み込み中を出す)
-    public var isLoaded: Bool
-    public var loadErrorMessage: String?
-    public var days: [ProgramDay]
-}
-
-/// 番組の詳細 (ProgramDetailViewModel.State)
-public struct RegzaAndroidProgramDetail {
-    public var program: ProgramItem
-    /// 番組内容・出演者など
-    public var texts: [ProgramTextItem]
-    public var channelName: String
-    public var isTuning: Bool
-    /// 予約・取り消しの途中
-    public var isReserving: Bool
-    public var message: String?
-    /// 「録画予約済み」「連ドラ予約済み」
-    public var reservedText: String?
-    public var isReserved: Bool
-    public var isSeriesReservation: Bool
-    public var canTune: Bool
-    public var canReserve: Bool
-    /// アプリで見られる (放送中で、ライブ視聴を設定している)
-    public var canStream: Bool
-    public var canStartOver: Bool
 }
 
 /// 番組表の検索 (GuideSearchViewModel.State)
@@ -86,28 +58,9 @@ extension RegzaAndroidScreen {
         case .reservations(let state):
             self.init(kind: "reservations", reservations: state)
         case .programs(let state):
-            self.init(kind: "programs", programs: RegzaAndroidProgramList(
-                channelName: state.channelName,
-                isLoaded: state.days != nil,
-                loadErrorMessage: state.loadErrorMessage,
-                days: state.days ?? []
-            ))
+            self.init(kind: "programs", programs: state)
         case .detail(let state):
-            self.init(kind: "detail", detail: RegzaAndroidProgramDetail(
-                program: state.program,
-                texts: state.texts,
-                channelName: state.channelName,
-                isTuning: state.isTuning,
-                isReserving: state.reserving != nil,
-                message: state.message,
-                reservedText: state.reservedText,
-                isReserved: state.isReserved,
-                isSeriesReservation: state.reservationIsSeries == true,
-                canTune: state.canTune,
-                canReserve: state.canReserve,
-                canStream: state.canStream,
-                canStartOver: state.canStartOver
-            ))
+            self.init(kind: "detail", detail: state)
         case .search(let state):
             self.init(kind: "search", search: RegzaAndroidSearch(
                 text: state.text,
