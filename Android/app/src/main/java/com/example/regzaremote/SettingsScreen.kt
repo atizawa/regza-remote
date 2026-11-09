@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -240,7 +241,9 @@ private fun GuideSettingsPage(setup: RegzaAndroidSetup, send: Send) {
 /** 設定の画面の枠。見出しの下に、まとまりを縦に並べてスクロールする */
 @Composable
 private fun SettingsPage(header: @Composable () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxSize()) {
+    // Android 15 からは画面の端まで描くので、タブの画面 (Scaffold) と同じく、ステータスバーと
+    // ナビゲーションバー・キーボードの分を空ける
+    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
         header()
         Column(
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Design.outer).padding(bottom = Design.group),
