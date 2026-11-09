@@ -50,10 +50,13 @@ class MainActivity : ComponentActivity() {
             // iOS 版と同じくダークに固定し、強調色を緑にする
             MaterialTheme(colorScheme = AppTheme.colorScheme) {
                 Surface(modifier = Modifier.fillMaxSize(), color = AppTheme.background) {
-                    val model: RegzaViewModel = viewModel()
-                    val state = model.state ?: return@Surface
-                    val setup = state.setup.orElse(null)
-                    if (setup != null) SettingsScreen(setup, model::send) else AppScreen(state, model.screen, model::send)
+                    // テレビは同じ LAN にあるので、ローカルネットワークへのアクセスを許可されてから画面を出す
+                    LocalNetworkGate {
+                        val model: RegzaViewModel = viewModel()
+                        val state = model.state ?: return@LocalNetworkGate
+                        val setup = state.setup.orElse(null)
+                        if (setup != null) SettingsScreen(setup, model::send) else AppScreen(state, model.screen, model::send)
+                    }
                 }
             }
         }

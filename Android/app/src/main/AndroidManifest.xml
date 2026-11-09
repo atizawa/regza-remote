@@ -3,6 +3,8 @@
 
     <!-- テレビ (同じ LAN) に問い合わせる -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 17 から、同じ LAN の機器 (テレビ・Mirakurun) への通信には、ユーザーの許可が要る -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application
         android:name=".RegzaApplication"
