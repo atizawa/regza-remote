@@ -19,13 +19,13 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-java", revision: "301e3da710ede7af93e798f1ce1c7950715a5748"),
     ],
     targets: [
-        // iOS と共有の型 (RegzaDomain と RegzaSharedModels) の Java のつなぎ。iOS と共有の Packages/RegzaCore には
+        // iOS と共有の UI の型 (RegzaSharedModels) の Java のつなぎ。iOS と共有の Packages/RegzaCore には
         // プラグインをかけられないので、mise run build-swift が swift-java のツールで Generated/ に作る
-        // (設定は RegzaDomain.swift-java.config と RegzaSharedModels.swift-java.config)。ここにはプラグインをかけない
+        // (設定は RegzaSharedModels.swift-java.config)。ここにはプラグインをかけない
         .target(
             name: "RegzaSharedJava",
             dependencies: [
-                .product(name: "RegzaDomain", package: "RegzaCore"),
+                .product(name: "RegzaSharedModels", package: "RegzaCore"),
                 .product(name: "SwiftJava", package: "swift-java"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]

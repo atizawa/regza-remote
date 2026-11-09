@@ -91,17 +91,13 @@ libcxx=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/sysroot/usr/lib/aarch
 # swift-java のプラグインは、Swift から消した型の Java のクラスを消さないので、毎回作り直す
 rm -rf .build/swift/plugins/outputs/regzaandroid
 
-# 共有の型 (RegzaDomain の RegzaKey・RegzaChannel など) の Java のつなぎを作る。iOS と共有のパッケージにはプラグインを
-# かけられないので、Mac で動く swift-java のツールで、Packages/RegzaCore/Sources/RegzaDomain を直接読む
+# 共有の UI の型 (RegzaSharedModels の RegzaKey・ProgramItem など) の Java のつなぎを作る。iOS と共有のパッケージには
+# プラグインをかけられないので、Mac で動く swift-java のツールで、Packages/RegzaCore/Sources/RegzaSharedModels を直接読む
 # Android 向けのビルドとはビルドの設定が違い、同じ置き場だと互いのキャッシュを捨て合うので、置き場を分ける
 swift build --package-path RegzaAndroid --scratch-path .build/swift-tool -c release --product swift-java
 generated=RegzaAndroid/Sources/RegzaSharedJava/Generated
 rm -rf "$generated" .build/swift/regzashared-java && mkdir -p "$generated" .build/swift/regzashared-java
-.build/swift-tool/out/Products/Release/swift-java jextract --log-level warning \
-  --config RegzaAndroid/RegzaDomain.swift-java.config --swift-module RegzaDomain \
-  --input-swift ../Packages/RegzaCore/Sources/RegzaDomain \
-  --output-swift "$generated" --output-java .build/swift/regzashared-java
-# UI で使う型 (RegzaSharedModels) は、すべてそのまま Java のクラスにする
+# UI で使う型は、すべてそのまま Java のクラスにする
 .build/swift-tool/out/Products/Release/swift-java jextract --log-level warning \
   --config RegzaAndroid/RegzaSharedModels.swift-java.config --swift-module RegzaSharedModels \
   --input-swift ../Packages/RegzaCore/Sources/RegzaSharedModels \

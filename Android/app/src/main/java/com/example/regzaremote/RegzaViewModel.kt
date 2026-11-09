@@ -61,8 +61,7 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
 
     /** PIN で登録したときや設定を保存したときなど、Swift の側で変わったものを保存する */
     private fun save(snapshot: RegzaAndroidSnapshot) {
-        val connection = snapshot.connection
-        val changed = Connection(connection.host, connection.user, connection.password)
+        val changed = Connection(snapshot.tvHost, snapshot.tvUser, snapshot.tvPassword)
         if (changed.host.isNotEmpty() && changed != saved) {
             store.save(changed)
             saved = changed

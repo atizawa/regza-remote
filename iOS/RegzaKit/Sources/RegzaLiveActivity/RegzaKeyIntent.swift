@@ -8,17 +8,17 @@ public struct RegzaKeyIntent: LiveActivityIntent {
     public static let title: LocalizedStringResource = "REGZAのボタンを押す"
     public static let isDiscoverable = false
 
-    @Parameter(title: "キーコード")
-    public var keyCode: String
+    @Parameter(title: "キー")
+    public var keyName: String
 
     public init() {}
 
     public init(_ key: RegzaKey) {
-        keyCode = key.rawValue
+        keyName = key.rawValue
     }
 
     public func perform() async throws -> some IntentResult {
-        if let key = RegzaKey(rawValue: keyCode) {
+        if let key = RegzaKey(rawValue: keyName) {
             try await RegzaRemoteService.send(key)
             // チャンネルを変えると番組の終了時刻も変わるので、起こしてもらう時刻を予約し直す
             await BackgroundRefresh.schedule()

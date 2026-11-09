@@ -3,9 +3,8 @@ import Observation
 import RegzaApp
 
 // Android アプリに見せる API。swift-java がここの public な型と関数から Java のクラスを作る
-// (Java のパッケージは com.example.regzaremote.core)。画面に出すものは UI の型 (RegzaSharedModels) をそのまま渡し、
-// Domain の型はリモコンのキー (RegzaKey) と保存する接続情報 (RegzaConnection) だけを使う
-// (Java のクラスは RegzaSharedJava で作る)。
+// (Java のパッケージは com.example.regzaremote.core)。画面に出すものとリモコンのキー (RegzaKey) は UI の型
+// (RegzaSharedModels) をそのまま渡し、Domain の型は見せない (UI の型の Java のクラスは RegzaSharedJava で作る)。
 //
 // 画面の状態と操作は iOS と同じ共有の ViewModel (AppViewModel とその下の画面の ViewModel) が持つ。
 // ViewModel は MainActor で動き、swift-java は MainActor の同期の関数を Java に出せないので、ここに窓口を置く:
@@ -29,8 +28,10 @@ public struct RegzaAndroidSnapshot {
     public var canGoBack: Bool
     /// テレビの登録の画面を出している (未登録のとき、設定を開いたとき)
     public var isShowingSetup: Bool
-    /// 保存すべき接続情報と番組表のアドレス。変わったら Kotlin が保存する
-    public var connection: RegzaConnection
+    /// 保存すべきテレビの接続情報 (アドレス・ユーザー名・パスワード) と番組表のアドレス。変わったら Kotlin が保存する
+    public var tvHost: String
+    public var tvUser: String
+    public var tvPassword: String
     public var guideHost: String
     /// ライブ視聴に使う EPGStation のアドレス。変わったら Kotlin が保存する
     public var streamHost: String
@@ -317,7 +318,9 @@ public final class RegzaAndroidApp {
             tab: appState.tab.rawValue,
             canGoBack: !appState.path(of: appState.tab).isEmpty,
             isShowingSetup: settings != nil,
-            connection: remote.connection,
+            tvHost: remote.connection.host,
+            tvUser: remote.connection.user,
+            tvPassword: remote.connection.password,
             guideHost: app.guide.guideHost,
             streamHost: store.streamHost,
             ownStreamIDs: store.ownStreamIDs.map(String.init).joined(separator: ","),

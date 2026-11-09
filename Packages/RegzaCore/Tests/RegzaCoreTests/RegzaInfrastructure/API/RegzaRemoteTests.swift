@@ -4,6 +4,16 @@ import Testing
 @testable import RegzaInfrastructure
 
 @Suite struct SwitchingTests {
+    /// テレビに送るキーコード (キーの値は名前で、コードは Infrastructure が持つ)
+    @Test func keyCodes() {
+        #expect(RegzaKey.power.rawValue == "power")
+        #expect(RegzaKey.power.code == "40BF12")
+        #expect(RegzaKey.num10.code == "40BF0A")
+        #expect(RegzaKey.subtitle.code == "43BC52")
+        // どのキーもコードが重ならない
+        #expect(Set(RegzaKey.allCases.map(\.code)).count == RegzaKey.allCases.count)
+    }
+
     @Test func switchingKeys() {
         #expect(RegzaKey.enter.mayStartContentSwitch)
         #expect(RegzaKey.play.mayStartContentSwitch)

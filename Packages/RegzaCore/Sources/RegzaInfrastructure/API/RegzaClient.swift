@@ -32,7 +32,7 @@ public actor RegzaClient {
     }
 
     public func send(_ key: RegzaKey) async throws {
-        let body = try await get(path: "/remote/remote.htm", query: "key=\(key.rawValue)")
+        let body = try await get(path: "/remote/remote.htm", query: "key=\(key.code)")
         let result = body.trimmingCharacters(in: .whitespacesAndNewlines)
         // 0 以外 (1, 2) はエラー。数値以外が返る機種は成功扱いにする
         if let code = Int(result), code != 0 {
