@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -49,7 +51,7 @@ import java.time.format.DateTimeFormatter
  * 押すと、いま映っているものの詳細を開く
  */
 @Composable
-fun NowPlayingBar(state: RegzaAndroidSnapshot, send: Send) {
+fun NowPlayingBar(state: RegzaAndroidSnapshot, send: Send, modifier: Modifier = Modifier) {
     val nowPlaying = state.nowPlaying.orElse(null)
     val hasError = state.connectionError.isPresent
     // 文言は iOS と同じ NowPlayingItem.captionText・headlineText
@@ -63,13 +65,16 @@ fun NowPlayingBar(state: RegzaAndroidSnapshot, send: Send) {
     val key = if (nowPlaying != null && !hasError) miniPlayerKey(nowPlaying.kind.rawValue, nowPlaying.isAdvancing) else null
 
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
-            .padding(horizontal = Design.outer, vertical = 6.dp)
+            .padding(horizontal = Design.outer, vertical = 8.dp)
+            .height(miniPlayerHeight - 16.dp)
+            // 下の画面から浮いて見えるよう、影を付ける
+            .shadow(8.dp, RoundedCornerShape(50))
             .background(AppTheme.surface, RoundedCornerShape(50))
             .border(0.5.dp, AppTheme.separator, RoundedCornerShape(50))
             .clickable { send(RegzaAndroidAction.showNowPlaying()) }
-            .padding(horizontal = Design.outer, vertical = 8.dp),
+            .padding(horizontal = Design.outer),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -87,6 +92,9 @@ fun NowPlayingBar(state: RegzaAndroidSnapshot, send: Send) {
         }
     }
 }
+
+/** ミニプレーヤーの高さ (上下の余白を含む) */
+val miniPlayerHeight = 72.dp
 
 /** 進み具合の輪 (中にテレビの印) */
 @Composable

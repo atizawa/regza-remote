@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,10 +25,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
@@ -143,30 +144,37 @@ private fun AppScreen(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?, 
     Scaffold(
         containerColor = AppTheme.background,
         bottomBar = {
-            Column {
-                NowPlayingBar(state, send)
-                NavigationBar(containerColor = AppTheme.surface) {
-                    TabItem("remote", "リモコン", { Icon(Icons.Filled.Home, contentDescription = null) }, tab, send)
-                    TabItem("guide", "番組表", { Icon(Icons.Filled.DateRange, contentDescription = null) }, tab, send)
-                    TabItem("channels", "チャンネル", { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, tab, send)
-                    TabItem("reservations", "録画予約", { RecordIcon(Modifier.size(22.dp), color = LocalContentColor.current) }, tab, send)
-                }
+            NavigationBar(containerColor = AppTheme.surface) {
+                TabItem("remote", "リモコン", { Icon(Icons.Filled.Home, contentDescription = null) }, tab, send)
+                TabItem("guide", "番組表", { Icon(Icons.Filled.DateRange, contentDescription = null) }, tab, send)
+                TabItem("channels", "チャンネル", { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, tab, send)
+                TabItem("reservations", "録画予約", { RecordIcon(Modifier.size(22.dp), color = LocalContentColor.current) }, tab, send)
             }
         },
     ) { padding ->
+        // ミニプレーヤーは iOS と同じく、タブの画面の上に浮かせて重ねる (画面はその下までスクロールする)
         Box(Modifier.padding(padding)) {
-            when (screen?.kind) {
-                "guide" -> screen.guide.orElse(null)?.let { GuideScreen(it, send) }
-                "channels" -> screen.channelList.orElse(null)?.let { ChannelScreen(it, send) }
-                "reservations" -> screen.reservations.orElse(null)?.let { ReservationsScreen(it, send) }
-                "programs" -> screen.programs.orElse(null)?.let { ProgramListScreen(it, back, send) }
-                "detail" -> screen.detail.orElse(null)?.let { ProgramDetailScreen(it, back, send) }
-                "search" -> screen.search.orElse(null)?.let { SearchScreen(it, back, send) }
-                else -> RemoteScreen(state, send)
-            }
+            CompositionLocalProvider(LocalMiniPlayerInset provides miniPlayerHeight) { TabContent(state, screen, back, send) }
+            NowPlayingBar(state, send, Modifier.align(Alignment.BottomCenter))
         }
     }
     state.nowPlayingDetail.orElse(null)?.let { NowPlayingSheet(state, it, send) }
+}
+
+/** いまのタブで見えている画面 */
+@Composable
+private fun TabContent(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?, back: (() -> Unit)?, send: Send) {
+    Box {
+        when (screen?.kind) {
+            "guide" -> screen.guide.orElse(null)?.let { GuideScreen(it, send) }
+            "channels" -> screen.channelList.orElse(null)?.let { ChannelScreen(it, send) }
+            "reservations" -> screen.reservations.orElse(null)?.let { ReservationsScreen(it, send) }
+            "programs" -> screen.programs.orElse(null)?.let { ProgramListScreen(it, back, send) }
+            "detail" -> screen.detail.orElse(null)?.let { ProgramDetailScreen(it, back, send) }
+            "search" -> screen.search.orElse(null)?.let { SearchScreen(it, back, send) }
+            else -> RemoteScreen(state, send)
+        }
+    }
 }
 
 @Composable

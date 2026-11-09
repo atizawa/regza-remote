@@ -65,7 +65,7 @@ fun ChannelScreen(list: RegzaAndroidChannelList, send: Send) {
             else -> {
                 BandPicker(list.bands, list.band.orElse(null), send)
                 val rows = list.rows.toList()
-                LazyColumn(contentPadding = PaddingValues(Design.outer)) {
+                LazyColumn(contentPadding = PaddingValues(start = Design.outer, top = Design.outer, end = Design.outer, bottom = Design.outer + LocalMiniPlayerInset.current)) {
                     list.tuneError.orElse(null)?.let { error ->
                         item { Text(error, style = MaterialTheme.typography.bodySmall, color = AppTheme.red, modifier = Modifier.padding(bottom = 8.dp)) }
                     }

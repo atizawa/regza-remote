@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -86,6 +87,12 @@ object AppTheme {
         error = red,
     )
 }
+
+/**
+ * タブの画面の下に重ねて浮かせているミニプレーヤーの高さ。一覧の最後がミニプレーヤーに隠れないよう、
+ * スクロールする画面はこの分だけ下に余白を足す (タブの中でない画面では 0)
+ */
+val LocalMiniPlayerInset = compositionLocalOf { 0.dp }
 
 /** 補足の説明 */
 @Composable

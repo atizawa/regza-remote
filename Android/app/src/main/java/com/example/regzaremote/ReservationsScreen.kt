@@ -84,7 +84,10 @@ fun ReservationsScreen(list: RegzaAndroidReservations, send: Send) {
                 if (list.scheduled.isEmpty() && list.waiting.isEmpty()) {
                     EmptyState("録画予約はありません")
                 } else {
-                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(Design.outer)) {
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = Design.outer, top = Design.outer, end = Design.outer, bottom = Design.outer + LocalMiniPlayerInset.current),
+                    ) {
                         list.cancelError.orElse(null)?.let { error ->
                             item { Text(error, style = MaterialTheme.typography.bodySmall, color = AppTheme.red, modifier = Modifier.padding(bottom = 8.dp)) }
                         }

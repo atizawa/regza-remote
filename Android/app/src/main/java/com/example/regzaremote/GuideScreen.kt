@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.RegzaAndroidAction
@@ -146,9 +147,11 @@ private fun GuideGrid(guide: RegzaAndroidGuide, send: Send) {
                 }
             }
         }
+        // 表の最後がミニプレーヤーに隠れないよう、時刻の列と表の両方の下に同じ余白を足す (縦のスクロールをそろえる)
+        val bottomInset = LocalMiniPlayerInset.current
         Row(Modifier.weight(1f)) {
-            TimeColumn(hours, vertical)
-            Box(Modifier.horizontalScroll(horizontal).verticalScroll(vertical)) {
+            TimeColumn(hours, vertical, bottomInset)
+            Box(Modifier.horizontalScroll(horizontal).verticalScroll(vertical).padding(bottom = bottomInset)) {
                 Row {
                     columns.forEach { column ->
                         Box(Modifier.width(columnWidth).height(dpPerMinute * minutes)) {
@@ -186,8 +189,8 @@ private fun GuideGrid(guide: RegzaAndroidGuide, send: Send) {
 
 /** 左端の時刻 (正時ごと) */
 @Composable
-private fun TimeColumn(hours: List<String>, vertical: ScrollState) {
-    Column(Modifier.width(timeColumnWidth).background(AppTheme.background).verticalScroll(vertical)) {
+private fun TimeColumn(hours: List<String>, vertical: ScrollState, bottomInset: Dp) {
+    Column(Modifier.width(timeColumnWidth).background(AppTheme.background).verticalScroll(vertical).padding(bottom = bottomInset)) {
         hours.forEach { hour ->
             Text(
                 hour,

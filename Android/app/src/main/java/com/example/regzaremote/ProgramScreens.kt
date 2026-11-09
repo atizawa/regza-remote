@@ -69,7 +69,9 @@ fun ProgramListScreen(list: RegzaAndroidProgramList, onBack: (() -> Unit)?, send
         val message = list.loadErrorMessage.orElse(null)
         when {
             list.isLoaded && list.days.isEmpty() -> EmptyState("番組表がありません", "Mirakurun がこのチャンネルの番組表を持っていません。")
-            list.isLoaded -> LazyColumn(contentPadding = PaddingValues(Design.outer)) {
+            list.isLoaded -> LazyColumn(
+                contentPadding = PaddingValues(start = Design.outer, top = Design.outer, end = Design.outer, bottom = Design.outer + LocalMiniPlayerInset.current),
+            ) {
                 list.days.forEach { day ->
                     item(key = "day-${day.label}") { SectionHeader(day.label, Modifier.padding(top = 8.dp, bottom = 6.dp)) }
                     val programs = day.programs.toList()
@@ -125,7 +127,7 @@ fun ProgramDetailScreen(detail: RegzaAndroidProgramDetail, onBack: (() -> Unit)?
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("番組の詳細", onBack)
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(Design.outer),
+            Modifier.verticalScroll(rememberScrollState()).padding(Design.outer).padding(bottom = LocalMiniPlayerInset.current),
             verticalArrangement = Arrangement.spacedBy(Design.group),
         ) {
             DetailHeader(detail)
@@ -304,7 +306,7 @@ fun SearchScreen(search: RegzaAndroidSearch, onBack: (() -> Unit)?, send: Send) 
                 }
             }
             results.isEmpty() -> EmptyState("「${search.text}」に一致する結果はありません", "スペルを確認するか、新しい検索を試してください。")
-            else -> LazyColumn {
+            else -> LazyColumn(contentPadding = PaddingValues(bottom = LocalMiniPlayerInset.current)) {
                 items(results.toList(), key = { it.program.id }) { row ->
                     SearchResultRow(row, send)
                     HorizontalDivider(Modifier.padding(start = Design.outer), thickness = 0.5.dp, color = AppTheme.separator)

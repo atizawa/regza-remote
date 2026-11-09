@@ -82,7 +82,7 @@ fun RemoteScreen(state: RegzaAndroidSnapshot, sendAction: Send) {
             }
         }
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(Design.outer),
+            Modifier.verticalScroll(rememberScrollState()).padding(Design.outer).padding(bottom = LocalMiniPlayerInset.current),
             verticalArrangement = Arrangement.spacedBy(Design.group),
         ) {
             // 電源は誤って押さないよう左端に離し、入力切替・消音と並べる
