@@ -17,38 +17,16 @@ public final class GuideSearchViewModel {
     }
 
     /// 画面に出す、読み取った条件
-    public enum Condition: Hashable, Sendable {
-        case day, hours, genre(Int)
-    }
+    public typealias Condition = GuideSearchCondition
 
-    public struct State: Equatable, Sendable {
-        public var text: String
-        /// 何も打っていない
-        public var isBlank: Bool
-        /// 読み取った条件 (外したものを除く)
-        public var conditions: [ConditionChip]
-        /// 条件を読み取らず、打った言葉そのままで探しているか (「夜のニュース」という番組名を探すときなど)
-        public var isLiteral: Bool
-        /// 索引を作っている途中か (その間は結果が空でも「見つかりません」と出さない)
-        public var isIndexing: Bool
-        /// 見つかった番組 (テレビに登録されていない局の番組は出さない)
-        public var results: [SearchResultItem]
-    }
+    /// 画面に出すもの
+    public typealias State = GuideSearchState
 
-    public struct ConditionChip: Equatable, Sendable, Identifiable {
-        public var condition: Condition
-        /// 「明日」「18時〜」「スポーツ」
-        public var label: String
-        public var id: Condition { condition }
-    }
+    /// 読み取った条件と、画面に出す名前
+    public typealias ConditionChip = GuideSearchConditionChip
 
-    public enum Action: Sendable {
-        case setText(String)
-        /// 読み取った条件から 1 つ外す
-        case removeCondition(Condition)
-        /// 条件を読み取らず、打った言葉そのままで探す
-        case searchLiterally
-    }
+    /// 画面からの操作
+    public typealias Action = GuideSearchAction
 
     private var text = ""
     private var query = ProgramSearchQuery()

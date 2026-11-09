@@ -59,7 +59,9 @@ import com.example.regzaremote.core.ProgramDetailAction
 import com.example.regzaremote.core.ProgramDetailState
 import com.example.regzaremote.core.ProgramListAction
 import com.example.regzaremote.core.ProgramListState
-import com.example.regzaremote.core.RegzaAndroidSearch
+import com.example.regzaremote.core.GuideSearchAction
+import com.example.regzaremote.core.GuideSearchConditionChip
+import com.example.regzaremote.core.GuideSearchState
 import com.example.regzaremote.core.SearchResultItem
 
 /** 1 チャンネルの番組表 (state と操作は ProgramListViewModel の ProgramListState・ProgramListAction)。日付ごとのまとまりに分けて並べる */
@@ -280,18 +282,18 @@ private fun RowScope.ActionButton(
 }
 
 /**
- * 番組を探す (iOS 版の GuideSearchScreen と同じ GuideSearchViewModel)。
+ * 番組を探す (state と操作は GuideSearchViewModel の GuideSearchState・GuideSearchAction)。
  * 打った言葉から日付・時間帯・ジャンルを読み取り、残りの言葉で全部の番組から探す
  */
 @Composable
-fun SearchScreen(search: RegzaAndroidSearch, onBack: (() -> Unit)?, send: Send) {
+fun SearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Send) {
     // 開いたらすぐ打てるようにする (前に探した言葉が残っていれば結果を見せる)
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { if (search.text.isEmpty()) focus.requestFocus() }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("番組を探す", onBack)
         SyncedTextField(
-            value = search.text, onValueChange = { send(RegzaAndroidAction.setSearchText(it)) },
+            value = search.text, onValueChange = { send(GuideSearchAction.setText(it)) },
             label = "番組名・出演者・「明日の夜のドラマ」",
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = Design.outer).focusRequester(focus),
@@ -302,7 +304,7 @@ fun SearchScreen(search: RegzaAndroidSearch, onBack: (() -> Unit)?, send: Send) 
                 Text(
                     "「${search.text}」をそのまま探す", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
                     color = AppTheme.accent,
-                    modifier = Modifier.clickable { send(RegzaAndroidAction.searchLiterally()) }.padding(horizontal = Design.outer, vertical = 4.dp),
+                    modifier = Modifier.clickable { send(GuideSearchAction.searchLiterally()) }.padding(horizontal = Design.outer, vertical = 4.dp),
                 )
             }
         }
@@ -331,24 +333,24 @@ fun SearchScreen(search: RegzaAndroidSearch, onBack: (() -> Unit)?, send: Send) 
 
 /** 読み取った条件。押すと外す */
 @Composable
-private fun ConditionChips(conditions: Array<String>, send: Send) {
+private fun ConditionChips(conditions: Array<GuideSearchConditionChip>, send: Send) {
     Row(
         Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Design.outer),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("条件", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = AppTheme.accent)
-        conditions.forEachIndexed { index, condition ->
+        conditions.forEach { chip ->
             Row(
                 Modifier
                     .background(AppTheme.surface, CircleShape)
-                    .clickable { send(RegzaAndroidAction.removeCondition(index.toLong())) }
+                    .clickable { send(GuideSearchAction.removeCondition(chip.condition)) }
                     .padding(horizontal = 10.dp, vertical = 5.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(condition, style = MaterialTheme.typography.labelMedium)
-                Icon(Icons.Filled.Close, contentDescription = "$condition を外す", tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                Text(chip.label, style = MaterialTheme.typography.labelMedium)
+                Icon(Icons.Filled.Close, contentDescription = "${chip.label} を外す", tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(12.dp))
             }
         }

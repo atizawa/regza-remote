@@ -19,18 +19,8 @@ public struct RegzaAndroidScreen {
     public var programs: ProgramListState?
     /// 番組の詳細の画面の state (ProgramDetailViewModel.State をそのまま渡す)
     public var detail: ProgramDetailState?
-    public var search: RegzaAndroidSearch?
-}
-
-/// 番組表の検索 (GuideSearchViewModel.State)
-public struct RegzaAndroidSearch {
-    public var text: String
-    public var isBlank: Bool
-    public var isLiteral: Bool
-    public var isIndexing: Bool
-    /// 読み取った条件 (「明日」「18時〜」「スポーツ」)。removeCondition には何番目かを渡す
-    public var conditions: [String]
-    public var results: [SearchResultItem]
+    /// 番組表の検索の画面の state (GuideSearchViewModel.State をそのまま渡す)
+    public var search: GuideSearchState?
 }
 
 // MARK: - ViewModel の state から作る
@@ -62,14 +52,7 @@ extension RegzaAndroidScreen {
         case .detail(let state):
             self.init(kind: "detail", detail: state)
         case .search(let state):
-            self.init(kind: "search", search: RegzaAndroidSearch(
-                text: state.text,
-                isBlank: state.isBlank,
-                isLiteral: state.isLiteral,
-                isIndexing: state.isIndexing,
-                conditions: state.conditions.map(\.label),
-                results: state.results
-            ))
+            self.init(kind: "search", search: state)
         }
     }
 }

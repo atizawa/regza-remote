@@ -22,6 +22,16 @@ extension RegzaAndroidApp {
         route { ($0 as? GuideGridViewModel)?.send(action) != nil }
     }
 
+    /// GuideSearchViewModel に送る
+    public func sendGuideSearchAction(_ action: GuideSearchAction) {
+        Task { @MainActor in self.perform(action) }
+    }
+
+    /// GuideSearchViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
+    @MainActor func perform(_ action: GuideSearchAction) {
+        route { ($0 as? GuideSearchViewModel)?.send(action) != nil }
+    }
+
     /// LivePlayerViewModel に送る
     public func sendLivePlayerAction(_ action: LivePlayerAction) {
         Task { @MainActor in self.perform(action) }

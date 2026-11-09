@@ -147,11 +147,6 @@ public enum RegzaAndroidAction {
     case openProgram(String, Int)
     /// 番組表から検索を開く (番組表の画面の中の操作は GuideGridAction で送る)
     case openSearch
-    // 番組表の検索 (GuideSearchViewModel)
-    case setSearchText(String)
-    /// 読み取った条件を外す (RegzaAndroidSearch.conditions の何番目か)
-    case removeCondition(Int)
-    case searchLiterally
     // 設定 (TVSetupViewModel・ServerSetupViewModel)
     case showSetup
     case closeSetup
@@ -395,11 +390,6 @@ public final class RegzaAndroidApp {
             app.send(.open(.channelPrograms(channelCode: code)))
         case .openProgram(let code, let id): app.send(.open(.programDetail(programID: id, channelCode: code)))
         case .openSearch: app.send(.open(.search))
-        case .setSearchText(let text): app.guideGrid.search.send(.setText(text))
-        case .removeCondition(let index):
-            let conditions = app.guideGrid.search.state.conditions
-            if conditions.indices.contains(index) { app.guideGrid.search.send(.removeCondition(conditions[index].condition)) }
-        case .searchLiterally: app.guideGrid.search.send(.searchLiterally)
         case .showSetup: app.send(.showSettings)
         case .closeSetup: app.send(.closeSettings)
         case .openSetupPage(let page):

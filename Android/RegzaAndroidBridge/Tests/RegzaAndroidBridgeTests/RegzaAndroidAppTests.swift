@@ -201,21 +201,19 @@ struct RegzaAndroidAppTests {
         #expect(!guide.isToday)
     }
 
-    /// 検索で読み取った条件は、conditions の何番目かで外す
-    @Test func removesSearchConditionByIndex() async throws {
+    /// 検索の操作 (GuideSearchAction) で読み取った条件を外すと、検索の state がそのまま届く
+    @Test func removesSearchConditionWithSearchAction() async throws {
         let fixture = try make()
         fixture.bridge.perform(.selectTab("guide"))
         fixture.bridge.perform(.openSearch)
-        fixture.bridge.perform(.setSearchText("明日の夜"))
+        fixture.bridge.perform(GuideSearchAction.setText("明日の夜"))
         let before = try #require(await fixture.bridge.screen().search)
         #expect(before.conditions.count == 2)
 
-        fixture.bridge.perform(.removeCondition(0))
+        fixture.bridge.perform(GuideSearchAction.removeCondition(before.conditions[0].condition))
         let after = try #require(await fixture.bridge.screen().search)
         #expect(after.conditions == Array(before.conditions.dropFirst()))
-
-        fixture.bridge.perform(.removeCondition(5))
-        #expect(await fixture.bridge.screen().search?.conditions == after.conditions)
+        #expect(after == fixture.app.guideGrid.search.state)
     }
 
     // MARK: - 設定
