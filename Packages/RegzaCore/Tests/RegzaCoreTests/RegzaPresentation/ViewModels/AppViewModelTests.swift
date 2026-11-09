@@ -35,6 +35,16 @@ import Testing
         #expect(app.programList(channelCode: channel.code) !== list)
     }
 
+    /// 画面を見分ける文字列は、同じ画面なら同じで、違う画面なら違う
+    @Test func routeIDsIdentifyScreens() {
+        let routes: [AppRoute] = [
+            .channelPrograms(channelCode: "JP-G00000001"), .channelPrograms(channelCode: "JP-G00000002"),
+            .programDetail(programID: 1, channelCode: "JP-G00000001"), .programDetail(programID: 2, channelCode: "JP-G00000001"), .search,
+        ]
+        #expect(Set(routes.map(\.id)).count == routes.count)
+        #expect(AppRoute.search.id == AppRoute.search.id)
+    }
+
     @Test func settingsStartFromTVWhenNotConfigured() throws {
         let app = try makeApp(configured: false)
         app.send(.showSettings)

@@ -106,21 +106,25 @@ public final class RegzaAndroidApp {
     /// いま見えている画面 (いまのタブの戻る道の最後、なければタブの最初の画面) の state
     @MainActor private func screenKey() -> ScreenKey {
         let state = app.state
-        switch state.path(of: state.tab).last {
-        case .channelPrograms(let code):
-            // チャンネルが見つからなければ、タブの最初の画面を出す
-            if let list = app.programList(channelCode: code) { return .programs(list.state) }
-        case .programDetail(let id, let code):
-            // 番組が見つからなければ、タブの最初の画面を出す
-            if let detail = app.programDetail(programID: id, channelCode: code) { return .detail(detail.state) }
-        case .search: return .search(app.guideGrid.search.state)
-        case nil: break
+        let route = state.path(of: state.tab).last
+        if let content = routeContent(route) { return ScreenKey(tab: state.tab, route: route, content: content) }
+        // 開いた画面のチャンネルや番組が見つからなければ、タブの最初の画面を出す
+        let content: ScreenContent = switch state.tab {
+        case .remote: .remote
+        case .channels: .channels(app.channelList.state)
+        case .reservations: .reservations(app.reservationList.state)
+        case .guide: .guide(app.guideGrid.state)
         }
-        switch state.tab {
-        case .remote: return .remote
-        case .channels: return .channels(app.channelList.state)
-        case .reservations: return .reservations(app.reservationList.state)
-        case .guide: return .guide(app.guideGrid.state)
+        return ScreenKey(tab: state.tab, route: nil, content: content)
+    }
+
+    /// path の画面の state
+    @MainActor private func routeContent(_ route: AppRoute?) -> ScreenContent? {
+        switch route {
+        case .channelPrograms(let code): app.programList(channelCode: code).map { .programs($0.state) }
+        case .programDetail(let id, let code): app.programDetail(programID: id, channelCode: code).map { .detail($0.state) }
+        case .search: .search(app.guideGrid.search.state)
+        case nil: nil
         }
     }
 

@@ -6,6 +6,10 @@ import RegzaApp
 
 /// いま見えている画面。kind に合わせて、どれか 1 つだけがある
 public struct RegzaAndroidScreen {
+    /// どのタブの画面か
+    public var tab: AppTab
+    /// タブの path のどの画面か。タブの最初の画面なら nil (Compose の back stack の、どの画面の state かを見分ける)
+    public var route: AppRoute?
     /// "remote"・"guide"・"channels"・"reservations" (タブの最初の画面)、
     /// "programs" (1 チャンネルの番組表)・"detail" (番組の詳細)・"search" (番組表の検索)
     public var kind: String
@@ -25,8 +29,15 @@ public struct RegzaAndroidScreen {
 
 // MARK: - ViewModel の state から作る
 
-/// 見えている画面の ViewModel の state。前と同じなら Kotlin に渡し直さない
-enum ScreenKey: Equatable {
+/// 見えている画面 (タブと path の画面) と、その ViewModel の state。前と同じなら Kotlin に渡し直さない
+struct ScreenKey: Equatable {
+    var tab: AppTab
+    var route: AppRoute?
+    var content: ScreenContent
+}
+
+/// 見えている画面の ViewModel の state
+enum ScreenContent: Equatable {
     case remote
     case channels(ChannelListViewModel.State)
     case guide(GuideGridViewModel.State)
@@ -38,21 +49,22 @@ enum ScreenKey: Equatable {
 
 extension RegzaAndroidScreen {
     @MainActor init(_ key: ScreenKey) {
-        switch key {
+        let (tab, route) = (key.tab, key.route)
+        switch key.content {
         case .remote:
-            self.init(kind: "remote")
+            self.init(tab: tab, route: route, kind: "remote")
         case .channels(let state):
-            self.init(kind: "channels", channelList: state)
+            self.init(tab: tab, route: route, kind: "channels", channelList: state)
         case .guide(let state):
-            self.init(kind: "guide", guide: state)
+            self.init(tab: tab, route: route, kind: "guide", guide: state)
         case .reservations(let state):
-            self.init(kind: "reservations", reservations: state)
+            self.init(tab: tab, route: route, kind: "reservations", reservations: state)
         case .programs(let state):
-            self.init(kind: "programs", programs: state)
+            self.init(tab: tab, route: route, kind: "programs", programs: state)
         case .detail(let state):
-            self.init(kind: "detail", detail: state)
+            self.init(tab: tab, route: route, kind: "detail", detail: state)
         case .search(let state):
-            self.init(kind: "search", search: state)
+            self.init(tab: tab, route: route, kind: "search", search: state)
         }
     }
 }

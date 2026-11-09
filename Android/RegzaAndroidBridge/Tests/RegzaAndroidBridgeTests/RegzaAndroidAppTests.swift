@@ -141,6 +141,9 @@ struct RegzaAndroidAppTests {
         fixture.bridge.perform(AppAction.push(.channelPrograms(channelCode: code)))
         let programs = try #require(await fixture.bridge.screen().programs)
         #expect(programs.channelName == "テスト局1")
+        // どのタブの path のどの画面の state か (Compose の back stack で見分ける)
+        #expect(await fixture.bridge.screen().tab == .channels)
+        #expect(await fixture.bridge.screen().route == .channelPrograms(channelCode: code))
         #expect(await fixture.bridge.snapshot().app.path(of: .channels).count == 1)
 
         fixture.bridge.perform(AppAction.push(.programDetail(programID: 1, channelCode: code)))

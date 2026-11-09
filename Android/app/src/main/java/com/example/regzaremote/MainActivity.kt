@@ -25,6 +25,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import com.example.regzaremote.core.AppRoute
+import androidx.navigation3.ui.NavDisplay
+import androidx.navigation3.runtime.NavEntry
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.key
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -139,10 +146,6 @@ private fun AppScreen(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?, 
         onStopOrDispose { send(RemoteAction.stopPolling()) }
     }
     val tab = state.app.tab
-    // タブの path に画面を積んでいれば (タブの中で画面を開いていれば)、戻るボタンで 1 つ戻る
-    val canGoBack = state.app.path(tab).isNotEmpty()
-    BackHandler(enabled = canGoBack) { send(AppAction.pop()) }
-    val back = if (canGoBack) ({ send(AppAction.pop()) }) else null
     Scaffold(
         containerColor = AppTheme.background,
         bottomBar = {
@@ -156,17 +159,52 @@ private fun AppScreen(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?, 
     ) { padding ->
         // ミニプレーヤーは iOS と同じく、タブの画面の上に浮かせて重ねる (画面はその下までスクロールする)
         Box(Modifier.padding(padding)) {
-            CompositionLocalProvider(LocalMiniPlayerInset provides miniPlayerHeight) { TabContent(state, screen, back, send) }
+            CompositionLocalProvider(LocalMiniPlayerInset provides miniPlayerHeight) { TabContent(state, screen, send) }
             NowPlayingBar(state, send, Modifier.align(Alignment.BottomCenter))
         }
     }
     state.nowPlayingDetail.orElse(null)?.let { NowPlayingSheet(state, it, send) }
 }
 
-/** いまのタブで見えている画面 */
+/**
+ * いまのタブの画面。共有の AppViewModel が持つタブの path を、Navigation 3 の back stack として渡す
+ * (iOS 版が NavigationStack(path:) に渡すのと同じ)。戻るキーや戻るジェスチャーは pop を送り、path が変わると画面が切り替わる
+ */
 @Composable
-private fun TabContent(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?, back: (() -> Unit)?, send: Send) {
-    Box {
+private fun TabContent(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?, send: Send) {
+    val tab = state.app.tab
+    // Swift からは見えている画面の state しか届かないので、戻る途中のアニメーションなどで後ろの画面も描けるよう、
+    // 届いた state を画面ごとに覚えておく (画面を開いたら、閉じた画面の分は忘れる)
+    val screens = remember { mutableStateMapOf<String, RegzaAndroidScreen>() }
+    val backStack = listOf(entryKey(tab, null)) + state.app.path(tab).map { entryKey(tab, it) }
+    SideEffect {
+        if (screen == null) return@SideEffect
+        val key = entryKey(screen.tab, screen.route.orElse(null))
+        if (key !in screens) screens.keys.removeAll { it.startsWith(tab.rawValue + "/") && it !in backStack }
+        screens[key] = screen
+    }
+    // タブを切り替えたときは、画面を積んだり戻ったりするアニメーションをしない
+    key(tab.rawValue) {
+        NavDisplay(
+            backStack = backStack,
+            onBack = { send(AppAction.pop()) },
+            entryProvider = { key ->
+                NavEntry(key) {
+                    val back = if (key == backStack.first()) null else ({ send(AppAction.pop()) })
+                    EntryContent(state, screens[key], back, send)
+                }
+            },
+        )
+    }
+}
+
+/** back stack の画面の key (タブと、path の画面の id。タブの最初の画面は空) */
+private fun entryKey(tab: AppTab, route: AppRoute?) = tab.rawValue + "/" + (route?.id ?: "")
+
+/** back stack の 1 つの画面。state がまだ届いていなければ、届くまで何も出さない (リモコンは state が要らない) */
+@Composable
+private fun EntryContent(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?, back: (() -> Unit)?, send: Send) {
+    Box(Modifier.fillMaxSize().background(AppTheme.background)) {
         when (screen?.kind) {
             "guide" -> screen.guide.orElse(null)?.let { GuideScreen(it, send) }
             "channels" -> screen.channelList.orElse(null)?.let { ChannelScreen(it, send) }
@@ -174,7 +212,8 @@ private fun TabContent(state: RegzaAndroidSnapshot, screen: RegzaAndroidScreen?,
             "programs" -> screen.programs.orElse(null)?.let { ProgramListScreen(it, back, send) }
             "detail" -> screen.detail.orElse(null)?.let { ProgramDetailScreen(it, back, send) }
             "search" -> screen.search.orElse(null)?.let { SearchScreen(it, back, send) }
-            else -> RemoteScreen(state, send)
+            "remote" -> RemoteScreen(state, send)
+            else -> if (state.app.tab.rawValue == "remote" && back == null) RemoteScreen(state, send)
         }
     }
 }
