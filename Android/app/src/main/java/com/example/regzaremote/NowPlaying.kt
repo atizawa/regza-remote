@@ -44,7 +44,7 @@ import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.NowPlayingAction
 import com.example.regzaremote.core.NowPlayingState
 import com.example.regzaremote.core.RemoteAction
-import com.example.regzaremote.core.RegzaAndroidSnapshot
+import com.example.regzaremote.core.RemoteState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -54,13 +54,13 @@ import java.time.format.DateTimeFormatter
  * 押すと、いま映っているものの詳細を開く
  */
 @Composable
-fun NowPlayingBar(state: RegzaAndroidSnapshot, send: Send, modifier: Modifier = Modifier) {
-    val nowPlaying = state.remote.nowPlaying.orElse(null)
-    val hasError = state.remote.errorMessage.isPresent
+fun NowPlayingBar(state: RemoteState, send: Send, modifier: Modifier = Modifier) {
+    val nowPlaying = state.nowPlaying.orElse(null)
+    val hasError = state.errorMessage.isPresent
     // 文言は iOS と同じ NowPlayingItem.captionText・headlineText
-    val caption = if (state.remote.isSearchingTV || hasError) null else nowPlaying?.captionText?.orElse(null)
+    val caption = if (state.isSearchingTV || hasError) null else nowPlaying?.captionText?.orElse(null)
     val headline = when {
-        state.remote.isSearchingTV -> "テレビを探しています…"
+        state.isSearchingTV -> "テレビを探しています…"
         hasError -> "テレビに接続できません"
         else -> nowPlaying?.headlineText ?: "接続中…"
     }
@@ -124,7 +124,7 @@ private fun ProgressRing(progress: Float?) {
 /** ミニプレーヤーを押したときの詳細 (state と操作は NowPlayingViewModel の NowPlayingState・NowPlayingAction)。録画ならシークもできる */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NowPlayingSheet(state: RegzaAndroidSnapshot, detail: NowPlayingState, send: Send) {
+fun NowPlayingSheet(state: RemoteState, detail: NowPlayingState, send: Send) {
     // 開いたら、最初から見られるかと、いま映っている局を読む
     LaunchedEffect(Unit) { send(NowPlayingAction.appear()) }
     ModalBottomSheet(onDismissRequest = { send(AppAction.closeNowPlaying()) }, containerColor = AppTheme.background) {
@@ -168,9 +168,9 @@ private fun SheetButton(title: String, onClick: () -> Unit) {
 
 /** テレビから取得した視聴状況 (iOS 版の NowPlayingCard)。録画再生中はシークできる */
 @Composable
-private fun NowPlayingCard(state: RegzaAndroidSnapshot, send: Send) {
-    val nowPlaying = state.remote.nowPlaying.orElse(null)
-    val error = state.remote.errorMessage.orElse(null)
+private fun NowPlayingCard(state: RemoteState, send: Send) {
+    val nowPlaying = state.nowPlaying.orElse(null)
+    val error = state.errorMessage.orElse(null)
     Column(
         Modifier
             .fillMaxWidth()
@@ -179,7 +179,7 @@ private fun NowPlayingCard(state: RegzaAndroidSnapshot, send: Send) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         when {
-            state.remote.isSearchingTV -> Status("テレビが見つからないため、探しています…")
+            state.isSearchingTV -> Status("テレビが見つからないため、探しています…")
             error != null -> Status(error, isWarning = true)
             nowPlaying == null -> Status("接続中…")
             nowPlaying.kind.rawValue == "recorded" -> Playback(nowPlaying, send)

@@ -7,9 +7,11 @@
 #     名前は型ごとに変える (sendChannelListAction など)。
 #     ほかの Action の中で使う部品の操作 (SettingsAction.tv の TVSetupAction など) は Java のクラスにするだけで、送る関数は作らない
 #     (1 つの画面には 1 つの Action で送る)。どちらでもない型が Action/ にあれば止める
+#     あわせて画面の ViewModel (「typealias State = 型」) ごとに、state を返す関数 (channelListState(route:)) と、
+#     変わるまで待って返す関数 (nextChannelListState(route:after:)) を作る
 #   - .build/swift/screen-glue-kotlin/Send.kt
-#     画面が受け取る送り先 (Send)。どの操作も send(...) で送れるよう型ごとの invoke を並べ、Swift の窓口に送る AppSend も作る
-#     (ビルドのたびに作るので保存しない)
+#     画面が受け取る送り先 (Send)。どの操作も send(...) で送れるよう型ごとの invoke を並べ、Swift の窓口に送る AppSend も作る。
+#     state は型ごとに Flow にする (channelListStates(route))。ビルドのたびに作るので保存しない
 #   - swift-java の設定の、ほかのモジュールの型の一覧 (importedModuleStubs の行)
 #     RegzaPresentation.swift-java.config と RegzaAndroidBridge.swift-java.config の "RegzaSharedModels" の行に
 #     RegzaSharedModels の型を、RegzaAndroidBridge.swift-java.config の "RegzaPresentation" の行に State/ と Action/ の型を書く
@@ -25,7 +27,7 @@ shared_models=../Packages/RegzaCore/Sources/RegzaSharedModels
 presentation_config=RegzaAndroid/RegzaPresentation.swift-java.config
 actions_file=RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift
 bridge_config=RegzaAndroid/RegzaAndroidBridge.swift-java.config
-kotlin_file=.build/swift/screen-glue-kotlin/Send.kt
+kotlin_file=.build/swift/screen-glue-kotlin/ScreenGlue.kt
 
 fail() { echo "generate-screen-glue: $*" >&2; exit 1; }
 
@@ -42,6 +44,8 @@ stubs=()
 actions=""
 kotlin_imports=""
 kotlin_invokes=""
+kotlin_flows=""
+states=""
 kotlin_overrides=""
 for file in $(find "$view_models" -path '*/State/*.swift' | sort); do
   # swift-java は型を書いていないプロパティ (public var count = 0 など) を黙って飛ばすので、型を書いてもらう
@@ -86,12 +90,47 @@ for file in $(find "$view_models" -path '*/Action/*.swift' | sort); do
 "
   kotlin_overrides+="
     override fun invoke(action: $action) = app.send$action(action)"
+
+  # 画面の ViewModel の state (ViewModel のファイルの「typealias State = 型」)
+  state=$(sed -En 's/^ *public typealias State = ([A-Za-z0-9_]+)$/\1/p' "$view_model_file")
+  [ -n "$state" ] || fail "$view_model_file に「public typealias State = 型」を書いてください"
+  state_function="$(printf '%s' "${state:0:1}" | tr '[:upper:]' '[:lower:]')${state:1}"
+  next_function="next${state}"
+  states+="
+    /// $view_model の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func $state_function(route: AppRoute?) async -> $state? {
+        await MainActor.run { self.state(route: route) { (\$0 as? $view_model)?.state } }
+    }
+
+    /// $view_model の state が after から変わるまで待って返す
+    public func $next_function(route: AppRoute?, after: $state?) async -> $state? {
+        await nextState(route: route, after: after) { @MainActor in (\$0 as? $view_model)?.state }
+    }
+"
+  kotlin_imports+="import com.example.regzaremote.core.$state
+"
+  kotlin_flows+="
+/** $view_model の state を、変わるたびに流す (route を渡せばその画面の ViewModel の。開いていなければ null) */
+fun RegzaAndroidApp.${state_function}s(route: AppRoute? = null): Flow<$state?> = flow {
+    var state = $state_function(Optional.ofNullable(route)).await().orElse(null)
+    while (true) {
+        emit(state)
+        state = $next_function(Optional.ofNullable(route), Optional.ofNullable(state)).await().orElse(null)
+    }
+}
+"
 done
 
 new_actions="// scripts/generate-screen-glue.sh が作る (手で直さない)
 import RegzaApp
 
-extension RegzaAndroidApp {${actions}}"
+// MARK: - 操作
+
+extension RegzaAndroidApp {${actions}}
+
+// MARK: - state
+
+extension RegzaAndroidApp {${states}}"
 
 # RegzaSharedModels の型 (raw value が String の enum は、そのことも書く)
 shared_stubs=()
@@ -128,11 +167,17 @@ printf '%s\n' "$new_bridge_config" > "$bridge_config"
 printf '%s\n' "// scripts/generate-screen-glue.sh が作る (手で直さない)
 package com.example.regzaremote
 
-${kotlin_imports}import com.example.regzaremote.core.RegzaAndroidApp
+${kotlin_imports}import com.example.regzaremote.core.AppRoute
+import com.example.regzaremote.core.RegzaAndroidApp
+import java.util.Optional
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.future.await
 
 /** 画面から操作を送る先。アプリ全体の操作 (AppAction) も、画面ごとの操作 (ChannelListAction など) も send(...) で送る */
 interface Send {${kotlin_invokes}}
 
 /** Swift の窓口 (RegzaAndroidApp) に送る */
 class AppSend(private val app: RegzaAndroidApp) : Send {${kotlin_overrides}
-}" > "$kotlin_file"
+}
+${kotlin_flows}" > "$kotlin_file"

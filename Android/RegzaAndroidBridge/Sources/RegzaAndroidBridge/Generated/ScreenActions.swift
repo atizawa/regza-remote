@@ -1,6 +1,8 @@
 // scripts/generate-screen-glue.sh が作る (手で直さない)
 import RegzaApp
 
+// MARK: - 操作
+
 extension RegzaAndroidApp {
     /// AppViewModel に送る
     public func sendAppAction(_ action: AppAction) {
@@ -110,5 +112,119 @@ extension RegzaAndroidApp {
     /// SettingsViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
     @MainActor func perform(_ action: SettingsAction) {
         route { ($0 as? SettingsViewModel)?.send(action) != nil }
+    }
+}
+
+// MARK: - state
+
+extension RegzaAndroidApp {
+    /// AppViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func appState(route: AppRoute?) async -> AppState? {
+        await MainActor.run { self.state(route: route) { ($0 as? AppViewModel)?.state } }
+    }
+
+    /// AppViewModel の state が after から変わるまで待って返す
+    public func nextAppState(route: AppRoute?, after: AppState?) async -> AppState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? AppViewModel)?.state }
+    }
+
+    /// ChannelListViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func channelListState(route: AppRoute?) async -> ChannelListState? {
+        await MainActor.run { self.state(route: route) { ($0 as? ChannelListViewModel)?.state } }
+    }
+
+    /// ChannelListViewModel の state が after から変わるまで待って返す
+    public func nextChannelListState(route: AppRoute?, after: ChannelListState?) async -> ChannelListState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? ChannelListViewModel)?.state }
+    }
+
+    /// GuideGridViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func guideGridState(route: AppRoute?) async -> GuideGridState? {
+        await MainActor.run { self.state(route: route) { ($0 as? GuideGridViewModel)?.state } }
+    }
+
+    /// GuideGridViewModel の state が after から変わるまで待って返す
+    public func nextGuideGridState(route: AppRoute?, after: GuideGridState?) async -> GuideGridState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? GuideGridViewModel)?.state }
+    }
+
+    /// GuideSearchViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func guideSearchState(route: AppRoute?) async -> GuideSearchState? {
+        await MainActor.run { self.state(route: route) { ($0 as? GuideSearchViewModel)?.state } }
+    }
+
+    /// GuideSearchViewModel の state が after から変わるまで待って返す
+    public func nextGuideSearchState(route: AppRoute?, after: GuideSearchState?) async -> GuideSearchState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? GuideSearchViewModel)?.state }
+    }
+
+    /// LivePlayerViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func livePlayerState(route: AppRoute?) async -> LivePlayerState? {
+        await MainActor.run { self.state(route: route) { ($0 as? LivePlayerViewModel)?.state } }
+    }
+
+    /// LivePlayerViewModel の state が after から変わるまで待って返す
+    public func nextLivePlayerState(route: AppRoute?, after: LivePlayerState?) async -> LivePlayerState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? LivePlayerViewModel)?.state }
+    }
+
+    /// NowPlayingViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func nowPlayingState(route: AppRoute?) async -> NowPlayingState? {
+        await MainActor.run { self.state(route: route) { ($0 as? NowPlayingViewModel)?.state } }
+    }
+
+    /// NowPlayingViewModel の state が after から変わるまで待って返す
+    public func nextNowPlayingState(route: AppRoute?, after: NowPlayingState?) async -> NowPlayingState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? NowPlayingViewModel)?.state }
+    }
+
+    /// ProgramDetailViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func programDetailState(route: AppRoute?) async -> ProgramDetailState? {
+        await MainActor.run { self.state(route: route) { ($0 as? ProgramDetailViewModel)?.state } }
+    }
+
+    /// ProgramDetailViewModel の state が after から変わるまで待って返す
+    public func nextProgramDetailState(route: AppRoute?, after: ProgramDetailState?) async -> ProgramDetailState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? ProgramDetailViewModel)?.state }
+    }
+
+    /// ProgramListViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func programListState(route: AppRoute?) async -> ProgramListState? {
+        await MainActor.run { self.state(route: route) { ($0 as? ProgramListViewModel)?.state } }
+    }
+
+    /// ProgramListViewModel の state が after から変わるまで待って返す
+    public func nextProgramListState(route: AppRoute?, after: ProgramListState?) async -> ProgramListState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? ProgramListViewModel)?.state }
+    }
+
+    /// RemoteViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func remoteState(route: AppRoute?) async -> RemoteState? {
+        await MainActor.run { self.state(route: route) { ($0 as? RemoteViewModel)?.state } }
+    }
+
+    /// RemoteViewModel の state が after から変わるまで待って返す
+    public func nextRemoteState(route: AppRoute?, after: RemoteState?) async -> RemoteState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? RemoteViewModel)?.state }
+    }
+
+    /// ReservationListViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func reservationListState(route: AppRoute?) async -> ReservationListState? {
+        await MainActor.run { self.state(route: route) { ($0 as? ReservationListViewModel)?.state } }
+    }
+
+    /// ReservationListViewModel の state が after から変わるまで待って返す
+    public func nextReservationListState(route: AppRoute?, after: ReservationListState?) async -> ReservationListState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? ReservationListViewModel)?.state }
+    }
+
+    /// SettingsViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func settingsState(route: AppRoute?) async -> SettingsState? {
+        await MainActor.run { self.state(route: route) { ($0 as? SettingsViewModel)?.state } }
+    }
+
+    /// SettingsViewModel の state が after から変わるまで待って返す
+    public func nextSettingsState(route: AppRoute?, after: SettingsState?) async -> SettingsState? {
+        await nextState(route: route, after: after) { @MainActor in ($0 as? SettingsViewModel)?.state }
     }
 }

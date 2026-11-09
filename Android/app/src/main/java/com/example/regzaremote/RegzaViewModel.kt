@@ -1,52 +1,26 @@
 package com.example.regzaremote
 
 import android.app.Application
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.RegzaAndroidApp
-import com.example.regzaremote.core.RegzaAndroidScreen
-import com.example.regzaremote.core.RegzaAndroidSnapshot
-import kotlinx.coroutines.future.await
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
+
 
 /**
- * 画面の状態と操作の入れ物。状態と操作そのものは iOS と同じ共有の ViewModel (Swift の AppViewModel) が持つので、
- * ここは Swift の状態を Compose に渡し、画面の操作を Swift に送るだけにする。
+ * Swift の窓口 (RegzaAndroidApp) の入れ物。状態と操作そのものは iOS と同じ共有の ViewModel (Swift) が持ち、
+ * 画面はそれぞれ自分の ViewModel の state を窓口から受け取り (channelListStates など)、操作を send で送る。
  * 画面の回転などで Activity が作り直されても残るので、Swift の ViewModel もここで 1 つだけ作る
  */
 class RegzaViewModel(application: Application) : AndroidViewModel(application) {
-    /** 接続情報などは、Swift が Kotlin の保存先 (AndroidStorage) を使って読み書きする */
-    private val core = RegzaAndroidApp.init(AndroidStorage(application))
-
-    /** アプリ全体の状態 (タブ・登録の画面・接続)。Swift から最初の状態を受け取るまでは null */
-    var state by mutableStateOf<RegzaAndroidSnapshot?>(null)
-        private set
-
-    /** いま見えている画面の状態。中身が変わったときだけ Swift から届く */
-    var screen by mutableStateOf<RegzaAndroidScreen?>(null)
-        private set
-
-    init {
-        // 状態が変わるたびに受け取って画面に渡す
-        viewModelScope.launch {
-            var snapshot = core.snapshot().await()
-            while (true) {
-                state = snapshot
-                snapshot = core.nextSnapshot().await()
-            }
-        }
-        viewModelScope.launch {
-            screen = core.screen().await()
-            while (true) screen = core.nextScreen().await()
-        }
-    }
+    /** Swift の窓口。接続情報などは、Swift が Kotlin の保存先 (AndroidStorage) を使って読み書きする */
+    val app: RegzaAndroidApp = RegzaAndroidApp.init(AndroidStorage(application))
 
     /** 画面から操作を送る先 (Swift の窓口に送る) */
-    val send: Send = AppSend(core)
+    val send: Send = AppSend(app)
 
     override fun onCleared() {
         // アプリを閉じたら、テレビの PIN 表示も取り消し、ライブ視聴の配信も止める (待たずに送るだけ)
@@ -54,3 +28,8 @@ class RegzaViewModel(application: Application) : AndroidViewModel(application) {
         send(AppAction.closePlayer())
     }
 }
+
+/** Swift の ViewModel の state を、Compose の状態として受け取る (開いていなければ null)。key が変わったら受け取り直す */
+@Composable
+fun <T> rememberState(key: Any?, states: () -> Flow<T?>): T? =
+    remember(key) { states() }.collectAsState(null).value

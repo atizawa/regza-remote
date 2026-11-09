@@ -135,6 +135,15 @@ public final class AppViewModel {
         return viewModel
     }
 
+    /// path の画面の ViewModel。チャンネルや番組が見つからなければ nil
+    public func viewModel(for route: Route) -> AnyObject? {
+        switch route {
+        case .channelPrograms(let code): programList(channelCode: code)
+        case .programDetail(let id, let code): programDetail(programID: id, channelCode: code)
+        case .search: guideGrid.search
+        }
+    }
+
     /// いま開いている画面の ViewModel を手前から並べる。操作の型から送り先を選ぶときに使う
     /// (同じ種類の画面が別のタブにも開いていれば、いまのタブの手前のものが先に来る)
     public var openViewModels: [AnyObject] {
@@ -144,14 +153,7 @@ public final class AppViewModel {
         if state.isShowingNowPlaying { result.append(nowPlaying) }
         let tabs = [state.tab] + Tab.allCases.filter { $0 != state.tab }
         for tab in tabs {
-            for route in state.path(of: tab).reversed() {
-                let screen: AnyObject? = switch route {
-                case .channelPrograms(let code): programList(channelCode: code)
-                case .programDetail(let id, let code): programDetail(programID: id, channelCode: code)
-                case .search: guideGrid.search
-                }
-                if let screen { result.append(screen) }
-            }
+            result += state.path(of: tab).reversed().compactMap(viewModel(for:))
         }
         result += [channelList, guideGrid, reservationList, remote]
         return result

@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.RemoteAction
-import com.example.regzaremote.core.RegzaAndroidSnapshot
+import com.example.regzaremote.core.RemoteState
 import com.example.regzaremote.core.RegzaKey
 
 /**
@@ -69,10 +69,10 @@ import com.example.regzaremote.core.RegzaKey
  * (再生と一時停止は同じ場所で入れ替える)。いま映っているものは、どのタブでも下のミニプレーヤーに出す
  */
 @Composable
-fun RemoteScreen(state: RegzaAndroidSnapshot, sendAction: Send) {
-    val nowPlaying = state.remote.nowPlaying.orElse(null)
+fun RemoteScreen(state: RemoteState, sendAction: Send) {
+    val nowPlaying = state.nowPlaying.orElse(null)
     val press: (RegzaKey) -> Unit = { sendAction(RemoteAction.press(it)) }
-    val band = state.remote.nowPlayingBand.orElse(null)?.rawValue
+    val band = state.nowPlayingBand.orElse(null)?.rawValue
     var isShowingMore by rememberSaveable { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(RemoteBody.background)) {
