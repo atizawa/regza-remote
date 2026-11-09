@@ -14,13 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,11 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.RegzaAndroidAction
 import com.example.regzaremote.core.RegzaAndroidGuide
-import com.example.regzaremote.core.ProgramItem
 
 /** 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる (iOS と同じ GuideGridViewModel) */
 @Composable
@@ -45,25 +47,21 @@ fun GuideScreen(guide: RegzaAndroidGuide, send: Send) {
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("番組表") {
             // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く (iOS 版と同じ)
-            if (guide.isCanSearch) TextButton(onClick = { send(RegzaAndroidAction.openSearch()) }) { Text("番組を探す") }
+            if (guide.isCanSearch) HeaderIconButton(Icons.Filled.Search, "番組を探す") { send(RegzaAndroidAction.openSearch()) }
         }
         when {
-            !guide.isHasGuide -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("番組表を使うには", style = MaterialTheme.typography.titleMedium)
-                Note(
-                    "録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。" +
-                        "設定の「番組表 (Mirakurun)」で Mirakurun のアドレスを設定してください。",
-                )
-                Button(onClick = { send(RegzaAndroidAction.showSetup()) }) { Text("設定を開く") }
-            }
-            !guide.isHasLoaded -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            guide.columns.isEmpty() -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("番組表を取得できません", style = MaterialTheme.typography.titleMedium)
-                Note("テレビと Mirakurun につながっているか確認してください。")
+            // Mirakurun がなくてもタブは消さず、何ができるかと設定のしかたを案内する
+            !guide.isHasGuide -> EmptyState(
+                "番組表を使うには",
+                "録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。\n" +
+                    "設定画面の「録画サーバーとの連携」で Mirakurun のアドレスを設定してください。",
+            ) { ProminentButton("設定を開く") { send(RegzaAndroidAction.showSetup()) } }
+            !guide.isHasLoaded -> Loading()
+            guide.columns.isEmpty() -> EmptyState("番組表を取得できません", "テレビと Mirakurun につながっているか確認してください。") {
                 TextButton(onClick = { send(RegzaAndroidAction.showGuide()) }) { Text("もう一度試す") }
             }
             else -> {
-                Box(Modifier.padding(horizontal = 16.dp)) { BandPicker(guide.bands, guide.band.orElse(null), send) }
+                BandPicker(guide.bands, guide.band.orElse(null), send)
                 DayPicker(guide, send)
                 GuideGrid(guide, send)
             }
@@ -75,22 +73,24 @@ fun GuideScreen(guide: RegzaAndroidGuide, send: Send) {
 @Composable
 private fun DayPicker(guide: RegzaAndroidGuide, send: Send) {
     Row(
-        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
+        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Design.outer).padding(bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         guide.days.forEachIndexed { index, day ->
+            val isSelected = index.toLong() == guide.selectedDayIndex
             val color = when (day.kind.rawValue) {
-                "saturday" -> Color(0xFF64B5F6)
-                "sunday" -> Color(0xFFE57373)
+                "saturday" -> AppTheme.blue
+                "sunday" -> AppTheme.red
                 else -> MaterialTheme.colorScheme.onSurface
             }
-            FilterChip(
-                selected = index.toLong() == guide.selectedDayIndex,
-                onClick = { send(RegzaAndroidAction.selectDay(index.toLong())) },
-                label = {
-                    val isSelected = index.toLong() == guide.selectedDayIndex
-                    Text(day.label, color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else color)
-                },
+            Text(
+                day.label,
+                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                color = if (isSelected) Color.White else color,
+                modifier = Modifier
+                    .background(if (isSelected) AppTheme.accent else AppTheme.fill, CircleShape)
+                    .clickable { send(RegzaAndroidAction.selectDay(index.toLong())) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
             )
         }
     }
@@ -115,9 +115,9 @@ private fun ProgramItem.toCell() =
     Cell(id, channelCode, name, startText, start.timeIntervalSince1970, end.timeIntervalSince1970, genre.toInt(), isOnAir, isReserved)
 
 private val columnWidth = 120.dp
-private val timeColumnWidth = 32.dp
+private val timeColumnWidth = 28.dp
 private val headerHeight = 36.dp
-private val dpPerMinute = 2.dp
+private val dpPerMinute = 2.4.dp
 
 /** 縦横にスクロールする表。局名の行は横に、時刻の列は縦に、表と一緒に動かす */
 @Composable
@@ -132,7 +132,8 @@ private fun GuideGrid(guide: RegzaAndroidGuide, send: Send) {
     val vertical = rememberScrollState()
 
     Column(Modifier.fillMaxSize()) {
-        Row {
+        // 局名の行は、表の上に重ねるので塗っておく
+        Row(Modifier.background(AppTheme.surface)) {
             Box(Modifier.width(timeColumnWidth).height(headerHeight))
             Row(Modifier.horizontalScroll(horizontal)) {
                 columns.forEach { column ->
@@ -186,13 +187,14 @@ private fun GuideGrid(guide: RegzaAndroidGuide, send: Send) {
 /** 左端の時刻 (正時ごと) */
 @Composable
 private fun TimeColumn(hours: List<String>, vertical: ScrollState) {
-    Column(Modifier.width(timeColumnWidth).verticalScroll(vertical)) {
+    Column(Modifier.width(timeColumnWidth).background(AppTheme.background).verticalScroll(vertical)) {
         hours.forEach { hour ->
             Text(
                 hour,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.height(dpPerMinute * 60).width(timeColumnWidth).gridLine().padding(top = 2.dp, start = 4.dp),
+                fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                modifier = Modifier.height(dpPerMinute * 60).width(timeColumnWidth).gridLine().padding(top = 2.dp),
             )
         }
     }
@@ -203,25 +205,27 @@ private fun ProgramCell(cell: Cell, modifier: Modifier) {
     val accent = MaterialTheme.colorScheme.primary
     Row(
         modifier
-            .background(if (cell.isOnAir) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceContainer)
+            .background(AppTheme.surface)
+            .background(if (cell.isOnAir) accent.copy(alpha = 0.14f) else Color.Transparent)
             .gridLine(),
     ) {
         // ジャンルは左端の細い線で示す (iOS 版と同じ)
         Box(Modifier.width(3.dp).fillMaxSize().background(genreColor(cell.genre).copy(alpha = 0.8f)))
-        Column(Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) {
+        Column(Modifier.padding(start = 4.dp, end = 4.dp, top = 3.dp, bottom = 3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     cell.startText, style = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (cell.isOnAir) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (cell.isOnAir) accent else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (cell.isReserved) Text("●", style = MaterialTheme.typography.labelSmall, color = Color.Red)
+                if (cell.isReserved) RecordIcon(Modifier.size(10.dp))
             }
             Text(cell.name, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium)
         }
     }
 }
 
-private fun Modifier.gridLine(): Modifier = border(0.5.dp, Color(0x33FFFFFF), RoundedCornerShape(0.dp))
+private fun Modifier.gridLine(): Modifier = border(0.5.dp, AppTheme.separator, RoundedCornerShape(0.dp))
 
 /** ジャンル (ARIB の大分類) ごとの色 (iOS 版と同じ並び) */
 private fun genreColor(genre: Int): Color = when (genre) {

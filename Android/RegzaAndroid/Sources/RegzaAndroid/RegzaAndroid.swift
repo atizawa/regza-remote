@@ -33,16 +33,33 @@ public struct RegzaAndroidSnapshot {
     public var connection: RegzaConnection
     public var guideHost: String
     public var nowPlaying: NowPlayingItem?
+    /// いま見ている放送の種類 (リモコンの地デジ・BS・CS の印。チャンネル一覧から分かるときだけ)
+    public var nowPlayingBand: BroadcastBand?
     /// テレビに接続できないときの説明
     public var connectionError: String?
     /// つながらないので、IP アドレスが変わっていないかテレビを探している
     public var isSearchingTV: Bool
     /// 登録の画面を出している間だけある
     public var setup: RegzaAndroidSetup?
+    /// ミニプレーヤーを押して開いた、いま映っているものの詳細。開いている間だけある
+    public var nowPlayingDetail: RegzaAndroidNowPlaying?
+}
+
+/// いま映っているものの詳細のシート (NowPlayingViewModel.State)
+public struct RegzaAndroidNowPlaying {
+    public var title: String
+    public var description: String?
+    public var canPowerOn: Bool
+    public var canStartOver: Bool
 }
 
 /// テレビの登録と録画サーバーの設定の画面 (TVSetupViewModel.State と ServerSetupViewModel.State)
 public struct RegzaAndroidSetup {
+    /// 開いている設定の画面 ("tv"・"guide")。設定の最初の画面なら空
+    public var page: String
+    /// 設定の最初の画面に出す、テレビの状態 (「登録済み」など) と、気を付けてほしい状態か
+    public var tvStatus: String
+    public var tvNeedsAttention: Bool
     public var host: String
     public var user: String
     public var password: String
@@ -68,6 +85,11 @@ public struct RegzaAndroidSetup {
     public var canClose: Bool
     /// 番組表 (Mirakurun) のアドレス
     public var guideHost: String
+    /// 設定の最初の画面に出す、番組表の状態
+    public var guideStatus: String
+    /// 連携を解除するか確かめるときの見出しと説明
+    public var guideUnlinkTitle: String
+    public var guideUnlinkMessage: String
     public var guideHosts: [String]
     public var isScanningGuide: Bool
     public var guideMessage: String?
@@ -86,15 +108,24 @@ public enum RegzaAndroidAction {
     case back
     // リモコン (RemoteViewModel)
     case press(RegzaKey)
+    /// 録画の再生位置を変える (秒)
+    case seek(Int)
     /// 画面が見えている間、2 秒ごとに取り直す
     case startPolling
     case stopPolling
     case selectBand(BroadcastBand)
+    // いま映っているものの詳細 (NowPlayingViewModel)
+    case showNowPlaying
+    case closeNowPlaying
+    case powerOn
+    case startOver
     // チャンネル一覧 (ChannelListViewModel)
     case showChannels
     case reloadChannels
     /// 選局する (チャンネルのコード)
     case tune(String)
+    /// 選局して、放送中の番組を最初から再生する (チャンネルのコード)
+    case tuneFromStart(String)
     /// 1 チャンネルの番組表を開く (チャンネルのコード)
     case openPrograms(String)
     /// 番組の詳細を開く (チャンネルのコード、番組の id)
@@ -126,6 +157,10 @@ public enum RegzaAndroidAction {
     // 設定 (TVSetupViewModel・ServerSetupViewModel)
     case showSetup
     case closeSetup
+    /// 設定の中の画面を開く ("tv"・"guide")
+    case openSetupPage(String)
+    /// 設定の最初の画面に戻る
+    case closeSetupPage
     case setupAppear
     case setHost(String)
     case setUser(String)
@@ -212,6 +247,7 @@ public final class RegzaAndroidApp {
         let appState = app.state
         let remote = app.remote.state
         let settings = appState.isShowingSettings ? app.settings : nil
+        let nowPlaying = appState.isShowingNowPlaying ? app.nowPlaying.state : nil
         return RegzaAndroidSnapshot(
             tab: appState.tab.rawValue,
             canGoBack: !appState.path(of: appState.tab).isEmpty,
@@ -219,12 +255,18 @@ public final class RegzaAndroidApp {
             connection: remote.connection,
             guideHost: app.guide.guideHost,
             nowPlaying: remote.nowPlaying,
+            nowPlayingBand: remote.nowPlaying.flatMap { nowPlaying in
+                nowPlaying.channelCode.isEmpty ? nil : remote.channels.first { $0.code == nowPlaying.channelCode }?.band
+            },
             connectionError: remote.lastError?.localizedDescription,
             isSearchingTV: remote.isSearchingTV,
             setup: settings.map { settings in
                 let tv = settings.tv.state
                 let servers = settings.servers.state
                 return RegzaAndroidSetup(
+                    page: appState.settingsPath.last?.rawValue ?? "",
+                    tvStatus: tv.status.text,
+                    tvNeedsAttention: tv.status.needsAttention,
                     host: tv.draft.host,
                     user: tv.draft.user,
                     password: tv.draft.password,
@@ -243,11 +285,19 @@ public final class RegzaAndroidApp {
                     canSave: tv.canSave && servers.isValid,
                     canClose: remote.connection.isConfigured,
                     guideHost: servers.guide.host,
+                    guideStatus: servers.guide.status,
+                    guideUnlinkTitle: servers.guide.unlinkTitle,
+                    guideUnlinkMessage: servers.guide.unlinkMessage,
                     guideHosts: servers.guide.hosts,
                     isScanningGuide: servers.guide.isScanning,
                     guideMessage: servers.guide.message,
                     isGuideLinked: servers.guide.isLinked,
                     isGuideHostValid: servers.isValid
+                )
+            },
+            nowPlayingDetail: nowPlaying.map {
+                RegzaAndroidNowPlaying(
+                    title: $0.title, description: $0.description, canPowerOn: $0.canPowerOn, canStartOver: $0.canStartOver
                 )
             }
         )
@@ -269,7 +319,7 @@ public final class RegzaAndroidApp {
         switch state.tab {
         case .remote: return .remote
         case .channels: return .channels(app.channelList.state)
-        case .reservations: return .reservations(app.reservationList.state)
+        case .reservations: return .reservations(app.reservationList.state, isLoading: app.reservationList.isBusy)
         case .guide:
             let grid = app.guideGrid.state
             return .guide(
@@ -303,12 +353,20 @@ public final class RegzaAndroidApp {
             if let tab = AppViewModel.Tab(rawValue: tab) { app.send(.selectTab(tab)) }
         case .back: app.send(.back)
         case .press(let key): app.remote.send(.press(key))
+        case .seek(let position): app.remote.send(.seek(position))
         case .startPolling: app.remote.send(.startPolling)
         case .stopPolling: app.remote.send(.stopPolling)
         case .selectBand(let band): app.remote.send(.selectBand(band))
+        case .showNowPlaying:
+            app.send(.showNowPlaying)
+            app.nowPlaying.send(.appear)
+        case .closeNowPlaying: app.send(.closeNowPlaying)
+        case .powerOn: app.nowPlaying.send(.powerOn)
+        case .startOver: app.nowPlaying.send(.startOver)
         case .showChannels: app.channelList.send(.appear)
         case .reloadChannels: app.channelList.send(.reload)
         case .tune(let code): app.channelList.send(.tune(code))
+        case .tuneFromStart(let code): app.channelList.send(.tuneFromStart(code))
         case .openPrograms(let code):
             app.send(.open(.channelPrograms(channelCode: code)))
         case .openProgram(let code, let id): app.send(.open(.programDetail(programID: id, channelCode: code)))
@@ -332,6 +390,9 @@ public final class RegzaAndroidApp {
         case .cancelReservation(let id): app.reservationList.send(.cancel(id))
         case .showSetup: app.send(.showSettings)
         case .closeSetup: app.send(.closeSettings)
+        case .openSetupPage(let page):
+            if let page = AppViewModel.SettingsPage(rawValue: page) { app.send(.setSettingsPath([page])) }
+        case .closeSetupPage: app.send(.setSettingsPath([]))
         case .setupAppear: tv?.send(.appear)
         case .setHost(let host): tv?.send(.setHost(host))
         case .setUser(let user): tv?.send(.setUser(user))
