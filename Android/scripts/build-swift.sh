@@ -74,41 +74,44 @@ drop_duplicate_foundation() {
   rm "$file"
 }
 
-# 共有の UI の型 (RegzaSharedModels の RegzaKey・ProgramItem など) の Java のつなぎを作る。iOS と共有のパッケージには
-# プラグインをかけられないので、Mac で動く swift-java のツールで、Packages/RegzaCore/Sources/RegzaSharedModels を直接読む
+# Swift のモジュールの Java のつなぎを作る (Swift のつなぎは RegzaAndroid の Sources/<…>Java/Generated、Java のクラスは .build/swift/<…>-java)。
+# 引数: モジュール、Swift の入力のフォルダ、Swift のつなぎの置き場、Java の置き場、先に作ったモジュールの Java の置き場…
+# 設定は RegzaAndroid/<モジュール>.swift-java.config。先に作ったモジュールがあれば、Foundation の型の重なりを消す
+extract_module() {
+  local module=$1 input=$2 swift_out=$3 java_out=$4
+  shift 4
+  rm -rf "$swift_out" "$java_out" && mkdir -p "$swift_out" "$java_out"
+  jextract \
+    --config "RegzaAndroid/$module.swift-java.config" --swift-module "$module" \
+    --input-swift "$input" --output-swift "$swift_out" --output-java "$java_out"
+  [ $# -eq 0 ] || drop_duplicate_foundation "$swift_out" "$java_out" "$@"
+}
+
+# iOS と共有のパッケージや窓口のパッケージにはプラグインをかけられないので、Mac で動く swift-java のツールで、ソースを直接読む。
 # Android 向けのビルドとはビルドの設定が違い、同じ置き場だと互いのキャッシュを捨て合うので、置き場を分ける
 "$SWIFT_COMMAND" build --package-path RegzaAndroid --scratch-path .build/swift-tool -c release --product swift-java
-generated=RegzaAndroid/Sources/RegzaSharedJava/Generated
-rm -rf "$generated" .build/swift/regzashared-java && mkdir -p "$generated" .build/swift/regzashared-java
-# UI で使う型は、すべてそのまま Java のクラスにする
-jextract \
-  --config RegzaAndroid/RegzaSharedModels.swift-java.config --swift-module RegzaSharedModels \
-  --input-swift ../Packages/RegzaCore/Sources/RegzaSharedModels \
-  --output-swift "$generated" --output-java .build/swift/regzashared-java
 
-# 画面の状態と操作の型 (RegzaPresentation の ChannelListState など) の Java のつなぎを作る。
-# ViewModel は Java にできない (MainActor) ので、画面ごとのフォルダの State/ と Action/ に置いた型だけを Java のクラスにする。
+shared_java=.build/swift/regzashared-java
+presentation_java=.build/swift/regzapresentation-java
+bridge_java=.build/swift/regzabridge-java
+bridge_generated=RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated
+
+# 共有の UI の型 (RegzaSharedModels の RegzaKey・ProgramItem など)。すべてそのまま Java のクラスにする
+extract_module RegzaSharedModels ../Packages/RegzaCore/Sources/RegzaSharedModels \
+  RegzaAndroid/Sources/RegzaSharedJava/Generated "$shared_java"
+
+# 画面の状態と操作の型 (RegzaPresentation の ChannelListState など)。ViewModel は Java にできない (MainActor) ので、
+# 画面ごとのフォルダの State/ と Action/ に置いた型だけを Java のクラスにする。
 # 絞り込みは入力のフォルダからのパスで比べるので、入力は絶対パスで渡す (相対パスだと、どのファイルも外れる)
-presentation_generated=RegzaAndroid/Sources/RegzaPresentationJava/Generated
-rm -rf "$presentation_generated" .build/swift/regzapresentation-java && mkdir -p "$presentation_generated" .build/swift/regzapresentation-java
-jextract \
-  --config RegzaAndroid/RegzaPresentation.swift-java.config --swift-module RegzaPresentation \
-  --input-swift "$(cd ../Packages/RegzaCore/Sources/RegzaPresentation && pwd)" \
-  --output-swift "$presentation_generated" --output-java .build/swift/regzapresentation-java
-drop_duplicate_foundation "$presentation_generated" .build/swift/regzapresentation-java .build/swift/regzashared-java
+extract_module RegzaPresentation "$(cd ../Packages/RegzaCore/Sources/RegzaPresentation && pwd)" \
+  RegzaAndroid/Sources/RegzaPresentationJava/Generated "$presentation_java" "$shared_java"
 
 # 画面ごとの操作を送る窓口の send と、窓口の設定に書く画面の状態と操作の型を、State/ と Action/ から作り直す
 scripts/generate-screen-glue.sh
 
-# 窓口 (RegzaAndroidBridge の RegzaAndroidApp と、その状態・操作の型) の Java のつなぎを作る。
-# Mac の swift test で確かめられるよう別のパッケージにしてあり、プラグインをかけられないので、同じくツールで作る
-bridge_generated=RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated
-rm -rf "$bridge_generated" .build/swift/regzabridge-java && mkdir -p "$bridge_generated" .build/swift/regzabridge-java
-jextract \
-  --config RegzaAndroid/RegzaAndroidBridge.swift-java.config --swift-module RegzaAndroidBridge \
-  --input-swift RegzaAndroidBridge/Sources/RegzaAndroidBridge \
-  --output-swift "$bridge_generated" --output-java .build/swift/regzabridge-java
-drop_duplicate_foundation "$bridge_generated" .build/swift/regzabridge-java .build/swift/regzashared-java .build/swift/regzapresentation-java
+# 窓口 (RegzaAndroidBridge の RegzaAndroidApp と、その状態・操作の型)。Mac の swift test で確かめられるよう別のパッケージにしてある
+extract_module RegzaAndroidBridge RegzaAndroidBridge/Sources/RegzaAndroidBridge \
+  "$bridge_generated" "$bridge_java" "$shared_java" "$presentation_java"
 # Kotlin が実装する Swift の protocol (保存先の RegzaAndroidStorage など) を、Swift から呼ぶための包み (JavaRegzaAndroidStorage) を作る。
 # swift-java はこれを SwiftPM のプラグインでしか作らないので (enableJavaCallbacks)、同じ手順を手で行う:
 # jextract が作ったインターフェースを javac でコンパイルし (ほかのモジュールの Java のクラスも参照する)、wrap-java で包む
@@ -116,9 +119,9 @@ callbacks=.build/swift/bridge-callbacks
 rm -rf "$callbacks" && mkdir -p "$callbacks/classes"
 protocols=$(sed -En 's/^public protocol ([A-Za-z0-9_]+).*/\1/p' RegzaAndroidBridge/Sources/RegzaAndroidBridge/*.swift)
 if [ -n "$protocols" ]; then
-  find .build/swift/regzabridge-java -name '*.java' > "$callbacks/sources.txt"
+  find "$bridge_java" -name '*.java' > "$callbacks/sources.txt"
   javac @"$callbacks/sources.txt" -d "$callbacks/classes" -parameters \
-    -sourcepath .build/swift/regzashared-java:.build/swift/regzapresentation-java:.build/swift/checkouts/swift-java/SwiftKitCore/src/main/java
+    -sourcepath "$shared_java:$presentation_java:".build/swift/checkouts/swift-java/SwiftKitCore/src/main/java
   classes=$(for protocol in $protocols; do printf '"com.example.regzaremote.core.%s":"Java%s",' "$protocol" "$protocol"; done)
   echo '{"classes":{'"${classes%,}"'}}' > "$callbacks/swift-java.config"
   # Optional などの Java の標準の型は、swift-java の SwiftJava モジュールにある包みを使う
