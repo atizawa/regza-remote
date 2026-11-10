@@ -68,10 +68,11 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     description = "mise run build-swift で、Swift の .so と swift-java の Java のクラスを作る"
     val androidDir = rootDir
     workingDir = androidDir
-    // Android Studio から動かすと PATH に mise がないことがあるので、よく入っている場所から探す
-    val mise = listOf("/opt/homebrew/bin/mise", "/usr/local/bin/mise", "${System.getProperty("user.home")}/.local/bin/mise")
-        .firstOrNull { File(it).canExecute() } ?: "mise"
+    // mise の場所はルートの build.gradle.kts で探す。mise の環境に既に別の Swift があると PATH の順番を直さない場合があるため、
+    // build-swift が `mise which swift` の実体を直接選べるよう、mise 自身の場所も渡す
+    val mise = rootProject.extra["mise"] as String
     commandLine(mise, "run", "build-swift")
+    environment("MISE_EXECUTABLE", mise)
     // Gradle と同じ SDK の場所と ndkVersion を渡す。Android Gradle Plugin は場所を聞くだけでは NDK を入れないので、
     // なければ build-swift が入れる
     val sdk = androidComponents.sdkComponents.sdkDirectory
@@ -96,6 +97,10 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     outputs.dir(androidDir.resolve(".build/swift/screen-glue-kotlin"))
     outputs.dir(androidDir.resolve(".build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java"))
     outputs.dir(androidDir.resolve(".build/swift/checkouts/swift-java/SwiftKitCore/src/main"))
+    // swift-java が作る Swift のつなぎ (Git に入れていない)。消えたら作り直す (behavior-tests の buildJvmHost もこれを使う)
+    outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaSharedJava/Generated"))
+    outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaPresentationJava/Generated"))
+    outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated"))
 }
 tasks.named("preBuild") { dependsOn(buildSwift) }
 // エディタの横のプレビューのために、debug のビルドでは Mac 向けの Swift のライブラリも作る (SamplePreview)

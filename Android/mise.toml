@@ -56,7 +56,21 @@ echo "Android SDK を用意しました: $ANDROID_HOME"
 
 [tasks.install-android-swift-sdk]
 description = "Swift SDK for Android を入れる (ツールチェーンと同じ版)"
-run = "swift sdk install https://download.swift.org/swift-{{ vars.swift }}-release/android-sdk/swift-{{ vars.swift }}-RELEASE/swift-{{ vars.swift }}-RELEASE_android.artifactbundle.tar.gz --checksum {{ vars.swift_android_sdk_checksum }}"
+run = '''
+set -euo pipefail
+. scripts/swift-toolchain.sh
+resolve_swift_toolchain "{{ vars.swift }}"
+"$SWIFT_COMMAND" sdk install https://download.swift.org/swift-{{ vars.swift }}-release/android-sdk/swift-{{ vars.swift }}-RELEASE/swift-{{ vars.swift }}-RELEASE_android.artifactbundle.tar.gz --checksum {{ vars.swift_android_sdk_checksum }}
+'''
+
+[tasks.build-jvm-host]
+description = "窓口とつなぎを、Mac の JVM から読み込む .dylib にする (振る舞いのテストの Android 側の相手と、エディタの横のプレビューが使う)。Android 向けと同じ Swift でビルドする"
+run = '''
+set -euo pipefail
+. scripts/swift-toolchain.sh
+resolve_swift_toolchain "{{ vars.swift }}"
+"$SWIFT_COMMAND" build --package-path RegzaAndroid --scratch-path .build/jvm-host --product RegzaJVMHost
+'''
 
 [tasks.build-swift]
 description = "RegzaAndroid を arm64 向けにビルドし (swift-java が Java のクラスも作る)、Swift の実行に要る .so と一緒に app の jniLibs に入れる"
@@ -64,6 +78,8 @@ run = '''
 set -euo pipefail
 # NDK の版は Gradle の buildSwift が app/build.gradle.kts の ndkVersion を渡す
 : "${NDK_VERSION:?このタスクは ./gradlew から実行してください (NDK の版は Gradle が渡します)}"
+. scripts/swift-toolchain.sh
+resolve_swift_toolchain "{{ vars.swift }}"
 export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
 if [ ! -d "$ANDROID_NDK_HOME" ]; then
   # Android CLI は入れるとライセンスに同意したことになるので、同意済みのときだけ入れる
@@ -84,7 +100,7 @@ triple=aarch64-unknown-linux-android28
 sdk=swift-{{ vars.swift }}-RELEASE_android
 out=app/src/main/jniLibs/arm64-v8a
 # Swift の実行に要る .so は SDK に入っているもの (場所は SwiftPM に聞く)、libc++_shared.so は NDK のもの
-resources=$(swift sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftResourcesPath: //p')
+resources=$("$SWIFT_COMMAND" sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftResourcesPath: //p')
 runtime="$resources/android"
 libcxx=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so | head -1)
 
@@ -133,7 +149,7 @@ drop_duplicate_foundation() {
 # 共有の UI の型 (RegzaSharedModels の RegzaKey・ProgramItem など) の Java のつなぎを作る。iOS と共有のパッケージには
 # プラグインをかけられないので、Mac で動く swift-java のツールで、Packages/RegzaCore/Sources/RegzaSharedModels を直接読む
 # Android 向けのビルドとはビルドの設定が違い、同じ置き場だと互いのキャッシュを捨て合うので、置き場を分ける
-swift build --package-path RegzaAndroid --scratch-path .build/swift-tool -c release --product swift-java
+"$SWIFT_COMMAND" build --package-path RegzaAndroid --scratch-path .build/swift-tool -c release --product swift-java
 generated=RegzaAndroid/Sources/RegzaSharedJava/Generated
 rm -rf "$generated" .build/swift/regzashared-java && mkdir -p "$generated" .build/swift/regzashared-java
 # UI で使う型は、すべてそのまま Java のクラスにする
@@ -186,8 +202,8 @@ fi
 
 # Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)。
 # HTTPS に使う BoringSSL は、SDK の静的ライブラリ (libssl.a・libcrypto.a) を RegzaAndroid に埋め込む
-static_libs=$(swift sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftStaticResourcesPath: //p')/android
-swift build --package-path RegzaAndroid --scratch-path .build/swift --product RegzaAndroid -c release \
+static_libs=$("$SWIFT_COMMAND" sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftStaticResourcesPath: //p')/android
+"$SWIFT_COMMAND" build --package-path RegzaAndroid --scratch-path .build/swift --product RegzaAndroid -c release \
   --swift-sdk "$sdk" --triple "$triple" -Xlinker -L"$static_libs"
 
 # 入れる候補: libRegzaAndroid.so と swift-java の libSwiftJava.so、SDK の Swift の .so、NDK の libc++_shared.so

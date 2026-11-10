@@ -53,12 +53,30 @@ val buildJvmHost = tasks.register<Exec>("buildJvmHost") {
     description = "窓口とつなぎを、Mac の JVM から読み込む .dylib にする"
     dependsOn(":app:buildSwift")
     workingDir = androidDir
-    val mise = listOf("/opt/homebrew/bin/mise", "/usr/local/bin/mise", "${System.getProperty("user.home")}/.local/bin/mise")
-        .firstOrNull { File(it).canExecute() } ?: "mise"
-    commandLine(
-        mise, "exec", "--", "swift", "build", "--package-path", "RegzaAndroid", "--scratch-path", ".build/jvm-host",
-        "--product", "RegzaJVMHost",
-    )
+    // Android 向け (app の buildSwift) と同じく、mise で固定した Swift を PATH の並びにかかわらず使う (scripts/swift-toolchain.sh)
+    val mise = rootProject.extra["mise"] as String
+    commandLine(mise, "run", "build-jvm-host")
+    environment("MISE_EXECUTABLE", mise)
+    // Mac 向けの .dylib に入る Swift や、依存の版・設定が変わったときだけ動く (変わっていなければ、debug のビルドやプレビューの更新で待たない)。
+    // RegzaAndroid は、Mac 向けには入らない Android だけの部品 (Looper・BoringSSL) を外し、それ以外をすべて見る
+    // (つなぎのフォルダが増えても、ここを直さずに見るように)。依存の版は RegzaAndroid/Package.resolved にだけ書かれる
+    inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**") })
+    inputs.files(fileTree(androidDir.resolve("RegzaAndroid")) {
+        include("Package.swift", "Package.resolved", "Sources/**")
+        exclude("Sources/RegzaAndroid/**", "Sources/CBoringSSL/**", "Sources/CAndroidMainLoop/**")
+    })
+    inputs.files(fileTree(androidDir.resolve("RegzaAndroidBridge")) { include("Package.swift", "Sources/**") })
+    inputs.file(androidDir.resolve("mise.toml"))
+    inputs.dir(androidDir.resolve("scripts"))
+    // .dylib は JDK の JNI と macOS SDK にもよるので、どちらかを上げたら作り直す。
+    // SDK の版は xcrun で調べる (xcodebuild より速い)。調べられなくても (Command Line Tools だけのときなど) ビルドは止めない
+    inputs.file(androidDir.resolve("gradle/gradle-daemon-jvm.properties"))
+    inputs.property("macOSSDK", providers.exec {
+        commandLine("xcrun", "--sdk", "macosx", "--show-sdk-build-version")
+        isIgnoreExitValue = true
+    }.standardOutput.asText)
+    outputs.files(androidDir.resolve(".build/jvm-host/debug/libRegzaJVMHost.dylib"), androidDir.resolve(".build/jvm-host/debug/libSwiftJava.dylib"))
+    outputs.dir(jvmHostLibs)
     doLast {
         val products = androidDir.resolve(".build/jvm-host/debug")
         jvmHostLibs.mkdirs()
