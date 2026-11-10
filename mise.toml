@@ -3,6 +3,7 @@
 #
 #   mise run lint     # Swift と Kotlin のコードの書き方を確かめる (Swift は swift-format・設定は .swift-format、Kotlin は ktlint・設定は .editorconfig)
 #   mise run format   # Swift と Kotlin のコードの書き方を直す
+#   mise run check    # 全部を確かめる (書き方・Swift のテスト・iOS と Android のビルド・振る舞いのテスト)。CI も同じタスクを流す
 
 [tools]
 # Kotlin のコードの書き方を確かめて直す (設定は .editorconfig)。Swift の swift-format は Swift のツールチェーンに入っているので入れない
@@ -25,4 +26,45 @@ run = '''
 set -euo pipefail
 git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format --in-place --parallel
 git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint --format --relative
+'''
+
+[tasks.test-swift]
+description = "Swift のパッケージのテストを流す (共有の部分・iOS の部品・Android の窓口・つなぎを作る道具)"
+dir = "{{ config_root }}"
+run = '''
+set -euo pipefail
+for package in Packages/RegzaCore iOS/RegzaKit Android/RegzaAndroidBridge Android/ScreenGlue; do
+  echo "== $package"
+  (cd "$package" && swift test)
+done
+'''
+
+[tasks.build-ios]
+description = "iOS のアプリとウィジェットをシミュレーター向けにビルドする (署名はしない)"
+dir = "{{ config_root }}"
+run = '''
+set -euo pipefail
+xcodebuild -project iOS/RegzaRemote.xcodeproj -scheme RegzaRemote -destination 'generic/platform=iOS Simulator' \
+  -quiet CODE_SIGNING_ALLOWED=NO build
+'''
+
+[tasks.build-android]
+description = "Android のアプリを debug と release でビルドする (release は APK の中身も確かめる)。Android/mise.toml の道具を使う"
+dir = "{{ config_root }}/Android"
+run = "mise exec -- ./gradlew :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest"
+
+[tasks.test-behavior]
+description = "振る舞いのテストを流す (iOS 側の regza と Android 側の regza-android の両方)"
+dir = "{{ config_root }}/BehaviorTests"
+run = "mise run test"
+
+[tasks.check]
+description = "全部を確かめる (書き方・Swift のテスト・iOS と Android のビルド・振る舞いのテスト)。1 つずつ順に流す"
+dir = "{{ config_root }}"
+run = '''
+set -euo pipefail
+for task in lint test-swift build-ios build-android test-behavior; do
+  echo "==== $task"
+  mise run "$task"
+done
 '''

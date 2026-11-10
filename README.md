@@ -156,15 +156,22 @@ rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it,
 ### 5. 確かめる
 
 ```sh
-mise run lint                              # Swift と Kotlin のコードの書き方 (swift-format と ktlint。直すときは mise run format)
-cd Packages/RegzaCore && swift test
-cd iOS/RegzaKit && swift test               # 画面の名前と、画面・Live Activity が使うモジュール
-cd Android/RegzaAndroidBridge && swift test
-cd Android/ScreenGlue && swift test
-cd Android && ./gradlew :app:assembleDebug
-cd Android && ./gradlew :app:connectedDebugAndroidTest  # arm64 のエミュレーター/実機
-cd BehaviorTests && mise run test
+mise run check                             # 全部を順に確かめる (CI と同じ)
 ```
+
+`mise run check` は、次のタスクを順に流す。1 つだけ流すこともできる。
+
+```sh
+mise run lint                              # Swift と Kotlin のコードの書き方 (swift-format と ktlint。直すときは mise run format)
+mise run test-swift                        # Swift のパッケージのテスト (RegzaCore・RegzaKit・RegzaAndroidBridge・ScreenGlue)
+mise run build-ios                         # iOS のアプリとウィジェットのビルド
+mise run build-android                     # Android のアプリのビルド (debug・release・端末のテスト。release は APK の中身も確かめる)
+mise run test-behavior                     # 振る舞いのテスト (iOS 側と Android 側)
+```
+
+エミュレーターや実機が要るもの（`cd Android && ./gradlew :app:connectedDebugAndroidTest`）は、`check` には入れていない。
+
+GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が同じタスクを流す。macOS の機械で、書き方・Swift と iOS・Android と振る舞いのテストの 3 つのジョブに分けて、同時に流す。
 
 画面を足したら、`BehaviorTests/tests/` にもその画面の振る舞いのテストを足す（操作を送り、state が期待どおりになるまで待つ）。
 

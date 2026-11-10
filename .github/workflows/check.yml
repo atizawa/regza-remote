@@ -1,0 +1,69 @@
+# main への push と pull request で、手元の mise run check と同じものを流す。
+# どのジョブも、ルートの mise.toml のタスクを呼ぶだけにする (手元と CI で、同じ手順を使う)
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 同じブランチに続けて push したら、前の実行は止める
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # リポジトリの mise.toml を、確認なしで信頼する (CI では人が答えられない)
+  MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+  # 使う Xcode
+  DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
+
+jobs:
+  # Swift と Kotlin の書き方 (swift-format と ktlint)
+  lint:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: mise run lint
+
+  # Swift のパッケージのテストと、iOS のアプリのビルド
+  swift:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: mise run test-swift
+      - run: mise run build-ios
+
+  # Android のアプリのビルド (Swift の .so も作る) と、両方の相手に流す振る舞いのテスト
+  android:
+    runs-on: xcode-27
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v7
+      # Android/mise.toml の道具 (swift.org の Swift・JDK・Android CLI) と、ルートの道具を入れる
+      - uses: jdx/mise-action@v5
+        with:
+          working_directory: Android
+      # Swift SDK for Android は大きいので、版ごとに取っておく
+      - uses: actions/cache@v6
+        with:
+          path: ~/Library/org.swift.swiftpm/swift-sdks
+          key: swift-sdk-android-${{ hashFiles('Android/mise.toml') }}
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('Android/**/*.gradle.kts', 'Android/gradle/**') }}
+      - name: Swift SDK for Android を入れる (取っておいたものがあれば使う)
+        working-directory: Android
+        run: mise exec -- swift sdk list | grep -q android || mise run install-android-swift-sdk
+      - run: mise run build-android
+      - name: 振る舞いのテストの道具 (bun) を入れる
+        working-directory: BehaviorTests
+        run: mise install
+      - run: mise run test-behavior
