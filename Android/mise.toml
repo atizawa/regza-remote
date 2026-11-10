@@ -11,6 +11,8 @@
 # - Swift と Swift SDK for Android: 下の [vars]
 # - JDK: gradle/gradle-daemon-jvm.properties (mise もここから読む)
 # - Android NDK: app/build.gradle.kts の ndkVersion (Swift SDK for Android は版 27 以上が要る)
+#
+# 複数行のタスクは bash で動かす (mise の既定の sh は、Linux では dash で、set -o pipefail を知らない)
 
 [vars]
 # Swift のツールチェーンと Swift SDK for Android は、同じ版でないと使えない。
@@ -39,6 +41,7 @@ _.path = ["{{ get_env(name='ANDROID_HOME', default=env.HOME ~ '/Library/Android/
 description = "ANDROID_HOME に Android SDK を用意し、ライセンスに同意する (Android Studio がなくてもビルドできるようにする)"
 # 同意するかをその場で聞くので、入力をつなぐ
 raw = true
+shell = "bash -c"
 run = '''
 set -euo pipefail
 # 新しい Android CLI (sdkmanager はその古い呼び方) は、部品を入れるとライセンスに同意したことになり、
@@ -56,6 +59,7 @@ echo "Android SDK を用意しました: $ANDROID_HOME"
 
 [tasks.install-android-swift-sdk]
 description = "Swift SDK for Android を入れる (ツールチェーンと同じ版)"
+shell = "bash -c"
 run = '''
 set -euo pipefail
 . scripts/swift-toolchain.sh
@@ -65,6 +69,7 @@ resolve_swift_toolchain "{{ vars.swift }}"
 
 [tasks.build-jvm-host]
 description = "窓口とつなぎを、Mac の JVM から読み込む .dylib にする (振る舞いのテストの Android 側の相手と、エディタの横のプレビューが使う)。Android 向けと同じ Swift でビルドする"
+shell = "bash -c"
 run = '''
 set -euo pipefail
 . scripts/swift-toolchain.sh

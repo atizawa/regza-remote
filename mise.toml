@@ -5,6 +5,8 @@
 #   mise run format   # Swift と Kotlin のコードの書き方を直す
 #   mise run check    # 全部を確かめる (書き方・Swift のテスト・iOS と Android のビルド・振る舞いのテスト)。CI も同じタスクを流す
 
+# 複数行のタスクは bash で動かす (mise の既定の sh は、Linux では dash で、set -o pipefail を知らない)
+
 [tools]
 # Kotlin のコードの書き方を確かめて直す (設定は .editorconfig)。Swift の swift-format は Swift のツールチェーンに入っているので入れない
 ktlint = "1.8.0"
@@ -12,6 +14,7 @@ ktlint = "1.8.0"
 [tasks.lint]
 description = "Swift と Kotlin のコードの書き方を確かめる (直すべきところがあれば止まる)"
 dir = "{{ config_root }}"
+shell = "bash -c"
 run = '''
 set -euo pipefail
 # 道具が作るファイル (Generated/) は対象にしない。.build/ などの Git に入れないものは、Git の一覧に出ないので外れる
@@ -22,6 +25,7 @@ git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint 
 [tasks.format]
 description = "Swift と Kotlin のコードの書き方を直す"
 dir = "{{ config_root }}"
+shell = "bash -c"
 run = '''
 set -euo pipefail
 git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format --in-place --parallel
@@ -36,6 +40,7 @@ run = "mise run test-swift-shared && mise run test-swift-apple"
 [tasks.test-swift-shared]
 description = "Apple の環境がなくても流せる Swift のパッケージのテスト (共有の部分・Android の窓口・つなぎを作る道具)。Linux でも流す"
 dir = "{{ config_root }}"
+shell = "bash -c"
 run = '''
 set -euo pipefail
 for package in Packages/RegzaCore Android/RegzaAndroidBridge Android/ScreenGlue; do
@@ -52,6 +57,7 @@ run = "swift test"
 [tasks.build-ios]
 description = "iOS のアプリとウィジェットをシミュレーター向けにビルドする (署名はしない)"
 dir = "{{ config_root }}"
+shell = "bash -c"
 run = '''
 set -euo pipefail
 xcodebuild -project iOS/RegzaRemote.xcodeproj -scheme RegzaRemote -destination 'generic/platform=iOS Simulator' \
@@ -71,6 +77,7 @@ run = "mise run test"
 [tasks.check]
 description = "全部を確かめる (書き方・Swift のテスト・iOS と Android のビルド・振る舞いのテスト)。1 つずつ順に流す"
 dir = "{{ config_root }}"
+shell = "bash -c"
 run = '''
 set -euo pipefail
 for task in lint test-swift build-ios build-android test-behavior; do
