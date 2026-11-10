@@ -37,13 +37,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.regzaremote.core.ReservationItem
 import com.example.regzaremote.core.ReservationListAction
 import com.example.regzaremote.core.ReservationListState
-import com.example.regzaremote.core.ReservationItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * テレビの録画予約の一覧 (state と操作は ReservationListViewModel の ReservationListState・ReservationListAction)。
@@ -73,7 +73,9 @@ fun ReservationListScreen(list: ReservationListState, send: Send) {
             message != null -> EmptyState("録画予約を取得できません", message) {
                 TextButton(onClick = { send(ReservationListAction.load()) }) { Text("もう一度試す") }
             }
+
             !list.isHasLoaded -> Loading()
+
             else -> PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = {
@@ -87,10 +89,23 @@ fun ReservationListScreen(list: ReservationListState, send: Send) {
                 } else {
                     LazyColumn(
                         Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = Design.outer, top = Design.outer, end = Design.outer, bottom = Design.outer + LocalMiniPlayerInset.current),
+                        contentPadding = PaddingValues(
+                            start = Design.outer,
+                            top = Design.outer,
+                            end = Design.outer,
+                            bottom =
+                                Design.outer + LocalMiniPlayerInset.current,
+                        ),
                     ) {
                         list.cancelError.orElse(null)?.let { error ->
-                            item { Text(error, style = MaterialTheme.typography.bodySmall, color = AppTheme.red, modifier = Modifier.padding(bottom = 8.dp)) }
+                            item {
+                                Text(
+                                    error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppTheme.red,
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                )
+                            }
                         }
                         section("予定", null, list.scheduled.toList()) { cancelling = it }
                         section(
@@ -150,7 +165,10 @@ private fun SwipeToCancel(item: ReservationItem, onCancel: (ReservationItem) -> 
         state = state,
         enableDismissFromStartToEnd = false,
         backgroundContent = {
-            Box(Modifier.fillMaxSize().background(AppTheme.red).padding(horizontal = Design.outer), contentAlignment = Alignment.CenterEnd) {
+            Box(
+                Modifier.fillMaxSize().background(AppTheme.red).padding(horizontal = Design.outer),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
                 Text("取り消す", color = Color.White, fontWeight = FontWeight.SemiBold)
             }
         },
@@ -166,7 +184,9 @@ private fun ReservationRow(item: ReservationItem) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            item.title, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            item.title,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
             color = if (item.isScheduled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {

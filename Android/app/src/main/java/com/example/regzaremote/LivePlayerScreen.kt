@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -57,15 +58,14 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import com.example.regzaremote.core.ChannelItem
 import com.example.regzaremote.core.AppAction
+import com.example.regzaremote.core.ChannelItem
+import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.LivePlayerAction
 import com.example.regzaremote.core.LivePlayerPhase
 import com.example.regzaremote.core.LivePlayerState
 import com.example.regzaremote.core.RegzaAndroidBridge
 import kotlinx.coroutines.delay
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.regzaremote.core.ChannelListAction
 
 /**
  * EPGStation のライブ配信をアプリで見る画面 (state と操作は LivePlayerViewModel の LivePlayerState・LivePlayerAction)。
@@ -130,22 +130,35 @@ private fun Video(player: LivePlayerState, send: Send, modifier: Modifier) {
         val phase = player.phase
         when (phase.discriminator) {
             LivePlayerPhase.Discriminator.READY -> HlsPlayer(RegzaAndroidBridge.regzaURLString(phase.asReady.get().url))
+
             LivePlayerPhase.Discriminator.FAILED -> Column(
                 Modifier.padding(Design.outer).verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 val failed = phase.asFailed.get()
-                Text(failed.message, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f), textAlign = TextAlign.Center)
+                Text(
+                    failed.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.8f),
+                    textAlign = TextAlign.Center,
+                )
                 if (failed.canRetry) {
                     ProminentButton("準備できていない配信を止めて、もう一度試す") { send(LivePlayerAction.retryAfterStoppingStalled()) }
                 }
             }
-            LivePlayerPhase.Discriminator.PREPARING -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            LivePlayerPhase.Discriminator.PREPARING -> Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 CircularProgressIndicator(color = Color.White)
                 Text(
-                    player.preparingMessage, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = Design.outer),
+                    player.preparingMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = Design.outer),
                 )
             }
         }
@@ -195,7 +208,12 @@ private fun HlsPlayer(url: String) {
             .clickable(interactionSource = null, indication = null) { isShowingControls = !isShowingControls },
     ) {
         AndroidView(
-            factory = { PlayerView(it).apply { player = exoPlayer; useController = false } },
+            factory = {
+                PlayerView(it).apply {
+                    player = exoPlayer
+                    useController = false
+                }
+            },
             modifier = Modifier.fillMaxSize(),
         )
         AnimatedVisibility(isShowingControls, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
@@ -247,7 +265,9 @@ private fun ProgramInfo(player: LivePlayerState) {
     Column(Modifier.padding(horizontal = Design.outer), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             player.channelName + if (program == null) "" else " · 放送中",
-            style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = AppTheme.accent,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = AppTheme.accent,
         )
         Text(program?.name ?: player.channelName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         if (program != null) {
@@ -258,11 +278,18 @@ private fun ProgramInfo(player: LivePlayerState) {
             LinearProgressIndicator(
                 progress = { ((now - start) / (end - start)).toFloat().coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth(),
-                color = AppTheme.accent, trackColor = AppTheme.fill, drawStopIndicator = {},
+                color = AppTheme.accent,
+                trackColor = AppTheme.fill,
+                drawStopIndicator = {},
             )
             if (program.description.isNotEmpty()) {
-                Text(program.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Text(
+                    program.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -291,8 +318,13 @@ private fun ChannelRow(row: ChannelItem, onClick: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
             row.programName.orElse(null)?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         if (row.isNowPlaying) Icon(Icons.Filled.PlayArrow, contentDescription = "再生中", tint = AppTheme.accent)
@@ -303,7 +335,7 @@ private fun ChannelRow(row: ChannelItem, onClick: () -> Unit) {
 @Composable
 private fun LivePlayerScreenPreview() = SamplePreview(setUp = {
     it(ChannelListAction.appear())
-    it(AppAction.play(SampleChannel))
+    it(AppAction.play(SAMPLE_CHANNEL))
     it(LivePlayerAction.appear())
     it(LivePlayerAction.start())
 }) { app, send ->

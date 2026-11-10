@@ -35,15 +35,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
+import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.GuideSearchAction
 import com.example.regzaremote.core.GuideSearchConditionChip
 import com.example.regzaremote.core.GuideSearchState
 import com.example.regzaremote.core.SearchResultItem
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.regzaremote.core.GuideGridAction
 
 /**
  * 番組を探す (state と操作は GuideSearchViewModel の GuideSearchState・GuideSearchAction)。
@@ -57,7 +57,8 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("番組を探す", onBack)
         SyncedTextField(
-            value = search.text, onValueChange = { send(GuideSearchAction.setText(it)) },
+            value = search.text,
+            onValueChange = { send(GuideSearchAction.setText(it)) },
             label = "番組名・出演者・「明日の夜のドラマ」",
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = Design.outer).focusRequester(focus),
@@ -66,9 +67,13 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
             Column(Modifier.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ConditionChips(search.conditions, send)
                 Text(
-                    "「${search.text}」をそのまま探す", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                    "「${search.text}」をそのまま探す",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = AppTheme.accent,
-                    modifier = Modifier.clickable { send(GuideSearchAction.searchLiterally()) }.padding(horizontal = Design.outer, vertical = 4.dp),
+                    modifier = Modifier.clickable {
+                        send(GuideSearchAction.searchLiterally())
+                    }.padding(horizontal = Design.outer, vertical = 4.dp),
                 )
             }
         }
@@ -78,13 +83,16 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
                 "番組を探す",
                 "1 週間分の番組から、番組名・出演者・説明で探します。\n「明日の夜のドラマ」「土曜 21時から」のように、日付・時間帯・ジャンルでも絞り込めます。",
             )
+
             results.isEmpty() && search.isIndexing -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     CircularProgressIndicator()
                     Note("番組を読み込んでいます")
                 }
             }
+
             results.isEmpty() -> EmptyState("「${search.text}」に一致する結果はありません", "スペルを確認するか、新しい検索を試してください。")
+
             else -> LazyColumn(contentPadding = PaddingValues(bottom = LocalMiniPlayerInset.current)) {
                 items(results.toList(), key = { it.program.id }) { row ->
                     SearchResultRow(row, send)
@@ -114,8 +122,12 @@ private fun ConditionChips(conditions: Array<GuideSearchConditionChip>, send: Se
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(chip.label, style = MaterialTheme.typography.labelMedium)
-                Icon(Icons.Filled.Close, contentDescription = "${chip.label} を外す", tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(12.dp))
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "${chip.label} を外す",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(12.dp),
+                )
             }
         }
     }
@@ -134,13 +146,20 @@ private fun SearchResultRow(row: SearchResultItem, send: Send) {
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                row.timeText, style = MaterialTheme.typography.bodySmall,
+                row.timeText,
+                style = MaterialTheme.typography.bodySmall,
                 color = if (program.isOnAir) AppTheme.accent else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Note(row.channelName)
             if (program.isReserved) RecordIcon(Modifier.size(12.dp))
         }
-        Text(program.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(
+            program.name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
         row.reason.orElse(null)?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = AppTheme.accent, maxLines = 1)
         }

@@ -37,13 +37,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
+import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.ProgramDetailAction
 import com.example.regzaremote.core.ProgramDetailState
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.regzaremote.core.GuideGridAction
 
 /** 番組の詳細 (state と操作は ProgramDetailViewModel の ProgramDetailState・ProgramDetailAction)。切り替えて見る・録画予約・最初から見る */
 @Composable
@@ -63,8 +63,12 @@ fun ProgramDetailScreen(detail: ProgramDetailState, onBack: (() -> Unit)?, send:
             if (program.description.isNotEmpty()) Text(program.description)
             detail.texts.forEach { item ->
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        item.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Text(item.text)
                 }
             }
@@ -79,12 +83,15 @@ private fun DetailHeader(detail: ProgramDetailState) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             detail.channelName + if (program.isOnAir) " · 放送中" else "",
-            style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = AppTheme.accent,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = AppTheme.accent,
         )
         Text(program.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(
             program.timeText + (program.genreName.orElse(null)?.let { " · $it" } ?: ""),
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (program.isOnAir) {
             val start = program.start.timeIntervalSince1970
@@ -93,11 +100,17 @@ private fun DetailHeader(detail: ProgramDetailState) {
             LinearProgressIndicator(
                 progress = { ((now - start) / (end - start)).toFloat().coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                color = AppTheme.accent, trackColor = AppTheme.fill, drawStopIndicator = {},
+                color = AppTheme.accent,
+                trackColor = AppTheme.fill,
+                drawStopIndicator = {},
             )
         }
         detail.reservedText.orElse(null)?.let {
-            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 RecordIcon(Modifier.size(16.dp))
                 Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = AppTheme.red)
             }
@@ -111,8 +124,13 @@ private fun DetailActions(detail: ProgramDetailState, send: Send) {
     Column(verticalArrangement = Arrangement.spacedBy(Design.item)) {
         Row(horizontalArrangement = Arrangement.spacedBy(Design.item)) {
             if (detail.isCanTune) {
-                ActionButton("切り替えて見る", AppTheme.accent, isBusy = detail.isTuning, enabled = !detail.isTuning,
-                    icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp)) }) {
+                ActionButton(
+                    "切り替えて見る",
+                    AppTheme.accent,
+                    isBusy = detail.isTuning,
+                    enabled = !detail.isTuning,
+                    icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                ) {
                     send(ProgramDetailAction.tune(false))
                 }
             }
@@ -144,11 +162,24 @@ private fun RowScope.ReserveMenu(detail: ProgramDetailState, send: Send) {
     Box(Modifier.weight(1f)) {
         Row {
             if (detail.isReserved) {
-                ActionButton("予約済み", AppTheme.surface, foreground = AppTheme.red, isBusy = isReserving, enabled = !isReserving,
-                    icon = { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp)) }) { isShowingMenu = true }
+                ActionButton(
+                    "予約済み",
+                    AppTheme.surface,
+                    foreground = AppTheme.red,
+                    isBusy = isReserving,
+                    enabled = !isReserving,
+                    icon = {
+                        Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp))
+                    },
+                ) { isShowingMenu = true }
             } else {
-                ActionButton("録画予約", AppTheme.red, isBusy = isReserving, enabled = !isReserving,
-                    icon = { RecordIcon(Modifier.size(18.dp), color = Color.White) }) { isShowingMenu = true }
+                ActionButton(
+                    "録画予約",
+                    AppTheme.red,
+                    isBusy = isReserving,
+                    enabled = !isReserving,
+                    icon = { RecordIcon(Modifier.size(18.dp), color = Color.White) },
+                ) { isShowingMenu = true }
             }
         }
         DropdownMenu(expanded = isShowingMenu, onDismissRequest = { isShowingMenu = false }) {
@@ -207,9 +238,9 @@ private fun RowScope.ActionButton(
 @Composable
 private fun ProgramDetailScreenPreview() = SamplePreview(setUp = {
     it(GuideGridAction.load())
-    it(AppAction.push(AppRoute.programDetail(SampleProgram, SampleChannel)))
+    it(AppAction.push(AppRoute.programDetail(SAMPLE_PROGRAM, SAMPLE_CHANNEL)))
     it(ProgramDetailAction.appear())
 }) { app, send ->
-    val route = remember { AppRoute.programDetail(SampleProgram, SampleChannel) }
+    val route = remember { AppRoute.programDetail(SAMPLE_PROGRAM, SAMPLE_CHANNEL) }
     rememberState(app) { app.programDetailStates(route) }?.let { ProgramDetailScreen(it, onBack = {}, send) }
 }

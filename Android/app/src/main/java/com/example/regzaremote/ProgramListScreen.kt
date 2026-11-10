@@ -28,14 +28,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
+import com.example.regzaremote.core.ChannelListAction
+import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.ProgramListAction
 import com.example.regzaremote.core.ProgramListState
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.regzaremote.core.ChannelListAction
 
 /** 1 チャンネルの番組表 (state と操作は ProgramListViewModel の ProgramListState・ProgramListAction)。日付ごとのまとまりに分けて並べる */
 @Composable
@@ -48,8 +48,15 @@ fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Send)
         val days = list.days.orElse(null)
         when {
             days != null && days.isEmpty() -> EmptyState("番組表がありません", "Mirakurun がこのチャンネルの番組表を持っていません。")
+
             days != null -> LazyColumn(
-                contentPadding = PaddingValues(start = Design.outer, top = Design.outer, end = Design.outer, bottom = Design.outer + LocalMiniPlayerInset.current),
+                contentPadding = PaddingValues(
+                    start = Design.outer,
+                    top = Design.outer,
+                    end = Design.outer,
+                    bottom =
+                        Design.outer + LocalMiniPlayerInset.current,
+                ),
             ) {
                 days.forEach { day ->
                     item(key = "day-${day.label}") { SectionHeader(day.label, Modifier.padding(top = 8.dp, bottom = 6.dp)) }
@@ -63,9 +70,11 @@ fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Send)
                     item(key = "space-${day.label}") { Box(Modifier.padding(bottom = Design.item)) }
                 }
             }
+
             message != null -> EmptyState("番組表を取得できません", message) {
                 TextButton(onClick = { send(ProgramListAction.reload()) }) { Text("もう一度試す") }
             }
+
             else -> Loading()
         }
     }
@@ -82,7 +91,8 @@ private fun ProgramRow(program: ProgramItem, send: Send) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            program.startText, style = MaterialTheme.typography.bodyMedium,
+            program.startText,
+            style = MaterialTheme.typography.bodyMedium,
             color = if (program.isOnAir) AppTheme.accent else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(48.dp),
         )
@@ -104,9 +114,9 @@ private fun ProgramRow(program: ProgramItem, send: Send) {
 @Composable
 private fun ProgramListScreenPreview() = SamplePreview(setUp = {
     it(ChannelListAction.appear())
-    it(AppAction.push(AppRoute.channelPrograms(SampleChannel)))
+    it(AppAction.push(AppRoute.channelPrograms(SAMPLE_CHANNEL)))
     it(ProgramListAction.appear())
 }) { app, send ->
-    val route = remember { AppRoute.channelPrograms(SampleChannel) }
+    val route = remember { AppRoute.channelPrograms(SAMPLE_CHANNEL) }
     rememberState(app) { app.programListStates(route) }?.let { ProgramListScreen(it, onBack = {}, send) }
 }

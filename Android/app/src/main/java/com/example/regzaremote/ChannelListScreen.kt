@@ -37,15 +37,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.core.BroadcastBand
-import com.example.regzaremote.core.ChannelItem
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
-import com.example.regzaremote.core.RemoteAction
+import com.example.regzaremote.core.BroadcastBand
+import com.example.regzaremote.core.ChannelItem
 import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.ChannelListState
-import androidx.compose.ui.tooling.preview.Preview
+import com.example.regzaremote.core.RemoteAction
 
 /**
  * テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える。
@@ -66,13 +66,30 @@ fun ChannelListScreen(state: ChannelListState, send: Send) {
             message != null -> EmptyState("チャンネルを取得できません", message) {
                 TextButton(onClick = { send(ChannelListAction.reload()) }) { Text("もう一度試す") }
             }
+
             state.rows.isEmpty() -> Loading()
+
             else -> {
                 BandPicker(state.bands, state.band.orElse(null), send)
                 val rows = state.rows.toList()
-                LazyColumn(contentPadding = PaddingValues(start = Design.outer, top = Design.outer, end = Design.outer, bottom = Design.outer + LocalMiniPlayerInset.current)) {
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = Design.outer,
+                        top = Design.outer,
+                        end = Design.outer,
+                        bottom =
+                            Design.outer + LocalMiniPlayerInset.current,
+                    ),
+                ) {
                     state.tuneError.orElse(null)?.let { error ->
-                        item { Text(error, style = MaterialTheme.typography.bodySmall, color = AppTheme.red, modifier = Modifier.padding(bottom = 8.dp)) }
+                        item {
+                            Text(
+                                error,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppTheme.red,
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                        }
                     }
                     itemsIndexed(rows, key = { _, row -> row.code }) { index, row ->
                         Column(Modifier.background(AppTheme.surface, sectionRowShape(index, rows.size))) {
@@ -104,7 +121,9 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                row.numberText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                row.numberText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(end = 12.dp),
             )
             Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
@@ -112,16 +131,28 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
                     row.name,
                     // 同じ放送局のサブチャンネルは控えめに出す
                     color = if (row.isSubchannel) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 row.programName.orElse(null)?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
             when {
                 tuningCode == row.code -> CircularProgressIndicator(Modifier.padding(horizontal = 8.dp).size(20.dp), strokeWidth = 2.dp)
-                row.isNowPlaying -> Icon(Icons.Filled.Check, contentDescription = "視聴中", tint = AppTheme.accent, modifier = Modifier.padding(horizontal = 8.dp))
+
+                row.isNowPlaying -> Icon(
+                    Icons.Filled.Check,
+                    contentDescription = "視聴中",
+                    tint = AppTheme.accent,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
             }
             if (row.isHasPrograms) {
                 IconButton(onClick = { send(AppAction.push(AppRoute.channelPrograms(row.code))) }) {

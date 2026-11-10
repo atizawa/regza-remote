@@ -44,7 +44,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.ServerSetupAction
 import com.example.regzaremote.core.ServerSetupServer
 import com.example.regzaremote.core.ServerSetupServerState
@@ -52,8 +54,6 @@ import com.example.regzaremote.core.SettingsAction
 import com.example.regzaremote.core.SettingsPage
 import com.example.regzaremote.core.SettingsState
 import com.example.regzaremote.core.TVSetupAction
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.regzaremote.core.AppAction
 
 /**
  * 設定 (state と操作は SettingsViewModel の SettingsState・SettingsAction)。
@@ -83,9 +83,19 @@ private fun SettingsTopPage(setup: SettingsState, send: Send) {
             // キャンセルは左上の ×、保存は右上の ✓ (iOS 版と同じ)
             ScreenHeader(
                 "設定",
-                leading = if (setup.isCanClose) ({ HeaderIconButton(Icons.Filled.Close, "閉じる") { send(SettingsAction.close()) } }) else null,
+                leading = if (setup.isCanClose) {
+                    (
+                        {
+                            HeaderIconButton(Icons.Filled.Close, "閉じる") { send(SettingsAction.close()) }
+                        }
+                        )
+                } else {
+                    null
+                },
             ) {
-                HeaderIconButton(Icons.Filled.Check, "保存", enabled = setup.isCanSave, tint = AppTheme.accent) { send(SettingsAction.save()) }
+                HeaderIconButton(Icons.Filled.Check, "保存", enabled = setup.isCanSave, tint = AppTheme.accent) {
+                    send(SettingsAction.save())
+                }
             }
         },
     ) {
@@ -104,7 +114,8 @@ private fun SettingsTopPage(setup: SettingsState, send: Send) {
             RowDivider()
             // EPGStation は Mirakurun から放送を受け取るので、Mirakurun を設定してから設定できるようにする
             NavigationRow(
-                "ライブ視聴（EPGStation）", if (servers.isHasGuideDraft) servers.stream.status else "先に番組表を設定",
+                "ライブ視聴（EPGStation）",
+                if (servers.isHasGuideDraft) servers.stream.status else "先に番組表を設定",
                 enabled = servers.isHasGuideDraft,
             ) { send(SettingsAction.openPage(SettingsPage.stream())) }
         }
@@ -126,8 +137,11 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
             footer = "スマートフォンとテレビを同じ Wi-Fi につないでください。見つからないときは、テレビの「設定」→「ネットワーク」で IP アドレスを確認して入力してください。",
         ) {
             FormTextField(
-                state.host, { send(tv(TVSetupAction.setHost(it))) }, "IPアドレス (例: 192.168.0.10)",
-                enabled = !state.isWaitingForPIN, keyboardType = KeyboardType.Uri,
+                state.host,
+                { send(tv(TVSetupAction.setHost(it))) },
+                "IPアドレス (例: 192.168.0.10)",
+                enabled = !state.isWaitingForPIN,
+                keyboardType = KeyboardType.Uri,
             )
             state.devices.forEach { device ->
                 RowDivider()
@@ -141,20 +155,28 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
             }
             RowDivider()
             ActionRow(
-                if (state.isScanning) "テレビを探しています…" else "テレビを探す", isBusy = state.isScanning,
+                if (state.isScanning) "テレビを探しています…" else "テレビを探す",
+                isBusy = state.isScanning,
                 enabled = !state.isScanning && !state.isWaitingForPIN,
             ) { send(tv(TVSetupAction.scan())) }
-            state.scanMessage.orElse(null)?.let { RowDivider(); MessageRow(it) }
+            state.scanMessage.orElse(null)?.let {
+                RowDivider()
+                MessageRow(it)
+            }
         }
 
         FormSection(
             "PIN で登録",
-            footer = if (state.isWaitingForPIN) "テレビの画面に表示されている PIN を入力してください。"
-            else "テレビの電源を入れてからボタンを押すと、テレビの画面に PIN が表示されます。",
+            footer = if (state.isWaitingForPIN) {
+                "テレビの画面に表示されている PIN を入力してください。"
+            } else {
+                "テレビの電源を入れてからボタンを押すと、テレビの画面に PIN が表示されます。"
+            },
         ) {
             if (!state.isWaitingForPIN) {
                 ActionRow(
-                    if (state.isRegistered) "もう一度登録する" else "テレビに PIN を表示", isBusy = state.isPairing,
+                    if (state.isRegistered) "もう一度登録する" else "テレビに PIN を表示",
+                    isBusy = state.isPairing,
                     enabled = state.isHasAddress && !state.isPairing,
                 ) { send(tv(TVSetupAction.startPairing())) }
             } else {
@@ -162,8 +184,11 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
                 val focus = remember { FocusRequester() }
                 LaunchedEffect(Unit) { focus.requestFocus() }
                 FormTextField(
-                    state.pin, { send(tv(TVSetupAction.setPIN(it))) }, "テレビに表示された PIN",
-                    keyboardType = KeyboardType.NumberPassword, modifier = Modifier.focusRequester(focus),
+                    state.pin,
+                    { send(tv(TVSetupAction.setPIN(it))) },
+                    "テレビに表示された PIN",
+                    keyboardType = KeyboardType.NumberPassword,
+                    modifier = Modifier.focusRequester(focus),
                 )
                 RowDivider()
                 // PIN で登録できたら、SettingsViewModel が設定を閉じる
@@ -173,14 +198,19 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
                 RowDivider()
                 ActionRow("やめる", enabled = !state.isPairing) { send(tv(TVSetupAction.cancelPairing())) }
             }
-            state.pairingMessage.orElse(null)?.let { RowDivider(); MessageRow(it) }
+            state.pairingMessage.orElse(null)?.let {
+                RowDivider()
+                MessageRow(it)
+            }
         }
 
         FormSection(footer = "PIN 登録に対応していない古い機種では、テレビの「外部連携設定」で設定したユーザー名とパスワードを入力してください。") {
             FormRow(onClick = { send(tv(TVSetupAction.setShowingManualEntry(!state.isShowingManualEntry))) }) {
                 Text("ユーザー名とパスワードを入力", Modifier.weight(1f))
                 Icon(
-                    Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = AppTheme.accent,
+                    Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = AppTheme.accent,
                     modifier = Modifier.rotate(if (state.isShowingManualEntry) 180f else 0f),
                 )
             }
@@ -196,24 +226,22 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
             ActionRow("接続テスト", isBusy = state.isTesting, enabled = state.isHasAddress && !state.isTesting) {
                 send(tv(TVSetupAction.test()))
             }
-            state.testResult.orElse(null)?.let { RowDivider(); MessageRow(it) }
+            state.testResult.orElse(null)?.let {
+                RowDivider()
+                MessageRow(it)
+            }
         }
     }
 }
 
 /** 録画サーバー (Mirakurun・EPGStation) の設定の画面の文言 */
-private class ServerPage(
-    val server: () -> ServerSetupServer,
-    val title: String,
-    val header: String,
-    val footer: String,
-    val name: String,
-)
+private class ServerPage(val server: () -> ServerSetupServer, val title: String, val header: String, val footer: String, val name: String)
 
 /** 番組表 (Mirakurun) の設定 */
 private val guidePage = ServerPage(
     server = { ServerSetupServer.guide() },
-    title = "番組表（Mirakurun）", header = "番組表 (Mirakurun)",
+    title = "番組表（Mirakurun）",
+    header = "番組表 (Mirakurun)",
     footer = "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。",
     name = "Mirakurun",
 )
@@ -221,7 +249,8 @@ private val guidePage = ServerPage(
 /** ライブ視聴 (EPGStation) の設定 */
 private val streamPage = ServerPage(
     server = { ServerSetupServer.stream() },
-    title = "ライブ視聴（EPGStation）", header = "ライブ視聴 (EPGStation)",
+    title = "ライブ視聴（EPGStation）",
+    header = "ライブ視聴 (EPGStation)",
     footer = "EPGStation を動かしている場合に設定すると、放送中の番組をスマートフォンで見られます。家の Wi-Fi の中だけで使えます。",
     name = "EPGStation",
 )
@@ -236,7 +265,9 @@ private fun ServerSettingsPage(page: ServerPage, state: ServerSetupServerState, 
     SettingsFrame(header = { ScreenHeader(page.title, onBack = { send(SettingsAction.back()) }) }) {
         FormSection(page.header, footer = page.footer) {
             FormTextField(
-                state.host, { host -> send(server { ServerSetupAction.setHost(it, host) }) }, "IPアドレス (例: 192.168.0.2)",
+                state.host,
+                { host -> send(server { ServerSetupAction.setHost(it, host) }) },
+                "IPアドレス (例: 192.168.0.2)",
                 keyboardType = KeyboardType.Uri,
             )
             if (!setup.servers.isValid) {
@@ -251,10 +282,14 @@ private fun ServerSettingsPage(page: ServerPage, state: ServerSetupServerState, 
             }
             RowDivider()
             ActionRow(
-                if (state.isScanning) "${page.name} を探しています…" else "${page.name} を探す", isBusy = state.isScanning,
+                if (state.isScanning) "${page.name} を探しています…" else "${page.name} を探す",
+                isBusy = state.isScanning,
                 enabled = !state.isScanning,
             ) { send(server { ServerSetupAction.scan(it) }) }
-            state.message.orElse(null)?.let { RowDivider(); MessageRow(it) }
+            state.message.orElse(null)?.let {
+                RowDivider()
+                MessageRow(it)
+            }
         }
         if (state.isLinked) {
             FormSection {
@@ -321,9 +356,19 @@ private fun NavigationRow(title: String, value: String, valueColor: Color? = nul
 
 /** 押すと何かをする行 (強調色の文字)。動いている間は右に回る印を出す */
 @Composable
-private fun ActionRow(title: String, isBusy: Boolean = false, enabled: Boolean = true, color: Color = AppTheme.accent, onClick: () -> Unit) {
+private fun ActionRow(
+    title: String,
+    isBusy: Boolean = false,
+    enabled: Boolean = true,
+    color: Color = AppTheme.accent,
+    onClick: () -> Unit,
+) {
     FormRow(onClick = if (enabled) onClick else null) {
-        Text(title, color = if (enabled) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.weight(1f))
+        Text(
+            title,
+            color = if (enabled) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.weight(1f),
+        )
         if (isBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
     }
 }
@@ -332,7 +377,9 @@ private fun ActionRow(title: String, isBusy: Boolean = false, enabled: Boolean =
 @Composable
 private fun MessageRow(text: String, color: Color? = null) {
     Text(
-        text, style = MaterialTheme.typography.bodySmall, color = color ?: MaterialTheme.colorScheme.onSurfaceVariant,
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = color ?: MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = Design.outer, vertical = 10.dp),
     )
 }
@@ -360,9 +407,11 @@ private fun FormTextField(
         keyboardOptions = KeyboardOptions(keyboardType = if (isPassword) KeyboardType.Password else keyboardType),
         visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
             disabledContainerColor = Color.Transparent,
-            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
         ),
         modifier = modifier.fillMaxWidth(),

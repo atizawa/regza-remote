@@ -39,9 +39,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.core.NowPlayingItem
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.NowPlayingAction
+import com.example.regzaremote.core.NowPlayingItem
 import com.example.regzaremote.core.NowPlayingState
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
@@ -84,9 +84,21 @@ fun NowPlayingBar(state: RemoteState, send: Send, modifier: Modifier = Modifier)
         ProgressRing(progress)
         Column(Modifier.weight(1f)) {
             caption?.let {
-                Text(it, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = AppTheme.accent, maxLines = 1)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppTheme.accent,
+                    maxLines = 1,
+                )
             }
-            Text(headline, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                headline,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         if (key != null) {
             TextButton(onClick = { send(RemoteAction.press(key)) }) {
@@ -110,7 +122,10 @@ private fun ProgressRing(progress: Float?) {
             drawCircle(separator, style = Stroke(stroke), radius = size.minDimension / 2 - stroke / 2)
             if (progress != null) {
                 drawArc(
-                    accent, startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
+                    accent,
+                    startAngle = -90f,
+                    sweepAngle = 360f * progress,
+                    useCenter = false,
                     topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
                     size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
                     style = Stroke(stroke, cap = StrokeCap.Round),
@@ -132,12 +147,20 @@ fun NowPlayingScreen(state: RemoteState, detail: NowPlayingState, send: Send) {
             Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Design.outer).padding(bottom = Design.group),
             verticalArrangement = Arrangement.spacedBy(Design.group),
         ) {
-            Text(detail.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.align(Alignment.CenterHorizontally))
+            Text(
+                detail.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
             NowPlayingCard(state, send)
             detail.description.orElse(null)?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
             }
             if (detail.isCanPowerOn) SheetButton("電源を入れる") { send(NowPlayingAction.powerOn()) }
             detail.playableChannelCode.orElse(null)?.let { code ->
@@ -192,7 +215,10 @@ private fun NowPlayingCard(state: RemoteState, send: Send) {
 @Composable
 private fun Status(text: String, isWarning: Boolean = false) {
     Text(
-        text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 2,
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Medium,
+        maxLines = 2,
         color = if (isWarning) AppTheme.orange else MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
@@ -206,16 +232,29 @@ private fun SourceLabel(text: String) {
 private fun Broadcast(nowPlaying: NowPlayingItem) {
     SourceLabel(nowPlaying.channelName.ifEmpty { "放送" })
     when {
-        nowPlaying.title.isNotEmpty() -> Text(nowPlaying.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2)
+        nowPlaying.title.isNotEmpty() -> Text(
+            nowPlaying.title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+        )
+
         // 番組名が取れない機種では、ジャンルで何の番組かを示す
-        nowPlaying.genre.isNotEmpty() -> Text(nowPlaying.genre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        nowPlaying.genre.isNotEmpty() -> Text(
+            nowPlaying.genre,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
     if (nowPlaying.isHasTimeline) {
         val start = nowPlaying.updatedAt.timeIntervalSince1970 - nowPlaying.position
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             LinearProgressIndicator(
-                progress = { nowPlaying.progress.toFloat() }, modifier = Modifier.fillMaxWidth(),
-                color = AppTheme.accent, trackColor = AppTheme.fill, drawStopIndicator = {},
+                progress = { nowPlaying.progress.toFloat() },
+                modifier = Modifier.fillMaxWidth(),
+                color = AppTheme.accent,
+                trackColor = AppTheme.fill,
+                drawStopIndicator = {},
             )
             TimeRow(clockTime(start), clockTime(start + nowPlaying.duration))
         }
@@ -232,7 +271,9 @@ private fun Playback(nowPlaying: NowPlayingItem, send: Send) {
         var seekPosition by remember { mutableStateOf<Float?>(null) }
         val position = seekPosition ?: nowPlaying.position.toFloat()
         Slider(
-            value = position, onValueChange = { seekPosition = it }, valueRange = 0f..nowPlaying.duration.toFloat(),
+            value = position,
+            onValueChange = { seekPosition = it },
+            valueRange = 0f..nowPlaying.duration.toFloat(),
             onValueChangeFinished = {
                 seekPosition?.let { send(RemoteAction.seek(it.toLong())) }
                 seekPosition = null

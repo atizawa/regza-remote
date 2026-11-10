@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
-
 /**
  * Swift の窓口 (RegzaAndroidApp) の入れ物。状態と操作そのものは iOS と同じ共有の ViewModel (Swift) が持ち、
  * 画面はそれぞれ自分の ViewModel の state を窓口から受け取り (channelListStates など)、操作を send で送る。

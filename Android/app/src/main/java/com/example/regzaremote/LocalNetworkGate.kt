@@ -50,6 +50,7 @@ fun LocalNetworkGate(content: @Composable () -> Unit) {
 
     when {
         isGranted -> content()
+
         hasRequested -> EmptyState(
             "ローカルネットワークへのアクセスが必要です",
             "同じ Wi-Fi のテレビを操作するため、ローカルネットワークへのアクセスを許可してください。",
@@ -60,14 +61,14 @@ fun LocalNetworkGate(content: @Composable () -> Unit) {
                 TextButton(onClick = { context.openAppSettings() }) { Text("設定を開く") }
             }
         }
+
         else -> Loading()
     }
 }
 
 /** Android 16 までは許可が要らない */
-private fun Context.hasLocalNetworkAccess(): Boolean =
-    Build.VERSION.SDK_INT < 37 ||
-        checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED
+private fun Context.hasLocalNetworkAccess(): Boolean = Build.VERSION.SDK_INT < 37 ||
+    checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED
 
 private fun Context.openAppSettings() {
     startActivity(

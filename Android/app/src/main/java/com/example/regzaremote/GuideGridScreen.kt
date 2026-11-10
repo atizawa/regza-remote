@@ -34,14 +34,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.GuideGridState
-import androidx.compose.ui.tooling.preview.Preview
+import com.example.regzaremote.core.ProgramItem
 
 /** 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる (state と操作は GuideGridViewModel の GuideGridState・GuideGridAction) */
 @Composable
@@ -60,10 +60,13 @@ fun GuideGridScreen(guide: GuideGridState, send: Send) {
                 "録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。\n" +
                     "設定画面の「録画サーバーとの連携」で Mirakurun のアドレスを設定してください。",
             ) { ProminentButton("設定を開く") { send(AppAction.showSettings()) } }
+
             !guide.isHasLoaded -> Loading()
+
             guide.columns.isEmpty() -> EmptyState("番組表を取得できません", "テレビと Mirakurun につながっているか確認してください。") {
                 TextButton(onClick = { send(GuideGridAction.load()) }) { Text("もう一度試す") }
             }
+
             else -> {
                 BandPicker(guide.bands, guide.band.orElse(null), send)
                 DayPicker(guide, send)
@@ -89,7 +92,8 @@ private fun DayPicker(guide: GuideGridState, send: Send) {
             }
             Text(
                 day.label,
-                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
                 color = if (isSelected) Color.White else color,
                 modifier = Modifier
                     .background(if (isSelected) AppTheme.accent else AppTheme.fill, CircleShape)
@@ -143,8 +147,12 @@ private fun GuideGrid(guide: GuideGridState, send: Send) {
                 columns.forEach { column ->
                     Box(Modifier.width(columnWidth).height(headerHeight).gridLine(), contentAlignment = Alignment.Center) {
                         Text(
-                            column.name, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp),
+                            column.name,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 4.dp),
                         )
                     }
                 }
@@ -199,7 +207,8 @@ private fun TimeColumn(hours: List<String>, vertical: ScrollState, bottomInset: 
                 hour,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
                 modifier = Modifier.height(dpPerMinute * 60).width(timeColumnWidth).gridLine().padding(top = 2.dp),
             )
         }
@@ -220,7 +229,8 @@ private fun ProgramCell(cell: Cell, modifier: Modifier) {
         Column(Modifier.padding(start = 4.dp, end = 4.dp, top = 3.dp, bottom = 3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    cell.startText, style = MaterialTheme.typography.labelSmall,
+                    cell.startText,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = if (cell.isOnAir) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (cell.isOnAir) accent else MaterialTheme.colorScheme.onSurfaceVariant,
                 )

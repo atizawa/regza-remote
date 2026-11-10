@@ -62,10 +62,10 @@ fun SamplePreview(setUp: (Send) -> Unit = {}, content: @Composable (RegzaAndroid
 }
 
 /** 見本のチャンネル (SampleTransport のチャンネル一覧の 1 局目) */
-const val SampleChannel = "JP-G00000001"
+const val SAMPLE_CHANNEL = "JP-G00000001"
 
 /** 見本の番組 (SampleTransport の番組表の、1 局目の番組) */
-const val SampleProgram = 1001L
+const val SAMPLE_PROGRAM = 1001L
 
 /** メモリに置くだけの保存先 (プレビューで、アプリの接続情報を書き換えないように) */
 private class PreviewStorage : RegzaAndroidStorage {
@@ -92,6 +92,7 @@ private object MacSwiftLibraries {
         // libRegzaAndroid は同じフォルダの libSwiftJava を使う (@loader_path) ので、両方を同じ一時フォルダに写す
         val copied = Files.createTempDirectory("regza-preview").toFile().apply { deleteOnExit() }
         val names = mapOf(SwiftLibraries.LIB_NAME_SWIFT_JAVA to "libSwiftJava.dylib", "RegzaAndroid" to "libRegzaAndroid.dylib")
+
         @Suppress("UNCHECKED_CAST")
         val loaded = SwiftLibraries::class.java.getDeclaredField("loadedLibraries")
             .apply { isAccessible = true }.get(null) as ConcurrentHashMap<String, File>

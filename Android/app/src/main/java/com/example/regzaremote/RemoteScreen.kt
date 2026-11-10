@@ -55,13 +55,13 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.core.AppAction
+import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
-import com.example.regzaremote.core.RegzaKey
-import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * リモコンの画面 (iOS 版の RemoteScreen と同じ並び・色)。
@@ -113,7 +113,18 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
                 KeyRow {
                     KeyButton(Keys.previousChapter, press, Modifier.weight(1f), size = ButtonSize.Primary)
                     KeyButton(Keys.skipBackward, press, Modifier.weight(1f), size = ButtonSize.Primary)
-                    KeyButton(if (nowPlaying?.isAdvancing == true) Keys.pause else Keys.play, press, Modifier.weight(1f), size = ButtonSize.Primary)
+                    KeyButton(
+                        if (nowPlaying?.isAdvancing ==
+                            true
+                        ) {
+                            Keys.pause
+                        } else {
+                            Keys.play
+                        },
+                        press,
+                        Modifier.weight(1f),
+                        size = ButtonSize.Primary,
+                    )
                     KeyButton(Keys.skipForward, press, Modifier.weight(1f), size = ButtonSize.Primary)
                     KeyButton(Keys.nextChapter, press, Modifier.weight(1f), size = ButtonSize.Primary)
                 }
@@ -136,10 +147,19 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
                     Modifier.fillMaxWidth().clickable { isShowingMore = !isShowingMore }.padding(horizontal = 4.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("その他の操作", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-                        color = RemoteBody.sectionText, modifier = Modifier.weight(1f))
-                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = RemoteBody.sectionText,
-                        modifier = Modifier.rotate(if (isShowingMore) 180f else 0f))
+                    Text(
+                        "その他の操作",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = RemoteBody.sectionText,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        Icons.Filled.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = RemoteBody.sectionText,
+                        modifier = Modifier.rotate(if (isShowingMore) 180f else 0f),
+                    )
                 }
                 AnimatedVisibility(isShowingMore) {
                     Column(verticalArrangement = Arrangement.spacedBy(Design.item)) {
@@ -195,8 +215,13 @@ private fun Modifier.layoutFullWidth(outer: Dp): Modifier = layout { measurable,
 @Composable
 private fun RemoteSection(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Design.item)) {
-        Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-            color = RemoteBody.sectionText, modifier = Modifier.padding(start = 4.dp))
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = RemoteBody.sectionText,
+            modifier = Modifier.padding(start = 4.dp),
+        )
         content()
     }
 }
@@ -206,7 +231,13 @@ private fun KeyRow(content: @Composable RowScope.() -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(Design.item), modifier = Modifier.fillMaxWidth(), content = content)
 }
 
-private enum class ButtonSize(val height: Dp) { Primary(Design.primaryHeight), Regular(Design.regularHeight), Compact(Design.compactHeight) }
+private enum class ButtonSize(val height: Dp) {
+    Primary(
+        Design.primaryHeight,
+    ),
+    Regular(Design.regularHeight),
+    Compact(Design.compactHeight),
+}
 
 /** ボタンが置かれている場所。グレーの部分はグレーのボタンに黒い文字、黒い帯の部分は黒いボタンに白い文字 */
 private enum class KeyTone { Gray, Black }
@@ -242,18 +273,25 @@ private fun KeyButton(
     }
     val style = when {
         isNumber -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black)
+
         // 地デジ・BS・CS も数字と同じ太さにするが、数字が主役になるよう大きさはそのまま
         isBandKey(key) -> MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black)
+
         size == ButtonSize.Compact -> MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+
         else -> MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
     }
     PressableKey(
-        onClick = { press(key) }, shape = RoundedCornerShape(Design.cornerRadius), color = background,
+        onClick = { press(key) },
+        shape = RoundedCornerShape(Design.cornerRadius),
+        color = background,
         modifier = modifier.heightIn(min = size.height),
     ) {
         // 入りきらない名前は、iOS 版と同じく 1 行のまま 6 割まで小さくする
         BasicText(
-            label, style = style.copy(color = foreground, textAlign = TextAlign.Center), maxLines = 1,
+            label,
+            style = style.copy(color = foreground, textAlign = TextAlign.Center),
+            maxLines = 1,
             autoSize = TextAutoSize.StepBased(minFontSize = style.fontSize * 0.6f, maxFontSize = style.fontSize),
             modifier = Modifier.padding(horizontal = 6.dp),
         )
@@ -264,13 +302,7 @@ private fun isBandKey(key: RegzaKey) = key.rawValue in setOf(Keys.terrestrial.ra
 
 /** 物のボタンらしく、押すと少し縮んで明るくなる面 */
 @Composable
-private fun PressableKey(
-    onClick: () -> Unit,
-    shape: Shape,
-    color: Color,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
+private fun PressableKey(onClick: () -> Unit, shape: Shape, color: Color, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val isPressed by interaction.collectIsPressedAsState()
     Box(
@@ -290,7 +322,9 @@ private fun PressableKey(
 @Composable
 private fun RowScope.ColorKey(key: RegzaKey, color: Color, press: (RegzaKey) -> Unit) {
     PressableKey(
-        onClick = { press(key) }, shape = RoundedCornerShape(Design.cornerRadius), color = RemoteBody.key,
+        onClick = { press(key) },
+        shape = RoundedCornerShape(Design.cornerRadius),
+        color = RemoteBody.key,
         modifier = Modifier.weight(1f).height(Design.compactHeight),
     ) {
         Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(8.dp).background(color, CircleShape))
@@ -329,7 +363,12 @@ private fun RockerHalf(key: RegzaKey, text: String?, icon: ImageVector, press: (
         contentAlignment = Alignment.Center,
     ) {
         if (text != null) {
-            Text(text, style = TextStyle(fontWeight = FontWeight.SemiBold), fontSize = MaterialTheme.typography.headlineSmall.fontSize, color = Color.White)
+            Text(
+                text,
+                style = TextStyle(fontWeight = FontWeight.SemiBold),
+                fontSize = MaterialTheme.typography.headlineSmall.fontSize,
+                color = Color.White,
+            )
         } else {
             Icon(icon, contentDescription = key.label, tint = Color.White, modifier = Modifier.size(32.dp))
         }
@@ -357,7 +396,12 @@ private fun DirectionPad(press: (RegzaKey) -> Unit, diameter: Dp) {
                 .clickable { press(Keys.enter) },
             contentAlignment = Alignment.Center,
         ) {
-            Text("決定", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.Black.copy(alpha = 0.8f))
+            Text(
+                "決定",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black.copy(alpha = 0.8f),
+            )
         }
     }
 }
@@ -376,16 +420,21 @@ private fun Arrow(key: RegzaKey, icon: ImageVector, press: (RegzaKey) -> Unit, m
 private object RemoteBody {
     /** 本体のグレー (#ADACB2 付近) */
     val background = verticalGradient(Color(0xFFB0AFB4), Color(0xFFA2A1A6))
+
     /** グレーの部分のボタン (本体より少し明るいグレー) */
     val grayKey = Color(0xFFCCCBCF)
+
     /** 十字キーのあたりの黒い帯 (#33323A 付近) */
     val panel = Color(0xFF33323A)
+
     /** 黒い帯の部分のボタン */
     val key = Color(0xFF1C1C20)
     val edge = Color.Black.copy(alpha = 0.3f)
+
     /** 十字キーの輪 (#212224 付近) */
     val ring = Color(0xFF212224)
     val power = Color(0xFFC71F24)
+
     /** まとまりの見出しの文字 */
     val sectionText = Color.Black.copy(alpha = 0.6f)
 }

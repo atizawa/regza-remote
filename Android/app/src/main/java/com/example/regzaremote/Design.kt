@@ -44,8 +44,10 @@ import androidx.compose.ui.unit.dp
 object Design {
     /** 画面の端 */
     val outer = 16.dp
+
     /** 同じまとまりのボタンの間 */
     val item = 12.dp
+
     /** まとまりの間 */
     val group = 24.dp
 
@@ -64,6 +66,7 @@ object AppTheme {
     /** iOS の systemGroupedBackground・secondarySystemGroupedBackground (ダーク) に合わせた面の色 */
     val background = Color.Black
     val surface = Color(0xFF1C1C1E)
+
     /** 日付やポートなど、控えめな塗り (iOS の .fill.tertiary) */
     val fill = Color(0x3D767680)
     val separator = Color(0x5C545458)
@@ -119,8 +122,11 @@ fun ScreenHeader(
             }
         }
         Text(
-            title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.align(Alignment.Center).padding(horizontal = 56.dp),
         )
         Row(Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically, content = actions)
@@ -137,7 +143,12 @@ fun EmptyState(title: String, message: String? = null, action: (@Composable () -
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             message?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
             }
             action?.let { Box(Modifier.padding(top = 8.dp)) { it() } }
         }
@@ -174,8 +185,11 @@ fun FormSection(
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
-        text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier.padding(horizontal = Design.outer),
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(horizontal = Design.outer),
     )
 }
 
@@ -206,7 +220,9 @@ fun ReservedBadge(compact: Boolean = false) {
         RecordIcon(Modifier.size(9.dp), color = Color.White)
         Text(
             if (compact) "予約" else "録画予約済み",
-            style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color.White,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
         )
     }
 }
@@ -235,6 +251,12 @@ fun Loading() {
 @Composable
 fun HeaderIconButton(icon: ImageVector, description: String, enabled: Boolean = true, tint: Color? = null, onClick: () -> Unit) {
     IconButton(onClick = onClick, enabled = enabled) {
-        if (tint != null && enabled) Icon(icon, contentDescription = description, tint = tint) else Icon(icon, contentDescription = description)
+        if (tint != null &&
+            enabled
+        ) {
+            Icon(icon, contentDescription = description, tint = tint)
+        } else {
+            Icon(icon, contentDescription = description)
+        }
     }
 }

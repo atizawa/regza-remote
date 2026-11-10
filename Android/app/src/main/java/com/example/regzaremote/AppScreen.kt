@@ -1,5 +1,6 @@
 package com.example.regzaremote
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,23 +18,22 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.background
-import com.example.regzaremote.core.AppRoute
-import androidx.navigation3.ui.NavDisplay
-import androidx.navigation3.runtime.NavEntry
-import androidx.compose.runtime.key
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.ui.NavDisplay
 import com.example.regzaremote.core.AppAction
-import com.example.regzaremote.core.AppTab
-import com.example.regzaremote.core.RemoteAction
+import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.AppState
+import com.example.regzaremote.core.AppTab
 import com.example.regzaremote.core.RegzaAndroidApp
+import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
 
 /**
@@ -92,8 +92,11 @@ private fun TabContent(app: RegzaAndroidApp, state: AppState, remote: RemoteStat
             entryProvider = { key ->
                 NavEntry(key) {
                     val route = routes[key]
-                    if (route == null) TabRoot(app, tab, remote, send)
-                    else RouteScreen(app, key, route, back = { send(AppAction.pop()) }, send)
+                    if (route == null) {
+                        TabRoot(app, tab, remote, send)
+                    } else {
+                        RouteScreen(app, key, route, back = { send(AppAction.pop()) }, send)
+                    }
                 }
             },
         )
@@ -123,8 +126,10 @@ private fun RouteScreen(app: RegzaAndroidApp, key: String, route: AppRoute, back
         when (route.discriminator) {
             AppRoute.Discriminator.CHANNELPROGRAMS ->
                 rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it, back, send) }
+
             AppRoute.Discriminator.PROGRAMDETAIL ->
                 rememberState(key) { app.programDetailStates(route) }?.let { ProgramDetailScreen(it, back, send) }
+
             AppRoute.Discriminator.SEARCH ->
                 rememberState(key) { app.guideSearchStates(route) }?.let { GuideSearchScreen(it, back, send) }
         }
@@ -132,20 +137,18 @@ private fun RouteScreen(app: RegzaAndroidApp, key: String, route: AppRoute, back
 }
 
 @Composable
-private fun RowScope.TabItem(
-    tab: AppTab,
-    label: String,
-    icon: @Composable () -> Unit,
-    selected: AppTab,
-    send: Send,
-) {
+private fun RowScope.TabItem(tab: AppTab, label: String, icon: @Composable () -> Unit, selected: AppTab, send: Send) {
     NavigationBarItem(
         // Swift の値なので、同じタブかは rawValue で比べる
-        selected = selected.rawValue == tab.rawValue, onClick = { send(AppAction.selectTab(tab)) },
-        icon = icon, label = { Text(label) },
+        selected = selected.rawValue == tab.rawValue,
+        onClick = { send(AppAction.selectTab(tab)) },
+        icon = icon,
+        label = { Text(label) },
         // 選んでいるタブは、iOS 版と同じく強調色の文字とアイコンにする (Material の丸い地は付けない)
         colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = AppTheme.accent, selectedTextColor = AppTheme.accent, indicatorColor = Color.Transparent,
+            selectedIconColor = AppTheme.accent,
+            selectedTextColor = AppTheme.accent,
+            indicatorColor = Color.Transparent,
         ),
     )
 }

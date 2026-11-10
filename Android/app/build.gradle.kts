@@ -82,14 +82,17 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     doFirst { environment("ANDROID_HOME", sdk.get().asFile.path) }
 
     inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**") })
-    inputs.files(fileTree(androidDir.resolve("RegzaAndroid")) {
-        exclude(
-            "Sources/RegzaSharedJava/Generated/**", "Sources/RegzaPresentationJava/Generated/**",
-            "Sources/RegzaAndroidBridgeJava/Generated/**",
-            // build-swift が共通の設定から書き出すもの
-            "Sources/RegzaAndroid/swift-java.config",
-        )
-    })
+    inputs.files(
+        fileTree(androidDir.resolve("RegzaAndroid")) {
+            exclude(
+                "Sources/RegzaSharedJava/Generated/**",
+                "Sources/RegzaPresentationJava/Generated/**",
+                "Sources/RegzaAndroidBridgeJava/Generated/**",
+                // build-swift が共通の設定から書き出すもの
+                "Sources/RegzaAndroid/swift-java.config",
+            )
+        },
+    )
     inputs.files(fileTree(androidDir.resolve("RegzaAndroidBridge")) { include("Package.swift", "Sources/**") })
     inputs.file(androidDir.resolve("mise.toml"))
     inputs.dir(androidDir.resolve("scripts"))
@@ -99,7 +102,9 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     outputs.dir(androidDir.resolve(".build/swift/regzapresentation-java"))
     outputs.dir(androidDir.resolve(".build/swift/regzabridge-java"))
     outputs.dir(androidDir.resolve(".build/swift/screen-glue-kotlin"))
-    outputs.dir(androidDir.resolve(".build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java"))
+    outputs.dir(
+        androidDir.resolve(".build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java"),
+    )
     outputs.dir(androidDir.resolve(".build/swift/checkouts/swift-java/SwiftKitCore/src/main"))
     // swift-java が作る Swift のつなぎ (Git に入れていない)。消えたら作り直す (behavior-tests の buildJvmHost もこれを使う)
     outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaSharedJava/Generated"))
