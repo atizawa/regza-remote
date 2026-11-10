@@ -102,6 +102,11 @@ public final class RegzaAndroidApp {
         }
     }
 
+    /// Android の実行環境のテストから、Flow を止めたあとに Swift の待機が残っていないことを確かめる
+    public func pendingStateWaitCount() async -> Int64 {
+        await MainActor.run { Int64(stateWaits.count) }
+    }
+
     /// テストで、終了した待機が残っていないことを確かめる
     @MainActor var stateWaitCount: Int { stateWaits.count }
 

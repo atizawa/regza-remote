@@ -16,6 +16,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Swift の .so は arm64 だけ作っている (buildSwift)
         ndk { abiFilters += "arm64-v8a" }
         // エディタの横のプレビュー (Mac の JVM) が読み込む、Mac 向けの Swift のライブラリの場所 (SamplePreview)。
@@ -118,4 +119,6 @@ dependencies {
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.kotlinx.coroutines.android)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }

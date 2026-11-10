@@ -11,6 +11,23 @@ let useSocketTransport: Void = {
     RegzaHTTP.transport = SocketTransport(tls: BoringSSLProvider())
 }()
 
+/// Android の実行環境のテストから、アプリと同じ SocketTransport で Bionic のソケットを通して HTTP を送る。
+/// 外のサーバーには頼らず、テストが端末内に立てたサーバーへ送るための小さな診断口。
+public func regzaAndroidNetworkProbe(_ address: String) async -> String {
+    guard let url = URL(string: address) else { return "error: URL が正しくありません" }
+    do {
+        let response = try await SocketTransport(tls: BoringSSLProvider()).send(HTTPRequest(url: url, timeout: 5))
+        return "\(response.statusCode)\n\(String(decoding: response.body, as: UTF8.self))"
+    } catch {
+        return "error: \(error)"
+    }
+}
+
+/// APK の BoringSSL が初期化でき、Android のシステム CA を検証用コンテキストへ読み込めることを確かめる
+public func regzaAndroidTLSIsReady() -> Bool {
+    BoringSSLProvider().isReady
+}
+
 /// BoringSSL で TLS の接続を作る。証明書は Android が信頼している認証局で確かめる
 /// (テレビの HTTPS は自己署名なので、SocketTransport が確かめないように頼む)
 final class BoringSSLProvider: TLSProvider, @unchecked Sendable {
@@ -22,6 +39,11 @@ final class BoringSSLProvider: TLSProvider, @unchecked Sendable {
 
     init() {
         unverified = Self.makeContext(verifies: false)
+    }
+
+    /// 証明書を確かめない接続と、Android のシステム CA を使う接続の両方を作れる
+    var isReady: Bool {
+        unverified != nil && verifyingContext() != nil
     }
 
     deinit {
@@ -73,13 +95,15 @@ final class BoringSSLProvider: TLSProvider, @unchecked Sendable {
     }
 
     private static func makeContext(verifies: Bool) -> OpaquePointer? {
-        let context = SSL_CTX_new(TLS_client_method())
+        guard let context = SSL_CTX_new(TLS_client_method()) else { return nil }
         _ = SSL_CTX_set_min_proto_version(context, UInt16(TLS1_2_VERSION))
         SSL_CTX_set_verify(context, verifies ? SSL_VERIFY_PEER : SSL_VERIFY_NONE, nil)
         if verifies {
+            var loaded = false
             for path in trustedCertificatePaths() {
-                _ = SSL_CTX_load_verify_locations(context, path, nil)
+                if SSL_CTX_load_verify_locations(context, path, nil) == 1 { loaded = true }
             }
+            guard loaded else { SSL_CTX_free(context); return nil }
         }
         return context
     }
