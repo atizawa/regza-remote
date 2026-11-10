@@ -1,21 +1,28 @@
-# リポジトリ全体で使うタスクだけを置く (Swift の版はここでは決めない。iOS は Xcode の Swift、Android は Android/mise.toml の Swift を使う)
+# リポジトリ全体で使うタスクと、その道具 (ktlint) を置く。
+# Swift の版はここでは決めない (iOS は Xcode の Swift、Android は Android/mise.toml の Swift を使う。どちらにも swift-format が入っている)
 #
-#   mise run lint     # Swift のコードの書き方を確かめる (swift-format。設定は .swift-format)
-#   mise run format   # Swift のコードの書き方を直す
+#   mise run lint     # Swift と Kotlin のコードの書き方を確かめる (Swift は swift-format・設定は .swift-format、Kotlin は ktlint・設定は .editorconfig)
+#   mise run format   # Swift と Kotlin のコードの書き方を直す
+
+[tools]
+# Kotlin のコードの書き方を確かめて直す (設定は .editorconfig)。Swift の swift-format は Swift のツールチェーンに入っているので入れない
+ktlint = "1.8.0"
 
 [tasks.lint]
-description = "Swift のコードの書き方を swift-format で確かめる (直すべきところがあれば止まる)"
+description = "Swift と Kotlin のコードの書き方を確かめる (直すべきところがあれば止まる)"
 dir = "{{ config_root }}"
 run = '''
 set -euo pipefail
 # 道具が作るファイル (Generated/) は対象にしない。.build/ などの Git に入れないものは、Git の一覧に出ないので外れる
 git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format lint --strict --parallel
+git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint --relative
 '''
 
 [tasks.format]
-description = "Swift のコードの書き方を swift-format で直す"
+description = "Swift と Kotlin のコードの書き方を直す"
 dir = "{{ config_root }}"
 run = '''
 set -euo pipefail
 git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format --in-place --parallel
+git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint --format --relative
 '''

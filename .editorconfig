@@ -1,0 +1,20 @@
+# エディターと ktlint (Kotlin の書き方の道具) が読む設定。Android Studio もこの設定で整形する
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+# Swift (.swift-format) と同じ長さにする
+max_line_length = 140
+# Android Studio の整形と同じ書き方にする (ずれると、Android Studio で整形するたびに ktlint が止める)
+ktlint_code_style = android_studio
+# 複数行に並べたものは、宣言でも呼び出しでも末尾にコンマを付ける (足すときの差分が 1 行で済み、並べ替えやすい。Swift の .swift-format と同じ考え)
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+# Compose の画面や部品 (@Composable の関数) は、慣習どおり大文字で始める
+ktlint_function_naming_ignore_when_annotated_with = Composable
