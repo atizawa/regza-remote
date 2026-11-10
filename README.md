@@ -141,7 +141,7 @@ scripts/generate-screen-glue.sh     # ./gradlew のビルドでも毎回実行�
 ツールが作るもの（作ったものはコミットする。古いままだと窓口のテスト `screenGlueIsUpToDate` が失敗する）:
 
 - 窓口の送る関数（`sendChannelListAction`）と state を返す関数（`channelListState(route:)`・`nextChannelListState(route:after:waitID:)`）: `RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift`。Kotlin の Flow が終わると `endStateWait` で Swift 側の待機も終える
-- swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）
+- swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）。どのモジュールにも共通の設定（Java のパッケージなど）は `RegzaAndroid/swift-java.common.config` に 1 回だけ書き、ビルドのときにモジュールごとの設定と重ねる
 - Kotlin の送り先 `Send`（`send(ChannelListAction.tune(code))` のように、どの Action も `send` で送れる）と、state の `Flow`（`app.channelListStates(route)`）: ビルドのたびに `.build/swift/screen-glue-kotlin/` に作る
 
 Kotlin の画面は `app/src/main/java/com/example/regzaremote/<画面>Screen.kt` に `fun <画面>Screen(` を置き（`ChannelListScreen`）、自分の ViewModel の state を受け取って描き、操作を `send` で送る。ファイルの末尾にはプレビューを置く。タブの最初の画面なら `AppScreen.kt` の `TabRoot`、タブの中で開く画面なら `RouteScreen` に足す。

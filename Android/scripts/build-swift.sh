@@ -76,16 +76,36 @@ drop_duplicate_foundation() {
 
 # Swift のモジュールの Java のつなぎを作る (Swift のつなぎは RegzaAndroid の Sources/<…>Java/Generated、Java のクラスは .build/swift/<…>-java)。
 # 引数: モジュール、Swift の入力のフォルダ、Swift のつなぎの置き場、Java の置き場、先に作ったモジュールの Java の置き場…
-# 設定は RegzaAndroid/<モジュール>.swift-java.config。先に作ったモジュールがあれば、Foundation の型の重なりを消す
+# 設定は、どのモジュールにも共通のもの (RegzaAndroid/swift-java.common.config) に、
+# モジュールごとのもの (RegzaAndroid/<モジュール>.swift-java.config。なければ共通のものだけ) を重ねる。
+# 先に作ったモジュールがあれば、Foundation の型の重なりを消す
 extract_module() {
-  local module=$1 input=$2 swift_out=$3 java_out=$4
+  local module=$1 input=$2 swift_out=$3 java_out=$4 config
   shift 4
   rm -rf "$swift_out" "$java_out" && mkdir -p "$swift_out" "$java_out"
+  config=$(swift_java_config "RegzaAndroid/$module.swift-java.config" "$configs/$module.swift-java.config")
   jextract \
-    --config "RegzaAndroid/$module.swift-java.config" --swift-module "$module" \
+    --config "$config" --swift-module "$module" \
     --input-swift "$input" --output-swift "$swift_out" --output-java "$java_out"
   [ $# -eq 0 ] || drop_duplicate_foundation "$swift_out" "$java_out" "$@"
 }
+
+# swift-java の設定を作る。共通の設定に、モジュールごとの設定 (あれば) を重ねて書き出し、書き出した場所を返す。
+# 引数: モジュールごとの設定、書き出す場所
+swift_java_config() {
+  local module_config=$1 out=$2
+  if [ -f "$module_config" ]; then
+    jq -s '.[0] * .[1]' RegzaAndroid/swift-java.common.config "$module_config" > "$out"
+  else
+    cp RegzaAndroid/swift-java.common.config "$out"
+  fi
+  echo "$out"
+}
+configs=.build/swift/configs
+rm -rf "$configs" && mkdir -p "$configs"
+# SwiftPM のプラグイン (RegzaAndroid の Java のつなぎ) は、ソースの中の swift-java.config を読むので、共通の設定をそこに書き出す
+# (書き出したものは Git に入れない)
+swift_java_config "" RegzaAndroid/Sources/RegzaAndroid/swift-java.config > /dev/null
 
 # iOS と共有のパッケージや窓口のパッケージにはプラグインをかけられないので、Mac で動く swift-java のツールで、ソースを直接読む。
 # Android 向けのビルドとはビルドの設定が違い、同じ置き場だと互いのキャッシュを捨て合うので、置き場を分ける

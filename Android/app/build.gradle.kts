@@ -44,7 +44,7 @@ android {
         }
     }
 
-    // swift-java が作る Java のコードは Java 17 の書き方を使う (swift-java.config の javaSourceLevel)
+    // swift-java が作る Java のコードは Java 17 の書き方を使う (RegzaAndroid/swift-java.common.config の javaSourceLevel)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -86,6 +86,8 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
         exclude(
             "Sources/RegzaSharedJava/Generated/**", "Sources/RegzaPresentationJava/Generated/**",
             "Sources/RegzaAndroidBridgeJava/Generated/**",
+            // build-swift が共通の設定から書き出すもの
+            "Sources/RegzaAndroid/swift-java.config",
         )
     })
     inputs.files(fileTree(androidDir.resolve("RegzaAndroidBridge")) { include("Package.swift", "Sources/**") })
@@ -103,6 +105,7 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaSharedJava/Generated"))
     outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaPresentationJava/Generated"))
     outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated"))
+    outputs.file(androidDir.resolve("RegzaAndroid/Sources/RegzaAndroid/swift-java.config"))
 }
 tasks.named("preBuild") { dependsOn(buildSwift) }
 // 配るアプリ (release の APK) に、手元のフォルダの場所 (ホームのフォルダ) が残っていないことを確かめる。

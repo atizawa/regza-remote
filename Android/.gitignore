@@ -17,3 +17,5 @@ RegzaAndroid/Sources/RegzaSharedJava/Generated/
 RegzaAndroid/Sources/RegzaPresentationJava/Generated/
 # mise run build-swift が作る、窓口 (RegzaAndroidBridge) の Java のつなぎ
 RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/
+# mise run build-swift が、共通の設定 (RegzaAndroid/swift-java.common.config) から書き出す SwiftPM のプラグインの設定
+RegzaAndroid/Sources/RegzaAndroid/swift-java.config

@@ -4,7 +4,9 @@ import PackageDescription
 // Android アプリから RegzaCore (iOS と共有) を使うための Swift のライブラリ。窓口 (状態と操作) は ../RegzaAndroidBridge にあり、
 // ここには Android 専用の部品 (MainActor を Looper で動かす・BoringSSL・ユーザー ID) と、Java のつなぎを置く。
 // swift-java の JExtractSwiftPlugin が RegzaAndroid の public な関数から Java のクラスを作る
-// (設定は Sources/RegzaAndroid/swift-java.config)。ビルドは Android/ で mise run build-swift
+// (設定は Sources/RegzaAndroid/swift-java.config。mise run build-swift が共通の設定 swift-java.common.config から書き出す)。
+// ビルドは Android/ で mise run build-swift (中身は scripts/build-swift.sh)。
+// swift-java の設定は、どのモジュールにも共通のもの (swift-java.common.config) に、モジュールごとのもの (<モジュール>.swift-java.config) を重ねて使う
 let package = Package(
     name: "RegzaAndroid",
     // swift-java に合わせる (Android 向けのビルドでは使われない)
@@ -26,7 +28,7 @@ let package = Package(
     targets: [
         // iOS と共有の UI の型 (RegzaSharedModels) の Java のつなぎ。iOS と共有の Packages/RegzaCore には
         // プラグインをかけられないので、mise run build-swift が swift-java のツールで Generated/ に作る
-        // (設定は RegzaSharedModels.swift-java.config)。ここにはプラグインをかけない
+        // (設定は共通の swift-java.common.config だけ)。ここにはプラグインをかけない
         .target(
             name: "RegzaSharedJava",
             dependencies: [
