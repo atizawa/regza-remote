@@ -124,7 +124,7 @@ private fun ProgressRing(progress: Float?) {
 /** ミニプレーヤーを押したときの詳細 (state と操作は NowPlayingViewModel の NowPlayingState・NowPlayingAction)。録画ならシークもできる */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NowPlayingSheet(state: RemoteState, detail: NowPlayingState, send: Send) {
+fun NowPlayingScreen(state: RemoteState, detail: NowPlayingState, send: Send) {
     // 開いたら、最初から見られるかと、いま映っている局を読む
     LaunchedEffect(Unit) { send(NowPlayingAction.appear()) }
     ModalBottomSheet(onDismissRequest = { send(AppAction.closeNowPlaying()) }, containerColor = AppTheme.background) {

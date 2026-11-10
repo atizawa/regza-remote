@@ -64,7 +64,7 @@ import com.example.regzaremote.core.RegzaKey
 import androidx.compose.ui.tooling.preview.Preview
 
 /**
- * リモコンの画面 (iOS 版の RemotePanel と同じ並び・色)。
+ * リモコンの画面 (iOS 版の RemoteScreen と同じ並び・色)。
  * 実物のリモコンと同じく、電源 → 放送の種類と数字 → 十字キー・色ボタン → 再生 の順に並べる。
  * リモコンは手の感覚で押すので、再生中かどうかでボタンの位置を変えない
  * (再生と一時停止は同じ場所で入れ替える)。いま映っているものは、どのタブでも下のミニプレーヤーに出す

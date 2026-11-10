@@ -5,9 +5,9 @@ import RegzaLiveActivity
 import RegzaRemoteViews
 import SwiftUI
 
-/// アプリの入口。アプリのプロセスに 1 つだけある ViewModel (RegzaAppContainer) を、画面 (RegzaRemoteViews の AppView) に渡す。
+/// アプリの入口。アプリのプロセスに 1 つだけある ViewModel (RegzaAppContainer) を、画面 (RegzaRemoteViews の AppScreen) に渡す。
 /// 終了時の後片づけなど、Domain の型が要るものはここで受け持つ (画面からは Domain が見えない)
-public struct RemoteView: View {
+public struct RootView: View {
     @State private var app: AppViewModel
     @State private var liveActivity: LiveActivityModel
     private let debugPlayer: LivePlayerViewModel?
@@ -33,7 +33,7 @@ public struct RemoteView: View {
     }
 
     public var body: some View {
-        AppView(app: app, liveActivity: liveActivity, debugPlayer: debugPlayer)
+        AppScreen(app: app, liveActivity: liveActivity, debugPlayer: debugPlayer)
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
                 // 終了するときも、ライブ視聴の配信を止めてみる (届かなければ次に開いたときに止める)
                 let store = RegzaAppContainer.shared.store

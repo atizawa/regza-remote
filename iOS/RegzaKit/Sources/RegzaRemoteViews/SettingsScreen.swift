@@ -2,7 +2,7 @@
 import RegzaPresentation
 import SwiftUI
 
-struct SettingsView: View {
+struct SettingsScreen: View {
     @State private var settings: SettingsViewModel
     @FocusState private var isPINFocused: Bool
     /// 連携を解除するか確かめている設定

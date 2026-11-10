@@ -51,7 +51,7 @@ import androidx.compose.ui.tooling.preview.Preview
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReservationsScreen(list: ReservationListState, send: Send) {
+fun ReservationListScreen(list: ReservationListState, send: Send) {
     LaunchedEffect(Unit) { send(ReservationListAction.load()) }
     // 取り消すか確かめている予約
     var cancelling by remember { mutableStateOf<ReservationItem?>(null) }
@@ -185,6 +185,6 @@ private fun ReservationRow(item: ReservationItem) {
 
 @Preview(name = "録画予約")
 @Composable
-private fun ReservationsScreenPreview() = SamplePreview(setUp = { it(ReservationListAction.load()) }) { app, send ->
-    rememberState(app) { app.reservationListStates() }?.let { ReservationsScreen(it, send) }
+private fun ReservationListScreenPreview() = SamplePreview(setUp = { it(ReservationListAction.load()) }) { app, send ->
+    rememberState(app) { app.reservationListStates() }?.let { ReservationListScreen(it, send) }
 }

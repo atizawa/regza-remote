@@ -4,7 +4,7 @@ import RegzaDesign
 import SwiftUI
 
 /// テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える
-struct ChannelListView: View {
+struct ChannelListScreen: View {
     @State private var viewModel: ChannelListViewModel
     @Environment(AppViewModel.self) private var app
 

@@ -11,13 +11,13 @@ struct RouteView: View {
         switch route {
         case .channelPrograms(let channelCode):
             if let viewModel = app.programList(channelCode: channelCode) {
-                ChannelProgramsView(viewModel: viewModel)
+                ProgramListScreen(viewModel: viewModel)
             } else {
                 ContentUnavailableView("チャンネルが見つかりません", systemImage: "list.bullet")
             }
         case .programDetail(let programID, let channelCode):
             if let viewModel = app.programDetail(programID: programID, channelCode: channelCode) {
-                ProgramDetailView(viewModel: viewModel)
+                ProgramDetailScreen(viewModel: viewModel)
             } else {
                 ContentUnavailableView("番組が見つかりません", systemImage: "calendar.badge.exclamationmark")
             }

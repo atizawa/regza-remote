@@ -45,7 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 
 /** 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる (state と操作は GuideGridViewModel の GuideGridState・GuideGridAction) */
 @Composable
-fun GuideScreen(guide: GuideGridState, send: Send) {
+fun GuideGridScreen(guide: GuideGridState, send: Send) {
     // 開いたら読み込む (予約した番組に印を付けるため、予約も読む)
     LaunchedEffect(Unit) { send(GuideGridAction.load()) }
     Column(Modifier.fillMaxSize()) {
@@ -251,6 +251,6 @@ private fun genreColor(genre: Int): Color = when (genre) {
 
 @Preview(name = "番組表")
 @Composable
-private fun GuideScreenPreview() = SamplePreview(setUp = { it(GuideGridAction.load()) }) { app, send ->
-    rememberState(app) { app.guideGridStates() }?.let { GuideScreen(it, send) }
+private fun GuideGridScreenPreview() = SamplePreview(setUp = { it(GuideGridAction.load()) }) { app, send ->
+    rememberState(app) { app.guideGridStates() }?.let { GuideGridScreen(it, send) }
 }

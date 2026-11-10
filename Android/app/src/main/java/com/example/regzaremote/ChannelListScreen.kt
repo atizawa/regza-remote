@@ -53,7 +53,7 @@ import androidx.compose.ui.tooling.preview.Preview
  * この画面の操作 (ChannelListAction) も、番組表を開くなどアプリ全体の操作 (AppAction) も send で送る
  */
 @Composable
-fun ChannelScreen(state: ChannelListState, send: Send) {
+fun ChannelListScreen(state: ChannelListState, send: Send) {
     LaunchedEffect(Unit) { send(ChannelListAction.appear()) }
     val tuningCode = state.tuningCode.orElse(null)
 
@@ -178,6 +178,6 @@ fun BandPicker(bands: Array<BroadcastBand>, band: BroadcastBand?, send: Send) {
 
 @Preview(name = "チャンネル一覧")
 @Composable
-private fun ChannelScreenPreview() = SamplePreview(setUp = { it(ChannelListAction.appear()) }) { app, send ->
-    rememberState(app) { app.channelListStates() }?.let { ChannelScreen(it, send) }
+private fun ChannelListScreenPreview() = SamplePreview(setUp = { it(ChannelListAction.appear()) }) { app, send ->
+    rememberState(app) { app.channelListStates() }?.let { ChannelListScreen(it, send) }
 }

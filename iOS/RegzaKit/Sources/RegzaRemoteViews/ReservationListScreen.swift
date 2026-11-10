@@ -3,7 +3,7 @@ import RegzaPresentation
 import SwiftUI
 
 /// テレビの録画予約の一覧
-struct ReservationsView: View {
+struct ReservationListScreen: View {
     @State private var viewModel: ReservationListViewModel
     /// 取り消すか確かめている予約
     @State private var canceling: ReservationItem?

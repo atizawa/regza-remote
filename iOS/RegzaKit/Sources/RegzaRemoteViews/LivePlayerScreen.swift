@@ -7,7 +7,7 @@ import SwiftUI
 /// EPGStation のライブ配信をアプリで見る画面 (ライブ視聴)。
 /// 縦向きでは映像の下に今の番組の情報と局の一覧を出し、局を押すとその局の配信に切り替える。横向きでは映像だけを出す。
 /// 閉じたり局を切り替えたりしたら、前の配信を止めてチューナーを空ける
-struct LivePlayerView: View {
+struct LivePlayerScreen: View {
     @State private var viewModel: LivePlayerViewModel
     /// 再生しているもの (ViewModel が出した URL の配信)
     @State private var player: AVPlayer?

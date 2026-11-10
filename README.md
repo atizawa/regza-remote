@@ -27,7 +27,7 @@ iOS/RegzaKit/                 iOS だけで使う Swift Package（マルチモ�
   RegzaRemoteIntents          ボタン（Live Activity・ウィジェット・コントロールセンター）からキーを送る App Intent
   RegzaSiriIntents            Siri・ショートカットの App Intent（アプリにだけ登録する）
   RegzaAppContainer           アプリのプロセスに 1 つだけ置くアプリ全体の ViewModel の組み立て（見本のデータも）
-  RegzaRemoteUI               アプリの入口（RemoteView。終了時の後片づけなど）
+  RegzaRemoteUI               アプリの入口（RootView。終了時の後片づけなど）
   RegzaDesign                 アプリとウィジェットで共通の色
   RegzaAppleStorage           キーチェーンへの接続情報保存
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
@@ -125,7 +125,9 @@ ViewModels/ChannelList/
 
 ### 3. iOS の画面を作る
 
-`iOS/RegzaKit/Sources/RegzaRemoteViews/` に置き、`viewModel.state` を見て `viewModel.send(...)` で送る。`RegzaDomain` は import しない（`LayerTests` が確かめる）。
+`iOS/RegzaKit/Sources/RegzaRemoteViews/<画面>Screen.swift` に `struct <画面>Screen` を置き（`ChannelListScreen`）、`viewModel.state` を見て `viewModel.send(...)` で送る。`RegzaDomain` は import しない（`LayerTests` が確かめる）。
+
+画面の名前は、iOS も Android も共有の ViewModel のフォルダの名前に `Screen` を付けたものにそろえ、1 画面 1 ファイルにする。`Screen` は画面全体にだけ付け、部品（`KeyButton`・`NowPlayingCard` など）には付けない。そろっていることは `RegzaKitTests` の `ScreenNamingTests` が確かめる。
 
 ### 4. Android の画面を作る
 
@@ -140,7 +142,7 @@ scripts/generate-screen-glue.sh     # ./gradlew のビルドでも毎回実行�
 - swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）
 - Kotlin の送り先 `Send`（`send(ChannelListAction.tune(code))` のように、どの Action も `send` で送れる）と、state の `Flow`（`app.channelListStates(route)`）: ビルドのたびに `.build/swift/screen-glue-kotlin/` に作る
 
-Kotlin の画面は、自分の ViewModel の state を受け取って描き、操作を `send` で送る。タブの最初の画面なら `MainActivity.kt` の `TabRoot`、タブの中で開く画面なら `RouteScreen` に足す。
+Kotlin の画面は `app/src/main/java/com/example/regzaremote/<画面>Screen.kt` に `fun <画面>Screen(` を置き（`ChannelListScreen`）、自分の ViewModel の state を受け取って描き、操作を `send` で送る。ファイルの末尾にはプレビューを置く。タブの最初の画面なら `AppScreen.kt` の `TabRoot`、タブの中で開く画面なら `RouteScreen` に足す。
 
 ```kotlin
 rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it, back, send) }
@@ -150,6 +152,7 @@ rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it,
 
 ```sh
 cd Packages/RegzaCore && swift test
+cd iOS/RegzaKit && swift test               # 画面の名前と、画面・Live Activity が使うモジュール
 cd Android/RegzaAndroidBridge && swift test
 cd Android && ./gradlew :app:assembleDebug
 cd BehaviorTests && mise run test

@@ -10,7 +10,7 @@ import SwiftUI
 struct RegzaRemoteApp: App {
     var body: some Scene {
         WindowGroup {
-            RemoteView()
+            RootView()
                 // Siri の「○○にして」で言えるチャンネル名を、テレビのチャンネル一覧で更新する
                 .task { RegzaRemoteShortcuts.updateAppShortcutParameters() }
         }

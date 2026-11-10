@@ -4,7 +4,7 @@ import RegzaDesign
 import SwiftUI
 
 /// 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる
-struct GuideGridView: View {
+struct GuideGridScreen: View {
     @State private var viewModel: GuideGridViewModel
     @Environment(AppViewModel.self) private var app
     @Environment(\.showSettings) private var showSettings
