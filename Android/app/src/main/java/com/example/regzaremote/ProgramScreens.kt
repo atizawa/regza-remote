@@ -64,6 +64,9 @@ import com.example.regzaremote.core.GuideSearchAction
 import com.example.regzaremote.core.GuideSearchConditionChip
 import com.example.regzaremote.core.GuideSearchState
 import com.example.regzaremote.core.SearchResultItem
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.regzaremote.core.ChannelListAction
+import com.example.regzaremote.core.GuideGridAction
 
 /** 1 チャンネルの番組表 (state と操作は ProgramListViewModel の ProgramListState・ProgramListAction)。日付ごとのまとまりに分けて並べる */
 @Composable
@@ -382,4 +385,28 @@ private fun SearchResultRow(row: SearchResultItem, send: Send) {
             Text(it, style = MaterialTheme.typography.bodySmall, color = AppTheme.accent, maxLines = 1)
         }
     }
+}
+
+// Swift の型 (AppRoute など) は、SamplePreview が Swift のライブラリを読み込んでから作る
+
+@Preview(name = "1 局の番組表")
+@Composable
+private fun ProgramListScreenPreview() = SamplePreview(setUp = {
+    it(ChannelListAction.appear())
+    it(AppAction.push(AppRoute.channelPrograms(SampleChannel)))
+    it(ProgramListAction.appear())
+}) { app, send ->
+    val route = remember { AppRoute.channelPrograms(SampleChannel) }
+    rememberState(app) { app.programListStates(route) }?.let { ProgramListScreen(it, onBack = {}, send) }
+}
+
+@Preview(name = "番組の詳細")
+@Composable
+private fun ProgramDetailScreenPreview() = SamplePreview(setUp = {
+    it(GuideGridAction.load())
+    it(AppAction.push(AppRoute.programDetail(SampleProgram, SampleChannel)))
+    it(ProgramDetailAction.appear())
+}) { app, send ->
+    val route = remember { AppRoute.programDetail(SampleProgram, SampleChannel) }
+    rememberState(app) { app.programDetailStates(route) }?.let { ProgramDetailScreen(it, onBack = {}, send) }
 }

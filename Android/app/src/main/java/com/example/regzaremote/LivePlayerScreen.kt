@@ -64,6 +64,8 @@ import com.example.regzaremote.core.LivePlayerPhase
 import com.example.regzaremote.core.LivePlayerState
 import com.example.regzaremote.core.RegzaAndroidBridge
 import kotlinx.coroutines.delay
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.regzaremote.core.ChannelListAction
 
 /**
  * EPGStation のライブ配信をアプリで見る画面 (state と操作は LivePlayerViewModel の LivePlayerState・LivePlayerAction)。
@@ -295,4 +297,15 @@ private fun ChannelRow(row: ChannelItem, onClick: () -> Unit) {
         }
         if (row.isNowPlaying) Icon(Icons.Filled.PlayArrow, contentDescription = "再生中", tint = AppTheme.accent)
     }
+}
+
+@Preview(name = "ライブ視聴")
+@Composable
+private fun LivePlayerScreenPreview() = SamplePreview(setUp = {
+    it(ChannelListAction.appear())
+    it(AppAction.play(SampleChannel))
+    it(LivePlayerAction.appear())
+    it(LivePlayerAction.start())
+}) { app, send ->
+    rememberState(app) { app.livePlayerStates() }?.let { LivePlayerScreen(it, send) }
 }

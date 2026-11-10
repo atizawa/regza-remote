@@ -18,9 +18,15 @@ android {
         versionName = "0.1"
         // Swift の .so は arm64 だけ作っている (buildSwift)
         ndk { abiFilters += "arm64-v8a" }
+        // エディタの横のプレビュー (Mac の JVM) が読み込む、Mac 向けの Swift のライブラリの場所 (SamplePreview)。
+        // 振る舞いのテストと同じもの (behavior-tests の buildJvmHost が作る)。エディタの中でしか使わない
+        buildConfigField("String", "MAC_SWIFT_LIBRARIES", "\"${rootDir.resolve(".build/jvm-host/libs").path}\"")
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     buildTypes {
         release {
@@ -87,6 +93,8 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     outputs.dir(androidDir.resolve(".build/swift/checkouts/swift-java/SwiftKitCore/src/main"))
 }
 tasks.named("preBuild") { dependsOn(buildSwift) }
+// エディタの横のプレビューのために、debug のビルドでは Mac 向けの Swift のライブラリも作る (SamplePreview)
+tasks.matching { it.name == "preDebugBuild" }.configureEach { dependsOn(":behavior-tests:buildJvmHost") }
 
 dependencies {
     // swift-java が作ったクラスが使う Java 側
@@ -96,6 +104,10 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.ui)
+    // 画面のプレビュー (それぞれの画面のファイルの末尾)。Swift の state を使うので、「Run Preview」でエミュレーターに出す。
+    // ui-tooling はエミュレーターでプレビューを出す PreviewActivity を含むので、debug にだけ入れる
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     // ライブ視聴: EPGStation の HLS の配信を再生する

@@ -45,6 +45,7 @@ import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.ChannelListState
+import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える。
@@ -173,4 +174,10 @@ fun BandPicker(bands: Array<BroadcastBand>, band: BroadcastBand?, send: Send) {
             ) { Text(item.label) }
         }
     }
+}
+
+@Preview(name = "チャンネル一覧")
+@Composable
+private fun ChannelScreenPreview() = SamplePreview(setUp = { it(ChannelListAction.appear()) }) { app, send ->
+    rememberState(app) { app.channelListStates() }?.let { ChannelScreen(it, send) }
 }

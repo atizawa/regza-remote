@@ -61,6 +61,7 @@ import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
 import com.example.regzaremote.core.RegzaKey
+import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * リモコンの画面 (iOS 版の RemotePanel と同じ並び・色)。
@@ -446,4 +447,10 @@ fun miniPlayerKey(kind: String, isAdvancing: Boolean): RegzaKey? = when (kind) {
     "broadcast" -> Keys.mute
     "standby" -> Keys.power
     else -> null
+}
+
+@Preview(name = "リモコン")
+@Composable
+private fun RemoteScreenPreview() = SamplePreview(setUp = { it(RemoteAction.refresh()) }) { app, send ->
+    rememberState(app) { app.remoteStates() }?.let { RemoteScreen(it, send) }
 }

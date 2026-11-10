@@ -41,6 +41,7 @@ import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.GuideGridState
+import androidx.compose.ui.tooling.preview.Preview
 
 /** 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる (state と操作は GuideGridViewModel の GuideGridState・GuideGridAction) */
 @Composable
@@ -246,4 +247,10 @@ private fun genreColor(genre: Int): Color = when (genre) {
     9 -> Color(0xFF3F51B5)
     10 -> Color(0xFF26A69A)
     else -> Color.Gray
+}
+
+@Preview(name = "番組表")
+@Composable
+private fun GuideScreenPreview() = SamplePreview(setUp = { it(GuideGridAction.load()) }) { app, send ->
+    rememberState(app) { app.guideGridStates() }?.let { GuideScreen(it, send) }
 }

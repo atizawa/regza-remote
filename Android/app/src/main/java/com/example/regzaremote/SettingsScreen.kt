@@ -52,6 +52,8 @@ import com.example.regzaremote.core.SettingsAction
 import com.example.regzaremote.core.SettingsPage
 import com.example.regzaremote.core.SettingsState
 import com.example.regzaremote.core.TVSetupAction
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.regzaremote.core.AppAction
 
 /**
  * 設定 (state と操作は SettingsViewModel の SettingsState・SettingsAction)。
@@ -365,4 +367,10 @@ private fun FormTextField(
         ),
         modifier = modifier.fillMaxWidth(),
     )
+}
+
+@Preview(name = "設定")
+@Composable
+private fun SettingsScreenPreview() = SamplePreview(setUp = { it(AppAction.showSettings()) }) { app, send ->
+    rememberState(app) { app.settingsStates() }?.let { SettingsScreen(it, send) }
 }

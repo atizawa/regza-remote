@@ -43,6 +43,7 @@ import com.example.regzaremote.core.ReservationListState
 import com.example.regzaremote.core.ReservationItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import androidx.compose.ui.tooling.preview.Preview
 
 /**
  * テレビの録画予約の一覧 (state と操作は ReservationListViewModel の ReservationListState・ReservationListAction)。
@@ -180,4 +181,10 @@ private fun ReservationRow(item: ReservationItem) {
         }
         item.channelName.orElse(null)?.let { Note(it) }
     }
+}
+
+@Preview(name = "録画予約")
+@Composable
+private fun ReservationsScreenPreview() = SamplePreview(setUp = { it(ReservationListAction.load()) }) { app, send ->
+    rememberState(app) { app.reservationListStates() }?.let { ReservationsScreen(it, send) }
 }

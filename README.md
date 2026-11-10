@@ -43,6 +43,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
 - 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
+- Android の画面のプレビューは、それぞれの画面のファイルの末尾に置く（準備は `SamplePreview.kt`）。見本の返事（`RegzaSample`）で組み立てた共有の ViewModel の state を渡す。state は Swift の値なので、エディタの横のプレビュー（Android Studio が Mac の JVM で描く）では、振る舞いのテストと同じ Mac 向けの Swift のライブラリ（`:behavior-tests:buildJvmHost`。debug のビルドで一緒に作る）を読み込む。「Run Preview」ではエミュレーターでアプリと同じ Android 向けのライブラリを使う。Swift の型は、ライブラリを読み込んだあと（`SamplePreview` の `setUp` と中身）で作る
 - OS だけの機能（iOS の Live Activity・ウィジェット・Siri）も、画面と同じく共有の ViewModel の state を読み、Action を送る。共有の部分は「何を出すか」を state に入れるだけで、OS ごとの口（protocol）は持たない
   - iOS は、アプリのプロセスに `AppViewModel` を 1 つだけ置き（`RegzaAppContainer`）、画面・Live Activity・ボタン・Siri・閉じている間の更新が同じものを使う。画面のない入口は、操作を送って終わるまで待ち（`sendAndWait`）、state を見て結果を返す
   - Live Activity は `RemoteViewModel.state` の変わり目を見て表示を更新し、番組の終了時刻が変われば起こしてもらう時刻を予約し直す
