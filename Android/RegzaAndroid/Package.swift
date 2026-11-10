@@ -37,7 +37,7 @@ let package = Package(
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        // 画面の状態と操作の型 (RegzaPresentation の ChannelListState など) の Java のつなぎ。
+        // 画面の状態と操作の型 (RegzaPresentation の State/・Action/ に置いた型) の Java のつなぎ。
         // iOS と共有のパッケージにはプラグインをかけられないので、mise run build-swift が swift-java のツールで Generated/ に作る
         // (設定は RegzaPresentation.swift-java.config。Java にする型だけを並べる)
         .target(

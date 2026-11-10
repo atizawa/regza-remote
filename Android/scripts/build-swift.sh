@@ -120,7 +120,7 @@ bridge_generated=RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated
 extract_module RegzaSharedModels ../Packages/RegzaCore/Sources/RegzaSharedModels \
   RegzaAndroid/Sources/RegzaSharedJava/Generated "$shared_java"
 
-# 画面の状態と操作の型 (RegzaPresentation の ChannelListState など)。ViewModel は Java にできない (MainActor) ので、
+# 画面の状態と操作の型 (RegzaPresentation の State/・Action/ に置いた型)。ViewModel は Java にできない (MainActor) ので、
 # 画面ごとのフォルダの State/ と Action/ に置いた型だけを Java のクラスにする。
 # 絞り込みは入力のフォルダからのパスで比べるので、入力は絶対パスで渡す (相対パスだと、どのファイルも外れる)
 extract_module RegzaPresentation "$(cd ../Packages/RegzaCore/Sources/RegzaPresentation && pwd)" \

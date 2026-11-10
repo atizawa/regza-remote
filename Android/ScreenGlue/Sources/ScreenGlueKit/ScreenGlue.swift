@@ -5,15 +5,15 @@ import Foundation
 /// - RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift
 ///   画面の Action (ViewModel のファイルに「typealias Action = 型」と書いた型) ごとに、窓口 (RegzaAndroidApp) の送る関数を作る。
 ///   送り先は、その型を Action にしている ViewModel。swift-java は同じ名前の関数を並べられないので、
-///   名前は型ごとに変える (sendChannelListAction など)。
-///   ほかの Action の中で使う部品の操作 (SettingsAction.tv の TVSetupAction など) は Java のクラスにするだけで、送る関数は作らない
+///   名前は型ごとに変える (send<Action の型>)。
+///   ほかの Action の case の値に使う部品の操作は Java のクラスにするだけで、送る関数は作らない
 ///   (1 つの画面には 1 つの Action で送る)。どちらでもない型が Action/ にあれば止める。
-///   あわせて画面の ViewModel (「typealias State = 型」) ごとに、state を返す関数 (channelListState(route:)) と、
-///   変わるまで待って返す関数 (nextChannelListState(route:after:waitID:)) を作る。
+///   あわせて画面の ViewModel (「typealias State = 型」) ごとに、state を返す関数 (<State の型 (先頭は小文字)>(route:)) と、
+///   変わるまで待って返す関数 (next<State の型>(route:after:waitID:)) を作る。
 ///   Kotlin の Flow が終わったら waitID を endStateWait に渡し、待っている Swift の Task も終わらせる
 /// - .build/swift/screen-glue-kotlin/ScreenGlue.kt
 ///   画面が受け取る送り先 (Send)。どの操作も send(...) で送れるよう型ごとの invoke を並べ、Swift の窓口に送る AppSend も作る。
-///   state は型ごとに Flow にする (channelListStates(route))。ビルドのたびに作るので保存しない
+///   state は型ごとに Flow にする (<State の型 (先頭は小文字)>s(route))。ビルドのたびに作るので保存しない
 /// - swift-java の設定の、ほかのモジュールの型の一覧 (importedModuleStubs の行)
 ///   RegzaPresentation.swift-java.config と RegzaAndroidBridge.swift-java.config の "RegzaSharedModels" の行に
 ///   RegzaSharedModels の型を、RegzaAndroidBridge.swift-java.config の "RegzaPresentation" の行に State/ と Action/ の型を書く
@@ -145,7 +145,7 @@ public struct ScreenGlue {
             """
     }
 
-    /// state を返す関数の名前 (ChannelListState → channelListState)
+    /// state を返す関数の名前 (State の型の先頭を小文字にしたもの)
     static func stateFunction(_ state: String) -> String {
         state.prefix(1).lowercased() + state.dropFirst()
     }

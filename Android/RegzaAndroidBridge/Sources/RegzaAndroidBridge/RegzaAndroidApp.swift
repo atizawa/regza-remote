@@ -8,13 +8,13 @@ import RegzaApp
 // Mac の swift test で確かめられる。
 //
 // 画面の状態と操作は iOS と同じ共有の ViewModel (AppViewModel とその下の画面の ViewModel) が持ち、
-// state と操作の型 (ChannelListState・ChannelListAction など) もそのまま渡す。ViewModel は MainActor で動き、
+// 画面ごとの state と操作の型 (State/・Action/ に置いた型) もそのまま渡す。ViewModel は MainActor で動き、
 // swift-java は MainActor の同期の関数を Java に出せないので、ここに窓口を置く。窓口の関数は
 // Android/ScreenGlue の screen-glue が型ごとに作る (Generated/):
-//   - channelListState(route:) / nextChannelListState(route:after:waitID:) など: ViewModel の state を返す。
+//   - <State の型 (先頭は小文字)>(route:) / next<State の型>(route:after:waitID:): ViewModel の state を返す。
 //     next は渡した state から変わるまで待つ (async なので Java の Future になる)。Flow が終わったら
 //     endStateWait で Swift の待機も終える。画面ごとに別々に待つので、2 秒ごとのリモコンの取り直しで番組表を渡し直すことはない
-//   - sendAppAction(_:)・sendChannelListAction(_:) など: 操作を送る (MainActor に順に積むだけで、すぐ返る)
+//   - send<Action の型>(_:): 操作を送る (MainActor に順に積むだけで、すぐ返る)
 
 /// アプリ全体の窓口。アプリに 1 つ作り、ViewModel の state を読んで操作を送る
 public final class RegzaAndroidApp {
@@ -113,7 +113,7 @@ public final class RegzaAndroidApp {
 
     // MARK: 操作
 
-    /// 操作 (AppAction・ChannelListAction など) を、AppViewModel と開いている画面の ViewModel に手前から渡してみて、受け取ったところで止める
+    /// 操作を、AppViewModel と開いている画面の ViewModel に手前から渡してみて、受け取ったところで止める
     @MainActor func route(_ deliver: (AnyObject) -> Bool) {
         for viewModel in viewModels {
             if deliver(viewModel) { return }

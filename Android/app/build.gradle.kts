@@ -55,7 +55,7 @@ android {
         "../.build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java",
         // iOS と共有の型 (RegzaKey・ProgramItem など) の Java のクラス
         "../.build/swift/regzashared-java",
-        // 画面の状態と操作の型 (ChannelListState など) の Java のクラス
+        // 画面の状態と操作の型 (RegzaPresentation の State/・Action/ に置いた型) の Java のクラス
         "../.build/swift/regzapresentation-java",
         // 窓口 (RegzaAndroidApp と、その状態・操作の型) の Java のクラス
         "../.build/swift/regzabridge-java",

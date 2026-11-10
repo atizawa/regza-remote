@@ -19,7 +19,7 @@ struct TypeStub: Equatable {
     /// raw value が String の enum (swift-java に、そのことも書く)
     var isStringEnum: Bool
 
-    /// 設定に書く形 ("public enum RegzaKey: String {}")
+    /// 設定に書く形 ("public enum <名前>: String {}" など)
     var text: String { "public \(kind) \(name)\(isStringEnum ? ": String" : "") {}" }
 }
 
@@ -170,7 +170,7 @@ struct SwiftFile {
         Conformances(file: self).names.contains(protocolName)
     }
 
-    /// enum の case の値に、その型を使っている (SettingsAction の case tv(TVSetupAction) など)
+    /// enum の case の値に、その型を使っている (部品の操作を、画面の Action の case に入れている)
     func usesAsAssociatedValue(_ type: String) -> Bool {
         AssociatedValues(file: self).types.contains(type)
     }
