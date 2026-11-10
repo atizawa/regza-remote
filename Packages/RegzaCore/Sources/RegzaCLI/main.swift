@@ -34,7 +34,7 @@ func main() async {
                 try options.fixture.map { try SampleFixture(json: String(contentsOfFile: $0, encoding: .utf8)) } ?? SampleFixture()
             transport = SampleTransport(fixture: fixture)
         } catch {
-            print(IntrospectionSession.failure("fixture を読めません: \(error)"))
+            output(IntrospectionSession.failure("fixture を読めません: \(error)"))
             return
         }
     } else {
@@ -50,18 +50,29 @@ func main() async {
         _ = await session.introspector.waitUntilIdle()
     }
 
-    print(#"{"ready":true}"#)
-    // パイプにつないで動かす (振る舞いのテストなど) ときも、すぐ相手に届くようにする
-    fflush(stdout)
-    do {
-        for try await line in FileHandle.standardInput.bytes.lines {
-            guard let command = IntrospectionSession.parse(line) else { continue }
-            if command == .quit { break }
-            print(await session.run(command))
-            fflush(stdout)
+    output(#"{"ready":true}"#)
+    for await line in inputLines() {
+        guard let command = IntrospectionSession.parse(line) else { continue }
+        if command == .quit { break }
+        output(await session.run(command))
+    }
+}
+
+/// 1 行書く。パイプにつないで動かす (振る舞いのテストなど) ときも、ためずにすぐ相手に届ける
+func output(_ text: String) {
+    FileHandle.standardOutput.write(Data((text + "\n").utf8))
+}
+
+/// 標準入力の行。読むのは別のスレッドで待つので、待っている間も MainActor の処理 (定期の取得など) は進む
+/// (Linux の Foundation には FileHandle.bytes がないので、readLine で読む)
+func inputLines() -> AsyncStream<String> {
+    AsyncStream { continuation in
+        Thread.detachNewThread {
+            while let line = readLine() {
+                continuation.yield(line)
+            }
+            continuation.finish()
         }
-    } catch {
-        print(IntrospectionSession.failure("\(error)"))
     }
 }
 

@@ -130,11 +130,20 @@ private enum StateWait {
 }
 
 /// MainActor で動かして結果を返す。アプリはメインスレッドから呼ぶのでそのまま動かし、
-/// JVM で動かすテストのようにほかのスレッドから呼ばれたときは、メインスレッドで動き終わるのを待つ
+/// JVM で動かすテストのようにほかのスレッドから呼ばれたときは、メインのキューで動き終わるのを待つ
 func onMainActor<Value>(_ body: @MainActor () -> Value) -> Value {
-    if Thread.isMainThread { return MainActor.assumeIsolated(body) }
+    // MainActor の処理はメインのキューで動く。Linux では、メインのキューがメインスレッド以外で動くこともあるので、
+    // スレッドではなくキューで見分ける (メインのキューの上で main.sync を呼ぶと、libdispatch が止める)
+    if Thread.isMainThread || DispatchQueue.getSpecific(key: mainQueueKey) == true { return MainActor.assumeIsolated(body) }
     return DispatchQueue.main.sync { MainActor.assumeIsolated(body) }
 }
+
+/// メインのキューの上で動いているかを見分ける印
+private let mainQueueKey: DispatchSpecificKey<Bool> = {
+    let key = DispatchSpecificKey<Bool>()
+    DispatchQueue.main.setSpecific(key: key, value: true)
+    return key
+}()
 
 /// URL を文字列にする (ライブ視聴の LivePlayerPhase.ready の URL を ExoPlayer に渡す)。
 /// swift-java は enum の値にしか使っていない型の Java のクラスを作らないので、ここで URL を使って作らせる役目もある
