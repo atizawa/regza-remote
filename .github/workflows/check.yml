@@ -1,5 +1,7 @@
 # main への push と pull request で、手元の mise run check と同じものを流す。
-# どのジョブも、ルートの mise.toml のタスクを呼ぶだけにする (手元と CI で、同じ手順を使う)
+# どのジョブも、ルートの mise.toml のタスクを呼ぶだけにする (手元と CI で、同じ手順を使う)。
+# Apple の環境がなくても流せるもの (書き方・共有の部分のテスト) は Linux で流し、
+# Xcode や、Mac 向けのライブラリが要るもの (iOS のビルド・Android のビルド・振る舞いのテスト) だけを macOS で流す
 name: check
 
 on:
@@ -15,33 +17,52 @@ concurrency:
 env:
   # リポジトリの mise.toml を、確認なしで信頼する (CI では人が答えられない)
   MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
-  # 使う Xcode
-  DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
 
 jobs:
   # Swift と Kotlin の書き方 (swift-format と ktlint)
   lint:
-    runs-on: xcode-27
+    runs-on: ubuntu-24.04
+    # Swift は Android/mise.toml の vars.swift と同じ版
+    container: swift:6.4.2-noble
     timeout-minutes: 15
     steps:
+      - name: ktlint を動かす Java と、mise を入れるための curl を入れる
+        run: apt-get update -qq && apt-get install -y -qq curl openjdk-21-jre-headless
       - uses: actions/checkout@v7
+      # コンテナの中ではリポジトリの持ち主が違うので、Git に読んでよいと伝える (git ls-files で対象のファイルを選ぶため)
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: jdx/mise-action@v5
       - run: mise run lint
 
-  # Swift のパッケージのテストと、iOS のアプリのビルド
-  swift:
+  # Apple の環境がなくても流せる Swift のパッケージのテスト (Android に近い Linux の Foundation で確かめる)
+  swift-linux:
+    runs-on: ubuntu-24.04
+    container: swift:6.4.2-noble
+    timeout-minutes: 30
+    steps:
+      - run: apt-get update -qq && apt-get install -y -qq curl
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: mise run test-swift-shared
+
+  # Xcode が要るもの: iOS の部品のテストと、iOS のアプリのビルド
+  apple:
     runs-on: xcode-27
     timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v5
-      - run: mise run test-swift
+      - run: mise run test-swift-apple
       - run: mise run build-ios
 
-  # Android のアプリのビルド (Swift の .so も作る) と、両方の相手に流す振る舞いのテスト
+  # Android のアプリのビルド (Swift の .so と、プレビュー用の Mac 向けのライブラリも作る) と、両方の相手に流す振る舞いのテスト
   android:
     runs-on: xcode-27
     timeout-minutes: 75
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
       # Android/mise.toml の道具 (swift.org の Swift・JDK・Android CLI) と、ルートの道具を入れる

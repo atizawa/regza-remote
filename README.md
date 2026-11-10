@@ -163,7 +163,9 @@ mise run check                             # 全部を順に確かめる (CI と
 
 ```sh
 mise run lint                              # Swift と Kotlin のコードの書き方 (swift-format と ktlint。直すときは mise run format)
-mise run test-swift                        # Swift のパッケージのテスト (RegzaCore・RegzaKit・RegzaAndroidBridge・ScreenGlue)
+mise run test-swift                        # Swift のパッケージのテスト (test-swift-shared と test-swift-apple)
+mise run test-swift-shared                 #   Apple の環境がなくても流せるもの (RegzaCore・RegzaAndroidBridge・ScreenGlue。Linux でも流せる)
+mise run test-swift-apple                  #   Xcode が要るもの (RegzaKit)
 mise run build-ios                         # iOS のアプリとウィジェットのビルド
 mise run build-android                     # Android のアプリのビルド (debug・release・端末のテスト。release は APK の中身も確かめる)
 mise run test-behavior                     # 振る舞いのテスト (iOS 側と Android 側)
@@ -171,7 +173,7 @@ mise run test-behavior                     # 振る舞いのテスト (iOS 側�
 
 エミュレーターや実機が要るもの（`cd Android && ./gradlew :app:connectedDebugAndroidTest`）は、`check` には入れていない。
 
-GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が同じタスクを流す。macOS の機械で、書き方・Swift と iOS・Android と振る舞いのテストの 3 つのジョブに分けて、同時に流す。
+GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が同じタスクを流す。Apple の環境がなくても流せるもの（書き方と `test-swift-shared`）は Linux の機械（Swift の公式のコンテナ）で、Xcode や Mac 向けのライブラリが要るもの（`test-swift-apple`・`build-ios`・`build-android`・`test-behavior`）だけを macOS の機械で、ジョブに分けて同時に流す。Linux で共有の部分のテストを流すと、Android に近い Foundation（swift-corelibs-foundation）でも確かめられる
 
 画面を足したら、`BehaviorTests/tests/` にもその画面の振る舞いのテストを足す（操作を送り、state が期待どおりになるまで待つ）。
 

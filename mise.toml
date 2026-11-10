@@ -29,15 +29,25 @@ git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint 
 '''
 
 [tasks.test-swift]
-description = "Swift のパッケージのテストを流す (共有の部分・iOS の部品・Android の窓口・つなぎを作る道具)"
+description = "Swift のパッケージのテストを全部流す (test-swift-shared と test-swift-apple)"
+dir = "{{ config_root }}"
+run = "mise run test-swift-shared && mise run test-swift-apple"
+
+[tasks.test-swift-shared]
+description = "Apple の環境がなくても流せる Swift のパッケージのテスト (共有の部分・Android の窓口・つなぎを作る道具)。Linux でも流す"
 dir = "{{ config_root }}"
 run = '''
 set -euo pipefail
-for package in Packages/RegzaCore iOS/RegzaKit Android/RegzaAndroidBridge Android/ScreenGlue; do
+for package in Packages/RegzaCore Android/RegzaAndroidBridge Android/ScreenGlue; do
   echo "== $package"
   (cd "$package" && swift test)
 done
 '''
+
+[tasks.test-swift-apple]
+description = "Apple の環境 (Xcode) が要る Swift のパッケージのテスト (iOS の部品)"
+dir = "{{ config_root }}/iOS/RegzaKit"
+run = "swift test"
 
 [tasks.build-ios]
 description = "iOS のアプリとウィジェットをシミュレーター向けにビルドする (署名はしない)"
