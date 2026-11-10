@@ -1,0 +1,21 @@
+# リポジトリ全体で使うタスクだけを置く (Swift の版はここでは決めない。iOS は Xcode の Swift、Android は Android/mise.toml の Swift を使う)
+#
+#   mise run lint     # Swift のコードの書き方を確かめる (swift-format。設定は .swift-format)
+#   mise run format   # Swift のコードの書き方を直す
+
+[tasks.lint]
+description = "Swift のコードの書き方を swift-format で確かめる (直すべきところがあれば止まる)"
+dir = "{{ config_root }}"
+run = '''
+set -euo pipefail
+# 道具が作るファイル (Generated/) は対象にしない。.build/ などの Git に入れないものは、Git の一覧に出ないので外れる
+git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format lint --strict --parallel
+'''
+
+[tasks.format]
+description = "Swift のコードの書き方を swift-format で直す"
+dir = "{{ config_root }}"
+run = '''
+set -euo pipefail
+git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format --in-place --parallel
+'''

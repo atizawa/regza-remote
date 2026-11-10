@@ -39,6 +39,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   mise.toml                   Swift 6.4.2 のツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
 ```
 
+- Swift のコードの書き方は swift-format（Swift のツールチェーンに入っている Apple の道具）でそろえる。設定は `.swift-format`（行の長さ 140・インデントは空白 4 つ・`#if` の中は下げない、ほかは既定の決まり）。`mise run lint` で確かめ、`mise run format` で直す。道具が作るファイル（`Generated/`）は対象にしない。ルートの `mise.toml` にはタスクだけを置き、Swift の版は決めない（初めてのときは `mise trust` が要る）
 - Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装している（Android の FoundationNetworking でも同じコードで動かすため）
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
@@ -153,6 +154,7 @@ rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it,
 ### 5. 確かめる
 
 ```sh
+mise run lint                              # Swift のコードの書き方 (swift-format。直すときは mise run format)
 cd Packages/RegzaCore && swift test
 cd iOS/RegzaKit && swift test               # 画面の名前と、画面・Live Activity が使うモジュール
 cd Android/RegzaAndroidBridge && swift test
