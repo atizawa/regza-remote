@@ -143,14 +143,14 @@ protocols=$(sed -En 's/^public protocol ([A-Za-z0-9_]+).*/\1/p' RegzaAndroidBrid
 if [ -n "$protocols" ]; then
   find "$bridge_java" -name '*.java' > "$callbacks/sources.txt"
   javac @"$callbacks/sources.txt" -d "$callbacks/classes" -parameters \
-    -sourcepath "$shared_java:$presentation_java:".build/swift/checkouts/swift-java/SwiftKitCore/src/main/java
+    -sourcepath "$shared_java:$presentation_java:".build/swift-tool/checkouts/swift-java/SwiftKitCore/src/main/java
   classes=$(for protocol in $protocols; do printf '"com.example.regzaremote.core.%s":"Java%s",' "$protocol" "$protocol"; done)
   echo '{"classes":{'"${classes%,}"'}}' > "$callbacks/swift-java.config"
   # Optional などの Java の標準の型は、swift-java の SwiftJava モジュールにある包みを使う
   log=$(.build/swift-tool/out/Products/Release/swift-java wrap-java --swift-module RegzaAndroidBridgeJava \
     --output-directory "$bridge_generated" --config "$callbacks/swift-java.config" --cp "$callbacks/classes" \
     --single-swift-file-output JavaCallbacks.swift \
-    --depends-on SwiftJava="$PWD/.build/swift/checkouts/swift-java/Sources/SwiftJava/swift-java.config" 2>&1) || { echo "$log" >&2; exit 1; }
+    --depends-on SwiftJava="$PWD/.build/swift-tool/checkouts/swift-java/Sources/SwiftJava/swift-java.config" 2>&1) || { echo "$log" >&2; exit 1; }
 fi
 
 # Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)。
