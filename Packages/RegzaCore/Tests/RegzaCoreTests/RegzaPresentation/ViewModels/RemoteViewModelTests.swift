@@ -19,8 +19,6 @@ import Testing
         let (model, transport, _) = makeModel { request in
             request.url.path.hasSuffix("channel_list") ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
         }
-        let observer = RecordingObserver()
-        model.observer = observer
         try await model.loadChannels()
         let channel = try #require(model.channels.last)
 
@@ -33,20 +31,51 @@ import Testing
         #expect(model.lastError == nil)
         #expect(model.state.tapCount == 1)
         #expect(transport.paths.last == "/v2/remote/status/channel")
-        #expect(observer.events == ["update \(channel.code) connected", "tune"])
+        #expect(model.state.isConnected)
+        #expect(model.state.lastCommandLabel == nil)
+    }
+
+    @Test func pressingKeyShowsItUntilTuning() async throws {
+        let (model, _, _) = makeModel { request in
+            request.url.path.hasSuffix("channel_list") ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
+        }
+        // 画面のない入口 (Siri など) は、送った操作が終わるまで待てる
+        await model.sendAndWait(.press(.volumeUp))
+        #expect(!model.isBusy)
+        #expect(model.state.lastCommandLabel == RegzaKey.volumeUp.label)
+
+        try await model.loadChannels()
+        try await model.tune(to: try #require(model.channels.first))
+        #expect(model.state.lastCommandLabel == nil)
     }
 
     @Test func refreshFailureKeepsError() async {
         let (model, _, _) = makeModel { _ in HTTPResponse(statusCode: 500, headers: [:], body: Data()) }
-        let observer = RecordingObserver()
-        model.observer = observer
-
         await model.refresh()
 
         #expect(model.lastError == .httpStatus(500))
         #expect(model.state.errorMessage == RegzaError.httpStatus(500).localizedDescription)
         #expect(model.state.nowPlaying == nil)
-        #expect(observer.events == ["update - disconnected"])
+        #expect(!model.state.isConnected)
+    }
+
+    @Test func refreshFailureKeepsWhatWasShowingAsDisconnected() async throws {
+        final class Failing: @unchecked Sendable { var value = false }
+        let failing = Failing()
+        let (model, _, _) = makeModel { request in
+            if failing.value { return HTTPResponse(statusCode: 500, headers: [:], body: Data()) }
+            return request.url.path.hasSuffix("channel_list") ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
+        }
+        try await model.loadChannels()
+        let channel = try #require(model.channels.first)
+        try await model.tune(to: channel)
+
+        failing.value = true
+        await model.refresh()
+
+        // 一時的な失敗で番組情報が消えないよう、直前のものを残し、つながっていないことだけを出す (ロック画面も同じ state を読む)
+        #expect(model.state.nowPlaying?.channelCode == channel.code)
+        #expect(!model.state.isConnected)
     }
 
     @Test func savingAnotherTVForgetsWhatWasLoaded() async throws {

@@ -13,12 +13,16 @@ describeOnBothPlatforms("リモコン", (app) => {
     await app().do("app/remote", "startPolling");
     const remote = await app().precondition("app/remote", (node) => node.state.nowPlaying !== null);
     expect(remote.state.nowPlaying.title).toBe("見本の番組");
+    // ロック画面 (iOS の Live Activity) も同じ state を読む
+    expect(remote.state.isConnected).toBe(true);
     await app().do("app/remote", "stopPolling");
   });
 
   test("キーを押すと、押した回数が増える", async () => {
     const before = (await app().ls("app/remote")).state.tapCount;
-    await app().do("app/remote", "press", { key: "power" }, (node) => node.state.tapCount > before);
+    const remote = await app().do("app/remote", "press", { key: "power" }, (node) => node.state.tapCount > before && !node.isBusy);
+    // 直前に押したボタン (ロック画面に出す)
+    expect(remote!.state.lastCommandLabel).toBe("電源");
   });
 
   test("テレビとのやり取りの外で起きたエラーを知らせると、説明を出す", async () => {

@@ -57,6 +57,17 @@ extension IntrospectableActions {
     }
 }
 
+extension IntrospectableActions {
+    /// 操作を送り、それで始まった処理 (テレビとのやり取りなど) が終わるまで待つ。
+    /// 画面のない入口 (iOS の Siri やロック画面のボタン) が、終わってから結果 (state) を見るのに使う
+    public func sendAndWait(_ action: Action) async {
+        send(action)
+        while isBusy {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+}
+
 /// 同じ種類の ViewModel がいくつも開いているとき (タブごとの戻る道など) に、道の名前を変えて見せる
 @MainActor
 final class IntrospectionAlias: Introspectable {

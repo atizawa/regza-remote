@@ -1,6 +1,6 @@
 #if os(iOS)
 import RegzaPresentation
-import RegzaLiveActivity
+import RegzaDesign
 import SwiftUI
 
 /// 画面全体で使う余白・大きさ。値はこの 3 段階だけにそろえる

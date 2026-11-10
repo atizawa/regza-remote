@@ -8,7 +8,7 @@
 extension AppViewModel {
     /// 本物のテレビと録画サーバーにつなぐ、アプリ全体の ViewModel を作る
     /// - Parameters:
-    ///   - remote: テレビのリモコン。iOS は Live Activity のボタン (App Intents) と同じものを渡す。渡さなければ作る
+    ///   - remote: テレビのリモコン。番組表を補う Mirakurun を短い待ち時間で渡すときなどに使う。渡さなければ作る
     ///   - transport: 録画サーバーとの通信 (テストや見本の返事に差し替える)
     public convenience init(
         store: any RegzaConnectionStore,
@@ -33,4 +33,10 @@ extension AppViewModel {
             setup: SetupUseCase(devices: NetworkDeviceRepository(transport: transport), guide: guide, stream: stream)
         )
     }
+}
+
+extension RemoteViewModel {
+    /// テレビに登録されているチャンネル (Domain の型)。画面のない入口 (iOS の Siri) が、チャンネルの名前から選ぶのに使う。
+    /// 取得前は空なので、先に loadChannels を送って待つ
+    public var registeredChannels: [RegzaChannel] { channels }
 }

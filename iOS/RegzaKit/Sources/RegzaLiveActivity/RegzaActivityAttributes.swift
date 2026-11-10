@@ -1,12 +1,17 @@
 #if os(iOS)
 import ActivityKit
 import Foundation
-import RegzaApp
+import RegzaPresentation
 
 public struct RegzaActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable, Sendable {
+        /// いま映っているものの種類 (NowPlayingKind と同じ値。Live Activity に保存するので Codable にする)
+        public enum Kind: String, Codable, Sendable {
+            case broadcast, recorded, external, standby, unknown
+        }
+
         /// 古いバージョンで開始した Live Activity も読めるよう optional にしている
-        public var kind: RegzaNowPlaying.Kind?
+        public var kind: Kind?
         public var channelName: String
         public var title: String
         public var chapterName: String
@@ -30,8 +35,11 @@ public struct RegzaActivityAttributes: ActivityAttributes {
         public var lastCommand: String?
         public var isConnected: Bool
 
-        public init(nowPlaying: RegzaNowPlaying?, lastCommand: RegzaKey?, isConnected: Bool) {
-            kind = nowPlaying?.kind
+        /// リモコンの state (画面と同じもの) から作る
+        public init(_ remote: RemoteState) {
+            let nowPlaying = remote.nowPlaying
+            let isConnected = remote.isConnected
+            kind = nowPlaying.flatMap { Kind(rawValue: $0.kind.rawValue) }
             channelName = nowPlaying?.channelName ?? ""
             title = nowPlaying?.title ?? ""
             chapterName = nowPlaying?.chapterName ?? ""
@@ -45,7 +53,7 @@ public struct RegzaActivityAttributes: ActivityAttributes {
             nextTitle = nowPlaying?.nextTitle
             genre = nowPlaying?.genre
             shortChannel = nowPlaying?.shortChannel
-            self.lastCommand = lastCommand?.label
+            lastCommand = remote.lastCommandLabel
             self.isConnected = isConnected
         }
 

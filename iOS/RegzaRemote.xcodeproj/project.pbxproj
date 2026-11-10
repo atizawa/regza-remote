@@ -10,7 +10,11 @@
 		AA0000000000000000000030 /* RegzaRemoteWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000005 /* RegzaRemoteWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		AA0000000000000000000060 /* RegzaRemoteUI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000070 /* RegzaRemoteUI */; };
 		AA0000000000000000000061 /* RegzaLiveActivity in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000071 /* RegzaLiveActivity */; };
-		AA0000000000000000000062 /* RegzaLiveActivity in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000072 /* RegzaLiveActivity */; };
+		AA0000000000000000000062 /* RegzaWidgets in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000072 /* RegzaWidgets */; };
+		AA0000000000000000000063 /* RegzaRemoteIntents in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000073 /* RegzaRemoteIntents */; };
+		AA0000000000000000000064 /* RegzaSiriIntents in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000074 /* RegzaSiriIntents */; };
+		AA0000000000000000000065 /* RegzaAppContainer in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000075 /* RegzaAppContainer */; };
+		AA0000000000000000000066 /* RegzaRemoteIntents in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000076 /* RegzaRemoteIntents */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +68,9 @@
 			files = (
 				AA0000000000000000000060 /* RegzaRemoteUI in Frameworks */,
 				AA0000000000000000000061 /* RegzaLiveActivity in Frameworks */,
+				AA0000000000000000000063 /* RegzaRemoteIntents in Frameworks */,
+				AA0000000000000000000064 /* RegzaSiriIntents in Frameworks */,
+				AA0000000000000000000065 /* RegzaAppContainer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,7 +78,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA0000000000000000000062 /* RegzaLiveActivity in Frameworks */,
+				AA0000000000000000000062 /* RegzaWidgets in Frameworks */,
+				AA0000000000000000000066 /* RegzaRemoteIntents in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,6 +130,9 @@
 			packageProductDependencies = (
 				AA0000000000000000000070 /* RegzaRemoteUI */,
 				AA0000000000000000000071 /* RegzaLiveActivity */,
+				AA0000000000000000000073 /* RegzaRemoteIntents */,
+				AA0000000000000000000074 /* RegzaSiriIntents */,
+				AA0000000000000000000075 /* RegzaAppContainer */,
 			);
 			productName = RegzaRemote;
 			productReference = AA0000000000000000000004 /* RegzaRemote.app */;
@@ -144,7 +155,8 @@
 			);
 			name = RegzaRemoteWidget;
 			packageProductDependencies = (
-				AA0000000000000000000072 /* RegzaLiveActivity */,
+				AA0000000000000000000072 /* RegzaWidgets */,
+				AA0000000000000000000076 /* RegzaRemoteIntents */,
 			);
 			productName = RegzaRemoteWidget;
 			productReference = AA0000000000000000000005 /* RegzaRemoteWidget.appex */;
@@ -434,10 +446,30 @@
 			package = AA0000000000000000000080 /* XCLocalSwiftPackageReference "RegzaKit" */;
 			productName = RegzaLiveActivity;
 		};
-		AA0000000000000000000072 /* RegzaLiveActivity */ = {
+		AA0000000000000000000072 /* RegzaWidgets */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AA0000000000000000000080 /* XCLocalSwiftPackageReference "RegzaKit" */;
-			productName = RegzaLiveActivity;
+			productName = RegzaWidgets;
+		};
+		AA0000000000000000000073 /* RegzaRemoteIntents */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000080 /* XCLocalSwiftPackageReference "RegzaKit" */;
+			productName = RegzaRemoteIntents;
+		};
+		AA0000000000000000000074 /* RegzaSiriIntents */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000080 /* XCLocalSwiftPackageReference "RegzaKit" */;
+			productName = RegzaSiriIntents;
+		};
+		AA0000000000000000000075 /* RegzaAppContainer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000080 /* XCLocalSwiftPackageReference "RegzaKit" */;
+			productName = RegzaAppContainer;
+		};
+		AA0000000000000000000076 /* RegzaRemoteIntents */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000080 /* XCLocalSwiftPackageReference "RegzaKit" */;
+			productName = RegzaRemoteIntents;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

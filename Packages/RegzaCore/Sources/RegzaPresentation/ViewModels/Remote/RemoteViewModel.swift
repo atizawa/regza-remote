@@ -2,27 +2,15 @@ public import Foundation
 public import Observation
 package import RegzaDomain
 
-/// OS ごとの後処理 (iOS は Live Activity とバックグラウンドの更新)。RemoteViewModel がテレビとやり取りしたあとに呼ぶ。
-/// Domain の型を受け取るので、画面ではなく組み立て (RegzaApp) から登録する
-@MainActor
-package protocol RemoteViewModelObserver: AnyObject {
-    /// いま映っているものが変わった。`isConnected` は、テレビから取り直せたか
-    /// (取り直せなかったときは、直前に出していたものを渡す)
-    func remoteViewModel(_ model: RemoteViewModel, didUpdate nowPlaying: RegzaNowPlaying?, isConnected: Bool) async
-    /// 選局した (番組の終了時刻が変わる)
-    func remoteViewModelDidTune(_ model: RemoteViewModel) async
-}
-
 /// アプリ全体で 1 つの ViewModel。
 /// テレビへの接続・いま映っているもの・リモコンの操作・チャンネルと選局を受け持つ。
-/// 画面は `state` を読み、`send` で操作する。番組表や録画などのほかの ViewModel は、結果を待てる関数 (internal) も使う
+/// 画面は `state` を読み、`send` で操作する。OS ごとの機能 (iOS の Live Activity など) も、画面と同じく state を読む。
+/// 番組表や録画などのほかの ViewModel は、結果を待てる関数 (internal) も使う
 @MainActor
 @Observable
 public final class RemoteViewModel {
     /// テレビの操作。接続とチャンネルは、この先の Repository が持つ
     package let tv: any TVUseCaseProtocol
-    /// 後処理。組み立て (RegzaApp) が、OS ごとの後処理につなぐ入れ物を入れる
-    @ObservationIgnored package var observer: (any RemoteViewModelObserver)?
 
     /// 画面に出すもの
     public typealias State = RemoteState
@@ -34,6 +22,8 @@ public final class RemoteViewModel {
     /// テレビに接続できなかった理由 (ほかの ViewModel とテストが読む。画面は state.errorMessage を読む)
     package private(set) var lastError: RegzaError?
     private var tapCount = 0
+    private var isConnected: Bool
+    private var lastCommand: RegzaKey?
     private var isSearchingTV = false
     private var selectedBand: BroadcastBand?
 
@@ -42,6 +32,8 @@ public final class RemoteViewModel {
             isConfigured: tv.connection.isConfigured,
             nowPlaying: nowPlaying.map(tv.item),
             errorMessage: lastError?.localizedDescription,
+            isConnected: isConnected,
+            lastCommandLabel: lastCommand?.label,
             tapCount: tapCount,
             isSearchingTV: isSearchingTV,
             isSampleMode: tv.isSample,
@@ -60,6 +52,7 @@ public final class RemoteViewModel {
     package init(tv: any TVUseCaseProtocol, nowPlaying: RegzaNowPlaying? = nil) {
         self.tv = tv
         self.nowPlaying = nowPlaying
+        isConnected = nowPlaying != nil
     }
 
     public func send(_ action: Action) {
@@ -91,6 +84,7 @@ public final class RemoteViewModel {
         run {
             do {
                 try await self.tv.send(key)
+                self.lastCommand = key
                 // テレビ側の状態が変わるのを少し待ってから反映する
                 try? await Task.sleep(for: .milliseconds(400))
                 _ = await self.fetch()
@@ -125,7 +119,6 @@ public final class RemoteViewModel {
         // 切り替えの最中はテレビに問い合わせないので、取り直さずに、選んだチャンネルに切り替わったものとして出す。
         // 番組名などは定期の取得で落ち着いてから反映する
         tuned(try await tv.tune(to: channel))
-        await notifyTuned()
     }
 
     /// いま映っている番組を最初から再生する
@@ -137,17 +130,13 @@ public final class RemoteViewModel {
     func tuneAndStartOver(_ channel: RegzaChannel) async throws(RegzaError) {
         tapCount += 1
         tuned(try await tv.tuneAndStartOver(channel))
-        await notifyTuned()
     }
 
     private func tuned(_ nowPlaying: RegzaNowPlaying?) {
         lastError = nil
+        lastCommand = nil
+        isConnected = true
         self.nowPlaying = nowPlaying
-    }
-
-    private func notifyTuned() async {
-        await observer?.remoteViewModel(self, didUpdate: nowPlaying, isConnected: true)
-        await observer?.remoteViewModelDidTune(self)
     }
 
     // MARK: - 状態の定期取得
@@ -179,18 +168,17 @@ public final class RemoteViewModel {
         }
     }
 
-    /// テレビから取り直し、後処理に知らせる。
-    /// 一時的な失敗で番組情報が消えないよう、失敗したときは直前の情報を「接続できません」として知らせる
+    /// テレビから取り直す。一時的な失敗で番組情報が消えないよう、失敗しても nowPlaying は直前のものを残し、
+    /// isConnected だけを落とす (画面やロック画面は「接続できません」を添えて出す)
     private func fetch() async -> Result<RegzaNowPlaying, RegzaError> {
-        let result: Result<RegzaNowPlaying, RegzaError>
         do {
-            result = .success(try await tv.refresh())
+            let value = try await tv.refresh()
+            isConnected = true
+            return .success(value)
         } catch {
-            result = .failure(error)
+            isConnected = false
+            return .failure(error)
         }
-        let previous = await tv.lastNowPlaying()
-        await observer?.remoteViewModel(self, didUpdate: (try? result.get()) ?? previous, isConnected: (try? result.get()) != nil)
-        return result
     }
 
     /// DHCP などで IP アドレスが変わったテレビを探し、見つかればそのアドレスに切り替える
@@ -208,6 +196,8 @@ public final class RemoteViewModel {
     func save(_ connection: RegzaConnection) async {
         await tv.save(connection)
         nowPlaying = nil
+        isConnected = false
+        lastCommand = nil
         lastSearch = nil
         stopPolling()
         startPolling()

@@ -118,6 +118,10 @@ public final class TVUseCase: TVUseCaseProtocol {
             duration: nowPlaying.duration,
             isAdvancing: nowPlaying.isAdvancing,
             updatedAt: nowPlaying.updatedAt,
+            nextProgramStart: nowPlaying.nextProgramStart,
+            nextProgramDuration: nowPlaying.nextProgramDuration,
+            nextTitle: nowPlaying.nextTitle,
+            shortChannel: nowPlaying.shortChannel,
             captionText: nowPlaying.captionText,
             headlineText: nowPlaying.headlineText,
             statusText: nowPlaying.statusText

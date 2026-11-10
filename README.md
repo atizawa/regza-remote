@@ -22,8 +22,13 @@ Packages/RegzaCore/           iOS と Android で共有する Swift Package（Fo
   RegzaCLI                    ViewModel を動かして確かめる CLI（regza）
 iOS/RegzaKit/                 iOS だけで使う Swift Package（マルチモジュール）
   RegzaRemoteViews            SwiftUI の画面（ViewModel の state を見て send で送るだけ）
-  RegzaRemoteUI               組み立て（RemoteView。見本のデータ・終了時の後片づけなど）
-  RegzaLiveActivity           Live Activity・Dynamic Island の UI と、ボタン用 App Intent
+  RegzaLiveActivity           Live Activity・Dynamic Island の表示と、閉じている間の更新の予約（画面と同じく state を読むだけ）
+  RegzaWidgets                Live Activity・ホーム画面のウィジェット・コントロールセンターの見た目（ウィジェット拡張が使う）
+  RegzaRemoteIntents          ボタン（Live Activity・ウィジェット・コントロールセンター）からキーを送る App Intent
+  RegzaSiriIntents            Siri・ショートカットの App Intent（アプリにだけ登録する）
+  RegzaAppContainer           アプリのプロセスに 1 つだけ置くアプリ全体の ViewModel の組み立て（見本のデータも）
+  RegzaRemoteUI               アプリの入口（RemoteView。終了時の後片づけなど）
+  RegzaDesign                 アプリとウィジェットで共通の色
   RegzaAppleStorage           キーチェーンへの接続情報保存
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
 Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）
@@ -38,6 +43,11 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
 - 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
+- OS だけの機能（iOS の Live Activity・ウィジェット・Siri）も、画面と同じく共有の ViewModel の state を読み、Action を送る。共有の部分は「何を出すか」を state に入れるだけで、OS ごとの口（protocol）は持たない
+  - iOS は、アプリのプロセスに `AppViewModel` を 1 つだけ置き（`RegzaAppContainer`）、画面・Live Activity・ボタン・Siri・閉じている間の更新が同じものを使う。画面のない入口は、操作を送って終わるまで待ち（`sendAndWait`）、state を見て結果を返す
+  - Live Activity は `RemoteViewModel.state` の変わり目を見て表示を更新し、番組の終了時刻が変われば起こしてもらう時刻を予約し直す
+  - ボタンの App Intent（`RegzaKeyIntent`）は `LiveActivityIntent` なので、ウィジェットの拡張から押してもアプリのプロセスで動く。Siri の App Intent はふつうの `AppIntent` で、拡張にも登録すると拡張のプロセスで動くことがあるので、アプリにだけ登録する
+  - 画面と Live Activity が Domain・通信・組み立てを import していないことは `RegzaKitTests` の `LayerTests` が確かめる
 - 接続情報の保存は `RegzaConnectionStore` を OS ごとに実装する。iOS はキーチェーン（`RegzaAppleStorage`）、Android は Kotlin の `AndroidStorage`（SharedPreferences。パスワードは Android Keystore の鍵で暗号化する）を、Swift の保存先 `RegzaAndroidStorage` として差し込む
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）
 

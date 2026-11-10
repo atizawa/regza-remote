@@ -1,6 +1,6 @@
 #if os(iOS)
 import RegzaPresentation
-import RegzaLiveActivity
+import RegzaDesign
 import SwiftUI
 
 /// 1 チャンネルの番組表 (Mirakurun)。放送中の番組から日ごとに並べる

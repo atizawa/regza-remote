@@ -19,6 +19,12 @@ public struct NowPlayingItem: Equatable, Sendable {
     public var isAdvancing: Bool
     /// テレビから取った時刻 (ここから再生位置を進めて出す)
     public var updatedAt: Date
+    /// 放送中の次の番組の開始時刻・長さ (秒)・番組名。番組表から補えたときだけ (ロック画面などで、番組が終わったら次の番組に切り替えて出す)
+    public var nextProgramStart: Date?
+    public var nextProgramDuration: Int
+    public var nextTitle: String
+    /// 狭い場所向けのチャンネルの表記。短くした局名 (`NHK総合`)、収まらなければ番号 (`4ch` `BS181`)
+    public var shortChannel: String
     /// 2 行で出すときの上の小さな行 (局名や「録画」)。なければ nil
     public var captionText: String?
     /// 2 行で出すときの下の大きな行 (番組名や状態)
@@ -29,6 +35,7 @@ public struct NowPlayingItem: Equatable, Sendable {
     public init(
         kind: NowPlayingKind, channelName: String, channelCode: String, title: String, description: String,
         chapterName: String, genre: String, position: Int, duration: Int, isAdvancing: Bool, updatedAt: Date,
+        nextProgramStart: Date?, nextProgramDuration: Int, nextTitle: String, shortChannel: String,
         captionText: String?, headlineText: String, statusText: String?
     ) {
         self.kind = kind
@@ -42,6 +49,10 @@ public struct NowPlayingItem: Equatable, Sendable {
         self.duration = duration
         self.isAdvancing = isAdvancing
         self.updatedAt = updatedAt
+        self.nextProgramStart = nextProgramStart
+        self.nextProgramDuration = nextProgramDuration
+        self.nextTitle = nextTitle
+        self.shortChannel = shortChannel
         self.captionText = captionText
         self.headlineText = headlineText
         self.statusText = statusText

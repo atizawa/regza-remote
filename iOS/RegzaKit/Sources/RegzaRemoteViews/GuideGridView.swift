@@ -1,6 +1,6 @@
 #if os(iOS)
 import RegzaPresentation
-import RegzaLiveActivity
+import RegzaDesign
 import SwiftUI
 
 /// 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる

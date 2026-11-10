@@ -7,7 +7,7 @@ import RegzaDomain
 @Observable
 public final class RegzaTVRepository: TVRepositoryProtocol {
     @ObservationIgnored public let store: any RegzaConnectionStore
-    /// テレビのリモコン。iOS は Live Activity のボタン (App Intents) と同じものを使う
+    /// テレビのリモコン
     @ObservationIgnored public let remote: RegzaRemote
 
     public private(set) var connection: RegzaConnection

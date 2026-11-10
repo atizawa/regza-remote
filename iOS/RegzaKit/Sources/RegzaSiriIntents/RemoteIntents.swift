@@ -2,8 +2,11 @@
 import AppIntents
 import Foundation
 import RegzaApp
+import RegzaAppContainer
+import RegzaLiveActivity
 
-// Siri・ショートカットから使う操作。Live Activity のボタンと同じく RegzaRemoteService でテレビに送る。
+// Siri・ショートカットから使う操作。画面と同じ ViewModel (RegzaAppContainer) に操作を送り、終わるのを待って結果を返す。
+// アプリのプロセスの ViewModel を使うので、アプリにだけ登録する (ウィジェットの拡張機能には登録しない)。
 // 呼びかけの言い方 (AppShortcutsProvider) はアプリのターゲットにある
 
 // MARK: - チャンネル
@@ -58,9 +61,16 @@ public struct ChannelQuery: EntityStringQuery {
             .filter { !$0.isWhitespace && $0 != "・" && $0 != "･" }
     }
 
+    /// テレビに登録されているチャンネル。まだ読んでいなければ読む
+    @MainActor
     static func channels() async throws -> [RegzaChannel] {
-        guard RegzaRemoteService.store.load().isConfigured else { throw RegzaError.notConfigured }
-        return try await RegzaRemoteService.remote.client.channels()
+        let remote = RegzaAppContainer.shared.app.remote
+        guard remote.state.isConfigured else { throw RegzaError.notConfigured }
+        await remote.sendAndWait(.loadChannels(force: false))
+        guard !remote.registeredChannels.isEmpty else {
+            throw RegzaError.network(remote.state.errorMessage ?? "チャンネル一覧を取得できませんでした")
+        }
+        return remote.registeredChannels
     }
 }
 
@@ -78,12 +88,18 @@ public struct TuneChannelIntent: AppIntent {
         Summary("テレビを\(\.$channel)に切り替える")
     }
 
+    @MainActor
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let channels = try await ChannelQuery.channels()
         guard let target = channels.first(where: { $0.code == channel.id }) else {
             throw RegzaError.commandRejected("チャンネルが見つかりません")
         }
-        try await RegzaRemoteService.tune(to: target)
+        // チャンネル一覧の画面と同じ選局 (切り替えられなければ tuneError に説明が入る)
+        let container = RegzaAppContainer.shared
+        let channelList = container.app.channelList
+        await channelList.sendAndWait(.tune(target.code))
+        if let error = channelList.state.tuneError { throw RegzaError.commandRejected(error) }
+        await container.liveActivity.update()
         return .result(dialog: "\(target.name)に切り替えました")
     }
 }
@@ -154,16 +170,22 @@ public struct RemoteCommandIntent: AppIntent {
         Summary("テレビの\(\.$command)を\(\.$count)回押す")
     }
 
+    @MainActor
     public func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard RegzaRemoteService.store.load().isConfigured else { throw RegzaError.notConfigured }
+        let container = RegzaAppContainer.shared
+        let remote = container.app.remote
+        guard remote.state.isConfigured else { throw RegzaError.notConfigured }
         let key = command.key
-        for index in 0..<max(1, count) {
-            if index > 0 { try await Task.sleep(for: .milliseconds(250)) }
-            try await RegzaRemoteService.remote.send(key)
+        for _ in 0..<max(1, count) {
+            // リモコンの画面と同じ操作 (送ったあと、テレビの状態を取り直す)。送れなければ errorMessage に説明が入る
+            await remote.sendAndWait(.press(key))
+            if let error = remote.state.errorMessage { throw RegzaError.commandRejected(error) }
         }
-        // Live Activity にも反映する (映像が切り替わるキーの後は RegzaRemote が問い合わせを待つ)
-        Task { _ = await RegzaRemoteService.refresh() }
+        await container.liveActivity.update()
         return .result(dialog: "\(key.label)を送りました")
     }
 }
+
+/// アプリの AppIntentsPackage から参照して、このモジュールの Intent を登録する (ウィジェットの拡張機能には登録しない)
+public struct RegzaSiriIntents: AppIntentsPackage {}
 #endif

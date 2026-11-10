@@ -1,7 +1,10 @@
 #if os(iOS)
 import ActivityKit
 import AppIntents
-import RegzaApp
+import RegzaDesign
+import RegzaLiveActivity
+import RegzaPresentation
+import RegzaRemoteIntents
 import SwiftUI
 import WidgetKit
 

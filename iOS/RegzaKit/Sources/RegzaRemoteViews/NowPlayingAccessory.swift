@@ -1,6 +1,6 @@
 #if os(iOS)
 import RegzaPresentation
-import RegzaLiveActivity
+import RegzaDesign
 import SwiftUI
 
 /// タブバーの上に出すミニプレーヤー。どのタブでもテレビで映っているものが分かる。

@@ -1,6 +1,6 @@
 #if os(iOS)
 import RegzaPresentation
-import RegzaLiveActivity
+import RegzaDesign
 import SwiftUI
 
 /// テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える

@@ -1,6 +1,6 @@
 #if os(iOS)
 import RegzaPresentation
-import RegzaLiveActivity
+import RegzaDesign
 import SwiftUI
 
 /// 番組を探す画面。番組表のナビゲーションバーの虫眼鏡から開く

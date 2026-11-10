@@ -7,6 +7,10 @@ public struct RemoteState: Equatable, Sendable {
     public var nowPlaying: NowPlayingItem?
     /// テレビに接続できないときの説明。つながっていれば nil
     public var errorMessage: String?
+    /// 最後にテレビから取り直せた。取り直せなかったときも nowPlaying は直前のものを残すので、これで「接続できません」を添える
+    public var isConnected: Bool = false
+    /// 直前に送ったリモコンのボタン (「音量+」など)。選局したあとは nil
+    public var lastCommandLabel: String?
     /// ボタンを押した回数 (触覚フィードバックの合図)
     public var tapCount: Int = 0
     /// つながらないので、IP アドレスが変わっていないかテレビを探している

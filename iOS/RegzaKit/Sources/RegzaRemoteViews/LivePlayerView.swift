@@ -1,7 +1,7 @@
 #if os(iOS)
 import AVKit
 import RegzaPresentation
-import RegzaLiveActivity
+import RegzaDesign
 import SwiftUI
 
 /// EPGStation のライブ配信をアプリで見る画面 (ライブ視聴)。
