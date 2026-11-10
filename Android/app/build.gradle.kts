@@ -20,8 +20,8 @@ android {
         // Swift の .so は arm64 だけ作っている (buildSwift)
         ndk { abiFilters += "arm64-v8a" }
         // エディタの横のプレビュー (Mac の JVM) が読み込む、Mac 向けの Swift のライブラリの場所 (SamplePreview)。
-        // 振る舞いのテストと同じもの (behavior-tests の buildJvmHost が作る)。エディタの中でしか使わない
-        buildConfigField("String", "MAC_SWIFT_LIBRARIES", "\"${rootDir.resolve(".build/jvm-host/libs").path}\"")
+        // 手元のフォルダの場所なので、配るアプリ (release) には入れず、debug のビルドでだけ入れる
+        buildConfigField("String", "MAC_SWIFT_LIBRARIES", "\"\"")
     }
 
     buildFeatures {
@@ -30,6 +30,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // 振る舞いのテストと同じもの (behavior-tests の buildJvmHost が作る)。エディタの中でしか使わない
+            buildConfigField("String", "MAC_SWIFT_LIBRARIES", "\"${rootDir.resolve(".build/jvm-host/libs").path}\"")
+        }
         release {
             // Java のコードを縮める (Compose などのライブラリのうち、使っていない部分を外す)
             isMinifyEnabled = true

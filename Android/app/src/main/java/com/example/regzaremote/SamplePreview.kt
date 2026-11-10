@@ -86,6 +86,7 @@ private class PreviewStorage : RegzaAndroidStorage {
  */
 private object MacSwiftLibraries {
     fun load() {
+        check(BuildConfig.MAC_SWIFT_LIBRARIES.isNotEmpty()) { "エディタの横のプレビューは debug のビルドでだけ使えます" }
         val built = File(BuildConfig.MAC_SWIFT_LIBRARIES)
         check(built.isDirectory) { "$built がありません。./gradlew :behavior-tests:buildJvmHost で作ってください" }
         // libRegzaAndroid は同じフォルダの libSwiftJava を使う (@loader_path) ので、両方を同じ一時フォルダに写す
