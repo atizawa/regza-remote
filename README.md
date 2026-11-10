@@ -66,7 +66,7 @@ Shopify の [Reflex](https://shopify.engineering/reflex) と同じ作りで、�
 - 外からの入力は見本の返事（`RegzaSample` の `SampleTransport`）で渡すので、テレビにも録画サーバーにもつながない
 - テストは `sdk/app.ts` の `describeOnBothPlatforms` で書き、`do`（操作を送り、state が期待どおりになるまで待つ）と `precondition`（state が期待どおりになるまで待つ）で確かめる
 - 「テレビにつながらない」「チャンネル一覧が空」のような場面は、`describeOnBothPlatforms` に fixture（`SampleFixture`。宛先ごとの返事の差し替えと、つながらないアドレス）を渡して作る。両方の相手に、起動するときに `--fixture <JSON のファイル>` で渡る
-- Mac で動かすので、Android の Foundation（Swift の Foundation は macOS と Android で実装が違う）の違いまでは確かめない
+- Swift 6 からは、Android の Foundation も iOS と同じ swift-foundation（JSON・Date・Calendar・URL・書式など）を土台にしているので、Mac で動かしても大半は Android と同じものを通る。確かめないのは Android の土台（ART と JNI・Bionic・Looper で動かす MainActor・APK の中の .so の読み込み）と、swift-corelibs-foundation に残る部分（RunLoop・Thread など）で、これらはエミュレーターや実機でアプリを動かして確かめる
 
 バンドル ID（`com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`）と署名のチームは `iOS/Config/Signing.xcconfig` にまとめている。自分でビルドして実機に入れるときは、このファイルは変えずに、同じフォルダに `Local.xcconfig` を作って自分の値で上書きする（Git には入れない）。
 
