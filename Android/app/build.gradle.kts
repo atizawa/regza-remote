@@ -1,3 +1,5 @@
+import java.util.zip.ZipFile
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -103,6 +105,30 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated"))
 }
 tasks.named("preBuild") { dependsOn(buildSwift) }
+// 配るアプリ (release の APK) に、手元のフォルダの場所 (ホームのフォルダ) が残っていないことを確かめる。
+// ビルドの設定やソースの #filePath などから入ると、開発している人のユーザー名やフォルダの構成が配られてしまう。
+// release のビルドのたびに、APK の中のすべてのファイル (Java のクラス・Swift の .so・リソース) を調べる
+val checkReleaseApk = tasks.register("checkReleaseApk") {
+    description = "release の APK に、手元のフォルダの場所が入っていないことを確かめる"
+    val apks = layout.buildDirectory.dir("outputs/apk/release")
+    val home = System.getProperty("user.home")
+    inputs.dir(apks)
+    doLast {
+        val files = apks.get().asFile.listFiles { file -> file.extension == "apk" }.orEmpty()
+        check(files.isNotEmpty()) { "release の APK が見つかりません: ${apks.get().asFile}" }
+        for (apk in files) {
+            ZipFile(apk).use { zip ->
+                // バイト列のまま探すため、1 バイトを 1 文字にする ISO-8859-1 で読む (ホームのフォルダの名前は ASCII)
+                val found = zip.entries().asSequence()
+                    .filter { entry -> String(zip.getInputStream(entry).use { it.readBytes() }, Charsets.ISO_8859_1).contains(home) }
+                    .map { it.name }
+                    .toList()
+                check(found.isEmpty()) { "${apk.name} に手元のフォルダの場所 ($home) が入っています: $found" }
+            }
+        }
+    }
+}
+tasks.matching { it.name == "assembleRelease" }.configureEach { finalizedBy(checkReleaseApk) }
 // エディタの横のプレビューのために、debug のビルドでは Mac 向けの Swift のライブラリも作る (SamplePreview)
 tasks.matching { it.name == "preDebugBuild" }.configureEach { dependsOn(":behavior-tests:buildJvmHost") }
 

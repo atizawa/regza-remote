@@ -65,6 +65,7 @@ mise run setup-android-sdk                # 初回だけ。Android SDK のライ
 mise run install-android-swift-sdk        # 初回だけ。Swift SDK for Android（platform・build-tools・NDK は Gradle が入れる）
 ./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (buildSwift が mise run build-swift を呼ぶ)
 ./gradlew :app:connectedDebugAndroidTest  # arm64 のエミュレーター/実機で .so・JNI・Looper・Bionic・BoringSSL を確かめる
+./gradlew :app:assembleRelease            # 配るアプリ。作ったあと、APK に手元のフォルダの場所が入っていないことも確かめる (checkReleaseApk)
 
 cd BehaviorTests && mise run test         # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
 ```
