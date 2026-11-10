@@ -12,6 +12,9 @@ public final class LiveActivityModel {
     /// Live Activity を出しているか
     public private(set) var isOn = LiveActivityController.isActive
     @ObservationIgnored private var shown: RegzaActivityAttributes.ContentState?
+    /// 出している途中の更新。state の変わり目と、画面のない入口の操作のあとの両方から更新するので、
+    /// 1 本ずつ順に出す (重なると、古い内容の更新があとから届くことがある)
+    @ObservationIgnored private var updating: Task<Void, Never>?
 
     public init(remote: RemoteViewModel) {
         self.remote = remote
@@ -39,6 +42,17 @@ public final class LiveActivityModel {
     /// いまの state を Live Activity に出し終えるまで待つ。画面のない入口 (ロック画面のボタンや閉じている間の更新) が、
     /// 操作のあと、アプリがまた止められる前に呼ぶ
     public func update() async {
+        let previous = updating
+        let next = Task { @MainActor in
+            await previous?.value
+            // 前の更新が終わってから、その時点の state を読む (待っている間に変わっても、新しいほうを出す)
+            await self.show()
+        }
+        updating = next
+        await next.value
+    }
+
+    private func show() async {
         let state = RegzaActivityAttributes.ContentState(remote.state)
         guard state != shown else { return }
         let programEndChanged = state.programEnd != shown?.programEnd
