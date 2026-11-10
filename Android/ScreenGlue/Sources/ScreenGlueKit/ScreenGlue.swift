@@ -228,7 +228,7 @@ public struct ScreenGlue {
                 }
             }
 
-            /** 画面から操作を送る先。アプリ全体の操作 (AppAction) も、画面ごとの操作 (ChannelListAction など) も send(...) で送る */
+            /** 画面から操作を送る先。アプリ全体の操作も、画面ごとの操作も send(...) で送る */
             interface Send {\(invokes.joined())}
 
             /** Swift の窓口 (RegzaAndroidApp) に送る */

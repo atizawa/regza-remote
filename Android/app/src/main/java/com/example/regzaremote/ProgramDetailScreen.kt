@@ -232,7 +232,7 @@ private fun RowScope.ActionButton(
     }
 }
 
-// Swift の型 (AppRoute など) は、SamplePreview が Swift のライブラリを読み込んでから作る
+// Swift の型 (画面の道など) は、SamplePreview が Swift のライブラリを読み込んでから作る
 
 @Preview(name = "番組の詳細")
 @Composable

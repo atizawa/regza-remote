@@ -116,7 +116,7 @@ presentation_java=.build/swift/regzapresentation-java
 bridge_java=.build/swift/regzabridge-java
 bridge_generated=RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated
 
-# 共有の UI の型 (RegzaSharedModels の RegzaKey・ProgramItem など)。すべてそのまま Java のクラスにする
+# 共有の UI の型 (RegzaSharedModels)。すべてそのまま Java のクラスにする
 extract_module RegzaSharedModels ../Packages/RegzaCore/Sources/RegzaSharedModels \
   RegzaAndroid/Sources/RegzaSharedJava/Generated "$shared_java"
 
@@ -134,7 +134,7 @@ extract_module RegzaPresentation "$(cd ../Packages/RegzaCore/Sources/RegzaPresen
 # 窓口 (RegzaAndroidBridge の RegzaAndroidApp と、その状態・操作の型)。Mac の swift test で確かめられるよう別のパッケージにしてある
 extract_module RegzaAndroidBridge RegzaAndroidBridge/Sources/RegzaAndroidBridge \
   "$bridge_generated" "$bridge_java" "$shared_java" "$presentation_java"
-# Kotlin が実装する Swift の protocol (保存先の RegzaAndroidStorage など) を、Swift から呼ぶための包み (JavaRegzaAndroidStorage) を作る。
+# Kotlin が実装する Swift の protocol (保存先など) を、Swift から呼ぶための包み (Java<protocol の名前>) を作る。
 # swift-java はこれを SwiftPM のプラグインでしか作らないので (enableJavaCallbacks)、同じ手順を手で行う:
 # jextract が作ったインターフェースを javac でコンパイルし (ほかのモジュールの Java のクラスも参照する)、wrap-java で包む
 callbacks=.build/swift/bridge-callbacks

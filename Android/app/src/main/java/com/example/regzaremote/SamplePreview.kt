@@ -29,7 +29,7 @@ import org.swift.swiftkit.core.SwiftLibraries
  * - エディタの横のプレビュー (Android Studio が Mac の JVM で描く): 振る舞いのテストと同じ Mac 向けのライブラリ
  *   (behavior-tests の buildJvmHost が作る) を読み込む (MacSwiftLibraries)。読み込めなければ、その理由を出す
  *
- * Swift の型 (AppRoute や Action など) は、ライブラリを読み込んだあとでないと作れないので、setUp と content の中で作る
+ * Swift の型 (画面の道や操作) は、ライブラリを読み込んだあとでないと作れないので、setUp と content の中で作る
  *
  * @param setUp 組み立てたあとに送る操作 (一覧を読み込むなど)
  */

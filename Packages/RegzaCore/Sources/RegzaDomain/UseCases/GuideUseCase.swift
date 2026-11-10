@@ -1,7 +1,7 @@
 import Foundation
 
 /// 番組表 (Mirakurun): 全局の番組表・1 チャンネルの番組表・放送中の番組・番組の録画予約。
-/// 番組は、UI の型 (ProgramItem など) にして返す。予約済みの印を付けるため、録画予約の Repository も見る
+/// 番組は、UI の型 (RegzaSharedModels) にして返す。予約済みの印を付けるため、録画予約の Repository も見る
 @MainActor
 public protocol GuideUseCaseProtocol: AnyObject {
     /// Mirakurun のアドレス。未設定なら空
@@ -74,7 +74,7 @@ extension GuideUseCaseProtocol {
 }
 
 /// 番組表 (Mirakurun): 全局の番組表・1 チャンネルの番組表・放送中の番組・番組の録画予約。
-/// 番組は、UI の型 (ProgramItem など) にして返す。予約済みの印を付けるため、録画予約の Repository も見る
+/// 番組は、UI の型 (RegzaSharedModels) にして返す。予約済みの印を付けるため、録画予約の Repository も見る
 @MainActor
 public final class GuideUseCase: GuideUseCaseProtocol {
     private let guide: any GuideRepositoryProtocol

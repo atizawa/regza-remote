@@ -53,7 +53,7 @@ android {
     // swift-java が RegzaAndroid の Swift から作った Java のクラス (buildSwift で作られる)
     sourceSets.getByName("main").java.srcDirs(
         "../.build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java",
-        // iOS と共有の型 (RegzaKey・ProgramItem など) の Java のクラス
+        // iOS と共有の型 (RegzaSharedModels) の Java のクラス
         "../.build/swift/regzashared-java",
         // 画面の状態と操作の型 (RegzaPresentation の State/・Action/ に置いた型) の Java のクラス
         "../.build/swift/regzapresentation-java",
