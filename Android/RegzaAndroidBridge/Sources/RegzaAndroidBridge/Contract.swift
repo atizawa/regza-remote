@@ -4,7 +4,7 @@ import RegzaApp
 // 振る舞いのテスト (BehaviorTests) の Android 側の相手が使う、約束事 (regza と同じ 1 行ずつの命令) の口。
 // 命令の読み方と返す JSON の形は regza と同じもの (IntrospectionSession) を使い、
 // 操作を送るところと state を読むところだけを、Kotlin がアプリと同じ道 (send と xxxStates) で行う。
-// 型ごとの口 (contractChannelListAction・contractChannelListStateJSON など) は scripts/generate-screen-glue.sh が作る
+// 型ごとの口 (contractChannelListAction・contractChannelListStateJSON など) は Android/ScreenGlue の screen-glue が作る
 
 /// 読んだ 1 行の命令
 public struct RegzaContractCommand {

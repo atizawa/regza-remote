@@ -60,7 +60,7 @@ android {
         // 窓口 (RegzaAndroidApp と、その状態・操作の型) の Java のクラス
         "../.build/swift/regzabridge-java",
     )
-    // 画面が受け取る送り先 (Send) と、Swift の窓口に送る AppSend (scripts/generate-screen-glue.sh が作る)
+    // 画面が受け取る送り先 (Send) と、Swift の窓口に送る AppSend (Android/ScreenGlue の screen-glue が作る)
     sourceSets.getByName("main").kotlin.srcDirs("../.build/swift/screen-glue-kotlin")
 }
 
@@ -96,6 +96,8 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     inputs.files(fileTree(androidDir.resolve("RegzaAndroidBridge")) { include("Package.swift", "Sources/**") })
     inputs.file(androidDir.resolve("mise.toml"))
     inputs.dir(androidDir.resolve("scripts"))
+    // 窓口のつなぎを作る道具
+    inputs.files(fileTree(androidDir.resolve("ScreenGlue")) { include("Package.swift", "Package.resolved", "Sources/**") })
     inputs.property("ndkVersion", android.ndkVersion)
     outputs.dir("src/main/jniLibs")
     outputs.dir(androidDir.resolve(".build/swift/regzashared-java"))

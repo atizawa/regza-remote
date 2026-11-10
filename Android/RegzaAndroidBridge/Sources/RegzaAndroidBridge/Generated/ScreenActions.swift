@@ -1,4 +1,4 @@
-// scripts/generate-screen-glue.sh が作る (手で直さない)
+// ScreenGlue (Android/ScreenGlue の screen-glue) が作る (手で直さない)
 import RegzaApp
 
 // MARK: - 操作

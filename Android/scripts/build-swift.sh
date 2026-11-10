@@ -127,7 +127,9 @@ extract_module RegzaPresentation "$(cd ../Packages/RegzaCore/Sources/RegzaPresen
   RegzaAndroid/Sources/RegzaPresentationJava/Generated "$presentation_java" "$shared_java"
 
 # 画面ごとの操作を送る窓口の send と、窓口の設定に書く画面の状態と操作の型を、State/ と Action/ から作り直す
-scripts/generate-screen-glue.sh
+# (Android/ScreenGlue の screen-glue。Swift のソースを swift-syntax で読む)。
+# ScreenGlue/.build は swift test (Xcode の Swift) が使うので、置き場を分ける (同じ置き場だと、Swift が変わるたびに作り直す)
+"$SWIFT_COMMAND" run --package-path ScreenGlue --scratch-path .build/screen-glue -c release screen-glue
 
 # 窓口 (RegzaAndroidBridge の RegzaAndroidApp と、その状態・操作の型)。Mac の swift test で確かめられるよう別のパッケージにしてある
 extract_module RegzaAndroidBridge RegzaAndroidBridge/Sources/RegzaAndroidBridge \

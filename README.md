@@ -34,7 +34,8 @@ iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュ�
 Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）
   RegzaAndroidBridge/         Android に見せる Swift の窓口（RegzaAndroidApp）。Mac の swift test で確かめる
   RegzaAndroid/               Android 向けにビルドする Swift のパッケージ（Looper・BoringSSL と、swift-java が作る Java のつなぎ）
-  scripts/                    generate-screen-glue.sh（State/・Action/ から窓口のつなぎを作る）
+  ScreenGlue/                 窓口のつなぎを作る道具（screen-glue。State/・Action/ の型を swift-syntax で読む。Mac で動かし、アプリには入らない）
+  scripts/                    build-swift.sh（Swift の .so と Java のクラスを作る）・swift-toolchain.sh（mise の Swift を選ぶ）
   app/                        Kotlin・Compose のアプリ
   mise.toml                   Swift 6.4.2 のツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
 ```
@@ -58,6 +59,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 ```sh
 cd Packages/RegzaCore && swift test       # 共有部分のテスト
 cd Android/RegzaAndroidBridge && swift test  # Android の窓口のテスト (Mac で動く)
+cd Android/ScreenGlue && swift test       # 窓口のつなぎを作る道具のテストと、Git に入れたつなぎが古くないかの確認
 open iOS/RegzaRemote.xcodeproj            # 実機へ入れるときは下の Local.xcconfig を作る
 
 cd Android                                # Android 版（Android Studio はなくてもよい）
@@ -100,7 +102,7 @@ xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab g
 
 ## 画面を足す手順
 
-画面の状態と操作は、iOS と Android で同じ ViewModel（`RegzaPresentation`）が持つ。ViewModel は Elm 風で、画面に出すものを `state`、画面からの操作を `send(Action)` で受ける。Android は ViewModel の State と Action の型を swift-java でそのまま Java のクラスにして使い、間の窓口（`Android/RegzaAndroidBridge`）は、`scripts/generate-screen-glue.sh` が State/ と Action/ のフォルダから作る。画面を足すときに窓口を手で書くことはない。
+画面の状態と操作は、iOS と Android で同じ ViewModel（`RegzaPresentation`）が持つ。ViewModel は Elm 風で、画面に出すものを `state`、画面からの操作を `send(Action)` で受ける。Android は ViewModel の State と Action の型を swift-java でそのまま Java のクラスにして使い、間の窓口（`Android/RegzaAndroidBridge`）は、道具（`Android/ScreenGlue` の `screen-glue`）が State/ と Action/ のフォルダから作る。画面を足すときに窓口を手で書くことはない。
 
 ### 1. 共有の ViewModel を作る
 
@@ -136,10 +138,10 @@ ViewModels/ChannelList/
 
 ```sh
 cd Android
-scripts/generate-screen-glue.sh     # ./gradlew のビルドでも毎回実行される
+swift run --package-path ScreenGlue --scratch-path .build/screen-glue -c release screen-glue   # ./gradlew のビルド (mise run build-swift) でも毎回実行される
 ```
 
-ツールが作るもの（作ったものはコミットする。古いままだと窓口のテスト `screenGlueIsUpToDate` が失敗する）:
+ツールが作るもの（作ったものはコミットする。古いままだと `Android/ScreenGlue` のテスト `committedGlueIsUpToDate` が失敗する）。ツールは Swift のソースを swift-syntax で読み、決まりに合わない置き方（型を書いていないプロパティ、送り先の ViewModel のない Action、1 つのファイルに 2 つの型など）なら止まる:
 
 - 窓口の送る関数（`sendChannelListAction`）と state を返す関数（`channelListState(route:)`・`nextChannelListState(route:after:waitID:)`）: `RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift`。Kotlin の Flow が終わると `endStateWait` で Swift 側の待機も終える
 - swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）。どのモジュールにも共通の設定（Java のパッケージなど）は `RegzaAndroid/swift-java.common.config` に 1 回だけ書き、ビルドのときにモジュールごとの設定と重ねる
@@ -158,6 +160,7 @@ mise run lint                              # Swift と Kotlin のコードの書
 cd Packages/RegzaCore && swift test
 cd iOS/RegzaKit && swift test               # 画面の名前と、画面・Live Activity が使うモジュール
 cd Android/RegzaAndroidBridge && swift test
+cd Android/ScreenGlue && swift test
 cd Android && ./gradlew :app:assembleDebug
 cd Android && ./gradlew :app:connectedDebugAndroidTest  # arm64 のエミュレーター/実機
 cd BehaviorTests && mise run test
@@ -169,7 +172,7 @@ cd BehaviorTests && mise run test
 
 swift-java（301e3da）には次の制約がある。どれも、守れなければビルドかテストで止まるようにしている。
 
-- 型を書いていないプロパティ（`public var count = 0`）を、警告だけ出して Java にしない。State/ と Action/ の public なプロパティには型を書く（`public var count: Int = 0`）。書いていなければ `generate-screen-glue.sh` が止まる
+- 型を書いていないプロパティ（`public var count = 0`）を、警告だけ出して Java にしない。State/ と Action/ の public なプロパティには型を書く（`public var count: Int = 0`）。書いていなければ `screen-glue` が止まる
 - Foundation の型（`URL`・`Date`・`Data`・`UUID`）を enum の値（`case ready(url: URL)`）でしか使っていないと、その型の Java のクラスを作らず、javac が失敗する。`URL` は窓口の `regzaURLString` が使うので作られる。ほかの型を enum の値だけで使うときは、窓口などで一度使う
 - Foundation の型の Java のクラスを、使うモジュールごとに作る。3 つのモジュール（`RegzaSharedModels`・`RegzaPresentation`・`RegzaAndroidBridge`）は同じ Java のパッケージに出しているので、そのままでは同じ名前の JNI の関数がぶつかってリンクできない。`mise run build-swift` が、前のモジュールにもある型のつなぎを消す（消せない混ざり方なら止まる）。モジュールごとにパッケージを分けると、ぶつからない代わりに `Date` がモジュールごとに別の型になり、モジュールをまたいで渡せなくなる
 - 同じ名前で引数の型だけ違う関数を並べられない。窓口の送る関数を `sendChannelListAction` のように型ごとの名前にしているのはこのため（Kotlin からは `Send` を通してどれも `send` で送れる）

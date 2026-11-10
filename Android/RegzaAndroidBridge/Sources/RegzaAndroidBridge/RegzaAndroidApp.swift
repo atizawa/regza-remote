@@ -10,7 +10,7 @@ import RegzaApp
 // 画面の状態と操作は iOS と同じ共有の ViewModel (AppViewModel とその下の画面の ViewModel) が持ち、
 // state と操作の型 (ChannelListState・ChannelListAction など) もそのまま渡す。ViewModel は MainActor で動き、
 // swift-java は MainActor の同期の関数を Java に出せないので、ここに窓口を置く。窓口の関数は
-// scripts/generate-screen-glue.sh が型ごとに作る (Generated/):
+// Android/ScreenGlue の screen-glue が型ごとに作る (Generated/):
 //   - channelListState(route:) / nextChannelListState(route:after:waitID:) など: ViewModel の state を返す。
 //     next は渡した state から変わるまで待つ (async なので Java の Future になる)。Flow が終わったら
 //     endStateWait で Swift の待機も終える。画面ごとに別々に待つので、2 秒ごとのリモコンの取り直しで番組表を渡し直すことはない

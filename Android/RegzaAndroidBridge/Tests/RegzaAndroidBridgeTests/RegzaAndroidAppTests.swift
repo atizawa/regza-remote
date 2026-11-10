@@ -217,21 +217,6 @@ struct RegzaAndroidAppTests {
         #expect(fixture.app.channelList.isBusy)
     }
 
-    /// 窓口のつなぎ (Generated/ScreenActions.swift と swift-java の設定) が、State/ と Action/ の型から作り直したものと同じ
-    @Test func screenGlueIsUpToDate() throws {
-        let script = URL(filePath: #filePath).deletingLastPathComponent()
-            .appending(path: "../../../scripts/generate-screen-glue.sh").standardized
-        let process = Process()
-        process.executableURL = URL(filePath: "/bin/bash")
-        process.arguments = [script.path(percentEncoded: false), "--check"]
-        let error = Pipe()
-        process.standardError = error
-        try process.run()
-        process.waitUntilExit()
-        let message = String(decoding: error.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        #expect(process.terminationStatus == 0, "\(message)")
-    }
-
     /// 戻る道の画面の操作は、いまのタブで開いている画面の ViewModel に届く
     @Test func screenActionsReachOpenedScreens() async throws {
         let fixture = try make()
