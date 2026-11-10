@@ -11,14 +11,18 @@ import RegzaApp
 // state と操作の型 (ChannelListState・ChannelListAction など) もそのまま渡す。ViewModel は MainActor で動き、
 // swift-java は MainActor の同期の関数を Java に出せないので、ここに窓口を置く。窓口の関数は
 // scripts/generate-screen-glue.sh が型ごとに作る (Generated/):
-//   - channelListState(route:) / nextChannelListState(route:after:) など: ViewModel の state を返す。
-//     next は渡した state から変わるまで待つ (async なので Java の Future になる)。画面ごとに別々に待つので、
-//     2 秒ごとのリモコンの取り直しで番組表を渡し直すことはない
+//   - channelListState(route:) / nextChannelListState(route:after:waitID:) など: ViewModel の state を返す。
+//     next は渡した state から変わるまで待つ (async なので Java の Future になる)。Flow が終わったら
+//     endStateWait で Swift の待機も終える。画面ごとに別々に待つので、2 秒ごとのリモコンの取り直しで番組表を渡し直すことはない
 //   - sendAppAction(_:)・sendChannelListAction(_:) など: 操作を送る (MainActor に順に積むだけで、すぐ返る)
 
 /// アプリ全体の窓口。アプリに 1 つ作り、ViewModel の state を読んで操作を送る
 public final class RegzaAndroidApp {
     let app: AppViewModel
+
+    /// Kotlin の Flow が待っている state。Java の Future を取り消しても swift-java が Swift の Task を取り消さないので、
+    /// Flow ごとの番号で待機を終わらせる。終了と待機の開始が前後しても取りこぼさないよう、終了済みも一時的に覚える。
+    @MainActor private var stateWaits: [Int64: StateWait] = [:]
 
     /// Kotlin の保存先 (Keystore と SharedPreferences) で組み立てる。Android では先に regzaSetUpMainActor を呼んでおく
     public convenience init(storage: any RegzaAndroidStorage) {
@@ -50,15 +54,56 @@ public final class RegzaAndroidApp {
 
     /// state が last から変わるまで待って返す (呼ぶ前に変わっていれば、すぐ返す)
     @MainActor func nextState<State: Equatable>(
-        route: AppRoute?, after last: State?, _ state: @MainActor (AnyObject) -> State?
+        route: AppRoute?, after last: State?, waitID: Int64, _ state: @MainActor (AnyObject) -> State?
     ) async -> State? {
         let changes = Changes()
+        switch stateWaits[waitID] {
+        case .cancelled?:
+            // Flow の終了が、swift-java がこの Task を MainActor で始めるより先だった
+            stateWaits[waitID] = nil
+            return nil
+        case nil:
+            stateWaits[waitID] = .waiting(changes)
+        case .waiting?, .completed?:
+            preconditionFailure("同じ state の待機番号が重なっています: \(waitID)")
+        }
         while true {
+            if case .cancelled? = stateWaits[waitID] {
+                stateWaits[waitID] = nil
+                return nil
+            }
             let current = changes.track { self.state(route: route, state) }
-            if current != last { return current }
+            if current != last {
+                // Kotlin が Future の結果を受け取って endStateWait を呼ぶまで、完了したことを覚えておく。
+                // 結果を返す直前に Flow が終了しても、後から来た endStateWait を開始前の終了と取り違えないため。
+                stateWaits[waitID] = .completed
+                return current
+            }
             await changes.wait()
         }
     }
+
+    /// Kotlin の Flow が 1 回の nextState の待機を使い終えたことを知らせる。
+    /// Flow が取り消されたときは待っている continuation を起こし、swift-java の Task と JNI の参照を解放させる。
+    public func endStateWait(_ id: Int64) async {
+        await MainActor.run {
+            switch self.stateWaits[id] {
+            case .waiting(let changes):
+                self.stateWaits[id] = .cancelled
+                changes.changed()
+            case .completed?:
+                self.stateWaits[id] = nil
+            case .cancelled?:
+                break
+            case nil:
+                // swift-java が nextState の Task を始める前に、Flow の終了が届いた
+                self.stateWaits[id] = .cancelled
+            }
+        }
+    }
+
+    /// テストで、終了した待機が残っていないことを確かめる
+    @MainActor var stateWaitCount: Int { stateWaits.count }
 
     // MARK: 操作
 
@@ -68,6 +113,14 @@ public final class RegzaAndroidApp {
             if deliver(viewModel) { return }
         }
     }
+}
+
+/// Kotlin の Flow から始めた state の待機
+@MainActor
+private enum StateWait {
+    case waiting(Changes)
+    case completed
+    case cancelled
 }
 
 /// MainActor で動かして結果を返す。アプリはメインスレッドから呼ぶのでそのまま動かし、
@@ -102,7 +155,7 @@ private final class Changes {
         await withCheckedContinuation { waiter = $0 }
     }
 
-    private func changed() {
+    fileprivate func changed() {
         hasChanged = true
         waiter?.resume()
         waiter = nil

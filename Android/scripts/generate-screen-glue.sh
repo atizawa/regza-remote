@@ -8,7 +8,8 @@
 #     ほかの Action の中で使う部品の操作 (SettingsAction.tv の TVSetupAction など) は Java のクラスにするだけで、送る関数は作らない
 #     (1 つの画面には 1 つの Action で送る)。どちらでもない型が Action/ にあれば止める
 #     あわせて画面の ViewModel (「typealias State = 型」) ごとに、state を返す関数 (channelListState(route:)) と、
-#     変わるまで待って返す関数 (nextChannelListState(route:after:)) を作る
+#     変わるまで待って返す関数 (nextChannelListState(route:after:waitID:)) を作る。
+#     Kotlin の Flow が終わったら waitID を endStateWait に渡し、待っている Swift の Task も終わらせる
 #   - .build/swift/screen-glue-kotlin/Send.kt
 #     画面が受け取る送り先 (Send)。どの操作も send(...) で送れるよう型ごとの invoke を並べ、Swift の窓口に送る AppSend も作る。
 #     state は型ごとに Flow にする (channelListStates(route))。ビルドのたびに作るので保存しない
@@ -106,8 +107,8 @@ for file in $(find "$view_models" -path '*/Action/*.swift' | sort); do
     }
 
     /// $view_model の state が after から変わるまで待って返す
-    public func $next_function(route: AppRoute?, after: $state?) async -> $state? {
-        await nextState(route: route, after: after) { @MainActor in (\$0 as? $view_model)?.state }
+    public func $next_function(route: AppRoute?, after: $state?, waitID: Int64) async -> $state? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in (\$0 as? $view_model)?.state }
     }
 "
   kotlin_imports+="import com.example.regzaremote.core.$state
@@ -136,7 +137,9 @@ fun RegzaAndroidApp.${state_function}s(route: AppRoute? = null): Flow<$state?> =
     var state = $state_function(Optional.ofNullable(route)).await().orElse(null)
     while (true) {
         emit(state)
-        state = $next_function(Optional.ofNullable(route), Optional.ofNullable(state)).await().orElse(null)
+        state = waitForNextState { waitID ->
+            $next_function(Optional.ofNullable(route), Optional.ofNullable(state), waitID)
+        }
     }
 }
 "
@@ -195,9 +198,31 @@ package com.example.regzaremote
 ${kotlin_imports}import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.RegzaAndroidApp
 import java.util.Optional
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.withContext
+
+/**
+ * swift-java の Future は、Kotlin から取り消しても元の Swift Task を取り消さない。
+ * 1 回の待機に番号を付け、正常に受け取ったときも Flow が終わったときも Swift 側へ終了を知らせる。
+ */
+private val stateWaitIDs = AtomicLong()
+
+private suspend fun <State> RegzaAndroidApp.waitForNextState(
+    next: (Long) -> CompletableFuture<Optional<State>>,
+): State? {
+    val waitID = stateWaitIDs.incrementAndGet()
+    return try {
+        next(waitID).await().orElse(null)
+    } finally {
+        // 取り消されたコルーチンの finally でも、Swift の continuation を起こし終わるまで待つ
+        withContext(NonCancellable) { endStateWait(waitID).await() }
+    }
+}
 
 /** 画面から操作を送る先。アプリ全体の操作 (AppAction) も、画面ごとの操作 (ChannelListAction など) も send(...) で送る */
 interface Send {${kotlin_invokes}}

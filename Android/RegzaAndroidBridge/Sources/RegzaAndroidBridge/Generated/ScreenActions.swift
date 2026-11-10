@@ -124,8 +124,8 @@ extension RegzaAndroidApp {
     }
 
     /// AppViewModel の state が after から変わるまで待って返す
-    public func nextAppState(route: AppRoute?, after: AppState?) async -> AppState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? AppViewModel)?.state }
+    public func nextAppState(route: AppRoute?, after: AppState?, waitID: Int64) async -> AppState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? AppViewModel)?.state }
     }
 
     /// ChannelListViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -134,8 +134,8 @@ extension RegzaAndroidApp {
     }
 
     /// ChannelListViewModel の state が after から変わるまで待って返す
-    public func nextChannelListState(route: AppRoute?, after: ChannelListState?) async -> ChannelListState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? ChannelListViewModel)?.state }
+    public func nextChannelListState(route: AppRoute?, after: ChannelListState?, waitID: Int64) async -> ChannelListState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? ChannelListViewModel)?.state }
     }
 
     /// GuideGridViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -144,8 +144,8 @@ extension RegzaAndroidApp {
     }
 
     /// GuideGridViewModel の state が after から変わるまで待って返す
-    public func nextGuideGridState(route: AppRoute?, after: GuideGridState?) async -> GuideGridState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? GuideGridViewModel)?.state }
+    public func nextGuideGridState(route: AppRoute?, after: GuideGridState?, waitID: Int64) async -> GuideGridState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? GuideGridViewModel)?.state }
     }
 
     /// GuideSearchViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -154,8 +154,8 @@ extension RegzaAndroidApp {
     }
 
     /// GuideSearchViewModel の state が after から変わるまで待って返す
-    public func nextGuideSearchState(route: AppRoute?, after: GuideSearchState?) async -> GuideSearchState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? GuideSearchViewModel)?.state }
+    public func nextGuideSearchState(route: AppRoute?, after: GuideSearchState?, waitID: Int64) async -> GuideSearchState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? GuideSearchViewModel)?.state }
     }
 
     /// LivePlayerViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -164,8 +164,8 @@ extension RegzaAndroidApp {
     }
 
     /// LivePlayerViewModel の state が after から変わるまで待って返す
-    public func nextLivePlayerState(route: AppRoute?, after: LivePlayerState?) async -> LivePlayerState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? LivePlayerViewModel)?.state }
+    public func nextLivePlayerState(route: AppRoute?, after: LivePlayerState?, waitID: Int64) async -> LivePlayerState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? LivePlayerViewModel)?.state }
     }
 
     /// NowPlayingViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -174,8 +174,8 @@ extension RegzaAndroidApp {
     }
 
     /// NowPlayingViewModel の state が after から変わるまで待って返す
-    public func nextNowPlayingState(route: AppRoute?, after: NowPlayingState?) async -> NowPlayingState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? NowPlayingViewModel)?.state }
+    public func nextNowPlayingState(route: AppRoute?, after: NowPlayingState?, waitID: Int64) async -> NowPlayingState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? NowPlayingViewModel)?.state }
     }
 
     /// ProgramDetailViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -184,8 +184,8 @@ extension RegzaAndroidApp {
     }
 
     /// ProgramDetailViewModel の state が after から変わるまで待って返す
-    public func nextProgramDetailState(route: AppRoute?, after: ProgramDetailState?) async -> ProgramDetailState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? ProgramDetailViewModel)?.state }
+    public func nextProgramDetailState(route: AppRoute?, after: ProgramDetailState?, waitID: Int64) async -> ProgramDetailState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? ProgramDetailViewModel)?.state }
     }
 
     /// ProgramListViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -194,8 +194,8 @@ extension RegzaAndroidApp {
     }
 
     /// ProgramListViewModel の state が after から変わるまで待って返す
-    public func nextProgramListState(route: AppRoute?, after: ProgramListState?) async -> ProgramListState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? ProgramListViewModel)?.state }
+    public func nextProgramListState(route: AppRoute?, after: ProgramListState?, waitID: Int64) async -> ProgramListState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? ProgramListViewModel)?.state }
     }
 
     /// RemoteViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -204,8 +204,8 @@ extension RegzaAndroidApp {
     }
 
     /// RemoteViewModel の state が after から変わるまで待って返す
-    public func nextRemoteState(route: AppRoute?, after: RemoteState?) async -> RemoteState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? RemoteViewModel)?.state }
+    public func nextRemoteState(route: AppRoute?, after: RemoteState?, waitID: Int64) async -> RemoteState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? RemoteViewModel)?.state }
     }
 
     /// ReservationListViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -214,8 +214,8 @@ extension RegzaAndroidApp {
     }
 
     /// ReservationListViewModel の state が after から変わるまで待って返す
-    public func nextReservationListState(route: AppRoute?, after: ReservationListState?) async -> ReservationListState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? ReservationListViewModel)?.state }
+    public func nextReservationListState(route: AppRoute?, after: ReservationListState?, waitID: Int64) async -> ReservationListState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? ReservationListViewModel)?.state }
     }
 
     /// SettingsViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -224,8 +224,8 @@ extension RegzaAndroidApp {
     }
 
     /// SettingsViewModel の state が after から変わるまで待って返す
-    public func nextSettingsState(route: AppRoute?, after: SettingsState?) async -> SettingsState? {
-        await nextState(route: route, after: after) { @MainActor in ($0 as? SettingsViewModel)?.state }
+    public func nextSettingsState(route: AppRoute?, after: SettingsState?, waitID: Int64) async -> SettingsState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? SettingsViewModel)?.state }
     }
 }
 

@@ -172,11 +172,38 @@ struct RegzaAndroidAppTests {
     @Test func nextStateWaitsForChange() async throws {
         let fixture = try make()
         let before = try #require(await fixture.bridge.appState(route: nil))
-        async let next = fixture.bridge.nextAppState(route: nil, after: before)
+        async let next = fixture.bridge.nextAppState(route: nil, after: before, waitID: 1)
         fixture.bridge.perform(AppAction.selectTab(.guide))
         #expect(await next?.tab == .guide)
+        await fixture.bridge.endStateWait(1)
         // 古い state を渡せば、待たずにいまの state を返す
-        #expect(await fixture.bridge.nextAppState(route: nil, after: before)?.tab == .guide)
+        #expect(await fixture.bridge.nextAppState(route: nil, after: before, waitID: 2)?.tab == .guide)
+        await fixture.bridge.endStateWait(2)
+        #expect(fixture.bridge.stateWaitCount == 0)
+    }
+
+    /// Flow が終わったら、変化を待っている Swift の Task も終わり、待機を残さない
+    @Test func endingStateWaitReleasesPendingTask() async throws {
+        let fixture = try make()
+        let before = try #require(await fixture.bridge.appState(route: nil))
+        let next = Task { await fixture.bridge.nextAppState(route: nil, after: before, waitID: 3) }
+        try await waitUntil { fixture.bridge.stateWaitCount == 1 }
+
+        await fixture.bridge.endStateWait(3)
+
+        #expect(await next.value == nil)
+        #expect(fixture.bridge.stateWaitCount == 0)
+    }
+
+    /// Flow の終了が swift-java の Task の開始より先に届いても、あとから始まった待機をすぐ終わらせる
+    @Test func endingStateWaitBeforeItStartsIsNotLost() async throws {
+        let fixture = try make()
+        let before = try #require(await fixture.bridge.appState(route: nil))
+
+        await fixture.bridge.endStateWait(4)
+
+        #expect(await fixture.bridge.nextAppState(route: nil, after: before, waitID: 4) == nil)
+        #expect(fixture.bridge.stateWaitCount == 0)
     }
 
     /// 画面ごとの操作は、その型を Action にしている ViewModel に届く
