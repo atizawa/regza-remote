@@ -36,7 +36,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   RegzaAndroid/               Android 向けにビルドする Swift のパッケージ（Looper・BoringSSL と、swift-java が作る Java のつなぎ）
   scripts/                    generate-screen-glue.sh（State/・Action/ から窓口のつなぎを作る）
   app/                        Kotlin・Compose のアプリ
-  mise.toml                   Swift 6.4.2 のツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift
+  mise.toml                   Swift 6.4.2 のツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
 ```
 
 - Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装している（Android の FoundationNetworking でも同じコードで動かすため）
