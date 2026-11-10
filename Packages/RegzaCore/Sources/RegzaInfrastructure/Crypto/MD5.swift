@@ -34,19 +34,31 @@ enum MD5 {
             var m = [UInt32](repeating: 0, count: 16)
             for i in 0..<16 {
                 let j = chunk + i * 4
-                m[i] = UInt32(message[j]) | UInt32(message[j + 1]) << 8
+                m[i] =
+                    UInt32(message[j]) | UInt32(message[j + 1]) << 8
                     | UInt32(message[j + 2]) << 16 | UInt32(message[j + 3]) << 24
             }
 
-            var a = a0, b = b0, c = c0, d = d0
+            var a = a0
+            var b = b0
+            var c = c0
+            var d = d0
             for i in 0..<64 {
                 var f: UInt32
                 let g: Int
                 switch i {
-                case 0..<16: f = (b & c) | (~b & d); g = i
-                case 16..<32: f = (d & b) | (~d & c); g = (5 * i + 1) % 16
-                case 32..<48: f = b ^ c ^ d; g = (3 * i + 5) % 16
-                default: f = c ^ (b | ~d); g = (7 * i) % 16
+                case 0..<16:
+                    f = (b & c) | (~b & d)
+                    g = i
+                case 16..<32:
+                    f = (d & b) | (~d & c)
+                    g = (5 * i + 1) % 16
+                case 32..<48:
+                    f = b ^ c ^ d
+                    g = (3 * i + 5) % 16
+                default:
+                    f = c ^ (b | ~d)
+                    g = (7 * i) % 16
                 }
                 f = f &+ a &+ constants[i] &+ m[g]
                 a = d

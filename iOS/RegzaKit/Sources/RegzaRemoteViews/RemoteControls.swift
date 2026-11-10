@@ -300,10 +300,13 @@ struct BandPicker: View {
     let selected: BroadcastBand?
 
     var body: some View {
-        Picker("放送", selection: Binding(
-            get: { selected ?? .terrestrial },
-            set: { model.send(.selectBand($0)) }
-        )) {
+        Picker(
+            "放送",
+            selection: Binding(
+                get: { selected ?? .terrestrial },
+                set: { model.send(.selectBand($0)) }
+            )
+        ) {
             ForEach(bands, id: \.self) { Text($0.label).tag($0) }
         }
         .pickerStyle(.segmented)

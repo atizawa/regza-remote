@@ -9,10 +9,10 @@ let package = Package(
     name: "RegzaAndroidBridge",
     platforms: [.macOS(.v14)],
     products: [
-        .library(name: "RegzaAndroidBridge", targets: ["RegzaAndroidBridge"]),
+        .library(name: "RegzaAndroidBridge", targets: ["RegzaAndroidBridge"])
     ],
     dependencies: [
-        .package(path: "../../Packages/RegzaCore"),
+        .package(path: "../../Packages/RegzaCore")
     ],
     targets: [
         .target(

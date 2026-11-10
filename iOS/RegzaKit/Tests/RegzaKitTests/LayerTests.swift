@@ -39,10 +39,14 @@ import Testing
                 // `import X`・`@testable import X`・`public import X` などの X を取り出す
                 let words = line.split(separator: " ")
                 guard let index = words.firstIndex(of: "import"), index + 1 < words.count,
-                      words[..<index].allSatisfy({ $0.hasPrefix("@") || ["public", "package", "internal", "private", "fileprivate"].contains($0) })
+                    words[..<index].allSatisfy({
+                        $0.hasPrefix("@") || ["public", "package", "internal", "private", "fileprivate"].contains($0)
+                    })
                 else { continue }
                 let imported = String(words[index + 1].split(separator: ".").first ?? "")
-                #expect(allowed.contains(imported), "\(module) の \(file.lastPathComponent) が \(imported) を import している (ViewModel の state と Action だけを使う)")
+                #expect(
+                    allowed.contains(imported),
+                    "\(module) の \(file.lastPathComponent) が \(imported) を import している (ViewModel の state と Action だけを使う)")
             }
         }
     }

@@ -56,7 +56,8 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
         if let id = read(account: Self.pairingUserIDAccount) { return id }
         // 以前のバージョンは UserDefaults に保存していた。テレビの登録をそのまま使えるよう引き継ぐ
         let defaults = UserDefaults.standard
-        let id = defaults.string(forKey: Self.pairingUserIDAccount).flatMap { $0.isEmpty ? nil : $0 }
+        let id =
+            defaults.string(forKey: Self.pairingUserIDAccount).flatMap { $0.isEmpty ? nil : $0 }
             ?? PairingUserID.make()
         write(id, account: Self.pairingUserIDAccount)
         defaults.removeObject(forKey: Self.pairingUserIDAccount)
@@ -77,7 +78,7 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
         query[kSecMatchLimit] = kSecMatchLimitOne
         var result: AnyObject?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data
+            let data = result as? Data
         else { return nil }
         return String(data: data, encoding: .utf8)
     }

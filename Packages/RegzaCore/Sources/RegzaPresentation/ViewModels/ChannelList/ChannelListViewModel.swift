@@ -12,7 +12,9 @@ public final class ChannelListViewModel {
     package let guide: any GuideUseCaseProtocol
     package let stream: any StreamUseCaseProtocol
 
-    package init(remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol) {
+    package init(
+        remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol
+    ) {
         self.remote = remote
         self.channels = channels
         self.guide = guide

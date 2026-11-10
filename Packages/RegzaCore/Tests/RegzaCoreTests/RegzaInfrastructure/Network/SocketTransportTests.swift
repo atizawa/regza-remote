@@ -1,8 +1,10 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
+@testable import RegzaPresentation
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -20,10 +22,11 @@ import Glibc
             Thread.sleep(forTimeInterval: 0.1)
             connection.send("world")
         }
-        let response = try await SocketTransport().send(HTTPRequest(
-            method: "POST", url: try #require(URL(string: "http://127.0.0.1:\(server.port)/path?q=1")),
-            body: Data("body".utf8), timeout: 3
-        ))
+        let response = try await SocketTransport().send(
+            HTTPRequest(
+                method: "POST", url: try #require(URL(string: "http://127.0.0.1:\(server.port)/path?q=1")),
+                body: Data("body".utf8), timeout: 3
+            ))
         #expect(response.statusCode == 200)
         #expect(response.value(forHTTPHeaderField: "X-Test") == "yes")
         #expect(String(decoding: response.body, as: UTF8.self) == "hello world")
@@ -73,12 +76,15 @@ private final class RecordingTLS: TLSProvider, @unchecked Sendable {
     private var recorded: [String] = []
 
     var requests: [String] {
-        lock.lock(); defer { lock.unlock() }
+        lock.lock()
+        defer { lock.unlock() }
         return recorded
     }
 
     func wrap(_ socket: SocketStream, host: String, verifiesCertificate: Bool) throws -> any ByteStream {
-        lock.lock(); recorded.append("\(host) verifies=\(verifiesCertificate)"); lock.unlock()
+        lock.lock()
+        recorded.append("\(host) verifies=\(verifiesCertificate)")
+        lock.unlock()
         return socket
     }
 }
@@ -128,7 +134,8 @@ private final class TestServer: @unchecked Sendable {
                 received += buffer[..<count]
                 let text = String(decoding: received, as: UTF8.self)
                 guard let headEnd = text.range(of: "\r\n\r\n") else { continue }
-                let length = text.components(separatedBy: "\r\n")
+                let length =
+                    text.components(separatedBy: "\r\n")
                     .first { $0.lowercased().hasPrefix("content-length:") }
                     .flatMap { Int($0.split(separator: ":")[1].trimmingCharacters(in: .whitespaces)) } ?? 0
                 if text[headEnd.upperBound...].utf8.count >= length { break }

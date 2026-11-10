@@ -119,13 +119,15 @@ public struct RegzaNowPlaying: Equatable, Sendable {
     /// `ＮＨＫ総合１・東京` → `NHK総合`、`ＢＳフジ・１８１` → `BSフジ`、`ＮＨＫＥテレ１東京` → `NHKEテレ`
     public static func shortChannelName(_ name: String) -> String? {
         // 全角の英数字と空白を半角にする (カタカナはそのまま)
-        var text = String(String.UnicodeScalarView(name.unicodeScalars.map { scalar in
-            switch scalar.value {
-            case 0xFF01...0xFF5E: Unicode.Scalar(scalar.value - 0xFEE0) ?? scalar
-            case 0x3000: " "
-            default: scalar
-            }
-        }))
+        var text = String(
+            String.UnicodeScalarView(
+                name.unicodeScalars.map { scalar in
+                    switch scalar.value {
+                    case 0xFF01...0xFF5E: Unicode.Scalar(scalar.value - 0xFEE0) ?? scalar
+                    case 0x3000: " "
+                    default: scalar
+                    }
+                }))
         let regions = ["東京", "大阪", "名古屋", "札幌", "仙台", "広島", "福岡"]
         // 「・東京」「・181」のように、中黒の後ろが地域名か番号のときだけ取り除く (「ザ・シネマ」は残す)
         if let dot = text.firstIndex(where: { $0 == "・" || $0 == "･" }) {
@@ -158,8 +160,9 @@ public struct RegzaNowPlaying: Equatable, Sendable {
     public static func cleanTitle(_ title: String) -> String {
         var result = title
         while let open = result.firstIndex(where: { $0 == "[" || $0 == "［" }),
-              let close = result[open...].firstIndex(where: { $0 == "]" || $0 == "］" }),
-              result.distance(from: open, to: close) <= 3 {
+            let close = result[open...].firstIndex(where: { $0 == "]" || $0 == "］" }),
+            result.distance(from: open, to: close) <= 3
+        {
             result.removeSubrange(open...close)
         }
         // Mirakurun は番組記号を 🈑 🈖 などの囲み文字にして返す

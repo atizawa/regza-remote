@@ -2,8 +2,8 @@
 // iOS・Android・CLI は、ここから作った AppViewModel を使う (画面の ViewModel は UseCase しか知らない)
 // 組み立てには Domain の型 (保存先・Repository) が要るので、Domain も見せる (画面は RegzaPresentation だけを使う)
 @_exported import RegzaDomain
-@_exported import RegzaPresentation
 @_exported import RegzaInfrastructure
+@_exported import RegzaPresentation
 
 extension AppViewModel {
     /// 本物のテレビと録画サーバーにつなぐ、アプリ全体の ViewModel を作る

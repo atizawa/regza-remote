@@ -1,8 +1,9 @@
 import Foundation
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 @testable import RegzaSample
 
 /// ViewModel のテストで使う、テレビの応答の見本と、画面の ViewModel の組み立て
@@ -23,7 +24,8 @@ struct ViewModelFixtures {
     }
 
     func makeModels(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
-        -> (RemoteViewModel, GuideUseCase, RecordingUseCase, StreamUseCase) {
+        -> (RemoteViewModel, GuideUseCase, RecordingUseCase, StreamUseCase)
+    {
         let live = LiveModels(transport: FakeTransport(respond))
         return (live.remote, live.guide, live.recording, live.stream)
     }

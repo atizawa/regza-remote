@@ -78,26 +78,26 @@ public struct RegzaLiveActivityWidget: Widget {
     }
 }
 
-private extension RegzaActivityAttributes.ContentState {
+extension RegzaActivityAttributes.ContentState {
     /// 機種によっては放送中の番組名が返らないので、代わりにチャンネル名を見出しにする
-    var showsChannelAsTitle: Bool {
+    fileprivate var showsChannelAsTitle: Bool {
         title.isEmpty && kind == .broadcast && !channelName.isEmpty
     }
 
     /// 番組名・チャンネル名・入力などを見出しに出せるか (つながらないときは直前に取得した情報)
-    var hasInfoHeadline: Bool {
+    fileprivate var hasInfoHeadline: Bool {
         !title.isEmpty || showsChannelAsTitle || kind == .external || kind == .standby
     }
 
     /// 放送中の番組が終わったか。システムは staleDate (番組の終了時刻) に stale として描き直すので、
     /// アプリが止まっていてもこの時点で表示が切り替わる
-    func hasProgramEnded(isStale: Bool) -> Bool {
+    fileprivate func hasProgramEnded(isStale: Bool) -> Bool {
         // displayed(isStale:) と同じく、stale になっていれば終了時刻を過ぎている
         isStale && isConnected && programEnd != nil && hasPredictedNextProgram != true
     }
 
     /// 見出しの上の小さなラベル。見出しと同じチャンネル名を重ねて出さない
-    func headerName(tvName: String) -> String {
+    fileprivate func headerName(tvName: String) -> String {
         channelName.isEmpty || showsChannelAsTitle ? tvName : channelName
     }
 }
@@ -109,8 +109,8 @@ private struct LockScreenView: View {
         let state = context.state.displayed(isStale: context.isStale)
         VStack(alignment: .leading, spacing: 10) {
             Label(state.headerName(tvName: context.attributes.tvName), systemImage: "tv")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(AppTheme.accent)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
             TitleText(state: state, isStale: context.isStale)
                 .font(.headline)
                 .foregroundStyle(.white)

@@ -3,7 +3,6 @@ import RegzaDesign
 import RegzaPresentation
 import SwiftUI
 
-
 struct ProgramDetailScreen: View {
     @State private var viewModel: ProgramDetailViewModel
     @Environment(AppViewModel.self) private var app

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import RegzaDomain
 @testable import RegzaSample
 
@@ -10,7 +11,8 @@ import Testing
         let channels = try UseCaseFixtures.channels()
         let programs = [
             try UseCaseFixtures.program(id: 1, serviceId: 1, start: UseCaseFixtures.date(hour: 12, minute: 30), minutes: 60, name: "代表の番組"),
-            try UseCaseFixtures.program(id: 2, serviceId: 0x11, start: UseCaseFixtures.date(hour: 12, minute: 30), minutes: 60, name: "代表の番組"),
+            try UseCaseFixtures.program(
+                id: 2, serviceId: 0x11, start: UseCaseFixtures.date(hour: 12, minute: 30), minutes: 60, name: "代表の番組"),
         ]
         let tv = SampleTVRepository(connection: RegzaConnection(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
         let useCase = ChannelUseCase(tv: tv, guide: SampleGuideRepository(guideHost: "192.0.2.2", programs: programs))
@@ -45,9 +47,13 @@ import Testing
         #expect(noGuide.liveItems(band: .terrestrial, watchingCode: "JP-G00000001", now: UseCaseFixtures.now).map(\.name) == ["テスト局１"])
 
         // 番組表があれば、番組表がある (Mirakurun が受信している) 局だけ
-        let withGuide = ChannelUseCase(tv: tv, guide: SampleGuideRepository(guideHost: "192.0.2.2", programs: [
-            try UseCaseFixtures.program(id: 1, networkId: 4, serviceId: 1, start: UseCaseFixtures.now),
-        ]))
+        let withGuide = ChannelUseCase(
+            tv: tv,
+            guide: SampleGuideRepository(
+                guideHost: "192.0.2.2",
+                programs: [
+                    try UseCaseFixtures.program(id: 1, networkId: 4, serviceId: 1, start: UseCaseFixtures.now)
+                ]))
         #expect(withGuide.liveBands == [.bs])
         let bs = withGuide.liveItems(band: .bs, watchingCode: "JP-G00040001", now: UseCaseFixtures.now)
         #expect(bs.map(\.name) == ["テストBS"])

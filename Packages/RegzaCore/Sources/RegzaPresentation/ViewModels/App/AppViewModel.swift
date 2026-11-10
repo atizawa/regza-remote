@@ -40,7 +40,8 @@ public final class AppViewModel {
 
     /// 画面の ViewModel は UseCase だけを使う。どの Repository の実装を使うかは、組み立てる側 (RegzaApp や見本) が決める
     package init(
-        remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol,
+        remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol,
+        recording: any RecordingUseCaseProtocol,
         stream: any StreamUseCaseProtocol, setup: any SetupUseCaseProtocol
     ) {
         self.channels = channels
@@ -126,7 +127,7 @@ public final class AppViewModel {
         let route = Route.programDetail(programID: programID, channelCode: channelCode)
         if let viewModel = programDetails[route] { return viewModel }
         guard let program = guide.program(id: programID, channelCode: channelCode),
-              let channel = channels.channel(code: channelCode)
+            let channel = channels.channel(code: channelCode)
         else { return nil }
         let viewModel = ProgramDetailViewModel(
             remote: remote, guide: guide, recording: recording, stream: stream, program: program, channel: channel
@@ -186,11 +187,12 @@ extension AppViewModel: IntrospectableActions {
         if let player { children.append(player) }
         for tab in Tab.allCases {
             for (depth, route) in state.path(of: tab).enumerated() {
-                let screen: (any Introspectable)? = switch route {
-                case .channelPrograms(let code): programList(channelCode: code)
-                case .programDetail(let id, let code): programDetail(programID: id, channelCode: code)
-                case .search: guideGrid.search
-                }
+                let screen: (any Introspectable)? =
+                    switch route {
+                    case .channelPrograms(let code): programList(channelCode: code)
+                    case .programDetail(let id, let code): programDetail(programID: id, channelCode: code)
+                    case .search: guideGrid.search
+                    }
                 if let screen { children.append(IntrospectionAlias("\(tab.rawValue)-\(depth)", screen)) }
             }
         }

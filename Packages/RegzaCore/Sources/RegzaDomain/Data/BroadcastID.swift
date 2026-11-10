@@ -26,10 +26,10 @@ public enum BroadcastID {
         guard epgContentID.hasPrefix("JP-") else { return nil }
         let digits = epgContentID.dropFirst(3)
         guard digits.count == 16,
-              let networkId = Int(digits.dropFirst(4).prefix(4), radix: 16),
-              let serviceId = Int(digits.dropFirst(8).prefix(4), radix: 16),
-              let eventId = Int(digits.suffix(4), radix: 16),
-              eventId != 0xFFFF
+            let networkId = Int(digits.dropFirst(4).prefix(4), radix: 16),
+            let serviceId = Int(digits.dropFirst(8).prefix(4), radix: 16),
+            let eventId = Int(digits.suffix(4), radix: 16),
+            eventId != 0xFFFF
         else { return nil }
         return networkId * 10_000_000_000 + serviceId * 100_000 + eventId
     }

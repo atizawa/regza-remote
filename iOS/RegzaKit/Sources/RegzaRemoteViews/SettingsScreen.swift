@@ -45,14 +45,16 @@ struct SettingsScreen: View {
                     }
                     // EPGStation は Mirakurun から放送を受け取るので、Mirakurun を設定してから設定できるようにする
                     NavigationLink(value: Page.stream) {
-                        LabeledContent("ライブ視聴（EPGStation）",
-                                       value: serverState.hasGuideDraft ? serverState.stream.status : "先に番組表を設定")
+                        LabeledContent(
+                            "ライブ視聴（EPGStation）",
+                            value: serverState.hasGuideDraft ? serverState.stream.status : "先に番組表を設定")
                     }
                     .disabled(!serverState.hasGuideDraft)
                 } header: {
                     Text("録画サーバーとの連携")
                 } footer: {
-                    Text("""
+                    Text(
+                        """
                         Mirakurun や EPGStation を使っている場合だけ設定してください。設定すると、番組名・番組表・番組表からの録画予約や、アプリでのライブ視聴が使えます。
                         ライブ視聴（EPGStation）は、番組表（Mirakurun）を設定すると設定できます。
                         """)
@@ -281,9 +283,10 @@ struct SettingsScreen: View {
         } header: {
             Text(server == .guide ? "番組表 (Mirakurun)" : "ライブ視聴 (EPGStation)")
         } footer: {
-            Text(server == .guide
-                 ? "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。"
-                 : "EPGStation を動かしている場合に設定すると、放送中の番組を iPhone で見られます。家の Wi-Fi の中だけで使えます。")
+            Text(
+                server == .guide
+                    ? "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。"
+                    : "EPGStation を動かしている場合に設定すると、放送中の番組を iPhone で見られます。家の Wi-Fi の中だけで使えます。")
         }
     }
 
@@ -311,13 +314,15 @@ private struct ServerAddressField: View {
     let defaultPort: Int
 
     private var address: Binding<String> {
-        Binding(get: { ServerAddress(host).address },
-                set: { host = ServerAddress(address: $0, port: ServerAddress(host).port).combined })
+        Binding(
+            get: { ServerAddress(host).address },
+            set: { host = ServerAddress(address: $0, port: ServerAddress(host).port).combined })
     }
 
     private var port: Binding<String> {
-        Binding(get: { ServerAddress(host).port },
-                set: { host = ServerAddress(address: ServerAddress(host).address, port: $0).combined })
+        Binding(
+            get: { ServerAddress(host).port },
+            set: { host = ServerAddress(address: ServerAddress(host).address, port: $0).combined })
     }
 
     var body: some View {

@@ -23,7 +23,8 @@ public struct RootView: View {
         if UserDefaults.standard.bool(forKey: "ShowSettings") { app.send(.showSettings) }
         // 開発用: 起動引数 -LiveHost <EPGStation> -LiveChannel <チャンネルの ID> で、すぐ再生画面を開く
         if let host = UserDefaults.standard.string(forKey: "LiveHost"),
-           let channelCode = UserDefaults.standard.string(forKey: "LiveChannel") {
+            let channelCode = UserDefaults.standard.string(forKey: "LiveChannel")
+        {
             debugPlayer = app.debugLivePlayer(streamHost: host, channelCode: channelCode)
         }
         #endif

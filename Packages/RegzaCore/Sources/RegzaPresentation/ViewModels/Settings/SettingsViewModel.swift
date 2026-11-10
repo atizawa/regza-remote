@@ -81,9 +81,9 @@ public final class SettingsViewModel {
     }
 }
 
-private extension SettingsPage {
+extension SettingsPage {
     /// 録画サーバーの設定の画面
-    init(_ server: ServerSetupServer) {
+    fileprivate init(_ server: ServerSetupServer) {
         self = server == .guide ? .guide : .stream
     }
 }
@@ -123,10 +123,13 @@ extension SettingsViewModel: IntrospectableActions {
         case "back": return .back
         case "setPath":
             guard case .array(let pages) = arguments["path"] ?? .array([]) else { throw IntrospectionError.invalidArgument("path") }
-            return .setPath(try pages.map { page in
-                guard case .string(let name) = page, let page = SettingsPage(rawValue: name) else { throw IntrospectionError.invalidArgument("path") }
-                return page
-            })
+            return .setPath(
+                try pages.map { page in
+                    guard case .string(let name) = page, let page = SettingsPage(rawValue: name) else {
+                        throw IntrospectionError.invalidArgument("path")
+                    }
+                    return page
+                })
         case "save": return .save
         case "close": return .close
         default: throw IntrospectionError.unknownAction(name)

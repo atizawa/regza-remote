@@ -1,9 +1,10 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 @testable import RegzaSample
 
 /// リモコンの ViewModel を、偽の通信と保存先で確かめる (iOS と Android で同じふるまいになることの確認)
@@ -17,7 +18,8 @@ import Testing
 
     @Test func tuneShowsChannelRightAway() async throws {
         let (model, transport, _) = makeModel { request in
-            request.url.path.hasSuffix("channel_list") ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
+            request.url.path.hasSuffix("channel_list")
+                ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
         }
         try await model.loadChannels()
         let channel = try #require(model.channels.last)
@@ -37,7 +39,8 @@ import Testing
 
     @Test func pressingKeyShowsItUntilTuning() async throws {
         let (model, _, _) = makeModel { request in
-            request.url.path.hasSuffix("channel_list") ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
+            request.url.path.hasSuffix("channel_list")
+                ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
         }
         // 画面のない入口 (Siri など) は、送った操作が終わるまで待てる
         await model.sendAndWait(.press(.volumeUp))
@@ -64,7 +67,8 @@ import Testing
         let failing = Failing()
         let (model, _, _) = makeModel { request in
             if failing.value { return HTTPResponse(statusCode: 500, headers: [:], body: Data()) }
-            return request.url.path.hasSuffix("channel_list") ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
+            return request.url.path.hasSuffix("channel_list")
+                ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
         }
         try await model.loadChannels()
         let channel = try #require(model.channels.first)
@@ -79,13 +83,14 @@ import Testing
     }
 
     @Test func savingAnotherTVForgetsWhatWasLoaded() async throws {
-        let live = LiveModels(transport: FakeTransport { request in
-            switch request.url.path {
-            case "/v2/remote/settings/channel_list": ViewModelFixtures.ok(ViewModelFixtures.channelList)
-            case "/v2/remote/pvr/reserves/list": ViewModelFixtures.ok(ViewModelFixtures.reservationList)
-            default: HTTPResponse(statusCode: 500, headers: [:], body: Data())
-            }
-        })
+        let live = LiveModels(
+            transport: FakeTransport { request in
+                switch request.url.path {
+                case "/v2/remote/settings/channel_list": ViewModelFixtures.ok(ViewModelFixtures.channelList)
+                case "/v2/remote/pvr/reserves/list": ViewModelFixtures.ok(ViewModelFixtures.reservationList)
+                default: HTTPResponse(statusCode: 500, headers: [:], body: Data())
+                }
+            })
         let (model, store, recording) = (live.remote, live.store, live.recording)
         try await model.loadChannels()
         try await recording.loadReservations()

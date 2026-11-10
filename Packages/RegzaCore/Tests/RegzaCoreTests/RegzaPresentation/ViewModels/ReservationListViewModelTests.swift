@@ -1,9 +1,10 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 @testable import RegzaSample
 
 /// 録画予約の一覧の ViewModel
@@ -18,7 +19,8 @@ import Testing
             {"rsv_id":"2","title":"次の回待ち","channel":"JP-G00000009","epg_content_id":"JP-0000000000010003","start_time":1000000000,"duration":1800,"repeat":"weekly","series_rec":"true"}]}
             """
         let (remote, _, recording, _) = fixtures.makeModels { request in
-            request.url.path.hasSuffix("channel_list") ? ViewModelFixtures.status(200, ViewModelFixtures.channelList) : ViewModelFixtures.status(200, list)
+            request.url.path.hasSuffix("channel_list")
+                ? ViewModelFixtures.status(200, ViewModelFixtures.channelList) : ViewModelFixtures.status(200, list)
         }
         let viewModel = ReservationListViewModel(remote: remote, recording: recording)
         await fixtures.send(viewModel) { $0.send(.load) }

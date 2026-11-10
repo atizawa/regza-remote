@@ -21,8 +21,9 @@ import Testing
             .map { viewModels.appending(path: $0) }
         return try files.map { file in
             let lines = try String(contentsOf: file, encoding: .utf8).components(separatedBy: "\n")
-            let name = try #require(lines.lazy.compactMap { $0.firstMatch(of: /^public enum (\w+)/)?.1 }.first.map(String.init),
-                                    "\(file.lastPathComponent) に public enum がありません")
+            let name = try #require(
+                lines.lazy.compactMap { $0.firstMatch(of: /^public enum (\w+)/)?.1 }.first.map(String.init),
+                "\(file.lastPathComponent) に public enum がありません")
             let cases = lines.compactMap { line in
                 line.trimmingCharacters(in: .whitespaces).firstMatch(of: /^case (\w+)/).map { String($0.1) }
             }
@@ -40,7 +41,9 @@ import Testing
             let signature: String
             if text.contains("typealias Action = \(action.name)\n"), let range = text.range(of: "func action(_ name: String") {
                 signature = String(text[range.lowerBound...])
-            } else if let range = text.range(of: "func introspectionAction(_ name: String, _ arguments: [String: JSONValue]) throws -> \(action.name) {") {
+            } else if let range = text.range(
+                of: "func introspectionAction(_ name: String, _ arguments: [String: JSONValue]) throws -> \(action.name) {")
+            {
                 signature = String(text[range.lowerBound...])
             } else {
                 continue
@@ -57,7 +60,10 @@ import Testing
         var result = ""
         for character in text {
             result.append(character)
-            if character == "{" { depth += 1; started = true }
+            if character == "{" {
+                depth += 1
+                started = true
+            }
             if character == "}" { depth -= 1 }
             if started && depth == 0 { break }
         }

@@ -1,18 +1,22 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 @testable import RegzaSample
 
 /// ViewModel を外から読み、操作する口 (Introspection)
 @MainActor
 @Suite struct IntrospectionTests {
     @Test func introspectionReachesScreensOnPath() async throws {
-        let app = LiveModels(transport: FakeTransport { request in
-            request.url.path.hasSuffix("channel_list") ? ViewModelFixtures.status(200, ViewModelFixtures.channelList) : ViewModelFixtures.status(500)
-        }).app
+        let app = LiveModels(
+            transport: FakeTransport { request in
+                request.url.path.hasSuffix("channel_list")
+                    ? ViewModelFixtures.status(200, ViewModelFixtures.channelList) : ViewModelFixtures.status(500)
+            }
+        ).app
         let introspector = Introspector(root: app)
         try introspector.perform("app/channelList", "reload")
         _ = await introspector.waitUntilIdle()

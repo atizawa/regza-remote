@@ -11,7 +11,8 @@ import WidgetKit
 /// キーを 1 つ送るボタンの共通の見た目
 @MainActor
 private func keyControl(kind: String, key: RegzaKey, title: LocalizedStringResource, systemImage: String)
-    -> some ControlWidgetConfiguration {
+    -> some ControlWidgetConfiguration
+{
     StaticControlConfiguration(kind: kind) {
         ControlWidgetButton(action: RegzaKeyIntent(key)) {
             Label(title, systemImage: systemImage)
@@ -38,32 +39,36 @@ public struct MuteControl: ControlWidget {
 public struct VolumeUpControl: ControlWidget {
     public init() {}
     public var body: some ControlWidgetConfiguration {
-        keyControl(kind: "RegzaRemote.control.volumeUp", key: .volumeUp, title: "テレビの音量を上げる",
-                   systemImage: "speaker.plus.fill")
+        keyControl(
+            kind: "RegzaRemote.control.volumeUp", key: .volumeUp, title: "テレビの音量を上げる",
+            systemImage: "speaker.plus.fill")
     }
 }
 
 public struct VolumeDownControl: ControlWidget {
     public init() {}
     public var body: some ControlWidgetConfiguration {
-        keyControl(kind: "RegzaRemote.control.volumeDown", key: .volumeDown, title: "テレビの音量を下げる",
-                   systemImage: "speaker.minus.fill")
+        keyControl(
+            kind: "RegzaRemote.control.volumeDown", key: .volumeDown, title: "テレビの音量を下げる",
+            systemImage: "speaker.minus.fill")
     }
 }
 
 public struct ChannelUpControl: ControlWidget {
     public init() {}
     public var body: some ControlWidgetConfiguration {
-        keyControl(kind: "RegzaRemote.control.channelUp", key: .channelUp, title: "次のチャンネル",
-                   systemImage: "chevron.up.circle")
+        keyControl(
+            kind: "RegzaRemote.control.channelUp", key: .channelUp, title: "次のチャンネル",
+            systemImage: "chevron.up.circle")
     }
 }
 
 public struct ChannelDownControl: ControlWidget {
     public init() {}
     public var body: some ControlWidgetConfiguration {
-        keyControl(kind: "RegzaRemote.control.channelDown", key: .channelDown, title: "前のチャンネル",
-                   systemImage: "chevron.down.circle")
+        keyControl(
+            kind: "RegzaRemote.control.channelDown", key: .channelDown, title: "前のチャンネル",
+            systemImage: "chevron.down.circle")
     }
 }
 #endif

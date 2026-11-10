@@ -89,7 +89,8 @@ enum SampleData {
                 let minutes = [30, 60, 45, 90, 15, 60][(event + index) % 6]
                 let title = titles[(event * 3 + index) % titles.count]
                 let cast = casts[(event * 5 + index) % casts.count]
-                items.append("""
+                items.append(
+                    """
                     {"id":\(1 * 10_000_000_000 + (index + 1) * 100_000 + event),"eventId":\(event),"networkId":1,\
                     "serviceId":\(index + 1),"startAt":\(Int(time.timeIntervalSince1970 * 1000)),"duration":\(minutes * 60_000),\
                     "name":"\(title)","description":"見本の番組です。","extended":{"番組内容":"見本の番組の内容です。"\(cast.isEmpty ? "" : ",\"出演者\":\"\(cast)\"")},\

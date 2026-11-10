@@ -1,9 +1,10 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 @testable import RegzaSample
 
 /// 番組表と検索の ViewModel
@@ -23,10 +24,12 @@ import Testing
     }
 
     @Test func gridShowsChannelsThatHavePrograms() async throws {
-        let app = fixtures.sampleApp(channels: try channels(), programs: [
-            try program(id: 1, startingIn: 0),
-            try program(id: 2, startingIn: 3 * 86_400),
-        ])
+        let app = fixtures.sampleApp(
+            channels: try channels(),
+            programs: [
+                try program(id: 1, startingIn: 0),
+                try program(id: 2, startingIn: 3 * 86_400),
+            ])
         let (remote, guide, recording) = (app.remote, app.guide, app.recording)
         let viewModel = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
         let state = viewModel.state
@@ -74,10 +77,12 @@ import Testing
     }
 
     @Test func searchFindsProgramsAndReadsConditions() async throws {
-        let app = fixtures.sampleApp(channels: try channels(), programs: [
-            try program(id: 1, startingIn: -60, name: "あおぞら散歩"),
-            try program(id: 2, startingIn: 86_400, name: "みどり劇場"),
-        ])
+        let app = fixtures.sampleApp(
+            channels: try channels(),
+            programs: [
+                try program(id: 1, startingIn: -60, name: "あおぞら散歩"),
+                try program(id: 2, startingIn: 86_400, name: "みどり劇場"),
+            ])
         let (remote, guide, recording) = (app.remote, app.guide, app.recording)
         let grid = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
         let search = grid.search

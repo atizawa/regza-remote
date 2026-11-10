@@ -13,7 +13,10 @@ public final class LivePlayerViewModel {
     package let guide: any GuideUseCaseProtocol
     package let stream: any StreamUseCaseProtocol
 
-    package init(remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol, channel: RegzaChannel) {
+    package init(
+        remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol,
+        channel: RegzaChannel
+    ) {
         self.remote = remote
         self.channels = channels
         self.guide = guide
@@ -124,10 +127,11 @@ public final class LivePlayerViewModel {
                 self.streamID = nil
                 await stream.stop(streamID: requested)
             }
-            phase = .failed(message: """
-                再生できませんでした。\(error.localizedDescription)
-                EPGStation で同時に変換できる数の上限に達していると始まりません。ほかの画面で見ている配信を閉じるか、準備できないまま残っている配信を止めてから試してください。
-                """, canRetry: true)
+            phase = .failed(
+                message: """
+                    再生できませんでした。\(error.localizedDescription)
+                    EPGStation で同時に変換できる数の上限に達していると始まりません。ほかの画面で見ている配信を閉じるか、準備できないまま残っている配信を止めてから試してください。
+                    """, canRetry: true)
         }
     }
 }

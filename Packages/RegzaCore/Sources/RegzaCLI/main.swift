@@ -30,7 +30,8 @@ func main() async {
     let transport: any HTTPTransport
     if options.sample {
         do {
-            let fixture = try options.fixture.map { try SampleFixture(json: String(contentsOfFile: $0, encoding: .utf8)) } ?? SampleFixture()
+            let fixture =
+                try options.fixture.map { try SampleFixture(json: String(contentsOfFile: $0, encoding: .utf8)) } ?? SampleFixture()
             transport = SampleTransport(fixture: fixture)
         } catch {
             print(IntrospectionSession.failure("fixture を読めません: \(error)"))

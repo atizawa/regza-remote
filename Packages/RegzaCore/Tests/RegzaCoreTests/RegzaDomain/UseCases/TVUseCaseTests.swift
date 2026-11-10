@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import RegzaDomain
 @testable import RegzaSample
 
@@ -8,9 +9,10 @@ import Testing
 @Suite struct TVUseCaseTests {
     @Test func nowPlayingItemUsesDomainTexts() {
         let tv = TVUseCase(tv: SampleTVRepository(connection: RegzaConnection(host: "192.0.2.1"), channels: [], nowPlaying: nil))
-        let recorded = tv.item(RegzaNowPlaying(
-            kind: .recorded, channelName: "テスト局１", title: "見本の録画", position: 60, duration: 120, isAdvancing: true
-        ))
+        let recorded = tv.item(
+            RegzaNowPlaying(
+                kind: .recorded, channelName: "テスト局１", title: "見本の録画", position: 60, duration: 120, isAdvancing: true
+            ))
         #expect(recorded.kind == .recorded)
         #expect(recorded.captionText == "録画 · テスト局１")
         #expect(recorded.headlineText == "見本の録画")

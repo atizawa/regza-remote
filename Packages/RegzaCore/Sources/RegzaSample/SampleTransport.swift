@@ -69,7 +69,9 @@ public struct SampleTransport: HTTPTransport {
                 let id = service * 1000 + index
                 let start = (hour + index * 3600) * 1000
                 let name = "\(names[(index + service) % names.count]) 第\(index + 1)回"
-                programs.append(#"{"id":\#(id),"eventId":\#(id),"networkId":0,"serviceId":\#(service),"startAt":\#(start),"duration":3600000,"name":"\#(name)","genres":[]}"#)
+                programs.append(
+                    #"{"id":\#(id),"eventId":\#(id),"networkId":0,"serviceId":\#(service),"startAt":\#(start),"duration":3600000,"name":"\#(name)","genres":[]}"#
+                )
             }
         }
         return "[" + programs.joined(separator: ",") + "]"

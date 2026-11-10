@@ -155,7 +155,7 @@ public actor RegzaClient {
         if response.statusCode == 401 {
             // nonce の期限切れなどで再チャレンジされたら、新しいチャレンジで 1 回だけやり直す
             guard let header = response.value(forHTTPHeaderField: "WWW-Authenticate"),
-                  let newChallenge = DigestChallenge(header: header)
+                let newChallenge = DigestChallenge(header: header)
             else { throw RegzaError.unauthorized }
             let retry = challenge == nil || challenge != newChallenge
             challenge = newChallenge

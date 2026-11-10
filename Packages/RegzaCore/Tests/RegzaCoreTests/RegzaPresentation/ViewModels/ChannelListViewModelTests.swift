@@ -1,9 +1,10 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 @testable import RegzaSample
 
 /// チャンネル一覧の ViewModel
@@ -20,9 +21,11 @@ import Testing
     }
 
     @Test func channelListExplainsRejectedTune() async throws {
-        let live = LiveModels(transport: FakeTransport { request in
-            request.url.path.hasSuffix("channel_list") ? ViewModelFixtures.status(200, ViewModelFixtures.channelList) : ViewModelFixtures.status(200, #"{"status":1}"#)
-        })
+        let live = LiveModels(
+            transport: FakeTransport { request in
+                request.url.path.hasSuffix("channel_list")
+                    ? ViewModelFixtures.status(200, ViewModelFixtures.channelList) : ViewModelFixtures.status(200, #"{"status":1}"#)
+            })
         let viewModel = live.app.channelList
         await fixtures.send(viewModel) { $0.send(.reload) }
         #expect(viewModel.state.bands == [RegzaChannel.Band.terrestrial, .bs])

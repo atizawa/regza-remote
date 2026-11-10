@@ -1,9 +1,10 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 @testable import RegzaSample
 
 /// 番組の詳細の ViewModel
@@ -13,7 +14,8 @@ import Testing
 
     @Test func programDetailExplainsRejectedReservation() async throws {
         let (remote, guide, recording, stream) = fixtures.makeModels { request in
-            request.url.path.hasSuffix("reserves/new") ? ViewModelFixtures.status(200, #"{"status":2}"#) : ViewModelFixtures.status(200, #"{"status":0,"rsv_list":[]}"#)
+            request.url.path.hasSuffix("reserves/new")
+                ? ViewModelFixtures.status(200, #"{"status":2}"#) : ViewModelFixtures.status(200, #"{"status":0,"rsv_list":[]}"#)
         }
         let program = try fixtures.program(startingIn: 3600)
         let viewModel = ProgramDetailViewModel(
@@ -31,7 +33,8 @@ import Testing
     }
 
     @Test func programDetailDescribesSeriesReservation() async throws {
-        let list = #"{"status":0,"rsv_list":[{"rsv_id":"1","title":"テスト番組","channel":"JP-G00010001","epg_content_id":"JP-0000000100010002","start_time":4000000000,"duration":1800,"repeat":"weekly","series_rec":"true"}]}"#
+        let list =
+            #"{"status":0,"rsv_list":[{"rsv_id":"1","title":"テスト番組","channel":"JP-G00010001","epg_content_id":"JP-0000000100010002","start_time":4000000000,"duration":1800,"repeat":"weekly","series_rec":"true"}]}"#
         let (remote, guide, recording, stream) = fixtures.makeModels { _ in ViewModelFixtures.status(200, list) }
         let program = try fixtures.program(startingIn: 3600)
         let viewModel = ProgramDetailViewModel(

@@ -47,7 +47,8 @@ struct GuideGridScreen: View {
             ContentUnavailableView {
                 Label("番組表を使うには", systemImage: "calendar")
             } description: {
-                Text("""
+                Text(
+                    """
                     録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。
                     設定画面の「録画サーバーとの連携」で Mirakurun のアドレスを設定してください。
                     """)
@@ -158,7 +159,8 @@ struct GuideGridScreen: View {
         #if DEBUG
         // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
         if UserDefaults.standard.bool(forKey: "SampleData"), UserDefaults.standard.bool(forKey: "SampleDetail"),
-           let column = viewModel.state.columns.first, let program = column.programs.first(where: \.isOnAir) {
+            let column = viewModel.state.columns.first, let program = column.programs.first(where: \.isOnAir)
+        {
             app.send(.setPath(.guide, [.programDetail(programID: program.id, channelCode: column.channelCode)]))
         }
         if UserDefaults.standard.bool(forKey: "SampleData"), let text = UserDefaults.standard.string(forKey: "SampleSearch") {
@@ -352,7 +354,8 @@ private struct ProgramCell: View {
 
     /// 「22時00分から22時45分、スポーツまとめ、みどりテレビ、スポーツ、録画予約済み」
     private func accessibilityText(isOnAir: Bool) -> String {
-        let time = "\(program.start.formatted(date: .omitted, time: .shortened))から\(program.end.formatted(date: .omitted, time: .shortened))"
+        let time =
+            "\(program.start.formatted(date: .omitted, time: .shortened))から\(program.end.formatted(date: .omitted, time: .shortened))"
         var parts = [isOnAir ? "放送中、\(time)" : time, program.name, channelName]
         if let genre = program.genreName { parts.append(genre) }
         if isReserved { parts.append("録画予約済み") }

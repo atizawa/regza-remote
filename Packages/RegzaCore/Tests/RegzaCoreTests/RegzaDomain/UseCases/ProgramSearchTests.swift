@@ -1,11 +1,14 @@
 import Foundation
 import Testing
+
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 
 @Suite struct ProgramSearchTests {
-    func program(_ id: Int, _ name: String, start: String, minutes: Int = 30, genre: Int = 1,
-                 cast: String = "") throws -> MirakurunProgram {
+    func program(
+        _ id: Int, _ name: String, start: String, minutes: Int = 30, genre: Int = 1,
+        cast: String = ""
+    ) throws -> MirakurunProgram {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(identifier: "Asia/Tokyo")
@@ -37,9 +40,10 @@ import Testing
         let query = ProgramSearchQuery(keywordGroups: [["見本グループ", "テスト太郎", "例示次郎"]])
         let found = ProgramSearchIndex(programs).search(query, now: now, calendar: calendar)
         #expect(found.map(\.program.id) == [2, 1])
-        #expect(found.map(\.matches) == [
-            [.init(term: "例示次郎", field: .cast)], [.init(term: "テスト太郎", field: .cast)],
-        ])
+        #expect(
+            found.map(\.matches) == [
+                [.init(term: "例示次郎", field: .cast)], [.init(term: "テスト太郎", field: .cast)],
+            ])
     }
 
     @Test func normalizesWidthKanaAndCase() {
@@ -84,8 +88,10 @@ import Testing
     }
 
     @Test func readsDayHoursAndGenre() {
-        #expect(parse("明日の夜のサッカー") == ProgramSearchQuery(
-            keywordGroups: [["サッカー"]], dayOffset: 1, startHour: 18, endHour: 28))
+        #expect(
+            parse("明日の夜のサッカー")
+                == ProgramSearchQuery(
+                    keywordGroups: [["サッカー"]], dayOffset: 1, startHour: 18, endHour: 28))
         #expect(parse("土曜のアニメ") == ProgramSearchQuery(genres: [7], dayOffset: 3))
         #expect(parse("２１時からのドラマ") == ProgramSearchQuery(genres: [3], startHour: 21))
         #expect(parse("今夜 映画") == ProgramSearchQuery(genres: [6], dayOffset: 0, startHour: 18, endHour: 28))

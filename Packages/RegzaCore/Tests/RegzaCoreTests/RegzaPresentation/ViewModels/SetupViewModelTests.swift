@@ -1,9 +1,10 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 @testable import RegzaSample
 
 /// 設定の ViewModel
@@ -62,9 +63,10 @@ import Testing
     }
 
     @Test func suggestsEPGStationOnMirakurunServer() async {
-        let live = LiveModels(transport: FakeTransport { request in
-            request.url.path == "/api/version" ? ViewModelFixtures.status(200, #"{"version":"2.0.0"}"#) : ViewModelFixtures.status(404)
-        })
+        let live = LiveModels(
+            transport: FakeTransport { request in
+                request.url.path == "/api/version" ? ViewModelFixtures.status(200, #"{"version":"2.0.0"}"#) : ViewModelFixtures.status(404)
+            })
         let servers = ServerSetupViewModel(setup: live.setup)
         servers.send(.setHost(.guide, "192.0.2.2:40772"))
 
@@ -81,7 +83,8 @@ import Testing
 
     /// 設定の画面と、閉じた回数
     func makeSettings(store: MemoryStore = MemoryStore(connection: RegzaConnection(host: "192.0.2.10")), transport: FakeTransport)
-        -> (SettingsViewModel, LiveModels, () -> Int) {
+        -> (SettingsViewModel, LiveModels, () -> Int)
+    {
         let live = LiveModels(store: store, transport: transport)
         var closed = 0
         let settings = SettingsViewModel(remote: live.remote, setup: live.setup) { closed += 1 }
@@ -130,9 +133,10 @@ import Testing
     }
 
     @Test func openingStreamPageSuggestsEPGStation() async {
-        let (settings, _, _) = makeSettings(transport: FakeTransport { request in
-            request.url.path == "/api/version" ? ViewModelFixtures.status(200, #"{"version":"2.0.0"}"#) : ViewModelFixtures.status(404)
-        })
+        let (settings, _, _) = makeSettings(
+            transport: FakeTransport { request in
+                request.url.path == "/api/version" ? ViewModelFixtures.status(200, #"{"version":"2.0.0"}"#) : ViewModelFixtures.status(404)
+            })
         settings.send(.server(.setHost(.guide, "192.0.2.2:40772")))
         await fixtures.send(settings) { $0.send(.openPage(.stream)) }
         #expect(settings.state.path == [.stream])

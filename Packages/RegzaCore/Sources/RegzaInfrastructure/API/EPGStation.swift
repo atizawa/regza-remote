@@ -31,7 +31,7 @@ public final class EPGStation: Sendable {
     public func startLiveStream(channelID: Int, mode: Int = 0) async throws -> Int {
         let data = try await request("GET", "/api/streams/live/\(channelID)/hls", query: "mode=\(mode)")
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let streamID = object["streamId"] as? Int
+            let streamID = object["streamId"] as? Int
         else { throw RegzaError.unsupported }
         return streamID
     }
@@ -46,7 +46,8 @@ public final class EPGStation: Sendable {
         while Date() < deadline {
             try Task.checkCancellation()
             if let data = try? await request("GET", "/streamfiles/stream\(streamID).m3u8"),
-               String(decoding: data, as: UTF8.self).contains(".ts") {
+                String(decoding: data, as: UTF8.self).contains(".ts")
+            {
                 return
             }
             // 見ていることを知らせながら待つ
@@ -71,7 +72,7 @@ public final class EPGStation: Sendable {
     public func streams() async throws -> [Stream] {
         let data = try await request("GET", "/api/streams", query: "isHalfWidth=true")
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let items = object["items"] as? [[String: Any]]
+            let items = object["items"] as? [[String: Any]]
         else { throw RegzaError.unsupported }
         return items.compactMap { item in
             (item["streamId"] as? Int).map { Stream(id: $0, isEnabled: item["isEnable"] as? Bool ?? false) }
@@ -87,7 +88,7 @@ public final class EPGStation: Sendable {
     /// EPGStation が応答するか
     public func isAvailable() async -> Bool {
         guard let data = try? await request("GET", "/api/version"),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return false }
         return object["version"] != nil
     }

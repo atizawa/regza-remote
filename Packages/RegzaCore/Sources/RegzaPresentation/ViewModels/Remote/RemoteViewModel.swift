@@ -242,7 +242,8 @@ extension RemoteViewModel: IntrospectableActions {
         [
             ActionDescription("press", "リモコンのボタンを押す", parameters: ["key": RegzaKey.allCases.map { "\($0)" }.joined(separator: " | ")]),
             ActionDescription("seek", "録画の再生位置を移す", parameters: ["seconds": "秒"]),
-            ActionDescription("selectBand", "放送の種類を選ぶ (省くと選ばない)", parameters: ["band": BroadcastBand.allCases.map(\.rawValue).joined(separator: " | ")]),
+            ActionDescription(
+                "selectBand", "放送の種類を選ぶ (省くと選ばない)", parameters: ["band": BroadcastBand.allCases.map(\.rawValue).joined(separator: " | ")]),
             ActionDescription("loadChannels", "チャンネル一覧を読む", parameters: ["force": "true なら読み直す"]),
             ActionDescription("tune", "選局する", parameters: ["channel": "チャンネルの code"]),
             ActionDescription("refresh", "いま映っているものを取り直す"),

@@ -27,11 +27,14 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
             throw RegzaError(error)
         }
         let now = Date()
-        loaded = (list.sorted { lhs, rhs in
-            let left = lhs.isScheduled(now: now), right = rhs.isScheduled(now: now)
-            // 予定のあるものは近い順、次の回が未定のものは最後に録画した回が新しい順
-            return left != right ? left : (left ? lhs.start < rhs.start : lhs.start > rhs.start)
-        }, connection)
+        loaded = (
+            list.sorted { lhs, rhs in
+                let left = lhs.isScheduled(now: now)
+                let right = rhs.isScheduled(now: now)
+                // 予定のあるものは近い順、次の回が未定のものは最後に録画した回が新しい順
+                return left != right ? left : (left ? lhs.start < rhs.start : lhs.start > rhs.start)
+            }, connection
+        )
     }
 
     public func reserve(_ program: MirakurunProgram, series: Bool) async throws(RegzaError) {

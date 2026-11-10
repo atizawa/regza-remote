@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 
@@ -13,9 +14,11 @@ import Testing
 
     // RFC 6070
     @Test func pbkdf2() {
-        let password = Array("password".utf8), salt = Array("salt".utf8)
+        let password = Array("password".utf8)
+        let salt = Array("salt".utf8)
         #expect(hex(SHA1.pbkdf2(password: password, salt: salt, iterations: 1, length: 20)) == "0c60c80f961f0e71f3a9b524af6012062fe037a6")
-        #expect(hex(SHA1.pbkdf2(password: password, salt: salt, iterations: 4096, length: 20)) == "4b007901b765489abead49d926f721d065a429c1")
+        #expect(
+            hex(SHA1.pbkdf2(password: password, salt: salt, iterations: 4096, length: 20)) == "4b007901b765489abead49d926f721d065a429c1")
     }
 
     // FIPS-197 C.1

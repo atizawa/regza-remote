@@ -47,10 +47,12 @@ struct NowPlayingScreen: View {
             }
             .onAppear { viewModel.send(.appear) }
             // このシートを開いている間は、アプリで見る画面をシートの上から出す
-            .fullScreenCover(isPresented: Binding(
-                get: { app.state.playingChannelCode != nil },
-                set: { if !$0 { app.send(.closePlayer) } }
-            )) {
+            .fullScreenCover(
+                isPresented: Binding(
+                    get: { app.state.playingChannelCode != nil },
+                    set: { if !$0 { app.send(.closePlayer) } }
+                )
+            ) {
                 if let player = app.player {
                     LivePlayerScreen(viewModel: player)
                 }

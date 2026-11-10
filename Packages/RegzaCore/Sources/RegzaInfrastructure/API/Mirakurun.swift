@@ -39,7 +39,7 @@ public final class Mirakurun: Sendable {
     /// Mirakurun が応答するか
     public func isAvailable() async -> Bool {
         guard let data = try? await get("/api/version"),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return false }
         return object["current"] != nil
     }

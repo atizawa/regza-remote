@@ -89,8 +89,8 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     public func locateMovedTV() async -> RegzaConnection? {
         let original = connection
         guard let host = await RegzaDiscovery.locate(original),
-              // 探している間に設定画面で接続先が変えられていたら、そちらを優先する
-              !Task.isCancelled, connection == original
+            // 探している間に設定画面で接続先が変えられていたら、そちらを優先する
+            !Task.isCancelled, connection == original
         else { return nil }
         var moved = original
         moved.host = host

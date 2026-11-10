@@ -14,7 +14,8 @@ public final class ProgramDetailViewModel {
     package let channel: RegzaChannel
 
     package init(
-        remote: RemoteViewModel, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, stream: any StreamUseCaseProtocol,
+        remote: RemoteViewModel, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol,
+        stream: any StreamUseCaseProtocol,
         program: MirakurunProgram, channel: RegzaChannel
     ) {
         self.remote = remote

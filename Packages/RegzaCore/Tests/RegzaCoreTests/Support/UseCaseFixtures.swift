@@ -1,4 +1,5 @@
 import Foundation
+
 @testable import RegzaDomain
 
 /// UseCase のテストで使う、決まった日時・局・番組・予約
@@ -33,7 +34,9 @@ enum UseCaseFixtures {
         return try JSONDecoder().decode(MirakurunProgram.self, from: Data(json.utf8))
     }
 
-    static func reservation(id: String, channelCode: String, epgContentID: String = "", start: Date, minutes: Int = 30, series: Bool = false) throws -> RegzaReservation {
+    static func reservation(
+        id: String, channelCode: String, epgContentID: String = "", start: Date, minutes: Int = 30, series: Bool = false
+    ) throws -> RegzaReservation {
         let json = """
             {"rsv_id":"\(id)","title":"予約\(id)","channel":"\(channelCode)","epg_content_id":"\(epgContentID)",\
             "start_time":\(Int(start.timeIntervalSince1970)),"duration":\(minutes * 60)\(series ? #","repeat":"weekly","series_rec":"true""# : "")}

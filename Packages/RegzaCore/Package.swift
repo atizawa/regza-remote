@@ -38,6 +38,8 @@ let package = Package(
         // 見本の Repository (テレビにも録画サーバーにもつながない)
         .target(name: "RegzaSample", dependencies: ["RegzaDomain", "RegzaPresentation", "RegzaInfrastructure"]),
         .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp", "RegzaSample"]),
-        .testTarget(name: "RegzaCoreTests", dependencies: ["RegzaApp", "RegzaSample", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels"]),
+        .testTarget(
+            name: "RegzaCoreTests",
+            dependencies: ["RegzaApp", "RegzaSample", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels"]),
     ]
 )

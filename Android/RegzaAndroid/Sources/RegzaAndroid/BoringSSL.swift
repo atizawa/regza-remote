@@ -89,7 +89,8 @@ final class BoringSSLProvider: TLSProvider, @unchecked Sendable {
     }
 
     private func verifyingContext() -> OpaquePointer? {
-        lock.lock(); defer { lock.unlock() }
+        lock.lock()
+        defer { lock.unlock() }
         if verifying == nil { verifying = Self.makeContext(verifies: true) }
         return verifying
     }
@@ -103,7 +104,10 @@ final class BoringSSLProvider: TLSProvider, @unchecked Sendable {
             for path in trustedCertificatePaths() {
                 if SSL_CTX_load_verify_locations(context, path, nil) == 1 { loaded = true }
             }
-            guard loaded else { SSL_CTX_free(context); return nil }
+            guard loaded else {
+                SSL_CTX_free(context)
+                return nil
+            }
         }
         return context
     }

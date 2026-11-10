@@ -92,7 +92,10 @@ public final class GuideSearchViewModel {
     private func refresh() {
         var query = isLiteral ? ProgramSearchQuery(text: text) : ProgramSearchQuery(parsing: text)
         if removed.contains(.day) { query.dayOffset = nil }
-        if removed.contains(.hours) { query.startHour = nil; query.endHour = nil }
+        if removed.contains(.hours) {
+            query.startHour = nil
+            query.endHour = nil
+        }
         query.genres.removeAll { removed.contains(.genre($0)) }
         self.query = query
         results = query.isEmpty ? [] : index.search(query)
@@ -137,16 +140,17 @@ extension GuideSearchViewModel: IntrospectableActions {
             "isLiteral": .bool(state.isLiteral),
             "isIndexing": .bool(state.isIndexing),
             "conditions": .array(state.conditions.map { .string($0.label) }),
-            "results": .array(state.results.prefix(50).map { row in
-                .object([
-                    "program": .number(Double(row.program.id)),
-                    "name": .string(row.program.name),
-                    "channel": .string(row.channelCode),
-                    "time": .string(row.timeText),
-                    "reason": row.reason.map(JSONValue.string) ?? .null,
-                    "isReserved": .bool(row.program.isReserved),
-                ])
-            }),
+            "results": .array(
+                state.results.prefix(50).map { row in
+                    .object([
+                        "program": .number(Double(row.program.id)),
+                        "name": .string(row.program.name),
+                        "channel": .string(row.channelCode),
+                        "time": .string(row.timeText),
+                        "reason": row.reason.map(JSONValue.string) ?? .null,
+                        "isReserved": .bool(row.program.isReserved),
+                    ])
+                }),
             "resultCount": .number(Double(state.results.count)),
         ])
     }

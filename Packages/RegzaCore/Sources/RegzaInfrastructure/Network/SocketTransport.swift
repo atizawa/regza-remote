@@ -1,5 +1,6 @@
 import Foundation
 import RegzaDomain
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -83,12 +84,15 @@ final class Cancellation: @unchecked Sendable {
     private var cancelled = false
 
     var isCancelled: Bool {
-        lock.lock(); defer { lock.unlock() }
+        lock.lock()
+        defer { lock.unlock() }
         return cancelled
     }
 
     func cancel() {
-        lock.lock(); cancelled = true; lock.unlock()
+        lock.lock()
+        cancelled = true
+        lock.unlock()
     }
 }
 

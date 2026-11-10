@@ -57,7 +57,8 @@ public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
         let extended = try container.decodeIfPresent([String: String].self, forKey: .extended) ?? [:]
         // JSON のキーの順番は残らないので、よく出る見出しを先に並べる
         let order = ["番組内容", "出演者"]
-        self.extended = extended
+        self.extended =
+            extended
             .map { Extended(title: $0.key, text: $0.value) }
             .sorted { lhs, rhs in
                 let left = order.firstIndex(of: lhs.title) ?? order.count

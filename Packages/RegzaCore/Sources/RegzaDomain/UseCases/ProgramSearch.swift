@@ -16,8 +16,10 @@ public struct ProgramSearchQuery: Equatable, Sendable {
     /// この時刻より前に始まる番組
     public var endHour: Int?
 
-    public init(keywordGroups: [[String]] = [], genres: [Int] = [], dayOffset: Int? = nil,
-                startHour: Int? = nil, endHour: Int? = nil) {
+    public init(
+        keywordGroups: [[String]] = [], genres: [Int] = [], dayOffset: Int? = nil,
+        startHour: Int? = nil, endHour: Int? = nil
+    ) {
         self.keywordGroups = keywordGroups
         self.genres = genres
         self.dayOffset = dayOffset
@@ -74,9 +76,10 @@ public struct ProgramSearchIndex: Sendable {
                 program: program,
                 title: Array(ProgramSearch.normalize(program.name).utf8),
                 cast: Array(ProgramSearch.normalize(program.extended.filter(isCast).map(\.text).joined(separator: " ")).utf8),
-                description: Array(ProgramSearch.normalize(
-                    ([program.description] + program.extended.filter { !isCast($0) }.map(\.text)).joined(separator: " ")
-                ).utf8)
+                description: Array(
+                    ProgramSearch.normalize(
+                        ([program.description] + program.extended.filter { !isCast($0) }.map(\.text)).joined(separator: " ")
+                    ).utf8)
             )
         }
     }
@@ -161,7 +164,8 @@ public enum ProgramSearch {
             if scalar.properties.isWhitespace { continue }
             // ぁ〜ゖ・ゝゞ は、同じ並びのカタカナ (0x60 後ろ) にする
             if (0x3041...0x3096).contains(scalar.value) || (0x309D...0x309E).contains(scalar.value),
-               let katakana = Unicode.Scalar(scalar.value + 0x60) {
+                let katakana = Unicode.Scalar(scalar.value + 0x60)
+            {
                 scalars.append(katakana)
             } else {
                 scalars.append(scalar)
@@ -180,12 +184,14 @@ extension ProgramSearchQuery {
     public init(parsing text: String, now: Date = Date(), calendar: Calendar = .current) {
         self.init()
         let today = BroadcastDay.start(of: now, calendar: calendar)
-        let digits = String(text.map { character -> Character in
-            // 全角の数字は半角にする (ほかの文字は打ったままにする)
-            guard let value = character.unicodeScalars.first?.value, (0xFF10...0xFF19).contains(value),
-                  let scalar = Unicode.Scalar(value - 0xFF10 + 0x30) else { return character }
-            return Character(scalar)
-        })
+        let digits = String(
+            text.map { character -> Character in
+                // 全角の数字は半角にする (ほかの文字は打ったままにする)
+                guard let value = character.unicodeScalars.first?.value, (0xFF10...0xFF19).contains(value),
+                    let scalar = Unicode.Scalar(value - 0xFF10 + 0x30)
+                else { return character }
+                return Character(scalar)
+            })
         for chunk in digits.split(whereSeparator: \.isWhitespace) {
             var rest = Substring(chunk)
             while let (condition, length) = Self.condition(at: rest) {
@@ -201,7 +207,12 @@ extension ProgramSearchQuery {
     }
 
     enum Condition {
-        case day(Int), weekday(Int), date(month: Int, day: Int), hours(Int, Int), hour(Int), genre(Int)
+        case day(Int)
+        case weekday(Int)
+        case date(month: Int, day: Int)
+        case hours(Int, Int)
+        case hour(Int)
+        case genre(Int)
         /// 今夜 (今日の夜)
         case tonight
     }
@@ -235,7 +246,8 @@ extension ProgramSearchQuery {
             return (.hour(hour < BroadcastDay.startHour ? hour + 24 : hour), match.0.count)
         }
         if let match = text.prefixMatch(of: /(\d{1,2})(?:\/|月)(\d{1,2})日?/), let month = Int(match.1),
-           let day = Int(match.2), (1...12).contains(month), (1...31).contains(day) {
+            let day = Int(match.2), (1...12).contains(month), (1...31).contains(day)
+        {
             return (.date(month: month, day: day), match.0.count)
         }
         return conditionWords.first { text.hasPrefix($0.0) }.map { ($0.1, $0.0.count) }
@@ -279,9 +291,13 @@ extension ProgramSearchQuery {
             endHour = end
         case .hour(let hour):
             switch particle {
-            case "から", "以降": startHour = hour; endHour = nil
+            case "から", "以降":
+                startHour = hour
+                endHour = nil
             case "まで", "以前": endHour = hour
-            default: startHour = hour; endHour = hour + 1
+            default:
+                startHour = hour
+                endHour = hour + 1
             }
         case .genre(let genre):
             if !genres.contains(genre) { genres.append(genre) }

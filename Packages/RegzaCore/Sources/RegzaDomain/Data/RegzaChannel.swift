@@ -103,7 +103,7 @@ extension Sequence where Element == RegzaChannel {
         }
         return channels.filter { channel in
             guard channel.remoteNumber > 0, let representative = representatives[channel.remoteNumber],
-                  representative != channel
+                representative != channel
             else { return true }
             return showsSubchannel(channel, representative)
         }

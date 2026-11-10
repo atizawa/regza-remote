@@ -73,8 +73,8 @@ public actor RegzaPairing {
             salt: Array(salt.utf8), iterations: 1331, length: 16
         )
         guard let plain = AES128(key: key)?.decryptCBC(encrypted),
-              let password = String(bytes: plain, encoding: .ascii),
-              !password.isEmpty, password.allSatisfy({ $0.isASCII && !$0.isNewline })
+            let password = String(bytes: plain, encoding: .ascii),
+            !password.isEmpty, password.allSatisfy({ $0.isASCII && !$0.isNewline })
         else { return nil }
         return password
     }

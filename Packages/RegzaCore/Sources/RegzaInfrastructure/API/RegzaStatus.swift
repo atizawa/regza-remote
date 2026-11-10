@@ -50,7 +50,9 @@ public struct RegzaStatus: Equatable, Sendable {
 extension Int {
     /// 秒数を `h:mm:ss` / `m:ss` 形式にする
     public var formattedDuration: String {
-        let h = self / 3600, m = (self % 3600) / 60, s = self % 60
+        let h = self / 3600
+        let m = (self % 3600) / 60
+        let s = self % 60
         return h > 0
             ? String(format: "%d:%02d:%02d", h, m, s)
             : String(format: "%d:%02d", m, s)

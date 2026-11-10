@@ -1,8 +1,9 @@
 import Foundation
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 
 /// 本物の Repository を、偽の通信と保存先でつないだもの (RegzaApp の組み立てと同じつなぎ方)
 @MainActor
@@ -16,8 +17,10 @@ struct LiveModels {
     let stream: StreamUseCase
     let setup: SetupUseCase
 
-    init(store: MemoryStore = MemoryStore(connection: RegzaConnection(host: "192.0.2.10", user: "user", password: "password")),
-         transport: FakeTransport) {
+    init(
+        store: MemoryStore = MemoryStore(connection: RegzaConnection(host: "192.0.2.10", user: "user", password: "password")),
+        transport: FakeTransport
+    ) {
         self.store = store
         tv = RegzaTVRepository(store: store, remote: RegzaRemote(connection: store.load(), transport: transport))
         remote = RemoteViewModel(tv: TVUseCase(tv: tv))

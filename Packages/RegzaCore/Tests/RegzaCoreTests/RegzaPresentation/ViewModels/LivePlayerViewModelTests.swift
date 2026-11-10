@@ -1,9 +1,10 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
+@testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaApp
+@testable import RegzaPresentation
 @testable import RegzaSample
 
 /// ライブ視聴の ViewModel
@@ -12,7 +13,8 @@ import Testing
     let fixtures = ViewModelFixtures()
 
     func makePlayer(channelCode: String, _ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
-        throws -> (LivePlayerViewModel, FakeTransport, MemoryStore) {
+        throws -> (LivePlayerViewModel, FakeTransport, MemoryStore)
+    {
         let store = MemoryStore(connection: RegzaConnection(host: "192.0.2.10"))
         // 配信を頼めるのは、番組表と EPGStation の両方を設定しているとき
         store.guideHost = "192.0.2.2"

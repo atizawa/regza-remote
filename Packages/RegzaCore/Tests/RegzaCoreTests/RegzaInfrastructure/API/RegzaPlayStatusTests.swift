@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 
@@ -63,9 +64,11 @@ import Testing
     }
 
     @Test func shortChannelForSatellite() throws {
-        let bs = #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G000400b5","channel_number":181,"rcu_channel_number":8,"start_time":1700000000,"duration":600}}"#
+        let bs =
+            #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G000400b5","channel_number":181,"rcu_channel_number":8,"start_time":1700000000,"duration":600}}"#
         #expect(RegzaNowPlaying(playStatus: try decode(bs)).shortChannel == "BS181")
-        let cs = #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G00070037","channel_number":55,"start_time":1700000000,"duration":600}}"#
+        let cs =
+            #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G00070037","channel_number":55,"start_time":1700000000,"duration":600}}"#
         #expect(RegzaNowPlaying(playStatus: try decode(cs)).shortChannel == "CS055")
     }
 

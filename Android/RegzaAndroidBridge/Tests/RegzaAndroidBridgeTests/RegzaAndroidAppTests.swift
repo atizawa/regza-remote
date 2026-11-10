@@ -1,8 +1,9 @@
 import Foundation
-import Testing
-@testable import RegzaAndroidBridge
 import RegzaApp
 import RegzaSample
+import Testing
+
+@testable import RegzaAndroidBridge
 
 /// Android の窓口が、共有の ViewModel の state を Android 向けに詰め直し、Android からの操作を
 /// ViewModel の操作に置き換えることを、見本の ViewModel (テレビにつながない) で確かめる
@@ -44,9 +45,10 @@ struct RegzaAndroidAppTests {
 
     /// 本物の Repository を偽の通信でつなぎ、ライブ視聴 (EPGStation) も設定してあるものを組み立てる (配信は頼まない)
     func makeWithStream() async throws -> Fixture {
-        let store = AndroidConnectionStore(storage: MemoryStorage([
-            AndroidStorageKey.host: "192.0.2.1", AndroidStorageKey.guideHost: "192.0.2.2", AndroidStorageKey.streamHost: "192.0.2.30",
-        ]))
+        let store = AndroidConnectionStore(
+            storage: MemoryStorage([
+                AndroidStorageKey.host: "192.0.2.1", AndroidStorageKey.guideHost: "192.0.2.2", AndroidStorageKey.streamHost: "192.0.2.30",
+            ]))
         let transport = ChannelListTransport()
         let app = AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport), transport: transport)
         // 局を引けるよう、チャンネル一覧を読んでおく

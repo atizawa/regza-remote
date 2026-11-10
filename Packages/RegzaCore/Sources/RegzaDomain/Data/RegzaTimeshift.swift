@@ -67,8 +67,11 @@ public struct RegzaTimeshiftSettings: Decodable, Sendable, Equatable {
             guard isActive(at: time) else { return false }
             // 次の正時へ
             let calendar = Self.calendar
-            guard let next = calendar.nextDate(after: time, matching: DateComponents(minute: 0, second: 0),
-                                               matchingPolicy: .nextTime) else { return false }
+            guard
+                let next = calendar.nextDate(
+                    after: time, matching: DateComponents(minute: 0, second: 0),
+                    matchingPolicy: .nextTime)
+            else { return false }
             time = next
         }
         return isActive(at: now)

@@ -1,5 +1,6 @@
 import Foundation
 import RegzaDomain
+
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -78,7 +79,8 @@ public final class URLSessionTransport: HTTPTransport {
                         let headers = response.allHeaderFields.reduce(into: [String: String]()) { result, field in
                             if let name = field.key as? String, let value = field.value as? String { result[name] = value }
                         }
-                        continuation.resume(returning: HTTPResponse(statusCode: response.statusCode, headers: headers, body: data ?? Data()))
+                        continuation.resume(
+                            returning: HTTPResponse(statusCode: response.statusCode, headers: headers, body: data ?? Data()))
                     } else {
                         continuation.resume(throwing: RegzaError.network("不正なレスポンスです"))
                     }
@@ -123,8 +125,9 @@ private final class LocalTrustDelegate: NSObject, URLSessionDelegate, Sendable {
     ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
         #if canImport(Security)
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
-           challenge.protectionSpace.port == RegzaClient.securePort,
-           let trust = challenge.protectionSpace.serverTrust {
+            challenge.protectionSpace.port == RegzaClient.securePort,
+            let trust = challenge.protectionSpace.serverTrust
+        {
             return (.useCredential, URLCredential(trust: trust))
         }
         #endif
@@ -244,7 +247,10 @@ public enum HTTP1 {
                 if size == 0 {
                     // 最後の塊のあとのトレーラーは使わない。空行まで揃うのを待つ
                     let rest = buffer[(lineEnd + 2)...]
-                    if rest.starts(with: [13, 10]) { buffer.removeAll(); return true }
+                    if rest.starts(with: [13, 10]) {
+                        buffer.removeAll()
+                        return true
+                    }
                     guard Self.find([13, 10, 13, 10], in: Array(rest)) != nil else { return false }
                     buffer.removeAll()
                     return true

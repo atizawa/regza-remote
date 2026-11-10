@@ -11,6 +11,6 @@ public enum AppTheme {
     /// Live Activity の背景 (緑みのある黒)
     public static let activityBackground = Color(red: 0.01, green: 0.07, blue: 0.05)
 
-    private static let onDark = UIColor(red: 0.114, green: 0.525, blue: 0.435, alpha: 1) // #1D866F
+    private static let onDark = UIColor(red: 0.114, green: 0.525, blue: 0.435, alpha: 1)  // #1D866F
 }
 #endif

@@ -77,10 +77,12 @@ public struct AppScreen: View {
             }
         }
         // アプリで見る (ライブ視聴)。いま映っているものの詳細を開いているときは、そのシートの上から出す
-        .fullScreenCover(isPresented: Binding(
-            get: { app.state.playingChannelCode != nil && !app.state.isShowingNowPlaying },
-            set: { if !$0 { app.send(.closePlayer) } }
-        )) {
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { app.state.playingChannelCode != nil && !app.state.isShowingNowPlaying },
+                set: { if !$0 { app.send(.closePlayer) } }
+            )
+        ) {
             if let player = app.player {
                 LivePlayerScreen(viewModel: player)
             }

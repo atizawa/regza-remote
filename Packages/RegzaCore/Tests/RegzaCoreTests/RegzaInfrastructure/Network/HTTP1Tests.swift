@@ -1,8 +1,10 @@
 import Foundation
 import Testing
-@testable import RegzaPresentation
+
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
+@testable import RegzaPresentation
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -12,13 +14,14 @@ import Glibc
 @Suite struct HTTP1EncodeTests {
     @Test func get() throws {
         let request = HTTPRequest(url: try #require(URL(string: "http://192.168.0.10/remote/status.htm?a=1")), timeout: 3)
-        #expect(String(decoding: HTTP1.encode(request), as: UTF8.self) == """
-            GET /remote/status.htm?a=1 HTTP/1.1\r
-            Host: 192.168.0.10\r
-            Connection: close\r
-            \r
+        #expect(
+            String(decoding: HTTP1.encode(request), as: UTF8.self) == """
+                GET /remote/status.htm?a=1 HTTP/1.1\r
+                Host: 192.168.0.10\r
+                Connection: close\r
+                \r
 
-            """)
+                """)
     }
 
     @Test func postWithPortAndBody() throws {
@@ -26,15 +29,16 @@ import Glibc
             method: "POST", url: try #require(URL(string: "https://192.168.0.10:4430/v2/x")),
             headers: ["Content-Type": "application/x-www-form-urlencoded"], body: Data("a=1".utf8), timeout: 3
         )
-        #expect(String(decoding: HTTP1.encode(request), as: UTF8.self) == """
-            POST /v2/x HTTP/1.1\r
-            Host: 192.168.0.10:4430\r
-            Connection: close\r
-            Content-Type: application/x-www-form-urlencoded\r
-            Content-Length: 3\r
-            \r
-            a=1
-            """)
+        #expect(
+            String(decoding: HTTP1.encode(request), as: UTF8.self) == """
+                POST /v2/x HTTP/1.1\r
+                Host: 192.168.0.10:4430\r
+                Connection: close\r
+                Content-Type: application/x-www-form-urlencoded\r
+                Content-Length: 3\r
+                \r
+                a=1
+                """)
     }
 
     @Test func emptyPath() throws {

@@ -66,9 +66,11 @@ struct RemoteScreen: View {
                 .frame(width: 64)
             DirectionPad(diameter: 196)
                 .frame(maxWidth: .infinity)
-            RockerControl(title: "CH", up: .channelUp, down: .channelDown,
-                          upImage: "chevron.up", downImage: "chevron.down")
-                .frame(width: 64)
+            RockerControl(
+                title: "CH", up: .channelUp, down: .channelDown,
+                upImage: "chevron.up", downImage: "chevron.down"
+            )
+            .frame(width: 64)
         }
     }
 
@@ -89,8 +91,10 @@ struct RemoteScreen: View {
                     KeyButton(key: key, size: .compact, isSelected: model.state.nowPlayingBand == key.band)
                 }
             }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Design.item), count: 3),
-                      spacing: Design.item) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: Design.item), count: 3),
+                spacing: Design.item
+            ) {
                 ForEach(RegzaKey.numbers) { key in
                     KeyButton(key: key)
                 }
@@ -139,8 +143,10 @@ struct RemoteScreen: View {
             }
             .buttonStyle(.plain)
             if isShowingMore {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Design.item), count: 3),
-                          spacing: Design.item) {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: Design.item), count: 3),
+                    spacing: Design.item
+                ) {
                     ForEach(Self.otherKeys) { key in
                         KeyButton(key: key, size: .compact, showsIcon: false)
                     }
@@ -149,7 +155,6 @@ struct RemoteScreen: View {
             }
         }
     }
-
 
     static let otherKeys: [RegzaKey] = [
         .display, .audio, .subtitle, .dData, .miniGuide, .channelNumber,

@@ -1,5 +1,6 @@
 import Foundation
 import RegzaDomain
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -93,8 +94,8 @@ public enum RegzaDiscovery {
     /// 1 台に問い合わせる。REGZA でなければ nil
     public static func probe(host: String, timeout: TimeInterval = 1.5) async -> RegzaDevice? {
         guard let url = URL(string: "http://\(host)/public/feature"),
-              let response = try? await RegzaHTTP.transport.send(HTTPRequest(url: url, timeout: timeout)),
-              (200..<300).contains(response.statusCode)
+            let response = try? await RegzaHTTP.transport.send(HTTPRequest(url: url, timeout: timeout)),
+            (200..<300).contains(response.statusCode)
         else { return nil }
         return device(host: host, featureJSON: response.body)
     }
@@ -122,9 +123,9 @@ public enum RegzaDiscovery {
             // Android では ifa_name が Optional になっている
             let name = interface.ifa_name.map { String(cString: $0) } ?? ""
             guard flags & interfaceUp != 0, flags & interfaceLoopback == 0,
-                  ["en", "wlan", "eth"].contains(where: name.hasPrefix),
-                  let address = interface.ifa_addr, let netmask = interface.ifa_netmask,
-                  address.pointee.sa_family == sa_family_t(AF_INET)
+                ["en", "wlan", "eth"].contains(where: name.hasPrefix),
+                let address = interface.ifa_addr, let netmask = interface.ifa_netmask,
+                address.pointee.sa_family == sa_family_t(AF_INET)
             else { continue }
             let network = IPv4Network(address: ipv4(address), mask: ipv4(netmask))
             if !networks.contains(network) { networks.append(network) }

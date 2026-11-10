@@ -139,7 +139,9 @@ extension ServerSetupViewModel {
 
     func introspectionAction(_ name: String, _ arguments: [String: JSONValue]) throws -> ServerSetupAction {
         func server() throws -> ServerSetupServer {
-            guard let server = ServerSetupServer(rawValue: try arguments.string("server")) else { throw IntrospectionError.invalidArgument("server") }
+            guard let server = ServerSetupServer(rawValue: try arguments.string("server")) else {
+                throw IntrospectionError.invalidArgument("server")
+            }
             return server
         }
         switch name {

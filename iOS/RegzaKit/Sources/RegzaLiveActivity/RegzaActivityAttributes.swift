@@ -79,7 +79,7 @@ public struct RegzaActivityAttributes: ActivityAttributes {
         /// システムは描き直しを少し前もって行うことがあり、時刻だけで判定すると終了直前の時刻で描かれて切り替わらない
         public func displayed(isStale: Bool, at date: Date = Date()) -> ContentState {
             guard isConnected, let end = programEnd, isStale || end <= date,
-                  let nextStart = nextProgramStart, let nextDuration = nextProgramDuration, nextDuration > 0
+                let nextStart = nextProgramStart, let nextDuration = nextProgramDuration, nextDuration > 0
             else { return self }
             var next = self
             next.title = nextTitle ?? ""

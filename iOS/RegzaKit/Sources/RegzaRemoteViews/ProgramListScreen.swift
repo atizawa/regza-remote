@@ -27,14 +27,17 @@ struct ProgramListScreen: View {
     private func content(_ state: ProgramListViewModel.State) -> some View {
         if let days = state.days {
             if days.isEmpty {
-                ContentUnavailableView("番組表がありません", systemImage: "calendar",
-                                       description: Text("Mirakurun がこのチャンネルの番組表を持っていません。"))
+                ContentUnavailableView(
+                    "番組表がありません", systemImage: "calendar",
+                    description: Text("Mirakurun がこのチャンネルの番組表を持っていません。"))
             } else {
                 List {
                     ForEach(days) { group in
                         Section {
                             ForEach(group.programs) { program in
-                                NavigationLink(value: AppViewModel.Route.programDetail(programID: program.id, channelCode: state.channelCode)) {
+                                NavigationLink(
+                                    value: AppViewModel.Route.programDetail(programID: program.id, channelCode: state.channelCode)
+                                ) {
                                     ProgramRow(program: program)
                                 }
                             }

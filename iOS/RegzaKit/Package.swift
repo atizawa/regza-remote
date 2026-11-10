@@ -17,7 +17,7 @@ let package = Package(
         .library(name: "RegzaRemoteUI", targets: ["RegzaRemoteUI"]),
     ],
     dependencies: [
-        .package(path: "../../Packages/RegzaCore"),
+        .package(path: "../../Packages/RegzaCore")
     ],
     targets: [
         // Apple: キーチェーンへの接続情報保存 (Domain の保存先の protocol を実装するので、組み立て (RegzaApp) に依存する)
@@ -43,12 +43,20 @@ let package = Package(
         ),
         // iOS: Live Activity・ウィジェット・コントロールセンターのボタンから、キーを送る App Intent (アプリのプロセスで動く)。
         // アプリとウィジェットの両方に登録する
-        .target(name: "RegzaRemoteIntents", dependencies: ["RegzaAppContainer", "RegzaLiveActivity", .product(name: "RegzaApp", package: "RegzaCore")]),
+        .target(
+            name: "RegzaRemoteIntents",
+            dependencies: ["RegzaAppContainer", "RegzaLiveActivity", .product(name: "RegzaApp", package: "RegzaCore")]),
         // iOS: Siri・ショートカットの App Intent。アプリのプロセスの ViewModel を使うので、アプリにだけ登録する
         // (ウィジェットにも登録すると、拡張機能のプロセスで動くことがある)
-        .target(name: "RegzaSiriIntents", dependencies: ["RegzaAppContainer", "RegzaLiveActivity", .product(name: "RegzaApp", package: "RegzaCore")]),
+        .target(
+            name: "RegzaSiriIntents",
+            dependencies: ["RegzaAppContainer", "RegzaLiveActivity", .product(name: "RegzaApp", package: "RegzaCore")]),
         // iOS: Live Activity・ホーム画面のウィジェット・コントロールセンターの見た目 (ウィジェットの拡張機能が使う)
-        .target(name: "RegzaWidgets", dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "RegzaLiveActivity", "RegzaRemoteIntents", "RegzaDesign"]),
+        .target(
+            name: "RegzaWidgets",
+            dependencies: [
+                .product(name: "RegzaPresentation", package: "RegzaCore"), "RegzaLiveActivity", "RegzaRemoteIntents", "RegzaDesign",
+            ]),
         // iOS: SwiftUI の画面。ViewModel の state を読み、send で操作するだけにする。
         // 使えるのは ViewModel と UI の型 (RegzaPresentation)、色、Live Activity のスイッチだけで、Domain・通信・組み立ては使わない
         // (RegzaPresentation は Domain を外に見せず、MemberImportVisibility で、読み込んでいないモジュールの機能も見えなくする)

@@ -236,12 +236,19 @@ public enum JSONValue: Codable, Equatable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        if container.decodeNil() { self = .null }
-        else if let value = try? container.decode(Bool.self) { self = .bool(value) }
-        else if let value = try? container.decode(Double.self) { self = .number(value) }
-        else if let value = try? container.decode(String.self) { self = .string(value) }
-        else if let value = try? container.decode([JSONValue].self) { self = .array(value) }
-        else { self = .object(try container.decode([String: JSONValue].self)) }
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([JSONValue].self) {
+            self = .array(value)
+        } else {
+            self = .object(try container.decode([String: JSONValue].self))
+        }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -295,9 +302,11 @@ public enum JSONValue: Codable, Equatable, Sendable {
             if children.allSatisfy({ $0.label?.hasPrefix(".") ?? true }) {
                 return .array(children.map { JSONValue(reflecting: $0.value) })
             }
-            return .object(Dictionary(children.enumerated().map { index, child in
-                (child.label ?? String(index), JSONValue(reflecting: child.value))
-            }, uniquingKeysWith: { first, _ in first }))
+            return .object(
+                Dictionary(
+                    children.enumerated().map { index, child in
+                        (child.label ?? String(index), JSONValue(reflecting: child.value))
+                    }, uniquingKeysWith: { first, _ in first }))
         case .struct, .class:
             var object: [String: JSONValue] = [:]
             for child in mirror.children {

@@ -67,7 +67,9 @@ public struct NowPlayingItem: Equatable, Sendable {
 
     /// 再生位置や長さ (秒) の表記。1 時間を超えれば「1:02:03」、超えなければ「12:34」
     public static func durationText(_ seconds: Int) -> String {
-        let hours = seconds / 3600, minutes = seconds % 3600 / 60, rest = seconds % 60
+        let hours = seconds / 3600
+        let minutes = seconds % 3600 / 60
+        let rest = seconds % 60
         return hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, rest) : String(format: "%d:%02d", minutes, rest)
     }
 }

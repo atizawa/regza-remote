@@ -111,16 +111,19 @@ extension GuideGridViewModel: IntrospectableActions {
             "bands": JSONValue(reflecting: state.bands),
             "selectedDay": JSONValue(reflecting: state.selectedDay as Any),
             "days": .array(state.days.map { .object(["day": JSONValue(reflecting: $0.date as Any), "label": .string($0.label)]) }),
-            "columns": .array(state.columns.map { column in
-                .object([
-                    "channel": .string(column.channelCode),
-                    "name": .string(column.channelName),
-                    "programCount": .number(Double(column.programs.count)),
-                    "onAir": column.programs.first { $0.start <= now && now < $0.end }.map { .object([
-                        "id": .number(Double($0.id)), "name": .string($0.name),
-                    ]) } ?? .null,
-                ])
-            }),
+            "columns": .array(
+                state.columns.map { column in
+                    .object([
+                        "channel": .string(column.channelCode),
+                        "name": .string(column.channelName),
+                        "programCount": .number(Double(column.programs.count)),
+                        "onAir": column.programs.first { $0.start <= now && now < $0.end }.map {
+                            .object([
+                                "id": .number(Double($0.id)), "name": .string($0.name),
+                            ])
+                        } ?? .null,
+                    ])
+                }),
         ])
     }
 

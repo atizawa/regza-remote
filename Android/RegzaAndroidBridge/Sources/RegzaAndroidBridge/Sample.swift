@@ -21,9 +21,10 @@ extension RegzaAndroidApp {
             storage.setValue(SampleTransport.guideHost, forKey: AndroidStorageKey.guideHost)
             storage.setValue(SampleTransport.streamHost, forKey: AndroidStorageKey.streamHost)
         }
-        return RegzaAndroidApp(app: onMainActor {
-            let store = AndroidConnectionStore(storage: storage)
-            return AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport), transport: transport)
-        })
+        return RegzaAndroidApp(
+            app: onMainActor {
+                let store = AndroidConnectionStore(storage: storage)
+                return AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport), transport: transport)
+            })
     }
 }

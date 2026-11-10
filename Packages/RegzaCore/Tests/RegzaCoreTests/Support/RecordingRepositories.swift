@@ -1,4 +1,5 @@
 import Foundation
+
 @testable import RegzaDomain
 
 // 呼ばれたことを記録する偽物の Repository (UseCase のテストで使う)

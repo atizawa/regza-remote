@@ -1,4 +1,5 @@
 import Foundation
+
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 
@@ -13,7 +14,8 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
     }
 
     var paths: [String] {
-        lock.lock(); defer { lock.unlock() }
+        lock.lock()
+        defer { lock.unlock() }
         return requests.map(\.url.path)
     }
 

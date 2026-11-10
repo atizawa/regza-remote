@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import RegzaDomain
 @testable import RegzaSample
 
@@ -9,7 +10,8 @@ import Testing
     @Test func reservationItemsDescribeScheduleAndChannel() async throws {
         let recording = SampleRecordingRepository(reservations: [
             try UseCaseFixtures.reservation(id: "1", channelCode: "JP-G00000001", start: UseCaseFixtures.date(hour: 12, minute: 45)),
-            try UseCaseFixtures.reservation(id: "2", channelCode: "JP-G00000009", start: UseCaseFixtures.date(day: 1, hour: 21), series: true),
+            try UseCaseFixtures.reservation(
+                id: "2", channelCode: "JP-G00000009", start: UseCaseFixtures.date(day: 1, hour: 21), series: true),
         ])
         let useCase = RecordingUseCase(recording: recording)
         let items = useCase.items(channels: try UseCaseFixtures.channels(), now: UseCaseFixtures.now)

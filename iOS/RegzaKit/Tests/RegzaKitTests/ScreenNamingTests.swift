@@ -21,10 +21,11 @@ import Testing
 
     /// フォルダの中で、名前が Screen で終わるファイルの名前 (拡張子なし)
     static func screenFiles(in directory: URL, extension: String) throws -> Set<String> {
-        Set(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == `extension` }
-            .map { $0.deletingPathExtension().lastPathComponent }
-            .filter { $0.hasSuffix("Screen") })
+        Set(
+            try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+                .filter { $0.pathExtension == `extension` }
+                .map { $0.deletingPathExtension().lastPathComponent }
+                .filter { $0.hasSuffix("Screen") })
     }
 
     @Test func everyViewModelHasScreenWithSameNameOnBothPlatforms() throws {

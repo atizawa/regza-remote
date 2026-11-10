@@ -38,7 +38,8 @@ public struct IntrospectionSession {
         case "do":
             guard arguments.count >= 2 else { return .invalid("do 道 操作 [JSON の引数]") }
             guard arguments.count > 2 else { return .perform(path: arguments[0], action: arguments[1], arguments: [:]) }
-            guard let value = try? JSONDecoder().decode(JSONValue.self, from: Data(arguments[2].utf8)), case .object(let object) = value else {
+            guard let value = try? JSONDecoder().decode(JSONValue.self, from: Data(arguments[2].utf8)), case .object(let object) = value
+            else {
                 return .invalid("引数は JSON のオブジェクトで渡す")
             }
             return .perform(path: arguments[0], action: arguments[1], arguments: object)
