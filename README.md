@@ -173,7 +173,7 @@ mise run test-behavior                     # 振る舞いのテスト (iOS 側�
 
 エミュレーターや実機が要るもの（`cd Android && ./gradlew :app:connectedDebugAndroidTest`）は、`check` には入れていない。
 
-GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が同じタスクを流す。Apple の環境がなくても流せるもの（書き方と `test-swift-shared`）は Linux の機械（Swift の公式のコンテナ）で、Xcode や Mac 向けのライブラリが要るもの（`test-swift-apple`・`build-ios`・`build-android`・`test-behavior`）だけを macOS の機械で、ジョブに分けて同時に流す。Linux で共有の部分のテストを流すと、Android に近い Foundation（swift-corelibs-foundation）でも確かめられる
+GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が同じタスクを流す。Apple の環境がなくても流せるもの（書き方と `test-swift-shared`）は Linux の機械（Swift の公式のコンテナ）で、Xcode や Mac 向けのライブラリが要るもの（`test-swift-apple`・`build-ios`・`build-android`・`test-behavior`）だけを macOS の機械で、ジョブに分けて同時に流す。ただし `build-android` と `test-behavior` のジョブ（android）は、毎回 Swift を最初からビルドして 30 分ほどかかるので、いったん GitHub の Actions の画面から手で動かしたとき（Run workflow）だけ流す。Linux で共有の部分のテストを流すと、Android に近い Foundation（swift-corelibs-foundation）でも確かめられる
 
 画面を足したら、`BehaviorTests/tests/` にもその画面の振る舞いのテストを足す（操作を送り、state が期待どおりになるまで待つ）。
 

@@ -8,6 +8,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # GitHub の Actions の画面の「Run workflow」から手で動かす (android のジョブは、手で動かしたときだけ流す)
+  workflow_dispatch:
 
 # 同じブランチに続けて push したら、前の実行は止める
 concurrency:
@@ -57,8 +59,10 @@ jobs:
       - run: mise run test-swift-apple
       - run: mise run build-ios
 
-  # Android のアプリのビルド (Swift の .so と、プレビュー用の Mac 向けのライブラリも作る) と、両方の相手に流す振る舞いのテスト
+  # Android のアプリのビルド (Swift の .so と、プレビュー用の Mac 向けのライブラリも作る) と、両方の相手に流す振る舞いのテスト。
+  # 毎回 Swift を最初からビルドするので 30 分ほどかかる。いったん、手で動かしたときだけ流す (push と pull request では流さない)
   android:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: xcode-27
     timeout-minutes: 75
     env:
