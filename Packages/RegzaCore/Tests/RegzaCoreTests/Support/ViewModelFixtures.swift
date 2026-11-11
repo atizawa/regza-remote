@@ -31,9 +31,9 @@ struct ViewModelFixtures {
     }
 
     /// 見本の Repository でつないだもの (テレビにつながない)
-    func sampleApp(channels: [RegzaChannel], nowPlaying: RegzaNowPlaying? = nil, programs: [MirakurunProgram] = []) -> AppViewModel {
+    func sampleApp(channels: [ChannelData], nowPlaying: NowPlayingData? = nil, programs: [ProgramData] = []) -> AppViewModel {
         AppViewModel.sample(
-            connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nowPlaying, channels: channels,
+            connection: ConnectionData(host: "192.0.2.1"), nowPlaying: nowPlaying, channels: channels,
             guideHost: programs.isEmpty ? "" : "192.0.2.2", programs: programs
         )
     }
@@ -43,15 +43,15 @@ struct ViewModelFixtures {
     }
 
     /// 番組 (network 1・service 1・event 2)。テレビの番組 ID は JP-0000000100010002
-    func program(startingIn offset: TimeInterval) throws -> MirakurunProgram {
+    func program(startingIn offset: TimeInterval) throws -> ProgramData {
         let start = Int((Date().timeIntervalSince1970 + offset) * 1000)
         let json = #"{"id":100010002,"eventId":2,"networkId":1,"serviceId":1,"startAt":\#(start),"duration":1800000,"name":"テスト番組"}"#
-        return try JSONDecoder().decode(MirakurunProgram.self, from: Data(json.utf8))
+        return try JSONDecoder().decode(ProgramData.self, from: Data(json.utf8))
     }
 
-    func channel(code: String) throws -> RegzaChannel {
+    func channel(code: String) throws -> ChannelItem {
         let json = #"{"channel_number":11,"channel":"\#(code)","name":"テスト局"}"#
-        return try JSONDecoder().decode(RegzaChannel.self, from: Data(json.utf8))
+        return UseCaseModelMapper.channel(try JSONDecoder().decode(ChannelData.self, from: Data(json.utf8)))
     }
 
     /// 操作を送り、処理が終わるまで待つ

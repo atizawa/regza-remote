@@ -42,7 +42,7 @@ import Testing
     }
 
     @Test func unlinkingGuideAlsoUnlinksStream() async {
-        let store = MemoryStore(connection: RegzaConnection(host: "192.0.2.10"))
+        let store = MemoryStore(connection: ConnectionData(host: "192.0.2.10"))
         // Repository は、作ったときに保存済みのアドレスを読む
         store.guideHost = "192.0.2.2"
         store.streamHost = "192.0.2.2:8888"
@@ -82,7 +82,7 @@ import Testing
     // MARK: - 設定の画面 (SettingsViewModel)
 
     /// 設定の画面と、閉じた回数
-    func makeSettings(store: MemoryStore = MemoryStore(connection: RegzaConnection(host: "192.0.2.10")), transport: FakeTransport)
+    func makeSettings(store: MemoryStore = MemoryStore(connection: ConnectionData(host: "192.0.2.10")), transport: FakeTransport)
         -> (SettingsViewModel, LiveModels, () -> Int)
     {
         let live = LiveModels(store: store, transport: transport)
@@ -121,7 +121,7 @@ import Testing
     }
 
     @Test func unlinkingClosesItsPage() async {
-        let store = MemoryStore(connection: RegzaConnection(host: "192.0.2.10"))
+        let store = MemoryStore(connection: ConnectionData(host: "192.0.2.10"))
         store.guideHost = "192.0.2.2"
         let (settings, _, _) = makeSettings(store: store, transport: FakeTransport { _ in ViewModelFixtures.status(500) })
         settings.send(.openPage(.guide))

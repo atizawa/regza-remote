@@ -39,14 +39,16 @@ Apple の Swift OpenAPI Generator 1.14.4 で、3 つの API の型とクライ�
   isEnable がなければ false とする。それ以外の型やパラメーターは原本の定義を使う。
 
 iOS・Android・macOS・Linux は同じ生成クライアントを使う。
-生成型は Infrastructure の内部に閉じ、画面・Domain に公開する型は変えない。
-Mirakurun の生成 DTO は Domain 型に直接変換し、番組表全体の JSON 再エンコードはしない。
+生成型は Infrastructure の内部に閉じる。Repository と UseCase は Domain/Data の XXXData を受け渡し、
+UseCase は Domain/Mappers で SharedModel に変換して画面側へ返す。
+Mirakurun の生成 DTO は ProgramData に直接変換し、番組表全体の JSON 再エンコードはしない。
 
 Repository が使う窓口の名前は `RegzaAPIClient`・`MirakurunAPIClient`・`EPGStationAPIClient` に揃える。
 APIClient は接続設定・認証状態と共通の実行窓口 `request(_:)` を持つ。
 Repository などの呼び出し元は `client.request(RegzaChannelsRequest())` のように Request を渡す。
 操作ごとのメソッドは APIClient に追加しない。サーバー探索と配信準備の待機は専用の型に分ける。
-Request は対応する Response 型と OpenAPI の型付き操作を定義し、Response は結果判定と Domain 型への変換を担当する。
+Request は対応する Response 型と OpenAPI の型付き操作を定義する。
+Response は結果判定を行い、Infrastructure/Mappers を使って生成 DTO を Domain の Data に変換する。
 同じ応答形式の操作は Response を共有する。本文を使わない操作には NoContentAPIResponse を使う。
 パス・HTTP メソッド・シリアライズは OpenAPI の生成コードが担当し、Request 側に重ねて定義しない。
 Repository は取得結果のキャッシュ・保存とアプリ用の状態管理を担当する。
@@ -115,6 +117,10 @@ Network/
   HTTPTransport.swift
   SocketTransport.swift
 Repositories/
+Mappers/
+  MirakurunProgramMapper.swift
+  RegzaDataMapper.swift
+  NowPlayingData+Status.swift
 ```
 
 ## ライセンス

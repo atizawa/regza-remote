@@ -1,6 +1,6 @@
 import Foundation
 
-/// テレビにいま映っているもの (UI で使う形)。TVUseCase が Domain の RegzaNowPlaying から作る
+/// テレビにいま映っているもの (UI で使う形)。TVUseCase が Domain の NowPlayingData から作る
 public struct NowPlayingItem: Equatable, Sendable {
     public var kind: NowPlayingKind
     public var channelName: String

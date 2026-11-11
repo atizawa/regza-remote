@@ -14,7 +14,7 @@ enum SampleData {
     /// 見本の Repository で、アプリ全体の ViewModel を組み立てる (テレビにつながない)
     @MainActor
     static func makeApp() -> AppViewModel {
-        let connection = RegzaConnection(host: "192.0.2.1")
+        let connection = ConnectionData(host: "192.0.2.1")
         // -SampleNoGuide YES で Mirakurun が未設定のときの画面を確かめる
         guard !UserDefaults.standard.bool(forKey: "SampleNoGuide") else {
             return .sample(connection: connection, nowPlaying: nowPlaying(), channels: channels())
@@ -36,15 +36,15 @@ enum SampleData {
         }
     }
 
-    static func nowPlaying(now: Date = Date()) -> RegzaNowPlaying {
+    static func nowPlaying(now: Date = Date()) -> NowPlayingData {
         let hour = Calendar.current.dateInterval(of: .hour, for: now)?.start ?? now
         if UserDefaults.standard.string(forKey: "SampleKind") == "recorded" {
-            return RegzaNowPlaying(
+            return NowPlayingData(
                 kind: .recorded, channelName: "みどりテレビ", title: "週末の旅　海辺の町をめぐる",
                 description: "見本の録画番組です。", position: 1280, duration: 3240, isAdvancing: true, updatedAt: now
             )
         }
-        return RegzaNowPlaying(
+        return NowPlayingData(
             kind: .broadcast, channelName: "みどりテレビ", channelCode: code(1, 1), title: "夜のニュース",
             position: Int(now.timeIntervalSince(hour)), duration: 3600, isAdvancing: true,
             nextProgramStart: hour.addingTimeInterval(3600), nextProgramDuration: 1800, nextTitle: "天気予報",
@@ -63,17 +63,17 @@ enum SampleData {
         BroadcastID.channelCode(networkId: network, serviceId: service)
     }
 
-    static func channels() -> [RegzaChannel] {
+    static func channels() -> [ChannelData] {
         let items = stations.enumerated().map { index, station in
             """
             {"channel":"\(code(1, index + 1))","channel_number":\(station.number),"rcu_channel_number":\(index + 1),\
             "name":"\(station.name)","ex_channel_number":"\(station.band)_\(station.number)","show_setting":"SHOW_REPRESENT"}
             """
         }
-        return (try? JSONDecoder().decode([RegzaChannel].self, from: Data("[\(items.joined(separator: ","))]".utf8))) ?? []
+        return (try? JSONDecoder().decode([ChannelData].self, from: Data("[\(items.joined(separator: ","))]".utf8))) ?? []
     }
 
-    static func programs(now: Date = Date()) -> [MirakurunProgram] {
+    static func programs(now: Date = Date()) -> [ProgramData] {
         let titles = [
             "夜のニュース", "天気予報", "クイズ王決定戦", "ドラマ　港の灯", "世界の車窓",
             "アニメ　星の子", "スポーツまとめ", "映画　風の街", "料理のじかん", "ドキュメント　森",
@@ -100,10 +100,10 @@ enum SampleData {
                 event += 1
             }
         }
-        return (try? JSONDecoder().decode([MirakurunProgram].self, from: Data("[\(items.joined(separator: ","))]".utf8))) ?? []
+        return (try? JSONDecoder().decode([ProgramData].self, from: Data("[\(items.joined(separator: ","))]".utf8))) ?? []
     }
 
-    static func reservations(programs: [MirakurunProgram], now: Date = Date()) -> [RegzaReservation] {
+    static func reservations(programs: [ProgramData], now: Date = Date()) -> [ReservationData] {
         let upcoming = programs.filter { $0.start > now }.prefix(40)
         let picked = [upcoming.dropFirst(3).first, upcoming.dropFirst(17).first].compactMap { $0 }
         let items = picked.enumerated().map { index, program in
@@ -114,7 +114,7 @@ enum SampleData {
             "series_rec":"\(index == 0)"}
             """
         }
-        return (try? JSONDecoder().decode([RegzaReservation].self, from: Data("[\(items.joined(separator: ","))]".utf8))) ?? []
+        return (try? JSONDecoder().decode([ReservationData].self, from: Data("[\(items.joined(separator: ","))]".utf8))) ?? []
     }
 }
 #endif

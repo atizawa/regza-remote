@@ -16,7 +16,7 @@ public struct ChannelEntity: AppEntity {
     public static let typeDisplayRepresentation: TypeDisplayRepresentation = "チャンネル"
     public static let defaultQuery = ChannelQuery()
 
-    /// チャンネル一覧の `RegzaChannel.code`
+    /// チャンネル一覧の `ChannelItem.code`
     public let id: String
     public let name: String
     public let number: String
@@ -25,10 +25,10 @@ public struct ChannelEntity: AppEntity {
         DisplayRepresentation(title: "\(name)", subtitle: "\(number)")
     }
 
-    init(_ channel: RegzaChannel) {
+    init(_ channel: ChannelItem) {
         id = channel.code
         name = channel.name
-        number = channel.formattedNumber
+        number = channel.numberText
     }
 }
 
@@ -50,7 +50,7 @@ public struct ChannelQuery: EntityStringQuery {
         let query = Self.normalize(string)
         guard !query.isEmpty else { return [] }
         let channels = try await Self.channels()
-        let matched = channels.filter { Self.normalize($0.name).contains(query) || $0.formattedNumber == query }
+        let matched = channels.filter { Self.normalize($0.name).contains(query) || $0.numberText == query }
         // 同じ局のサブチャンネルより代表チャンネルを先にする
         return matched.sorted { $0.isRepresentative && !$1.isRepresentative }.map(ChannelEntity.init)
     }
@@ -63,7 +63,7 @@ public struct ChannelQuery: EntityStringQuery {
 
     /// テレビに登録されているチャンネル。まだ読んでいなければ読む
     @MainActor
-    static func channels() async throws -> [RegzaChannel] {
+    static func channels() async throws -> [ChannelItem] {
         let remote = RegzaAppContainer.shared.app.remote
         guard remote.state.isConfigured else { throw RegzaError.notConfigured }
         await remote.sendAndWait(.loadChannels(force: false))

@@ -9,20 +9,20 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
     @ObservationIgnored private let client: RegzaAPIClient
     @ObservationIgnored private let connectionState: RegzaConnectionState
     /// 読み込んだ予約と、そのときの接続。接続が変わったら使わない
-    private var loaded: (reservations: [RegzaReservation], revision: Int)?
+    private var loaded: (reservations: [ReservationData], revision: Int)?
 
     public init(client: RegzaAPIClient, connectionState: RegzaConnectionState) {
         self.client = client
         self.connectionState = connectionState
     }
 
-    public var reservations: [RegzaReservation] {
+    public var reservations: [ReservationData] {
         loaded.flatMap { $0.revision == connectionState.revision ? $0.reservations : nil } ?? []
     }
 
     public func loadReservations() async throws(RegzaError) {
         let revision = connectionState.revision
-        let list: [RegzaReservation]
+        let list: [ReservationData]
         do {
             list = try await client.request(RegzaReservationsRequest())
         } catch {
@@ -40,7 +40,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
         )
     }
 
-    public func reserve(_ program: MirakurunProgram, series: Bool) async throws(RegzaError) {
+    public func reserve(_ program: ProgramData, series: Bool) async throws(RegzaError) {
         let revision = connectionState.revision
         do {
             try await client.request(
@@ -58,7 +58,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
         try? await loadReservations()
     }
 
-    public func cancel(_ reservation: RegzaReservation) async throws(RegzaError) {
+    public func cancel(_ reservation: ReservationData) async throws(RegzaError) {
         let revision = connectionState.revision
         do {
             try await client.request(RegzaCancelReservationRequest(id: reservation.id))

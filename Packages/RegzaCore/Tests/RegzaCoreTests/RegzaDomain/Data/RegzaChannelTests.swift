@@ -26,12 +26,12 @@ import Testing
 
 @Suite struct SubchannelGroupingTests {
     /// テスト用のチャンネル (値はダミー)。remote はリモコン番号、representative は代表の印
-    private func channel(_ number: Int, remote: Int, representative: Bool = false) -> RegzaChannel {
+    private func channel(_ number: Int, remote: Int, representative: Bool = false) -> ChannelData {
         let json = """
             {"channel":"JP-G\(number)","channel_number":\(number),"rcu_channel_number":\(remote),"name":"局\(number)",\
             "ex_channel_number":"DUV_\(number)","show_setting":"\(representative ? "SHOW_REPRESENT" : "SHOW")"}
             """
-        return try! JSONDecoder().decode(RegzaChannel.self, from: Data(json.utf8))
+        return try! JSONDecoder().decode(ChannelData.self, from: Data(json.utf8))
     }
 
     @Test func keepsRepresentativeEvenIfNotFirst() {
@@ -51,19 +51,19 @@ import Testing
 
     @Test func channelListShowsWatchedSubchannelAndDifferentProgram() {
         let channels = [channel(11, remote: 1, representative: true), channel(12, remote: 1), channel(13, remote: 1)]
-        let watching = RegzaChannel.channelList(channels, in: .terrestrial, nowPlayingChannelCode: "JP-G12")
+        let watching = ChannelData.channelList(channels, in: .terrestrial, nowPlayingChannelCode: "JP-G12")
         #expect(watching.map(\.number) == [11, 12])
         let programs = [11: "ニュース", 12: "ニュース", 13: "野球中継"]
-        let different = RegzaChannel.channelList(channels, in: .terrestrial, nowPlayingChannelCode: nil) { programs[$0.number] }
+        let different = ChannelData.channelList(channels, in: .terrestrial, nowPlayingChannelCode: nil) { programs[$0.number] }
         #expect(different.map(\.number) == [11, 13])
     }
 
     @Test func preferredBand() {
-        let bands: [RegzaChannel.Band] = [.terrestrial, .bs]
-        #expect(RegzaChannel.Band.preferred(among: bands, selected: .bs, nowPlaying: .terrestrial) == .bs)
-        #expect(RegzaChannel.Band.preferred(among: bands, selected: nil, nowPlaying: .bs) == .bs)
+        let bands: [ChannelData.Band] = [.terrestrial, .bs]
+        #expect(ChannelData.Band.preferred(among: bands, selected: .bs, nowPlaying: .terrestrial) == .bs)
+        #expect(ChannelData.Band.preferred(among: bands, selected: nil, nowPlaying: .bs) == .bs)
         // 選んでいたものがなければ、いま見ているもの、それもなければ最初のもの
-        #expect(RegzaChannel.Band.preferred(among: bands, selected: .cs, nowPlaying: nil) == .terrestrial)
+        #expect(ChannelData.Band.preferred(among: bands, selected: .cs, nowPlaying: nil) == .terrestrial)
     }
 
     @Test func showsSubchannelsTheCallerAsksFor() {

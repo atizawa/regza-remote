@@ -34,12 +34,12 @@ import Testing
 
     @Test func advancesWithoutPlayStatus() {
         let start = Date(timeIntervalSince1970: 1_000)
-        let broadcast = RegzaNowPlaying(kind: .broadcast, position: 100, duration: 600, isAdvancing: true, updatedAt: start)
+        let broadcast = NowPlayingData(kind: .broadcast, position: 100, duration: 600, isAdvancing: true, updatedAt: start)
         let movedOn = RegzaRemote.advanced(broadcast, with: RegzaStatus(), now: start.addingTimeInterval(30))
         #expect(movedOn.position == 130)
         #expect(movedOn.updatedAt == start.addingTimeInterval(30))
 
-        let recorded = RegzaNowPlaying(kind: .recorded, title: "テスト", position: 50, duration: 600, isAdvancing: false, updatedAt: start)
+        let recorded = NowPlayingData(kind: .recorded, title: "テスト", position: 50, duration: 600, isAdvancing: false, updatedAt: start)
         let status = RegzaStatus(text: "action=2\ntitle_name=テスト\ntotal_time=600\ntitle_time=52")
         let played = RegzaRemote.advanced(recorded, with: status, now: start.addingTimeInterval(2))
         #expect(played.position == 52)

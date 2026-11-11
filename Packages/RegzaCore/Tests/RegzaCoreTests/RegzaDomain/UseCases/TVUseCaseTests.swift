@@ -8,9 +8,9 @@ import Testing
 @MainActor
 @Suite struct TVUseCaseTests {
     @Test func nowPlayingItemUsesDomainTexts() {
-        let tv = TVUseCase(tv: SampleTVRepository(connection: RegzaConnection(host: "192.0.2.1"), channels: [], nowPlaying: nil))
+        let tv = TVUseCase(tv: SampleTVRepository(connection: ConnectionData(host: "192.0.2.1"), channels: [], nowPlaying: nil))
         let recorded = tv.item(
-            RegzaNowPlaying(
+            NowPlayingData(
                 kind: .recorded, channelName: "テスト局１", title: "見本の録画", position: 60, duration: 120, isAdvancing: true
             ))
         #expect(recorded.kind == .recorded)
@@ -19,7 +19,7 @@ import Testing
         #expect(recorded.progress == 0.5)
         #expect(recorded.hasTimeline)
 
-        let standby = tv.item(RegzaNowPlaying(kind: .standby))
+        let standby = tv.item(NowPlayingData(kind: .standby))
         #expect(standby.kind == .standby)
         #expect(standby.statusText == "待機中")
         #expect(standby.headlineText == "待機中")
@@ -31,11 +31,12 @@ import Testing
         let tv = TVUseCase(tv: repository)
         let channel = try #require(UseCaseFixtures.channels().first)
 
+        repository.channels = [channel]
         try await tv.startOver()
         #expect(repository.events == ["key jumpToStart"])
 
         // 切り替えた直後は「始めにジャンプ」が効かないので、選局のあとに送る
-        _ = try await tv.tuneAndStartOver(channel)
+        _ = try await tv.tuneAndStartOver(UseCaseModelMapper.channel(channel))
         #expect(repository.events == ["key jumpToStart", "tune JP-G00000001", "key jumpToStart"])
     }
 }

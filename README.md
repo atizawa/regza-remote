@@ -14,7 +14,7 @@ REGZA だけでもリモコン・Live Activity・Siri・チャンネル一覧と
 ```
 Packages/RegzaCore/           iOS と Android で共有する Swift Package（REGZA の OpenAPI 生成クライアントも共有）
   RegzaSharedModels           画面に出す UI の型とリモコンのキー（RegzaKey）
-  RegzaDomain                 データの型・Repository の約束・UseCase
+  RegzaDomain                 Data・Repository の約束・UseCase・SharedModel への変換
   RegzaInfrastructure         テレビ・Mirakurun・EPGStation の通信（キーコード / Digest 認証 / HTTP クライアント / status.htm 解析）
   RegzaPresentation           iOS と Android で共有する ViewModel（ViewModels/<画面>/ に ViewModel・State/・Action/）
   RegzaApp                    組み立て（どの Repository を使うかを決めて ViewModel を作る）
@@ -53,6 +53,8 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   - 画面と Live Activity が Domain・通信・組み立てを import していないことは `RegzaKitTests` の `LayerTests` が確かめる
 - 接続情報の保存は `RegzaConnectionStore` を OS ごとに実装する。iOS はキーチェーン（`RegzaAppleStorage`）、Android は Kotlin の `AndroidStorage`（SharedPreferences。パスワードは Android Keystore の鍵で暗号化する）を、Swift の保存先 `RegzaAndroidStorage` として差し込む
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）
+- Repository と UseCase は Domain/Data の `ChannelData`・`ProgramData` などを受け渡す。UseCase は Domain に置き、画面側には `RegzaSharedModels` の型を返す。ViewModel は Data を保持せず、番組検索の索引も Domain 内で管理する。
+- `Infrastructure/Mappers` は API の型から Data への変換、`Domain/Mappers` は Data から SharedModel への変換を担当する。
 - REGZA・Mirakurun・EPGStation の API は `OpenAPI/` の仕様から Swift OpenAPI Generator で生成する。生成クライアント、Digest 認証・LenientJSON のミドルウェア、既存の `HTTPTransport` を包む `ClientTransport` はすべて共有する。構成と生成方法は [OpenAPI/README.md](OpenAPI/README.md)。
 
 ## 開発

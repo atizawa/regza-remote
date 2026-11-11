@@ -17,16 +17,16 @@ public struct KeychainConnectionStore: RegzaConnectionStore {
 
     public init() {}
 
-    public func load() -> RegzaConnection {
+    public func load() -> ConnectionData {
         let defaults = UserDefaults.standard
-        return RegzaConnection(
+        return ConnectionData(
             host: defaults.string(forKey: Self.hostKey) ?? "",
             user: defaults.string(forKey: Self.userKey) ?? "",
             password: read(account: Self.passwordAccount) ?? ""
         )
     }
 
-    public func save(_ connection: RegzaConnection) {
+    public func save(_ connection: ConnectionData) {
         let defaults = UserDefaults.standard
         defaults.set(connection.host.trimmingCharacters(in: .whitespaces), forKey: Self.hostKey)
         defaults.set(connection.user, forKey: Self.userKey)

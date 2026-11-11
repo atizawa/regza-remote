@@ -18,7 +18,7 @@ public final class RemoteViewModel {
     /// 画面からの操作
     public typealias Action = RemoteAction
 
-    private var nowPlaying: RegzaNowPlaying?
+    private var nowPlaying: NowPlayingItem?
     /// テレビに接続できなかった理由 (ほかの ViewModel とテストが読む。画面は state.errorMessage を読む)
     package private(set) var lastError: RegzaError?
     private var tapCount = 0
@@ -30,7 +30,7 @@ public final class RemoteViewModel {
     public var state: State {
         State(
             isConfigured: tv.connection.isConfigured,
-            nowPlaying: nowPlaying.map(tv.item),
+            nowPlaying: nowPlaying,
             errorMessage: lastError?.localizedDescription,
             isConnected: isConnected,
             lastCommandLabel: lastCommand?.label,
@@ -49,7 +49,7 @@ public final class RemoteViewModel {
     private static let searchInterval: TimeInterval = 180
 
     /// - Parameter nowPlaying: 最初に出しておく「いま映っているもの」(見本など)
-    package init(tv: any TVUseCaseProtocol, nowPlaying: RegzaNowPlaying? = nil) {
+    package init(tv: any TVUseCaseProtocol, nowPlaying: NowPlayingItem? = nil) {
         self.tv = tv
         self.nowPlaying = nowPlaying
         isConnected = nowPlaying != nil
@@ -114,7 +114,7 @@ public final class RemoteViewModel {
         try await tv.loadChannels(force: force)
     }
 
-    func tune(to channel: RegzaChannel) async throws(RegzaError) {
+    func tune(to channel: ChannelItem) async throws(RegzaError) {
         tapCount += 1
         // 切り替えの最中はテレビに問い合わせないので、取り直さずに、選んだチャンネルに切り替わったものとして出す。
         // 番組名などは定期の取得で落ち着いてから反映する
@@ -127,12 +127,12 @@ public final class RemoteViewModel {
     }
 
     /// チャンネルを切り替えてから、その番組を最初から再生する
-    func tuneAndStartOver(_ channel: RegzaChannel) async throws(RegzaError) {
+    func tuneAndStartOver(_ channel: ChannelItem) async throws(RegzaError) {
         tapCount += 1
         tuned(try await tv.tuneAndStartOver(channel))
     }
 
-    private func tuned(_ nowPlaying: RegzaNowPlaying?) {
+    private func tuned(_ nowPlaying: NowPlayingItem?) {
         lastError = nil
         lastCommand = nil
         isConnected = true
@@ -170,7 +170,7 @@ public final class RemoteViewModel {
 
     /// テレビから取り直す。一時的な失敗で番組情報が消えないよう、失敗しても nowPlaying は直前のものを残し、
     /// isConnected だけを落とす (画面やロック画面は「接続できません」を添えて出す)
-    private func fetch() async -> Result<RegzaNowPlaying, RegzaError> {
+    private func fetch() async -> Result<NowPlayingItem, RegzaError> {
         do {
             let value = try await tv.refresh()
             isConnected = true
@@ -193,7 +193,7 @@ public final class RemoteViewModel {
 
     // MARK: - 設定 (設定の ViewModel から使う)
 
-    func save(_ connection: RegzaConnection) async {
+    func save(_ connection: ConnectionItem) async {
         await tv.save(connection)
         nowPlaying = nil
         isConnected = false
@@ -209,19 +209,19 @@ public final class RemoteViewModel {
     }
 
     /// 保存前の接続情報で視聴状況を取得してみる
-    func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError> {
+    func testConnection(_ connection: ConnectionItem) async -> Result<NowPlayingItem, RegzaError> {
         await tv.testConnection(connection)
     }
 
     // MARK: - ほかの ViewModel が読むもの (画面は state を読む)
 
-    package var connection: RegzaConnection { tv.connection }
+    package var connection: ConnectionItem { tv.connection }
     /// テレビに登録されているチャンネル。取得前は空
-    package var channels: [RegzaChannel] { tv.channels }
+    package var channels: [ChannelItem] { tv.channels }
     var isSampleMode: Bool { tv.isSample }
 
     /// いま映っている放送のチャンネル
-    package var nowPlayingChannel: RegzaChannel? {
+    package var nowPlayingChannel: ChannelItem? {
         guard let code = nowPlaying?.channelCode, !code.isEmpty else { return nil }
         return channels.first { $0.code == code }
     }

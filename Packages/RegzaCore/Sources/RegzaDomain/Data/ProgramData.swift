@@ -1,7 +1,7 @@
 import Foundation
 
 /// Mirakurun の番組 (`GET /api/programs`)。
-public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
+public struct ProgramData: Decodable, Hashable, Sendable, Identifiable {
     public var id: Int
     public var networkId: Int
     public var serviceId: Int
@@ -35,7 +35,7 @@ public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
         self.eventId = eventId
         self.start = start
         self.end = end
-        self.name = RegzaNowPlaying.cleanTitle(name)
+        self.name = NowPlayingData.cleanTitle(name)
         self.description = description
         let order = ["番組内容", "出演者"]
         self.extended = extended.sorted { lhs, rhs in
@@ -46,7 +46,7 @@ public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
         self.genres = genres
     }
 
-    /// テレビのチャンネル一覧の `RegzaChannel.code` と同じ形式
+    /// テレビのチャンネル一覧の `ChannelData.code` と同じ形式
     public var channelCode: String { BroadcastID.channelCode(networkId: networkId, serviceId: serviceId) }
 
     /// テレビの番組 ID (`epg_content_id`)。録画予約に使う

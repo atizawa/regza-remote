@@ -1,66 +1,29 @@
 import Foundation
 
-/// 番組表 (Mirakurun) を探す条件。
-/// 打った言葉をそのまま使うときは言葉ごとのグループ (すべて含む)、AI が言葉を広げたときは
-/// 関係する言葉を 1 つのグループ (どれかを含む) にし、ジャンル・日付・時間帯も入る
-public struct ProgramSearchQuery: Equatable, Sendable {
-    /// グループごとに、どれかの言葉を含む番組を探す。すべてのグループを満たすものだけ残す
-    /// (番組名・説明・番組内容・出演者から探す)
-    public var keywordGroups: [[String]]
-    /// ARIB の大分類 (0: ニュース 〜 11: 福祉)。空ならジャンルを問わない
-    public var genres: [Int]
-    /// 今日を 0 とした日。nil なら日を問わない (番組表の 1 日は朝 4 時から)
-    public var dayOffset: Int?
-    /// この時刻から始まる番組 (4〜27 時。深夜は前の日の続きとして 24 時以降で書く)。nil なら問わない
-    public var startHour: Int?
-    /// この時刻より前に始まる番組
-    public var endHour: Int?
-
-    public init(
-        keywordGroups: [[String]] = [], genres: [Int] = [], dayOffset: Int? = nil,
-        startHour: Int? = nil, endHour: Int? = nil
-    ) {
-        self.keywordGroups = keywordGroups
-        self.genres = genres
-        self.dayOffset = dayOffset
-        self.startHour = startHour
-        self.endHour = endHour
-    }
-
-    /// 打った言葉を空白で区切り、すべて含む番組を探す条件
-    public init(text: String) {
-        self.init(keywordGroups: text.split(whereSeparator: \.isWhitespace).map { [String($0)] })
-    }
-
-    public var isEmpty: Bool {
-        keywordGroups.allSatisfy(\.isEmpty) && genres.isEmpty && dayOffset == nil && startHour == nil && endHour == nil
-    }
-}
-
 /// 見つかった番組と、見つかったわけ (どの言葉が、どこに入っていたか)
-public struct ProgramSearchResult: Sendable, Identifiable {
-    public var program: MirakurunProgram
+struct ProgramSearchResult: Sendable, Identifiable {
+    var program: ProgramData
     /// 見つかった言葉 (グループごとに 1 つ)
-    public var matches: [Match]
+    var matches: [Match]
 
-    public var id: Int { program.id }
+    var id: Int { program.id }
 
-    public struct Match: Equatable, Sendable {
-        public var term: String
-        public var field: Field
+    struct Match: Equatable, Sendable {
+        var term: String
+        var field: Field
     }
 
     /// 言葉が入っていた場所。番組名 → 出演者 → 説明の順に見る
-    public enum Field: Sendable {
+    enum Field: Sendable {
         case title, cast, description
     }
 }
 
 /// 番組を探しやすい形 (正規化した文字の UTF-8) にしたもの。番組表を読み込んだときに 1 度だけ作る。
 /// String の contains は 1 万件を超えると打つたびに数百ミリ秒かかるので、バイト列のまま比べる
-public struct ProgramSearchIndex: Sendable {
+struct ProgramSearchIndex: Sendable {
     struct Entry: Sendable {
-        var program: MirakurunProgram
+        var program: ProgramData
         var title: [UInt8]
         var cast: [UInt8]
         var description: [UInt8]
@@ -68,10 +31,10 @@ public struct ProgramSearchIndex: Sendable {
 
     let entries: [Entry]
 
-    public init(_ programs: [MirakurunProgram]) {
+    init(_ programs: [ProgramData]) {
         entries = programs.sorted { $0.start < $1.start }.map { program in
             // 出演者は「出演者」「出演」「声の出演」などの見出しで入っている
-            let isCast = { (item: MirakurunProgram.Extended) in item.title.contains("出演") }
+            let isCast = { (item: ProgramData.Extended) in item.title.contains("出演") }
             return Entry(
                 program: program,
                 title: Array(ProgramSearch.normalize(program.name).utf8),
@@ -84,10 +47,10 @@ public struct ProgramSearchIndex: Sendable {
         }
     }
 
-    public var isEmpty: Bool { entries.isEmpty }
+    var isEmpty: Bool { entries.isEmpty }
 
     /// 条件に合う、これから放送する番組 (放送中を含む) を時刻順に返す
-    public func search(
+    func search(
         _ query: ProgramSearchQuery, now: Date = Date(), calendar: Calendar = .current
     ) -> [ProgramSearchResult] {
         let groups = query.keywordGroups

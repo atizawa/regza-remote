@@ -1,11 +1,11 @@
 import Foundation
 import RegzaDomain
 
-/// テレビの視聴状況の応答 (`status.htm`・`/v2/remote/play/status`) から、いま映っているもの (RegzaNowPlaying) を作る
-extension RegzaNowPlaying {
+/// テレビの視聴状況の応答 (`status.htm`・`/v2/remote/play/status`) から、いま映っているもの (NowPlayingData) を作る
+extension NowPlayingData {
     /// 旧 API (`status.htm`) から作る。
     /// `action` の値の意味は公開されていないため、前回からの再生位置の変化で再生中かを判定する
-    init(status: RegzaStatus, previous: RegzaNowPlaying?, now: Date = Date()) {
+    init(status: RegzaStatus, previous: NowPlayingData?, now: Date = Date()) {
         let title = Self.cleanTitle(status.titleName)
         let sameTitle = previous?.title == title && previous?.duration == status.totalTime
         self.init(

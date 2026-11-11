@@ -15,7 +15,7 @@ public final class LivePlayerViewModel {
 
     package init(
         remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol,
-        channel: RegzaChannel
+        channel: ChannelItem
     ) {
         self.remote = remote
         self.channels = channels
@@ -33,7 +33,7 @@ public final class LivePlayerViewModel {
     /// 画面からの操作
     public typealias Action = LivePlayerAction
 
-    private var channel: RegzaChannel
+    private var channel: ChannelItem
     private var phase = Phase.preparing
     @ObservationIgnored private var streamID: Int?
     /// 配信を頼んでから見終わるまでの処理 (局を切り替えたら止めて頼み直す)
@@ -99,7 +99,7 @@ public final class LivePlayerViewModel {
         }
     }
 
-    private func run(_ channel: RegzaChannel) async {
+    private func run(_ channel: ChannelItem) async {
         phase = .preparing
         guard stream.isPlayable(channelCode: channel.code) else {
             phase = .failed(message: "このチャンネルは EPGStation で見られません。", canRetry: false)

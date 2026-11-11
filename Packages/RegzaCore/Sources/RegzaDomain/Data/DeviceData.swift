@@ -1,7 +1,7 @@
 import Foundation
 
 /// 同じネットワークにある REGZA。
-public struct RegzaDevice: Hashable, Sendable, Identifiable {
+public struct DeviceData: Hashable, Sendable, Identifiable {
     public var host: String
     public var model: String
     public var size: String

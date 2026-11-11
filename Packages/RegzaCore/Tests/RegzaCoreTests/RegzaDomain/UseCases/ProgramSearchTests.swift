@@ -8,7 +8,7 @@ import Testing
     func program(
         _ id: Int, _ name: String, start: String, minutes: Int = 30, genre: Int = 1,
         cast: String = ""
-    ) throws -> MirakurunProgram {
+    ) throws -> ProgramData {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(identifier: "Asia/Tokyo")
@@ -18,7 +18,7 @@ import Testing
             {"id":\(id),"eventId":\(id),"networkId":1,"serviceId":1,"startAt":\(startAt),"duration":\(minutes * 60_000),\
             "name":"\(name)","description":"","extended":{"出演者":"\(cast)"},"genres":[{"lv1":\(genre)}]}
             """
-        return try JSONDecoder().decode(MirakurunProgram.self, from: Data(json.utf8))
+        return try JSONDecoder().decode(ProgramData.self, from: Data(json.utf8))
     }
 
     var calendar: Calendar {

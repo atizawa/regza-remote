@@ -13,20 +13,20 @@ struct RegzaAndroidAppTests {
     /// 見本の局 (network 1 の service 1〜2)
     static let channelCodes = [BroadcastID.channelCode(networkId: 1, serviceId: 1), BroadcastID.channelCode(networkId: 1, serviceId: 2)]
 
-    static func channels() throws -> [RegzaChannel] {
+    static func channels() throws -> [ChannelData] {
         let items = channelCodes.enumerated().map { index, code in
             #"{"channel":"\#(code)","channel_number":\#(11 + index * 10),"rcu_channel_number":\#(index + 1),"name":"テスト局\#(index + 1)","ex_channel_number":"DUV_\#(11 + index * 10)","show_setting":"SHOW_REPRESENT"}"#
         }
-        return try JSONDecoder().decode([RegzaChannel].self, from: Data("[\(items.joined(separator: ","))]".utf8))
+        return try JSONDecoder().decode([ChannelData].self, from: Data("[\(items.joined(separator: ","))]".utf8))
     }
 
     /// テスト局１の番組。放送中のもの (id 1) と、明日のもの (id 2)
-    static func programs() throws -> [MirakurunProgram] {
+    static func programs() throws -> [ProgramData] {
         let now = Date().timeIntervalSince1970
         let items = [(1, now - 600, "放送中の番組"), (2, now + 86_400, "明日の番組")].map { id, start, name in
             #"{"id":\#(id),"eventId":\#(id),"networkId":1,"serviceId":1,"startAt":\#(Int(start * 1000)),"duration":1800000,"name":"\#(name)"}"#
         }
-        return try JSONDecoder().decode([MirakurunProgram].self, from: Data("[\(items.joined(separator: ","))]".utf8))
+        return try JSONDecoder().decode([ProgramData].self, from: Data("[\(items.joined(separator: ","))]".utf8))
     }
 
     /// 窓口と、その中の ViewModel
@@ -37,7 +37,7 @@ struct RegzaAndroidAppTests {
 
     func make(host: String = "192.0.2.1", guide: Bool = true) throws -> Fixture {
         let app = AppViewModel.sample(
-            connection: RegzaConnection(host: host), nowPlaying: nil, channels: try Self.channels(),
+            connection: ConnectionData(host: host), nowPlaying: nil, channels: try Self.channels(),
             guideHost: guide ? "192.0.2.2" : "", programs: guide ? try Self.programs() : []
         )
         return Fixture(bridge: RegzaAndroidApp(app: app), app: app)
@@ -74,7 +74,7 @@ struct RegzaAndroidAppTests {
             AndroidStorageKey.guideHost: "192.0.2.2", AndroidStorageKey.ownStreamIDs: "1,2",
         ])
         let store = AndroidConnectionStore(storage: storage)
-        #expect(store.load() == RegzaConnection(host: "192.0.2.1", user: "user", password: "secret"))
+        #expect(store.load() == ConnectionData(host: "192.0.2.1", user: "user", password: "secret"))
         #expect(store.guideHost == "192.0.2.2")
         #expect(store.streamHost == "")
         #expect(store.ownStreamIDs == [1, 2])
@@ -88,7 +88,7 @@ struct RegzaAndroidAppTests {
     @Test func storeWritesChangedValues() async throws {
         let storage = MemoryStorage([:])
         let store = AndroidConnectionStore(storage: storage)
-        store.save(RegzaConnection(host: "192.0.2.1", user: "user", password: "secret"))
+        store.save(ConnectionData(host: "192.0.2.1", user: "user", password: "secret"))
         store.streamHost = "192.0.2.30"
         store.ownStreamIDs = [3, 4]
         try await waitUntil { storage.values[AndroidStorageKey.ownStreamIDs] == "3,4" }

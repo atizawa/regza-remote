@@ -7,7 +7,7 @@ public protocol SetupUseCaseProtocol: AnyObject {
     func findTVs() -> AsyncStream<DeviceItem>
 
     /// テレビに PIN を表示させてから確定するまでの 1 回の登録
-    func pairing(host: String, user: String) -> any PairingSession
+    func pairing(host: String, user: String) -> any PairingRegistration
 
     func findGuideServers() async -> [String]
 
@@ -64,8 +64,8 @@ public final class SetupUseCase: SetupUseCaseProtocol {
     }
 
     /// テレビに PIN を表示させてから確定するまでの 1 回の登録
-    public func pairing(host: String, user: String) -> any PairingSession {
-        devices.pairing(host: host, user: user)
+    public func pairing(host: String, user: String) -> any PairingRegistration {
+        PairingUseCaseSession(session: devices.pairing(host: host, user: user))
     }
 
     public func findGuideServers() async -> [String] {
@@ -103,4 +103,20 @@ public final class SetupUseCase: SetupUseCaseProtocol {
     public func unlinkStream() {
         stream.saveStreamHost("")
     }
+}
+
+/// 登録処理が画面へ公開する契約。資格情報は SharedModel で返す。
+public protocol PairingRegistration: Sendable {
+    func start() async throws
+    func confirm(pin: String) async throws -> ConnectionItem
+    func cancel() async
+}
+
+private struct PairingUseCaseSession: PairingRegistration {
+    let session: any PairingSession
+    func start() async throws { try await session.start() }
+    func confirm(pin: String) async throws -> ConnectionItem {
+        UseCaseModelMapper.connection(try await session.confirm(pin: pin))
+    }
+    func cancel() async { await session.cancel() }
 }

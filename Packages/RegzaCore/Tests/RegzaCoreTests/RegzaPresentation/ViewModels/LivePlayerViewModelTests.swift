@@ -15,7 +15,7 @@ import Testing
     func makePlayer(channelCode: String, _ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
         throws -> (LivePlayerViewModel, FakeTransport, MemoryStore)
     {
-        let store = MemoryStore(connection: RegzaConnection(host: "192.0.2.10"))
+        let store = MemoryStore(connection: ConnectionData(host: "192.0.2.10"))
         // 配信を頼めるのは、番組表と EPGStation の両方を設定しているとき
         store.guideHost = "192.0.2.2"
         store.streamHost = "192.0.2.30"

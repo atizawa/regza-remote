@@ -28,7 +28,7 @@ import Testing
             })
         let viewModel = live.app.channelList
         await fixtures.send(viewModel) { $0.send(.reload) }
-        #expect(viewModel.state.bands == [RegzaChannel.Band.terrestrial, .bs])
+        #expect(viewModel.state.bands == [ChannelData.Band.terrestrial, .bs])
         let row = try #require(viewModel.state.rows.first)
         #expect(!row.isSubchannel)
 

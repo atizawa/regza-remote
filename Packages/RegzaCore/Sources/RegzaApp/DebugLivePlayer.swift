@@ -6,13 +6,14 @@ extension AppViewModel {
     /// iOS の起動引数 -LiveHost <EPGStation> -LiveChannel <チャンネルの ID> で使う
     public func debugLivePlayer(streamHost: String, channelCode: String) -> LivePlayerViewModel? {
         let json = #"[{"channel":"\#(channelCode)","name":"確認用","channel_number":1}]"#
-        guard let channel = (try? JSONDecoder().decode([RegzaChannel].self, from: Data(json.utf8)))?.first else { return nil }
+        guard let channel = (try? JSONDecoder().decode([ChannelData].self, from: Data(json.utf8)))?.first else { return nil }
         // EPGStation は番組表を設定しているときだけ使うので、番組表も設定済みにしておく (番組名は出ない)
         let store = DebugStore(streamHost: streamHost)
         let guide = MirakurunGuideRepository(store: store, client: MirakurunAPIClient(host: store.guideHost))
         let repository = EPGStationStreamRepository(store: store, client: EPGStationAPIClient(host: streamHost))
         let stream = StreamUseCase(stream: repository, guide: guide)
-        return LivePlayerViewModel(remote: remote, channels: channels, guide: self.guide, stream: stream, channel: channel)
+        return LivePlayerViewModel(
+            remote: remote, channels: channels, guide: self.guide, stream: stream, channel: UseCaseModelMapper.channel(channel))
     }
 }
 
@@ -26,8 +27,8 @@ private final class DebugStore: RegzaConnectionStore, @unchecked Sendable {
         streamHostValue = streamHost
     }
 
-    func load() -> RegzaConnection { RegzaConnection() }
-    func save(_ connection: RegzaConnection) {}
+    func load() -> ConnectionData { ConnectionData() }
+    func save(_ connection: ConnectionData) {}
     func pairingUserID() -> String { "" }
 
     var guideHost: String {

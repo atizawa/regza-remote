@@ -1,6 +1,6 @@
 import Foundation
 
-/// 同じネットワークで見つかったテレビ (UI で使う形)。SetupUseCase が Domain の RegzaDevice から作る
+/// 同じネットワークで見つかったテレビ (UI で使う形)。SetupUseCase が Domain の DeviceData から作る
 public struct DeviceItem: Equatable, Sendable, Identifiable {
     public var host: String
     /// 「REGZA 55Z000」

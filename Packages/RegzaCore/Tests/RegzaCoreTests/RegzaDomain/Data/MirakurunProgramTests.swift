@@ -22,7 +22,7 @@ import Testing
             "name":"テスト番組🈑🈖[字]","description":"説明","extended":{"出演者":"テスト","番組内容":"内容"},\
             "genres":[{"lv1":7,"lv2":0,"un1":15,"un2":15}]}
             """
-        let program = try JSONDecoder().decode(MirakurunProgram.self, from: Data(json.utf8))
+        let program = try JSONDecoder().decode(ProgramData.self, from: Data(json.utf8))
         #expect(program.name == "テスト番組")
         #expect(program.channelCode == "JP-G7fe10408")
         #expect(program.epgContentID == "JP-00007fe104080001")

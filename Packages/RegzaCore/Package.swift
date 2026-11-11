@@ -60,8 +60,8 @@ let package = Package(
             exclude: ["openapi-generator-config.yaml"],
             plugins: [.plugin(name: "GenerateAPI")]
         ),
-        // Domain: アプリの中心になる型 (Data)、保存先などの protocol (Repositories)、決まりごと (UseCases)。SharedModels だけに依存する
-        // SharedModels: UI で使う型。Domain の UseCase がエンティティから作る。Android からも使うので、Java のクラスにできる形にする
+        // Domain: Repository と UseCase の間で使う Data、Repository の protocol、UseCase と SharedModel への変換。SharedModels だけに依存する
+        // SharedModels: UI で使う型。Domain の UseCase が Data から作る。Android からも使うので、Java のクラスにできる形にする
         .target(name: "RegzaSharedModels", exclude: ["README.md"]),
         .target(name: "RegzaDomain", dependencies: ["RegzaSharedModels"]),
         // Infrastructure: テレビ・Mirakurun・EPGStation との通信、HTTP、暗号、通信の形から Domain の型への変換 (Mappers)

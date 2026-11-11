@@ -30,16 +30,14 @@ public final class GuideSearchViewModel {
 
     private var text = ""
     private var query = ProgramSearchQuery()
-    private var results: [ProgramSearchResult] = []
+    private var results: [SearchResultItem] = []
     private var isLiteral = false
     private var isIndexing = false
     @ObservationIgnored private var removed: Set<Condition> = []
-    @ObservationIgnored private var index = ProgramSearchIndex([])
     @ObservationIgnored private var indexedAt: Date?
 
     public var state: State {
         let now = Date()
-        let channels = remote.channels
         return State(
             text: text,
             isBlank: text.trimmingCharacters(in: .whitespaces).isEmpty,
@@ -47,9 +45,10 @@ public final class GuideSearchViewModel {
             isLiteral: isLiteral,
             isIndexing: isIndexing,
             results: results.compactMap { result in
-                guard let channel = channels.first(where: { $0.code.caseInsensitiveCompare(result.program.channelCode) == .orderedSame })
-                else { return nil }
-                return guide.searchResult(result, channel: channel, now: now)
+                guard remote.channels.contains(where: { $0.code.caseInsensitiveCompare(result.channelCode) == .orderedSame }) else {
+                    return nil
+                }
+                return guide.searchResult(result, now: now)
             }
         )
     }
@@ -74,16 +73,14 @@ public final class GuideSearchViewModel {
 
     /// 番組表を読み込み直したときに、探すための索引を作り直す (番組表の画面から呼ぶ)。
     /// 1 週間分で 1 秒ほどかかるので、番組表の表示を待たせないよう裏で作る
-    func updateIndex(_ programs: [String: [MirakurunProgram]], loadedAt: Date?) {
-        guard loadedAt != indexedAt || index.isEmpty else { return }
+    func updateIndex() {
+        let loadedAt = guide.guideProgramsLoadedAt
+        guard loadedAt != indexedAt || results.isEmpty else { return }
         indexedAt = loadedAt
-        let all = programs.values.flatMap { $0 }
         isIndexing = true
         Task {
-            let index = await Task.detached { ProgramSearchIndex(all) }.value
-            // 作っている間に番組表を読み込み直していたら、古い索引は使わない
+            await guide.updateSearchIndex()
             guard loadedAt == indexedAt else { return }
-            self.index = index
             isIndexing = false
             refresh()
         }
@@ -98,7 +95,7 @@ public final class GuideSearchViewModel {
         }
         query.genres.removeAll { removed.contains(.genre($0)) }
         self.query = query
-        results = query.isEmpty ? [] : index.search(query)
+        results = guide.search(query, channels: remote.channels)
     }
 
     private var conditions: [Condition] {

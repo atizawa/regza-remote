@@ -14,7 +14,7 @@ import Testing
 
     func makeApp(configured: Bool = true) throws -> AppViewModel {
         AppViewModel.sample(
-            connection: RegzaConnection(host: configured ? "192.0.2.10" : ""), nowPlaying: nil, channels: try guideScreens.channels()
+            connection: ConnectionData(host: configured ? "192.0.2.10" : ""), nowPlaying: nil, channels: try guideScreens.channels()
         )
     }
 

@@ -13,13 +13,13 @@ import Testing
     let fixtures = ViewModelFixtures()
 
     /// テスト局１ (JP-G00000001) の番組。start は今からの秒数
-    func program(id: Int, startingIn offset: TimeInterval, name: String = "テスト番組") throws -> MirakurunProgram {
+    func program(id: Int, startingIn offset: TimeInterval, name: String = "テスト番組") throws -> ProgramData {
         let start = Int((Date().timeIntervalSince1970 + offset) * 1000)
         let json = #"{"id":\#(id),"eventId":\#(id),"networkId":0,"serviceId":1,"startAt":\#(start),"duration":1800000,"name":"\#(name)"}"#
-        return try JSONDecoder().decode(MirakurunProgram.self, from: Data(json.utf8))
+        return try JSONDecoder().decode(ProgramData.self, from: Data(json.utf8))
     }
 
-    func channels() throws -> [RegzaChannel] {
+    func channels() throws -> [ChannelData] {
         try #require(try JSONDecoder().decode(RegzaChannelList.self, from: Data(ViewModelFixtures.channelList.utf8)).channels)
     }
 

@@ -2,7 +2,7 @@ import RegzaDomain
 
 struct RegzaReservationList: Decodable {
     var status: Int
-    var reservations: [RegzaReservation]?
+    var reservations: [ReservationData]?
 
     enum CodingKeys: String, CodingKey {
         case status

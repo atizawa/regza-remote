@@ -1,7 +1,7 @@
 import Foundation
 
-/// REGZA への接続情報。
-public struct RegzaConnection: Equatable, Sendable {
+/// 接続設定・登録結果。保存用の ConnectionData は UseCase 内で変換する。
+public struct ConnectionItem: Equatable, Sendable {
     public var host: String
     public var user: String
     public var password: String
@@ -12,7 +12,5 @@ public struct RegzaConnection: Equatable, Sendable {
         self.password = password
     }
 
-    public var isConfigured: Bool { !trimmedHost.isEmpty }
-
-    public var trimmedHost: String { host.trimmingCharacters(in: .whitespacesAndNewlines) }
+    public var isConfigured: Bool { !host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }

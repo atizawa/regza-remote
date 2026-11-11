@@ -18,7 +18,7 @@ struct LiveModels {
     let setup: SetupUseCase
 
     init(
-        store: MemoryStore = MemoryStore(connection: RegzaConnection(host: "192.0.2.10", user: "user", password: "password")),
+        store: MemoryStore = MemoryStore(connection: ConnectionData(host: "192.0.2.10", user: "user", password: "password")),
         transport: FakeTransport
     ) {
         self.store = store
@@ -31,7 +31,7 @@ struct LiveModels {
         let recording = RegzaRecordingRepository(client: client, connectionState: connectionState)
         channels = ChannelUseCase(tv: tv, guide: guide)
         self.guide = GuideUseCase(guide: guide, recording: recording)
-        self.recording = RecordingUseCase(recording: recording)
+        self.recording = RecordingUseCase(recording: recording, guide: guide)
         self.stream = StreamUseCase(stream: stream, guide: guide)
         setup = SetupUseCase(devices: NetworkDeviceRepository(transport: transport), guide: guide, stream: stream)
     }

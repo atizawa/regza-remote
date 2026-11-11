@@ -1,6 +1,6 @@
 import Foundation
 
-/// 録画予約の一覧に出す 1 件 (UI で使う形)。RecordingUseCase が Domain の RegzaReservation から作る
+/// 録画予約の一覧に出す 1 件 (UI で使う形)。RecordingUseCase が Domain の ReservationData から作る
 public struct ReservationItem: Equatable, Sendable, Identifiable {
     public var id: String
     public var title: String

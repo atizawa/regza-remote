@@ -4,10 +4,10 @@ import Foundation
 @MainActor
 public protocol TVUseCaseProtocol: AnyObject {
     /// 保存してある接続
-    var connection: RegzaConnection { get }
+    var connection: ConnectionItem { get }
 
     /// テレビに登録されているチャンネル。取得前は空
-    var channels: [RegzaChannel] { get }
+    var channels: [ChannelItem] { get }
 
     /// 見本 (テレビにつながない)
     var isSample: Bool { get }
@@ -17,19 +17,16 @@ public protocol TVUseCaseProtocol: AnyObject {
     func send(_ key: RegzaKey) async throws(RegzaError)
 
     /// 選局する。切り替わったものとしての「いま映っているもの」を返す
-    func tune(to channel: RegzaChannel) async throws(RegzaError) -> RegzaNowPlaying?
+    func tune(to channel: ChannelItem) async throws(RegzaError) -> NowPlayingItem?
 
     func seek(to seconds: Int) async throws(RegzaError)
 
-    func refresh() async throws(RegzaError) -> RegzaNowPlaying
+    func refresh() async throws(RegzaError) -> NowPlayingItem
 
-    func lastNowPlaying() async -> RegzaNowPlaying?
+    func lastNowPlaying() async -> NowPlayingItem?
 
     /// DHCP などで IP アドレスが変わったテレビを探し、見つかれば新しい接続を保存して返す
-    func locateMovedTV() async -> RegzaConnection?
-
-    /// いま映っているもの (UI の型)。画面に出す文言は Domain の RegzaNowPlaying の決まりで作る
-    func item(_ nowPlaying: RegzaNowPlaying) -> NowPlayingItem
+    func locateMovedTV() async -> ConnectionItem?
 
     func loadTimeshiftSettings() async
 
@@ -41,12 +38,12 @@ public protocol TVUseCaseProtocol: AnyObject {
 
     /// チャンネルを切り替えてから、その番組を最初から再生する。
     /// 切り替えた直後は「始めにジャンプ」が効かないので、選局が落ち着くのを待ってから送る
-    func tuneAndStartOver(_ channel: RegzaChannel) async throws(RegzaError) -> RegzaNowPlaying?
+    func tuneAndStartOver(_ channel: ChannelItem) async throws(RegzaError) -> NowPlayingItem?
 
-    func save(_ connection: RegzaConnection) async
+    func save(_ connection: ConnectionItem) async
 
     /// 保存前の接続で、いま映っているものを取ってみる
-    func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError>
+    func testConnection(_ connection: ConnectionItem) async -> Result<NowPlayingItem, RegzaError>
 
     /// PIN 登録に使うこのアプリ用のユーザー ID
     func pairingUserID() -> String
@@ -68,9 +65,9 @@ public final class TVUseCase: TVUseCaseProtocol {
     }
 
     /// 保存してある接続
-    public var connection: RegzaConnection { tv.connection }
+    public var connection: ConnectionItem { UseCaseModelMapper.connection(tv.connection) }
     /// テレビに登録されているチャンネル。取得前は空
-    public var channels: [RegzaChannel] { tv.channels }
+    public var channels: [ChannelItem] { tv.channels.map(UseCaseModelMapper.channel) }
     /// 見本 (テレビにつながない)
     public var isSample: Bool { tv.isSample }
 
@@ -83,49 +80,30 @@ public final class TVUseCase: TVUseCaseProtocol {
     }
 
     /// 選局する。切り替わったものとしての「いま映っているもの」を返す
-    public func tune(to channel: RegzaChannel) async throws(RegzaError) -> RegzaNowPlaying? {
-        try await tv.tune(to: channel)
+    public func tune(to channel: ChannelItem) async throws(RegzaError) -> NowPlayingItem? {
+        guard let data = tv.channels.first(where: { $0.code == channel.code }) else { throw .unsupported }
+        return try await tv.tune(to: data).map(UseCaseModelMapper.nowPlaying)
     }
 
     public func seek(to seconds: Int) async throws(RegzaError) {
         try await tv.seek(to: seconds)
     }
 
-    public func refresh() async throws(RegzaError) -> RegzaNowPlaying {
-        try await tv.refresh()
+    public func refresh() async throws(RegzaError) -> NowPlayingItem {
+        UseCaseModelMapper.nowPlaying(try await tv.refresh())
     }
 
-    public func lastNowPlaying() async -> RegzaNowPlaying? {
-        await tv.lastNowPlaying()
+    public func lastNowPlaying() async -> NowPlayingItem? {
+        await tv.lastNowPlaying().map(UseCaseModelMapper.nowPlaying)
     }
 
     /// DHCP などで IP アドレスが変わったテレビを探し、見つかれば新しい接続を保存して返す
-    public func locateMovedTV() async -> RegzaConnection? {
-        await tv.locateMovedTV()
+    public func locateMovedTV() async -> ConnectionItem? {
+        await tv.locateMovedTV().map(UseCaseModelMapper.connection)
     }
 
-    /// いま映っているもの (UI の型)。画面に出す文言は Domain の RegzaNowPlaying の決まりで作る
-    public func item(_ nowPlaying: RegzaNowPlaying) -> NowPlayingItem {
-        NowPlayingItem(
-            kind: NowPlayingKind(rawValue: nowPlaying.kind.rawValue) ?? .unknown,
-            channelName: nowPlaying.channelName,
-            channelCode: nowPlaying.channelCode,
-            title: nowPlaying.title,
-            description: nowPlaying.description,
-            chapterName: nowPlaying.chapterName,
-            genre: nowPlaying.genre,
-            position: nowPlaying.position,
-            duration: nowPlaying.duration,
-            isAdvancing: nowPlaying.isAdvancing,
-            updatedAt: nowPlaying.updatedAt,
-            nextProgramStart: nowPlaying.nextProgramStart,
-            nextProgramDuration: nowPlaying.nextProgramDuration,
-            nextTitle: nowPlaying.nextTitle,
-            shortChannel: nowPlaying.shortChannel,
-            captionText: nowPlaying.captionText,
-            headlineText: nowPlaying.headlineText,
-            statusText: nowPlaying.statusText
-        )
+    func item(_ data: NowPlayingData) -> NowPlayingItem {
+        UseCaseModelMapper.nowPlaying(data)
     }
 
     // MARK: - 最初から見る (タイムシフトマシン)
@@ -146,22 +124,23 @@ public final class TVUseCase: TVUseCaseProtocol {
 
     /// チャンネルを切り替えてから、その番組を最初から再生する。
     /// 切り替えた直後は「始めにジャンプ」が効かないので、選局が落ち着くのを待ってから送る
-    public func tuneAndStartOver(_ channel: RegzaChannel) async throws(RegzaError) -> RegzaNowPlaying? {
-        let nowPlaying = try await tv.tune(to: channel)
+    public func tuneAndStartOver(_ channel: ChannelItem) async throws(RegzaError) -> NowPlayingItem? {
+        guard let data = tv.channels.first(where: { $0.code == channel.code }) else { throw .unsupported }
+        let nowPlaying = try await tv.tune(to: data)
         try? await Task.sleep(for: .seconds(3))
         try? await tv.send(.jumpToStart)
-        return nowPlaying
+        return nowPlaying.map(UseCaseModelMapper.nowPlaying)
     }
 
     // MARK: - 接続の設定
 
-    public func save(_ connection: RegzaConnection) async {
-        await tv.save(connection)
+    public func save(_ connection: ConnectionItem) async {
+        await tv.save(UseCaseModelMapper.connectionData(connection))
     }
 
     /// 保存前の接続で、いま映っているものを取ってみる
-    public func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError> {
-        await tv.testConnection(connection)
+    public func testConnection(_ connection: ConnectionItem) async -> Result<NowPlayingItem, RegzaError> {
+        await tv.testConnection(UseCaseModelMapper.connectionData(connection)).map(UseCaseModelMapper.nowPlaying)
     }
 
     /// PIN 登録に使うこのアプリ用のユーザー ID

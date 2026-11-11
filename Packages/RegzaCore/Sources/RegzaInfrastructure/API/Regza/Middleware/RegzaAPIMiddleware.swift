@@ -5,11 +5,11 @@ import RegzaDomain
 
 /// nonce の状態はクライアントごとに持つ。接続情報を変えたときは新しいインスタンスへ交換する。
 actor RegzaDigestMiddleware: ClientMiddleware {
-    private let connection: RegzaConnection
+    private let connection: ConnectionData
     private var challenge: DigestChallenge?
     private var nonceCount = 0
 
-    init(connection: RegzaConnection) { self.connection = connection }
+    init(connection: ConnectionData) { self.connection = connection }
 
     func intercept(
         _ request: HTTPTypes.HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String,

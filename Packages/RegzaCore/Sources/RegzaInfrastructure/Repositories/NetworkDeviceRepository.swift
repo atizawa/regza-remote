@@ -9,7 +9,7 @@ public struct NetworkDeviceRepository: DeviceRepositoryProtocol {
         self.transport = transport
     }
 
-    public func devices() -> AsyncStream<RegzaDevice> {
+    public func devices() -> AsyncStream<DeviceData> {
         RegzaDiscovery.devices()
     }
 

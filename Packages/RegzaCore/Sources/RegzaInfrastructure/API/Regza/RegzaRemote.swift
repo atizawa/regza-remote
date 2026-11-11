@@ -6,7 +6,7 @@ import RegzaDomain
 /// Android は JNI 経由で同じものを使う。
 public actor RegzaRemote {
     public nonisolated let client: RegzaAPIClient
-    public private(set) var nowPlaying: RegzaNowPlaying?
+    public private(set) var nowPlaying: NowPlayingData?
     public private(set) var lastCommand: RegzaKey?
     /// v2 API (`play/status`) に対応しているか。未確認なら nil
     private var supportsPlayStatus: Bool?
@@ -29,7 +29,7 @@ public actor RegzaRemote {
     /// 落ち着いているときに `play/status` を問い合わせる間隔
     static let playStatusInterval: TimeInterval = 15
     /// 走っている確認。重なって呼ばれたら、新しく問い合わせずにこの結果を使う
-    private var refreshing: Task<RegzaNowPlaying, Error>?
+    private var refreshing: Task<NowPlayingData, Error>?
 
     /// 旧 API の値のうち、切り替わると変わるもの
     struct Probe: Equatable {
@@ -47,9 +47,9 @@ public actor RegzaRemote {
     }
 
     /// 番組名を毎回問い合わせないよう、調べた番組を覚えておく (取れなかったときは 1 分後に調べ直す)
-    private var programCache: [Int: (program: MirakurunProgram?, checkedAt: Date)] = [:]
+    private var programCache: [Int: (program: ProgramData?, checkedAt: Date)] = [:]
 
-    public init(connection: RegzaConnection, guide: MirakurunAPIClient? = nil, transport: any HTTPTransport = RegzaHTTP.transport) {
+    public init(connection: ConnectionData, guide: MirakurunAPIClient? = nil, transport: any HTTPTransport = RegzaHTTP.transport) {
         client = RegzaAPIClient(connection: connection, transport: transport)
         self.guide = guide
     }
@@ -64,7 +64,7 @@ public actor RegzaRemote {
         programCache = [:]
     }
 
-    public func update(connection: RegzaConnection) async {
+    public func update(connection: ConnectionData) async {
         await client.update(connection: connection)
         nowPlaying = nil
         supportsPlayStatus = nil
@@ -81,7 +81,7 @@ public actor RegzaRemote {
         }
     }
 
-    public func tune(to channel: RegzaChannel) async throws {
+    public func tune(to channel: ChannelData) async throws {
         try await client.request(RegzaTuneRequest(code: channel.code))
         lastCommand = nil
         needsPlayStatus = true
@@ -92,7 +92,7 @@ public actor RegzaRemote {
         // (残すと、待ったあとに status.htm の値が変わったとしてもう一度待ち、番組名が出るまで倍かかる)
         lastProbe = nil
         // 待つ間も選んだチャンネルが分かるよう、切り替わったものとして先に出す。番組名などは落ち着いてから取り直す
-        nowPlaying = RegzaNowPlaying(kind: .broadcast, channelName: channel.name, channelCode: channel.code)
+        nowPlaying = NowPlayingData(kind: .broadcast, channelName: channel.name, channelCode: channel.code)
     }
 
     public func seek(to seconds: Int) async throws {
@@ -103,7 +103,7 @@ public actor RegzaRemote {
     /// v2 API を優先し、未対応の機種では旧 API (`status.htm`) を使う
     /// 映像が切り替わるキーを送った直後は、落ち着くまで待ってから問い合わせる
     @discardableResult
-    public func refresh() async throws -> RegzaNowPlaying {
+    public func refresh() async throws -> NowPlayingData {
         // 2 秒ごとの確認・キーを送った後の取り直し・Live Activity などが重なると、ほかの確認が見つけた切り替わりを
         // 見落として play/status を問い合わせてしまう (実機のログで確認) ので、1 本ずつにし、重なったら走っている確認の結果を使う
         if let refreshing { return try await refreshing.value }
@@ -113,7 +113,7 @@ public actor RegzaRemote {
         return try await task.value
     }
 
-    private func refreshOnce() async throws -> RegzaNowPlaying {
+    private func refreshOnce() async throws -> NowPlayingData {
         try await waitUntilQuiet()
         // v2 API で一度取れてからは、旧 API で見張って play/status を必要なときだけにする
         guard supportsPlayStatus == true, let current = nowPlaying else { return try await fetch() }
@@ -150,7 +150,7 @@ public actor RegzaRemote {
     }
 
     /// play/status を問い合わせない間は、前回の値を今の時刻まで進める (録画は旧 API の再生位置を使う)
-    static func advanced(_ nowPlaying: RegzaNowPlaying, with status: RegzaStatus, now: Date = Date()) -> RegzaNowPlaying {
+    static func advanced(_ nowPlaying: NowPlayingData, with status: RegzaStatus, now: Date = Date()) -> NowPlayingData {
         var updated = nowPlaying
         switch nowPlaying.kind {
         case .recorded where status.isPlayingRecording:
@@ -168,15 +168,15 @@ public actor RegzaRemote {
     }
 
     /// 視聴状況を取り直す。v2 API を優先し、未対応の機種では旧 API (`status.htm`) を使う
-    private func fetch() async throws -> RegzaNowPlaying {
-        let updated: RegzaNowPlaying
+    private func fetch() async throws -> NowPlayingData {
+        let updated: NowPlayingData
         if supportsPlayStatus != false {
             do {
                 let status = try await client.request(RegzaPlayStatusRequest())
                 supportsPlayStatus = true
                 lastPlayStatusAt = Date()
                 needsPlayStatus = false
-                updated = await withProgramName(RegzaNowPlaying(playStatus: status), status: status)
+                updated = await withProgramName(NowPlayingData(playStatus: status), status: status)
             } catch let error as RegzaError where error == .httpStatus(404) || error == .unsupported {
                 // 一度でも v2 API で取れたテレビなら、切り替え中などの一時的な失敗として扱い、旧 API に切り替えない
                 guard supportsPlayStatus == nil else { throw error }
@@ -191,7 +191,7 @@ public actor RegzaRemote {
     }
 
     /// テレビが放送中の番組名を返さない機種向けに、番組表から番組名と説明を補う (次の番組名も)
-    private func withProgramName(_ nowPlaying: RegzaNowPlaying, status: RegzaPlayStatus) async -> RegzaNowPlaying {
+    private func withProgramName(_ nowPlaying: NowPlayingData, status: RegzaPlayStatus) async -> NowPlayingData {
         guard nowPlaying.kind == .broadcast else { return nowPlaying }
         var result = nowPlaying
         if result.title.isEmpty, let program = await program(epgContentID: status.currentProgram?.epgContentID) {
@@ -201,7 +201,7 @@ public actor RegzaRemote {
             }
         }
         if let next = status.nextProgram {
-            if let title = next.title.map(RegzaNowPlaying.cleanTitle(_:)), !title.isEmpty {
+            if let title = next.title.map(NowPlayingData.cleanTitle(_:)), !title.isEmpty {
                 result.nextTitle = title
             } else if let program = await program(epgContentID: next.epgContentID) {
                 result.nextTitle = program.name
@@ -210,7 +210,7 @@ public actor RegzaRemote {
         return result
     }
 
-    private func program(epgContentID: String?) async -> MirakurunProgram? {
+    private func program(epgContentID: String?) async -> ProgramData? {
         guard let guide, let id = epgContentID.flatMap(BroadcastID.programID(epgContentID:)) else { return nil }
         if let cached = programCache[id], cached.program != nil || Date().timeIntervalSince(cached.checkedAt) < 60 {
             return cached.program
@@ -223,7 +223,7 @@ public actor RegzaRemote {
         return program
     }
 
-    private func legacyStatus() async throws -> RegzaNowPlaying {
-        RegzaNowPlaying(status: try await client.request(RegzaLegacyStatusRequest()), previous: nowPlaying)
+    private func legacyStatus() async throws -> NowPlayingData {
+        NowPlayingData(status: try await client.request(RegzaLegacyStatusRequest()), previous: nowPlaying)
     }
 }

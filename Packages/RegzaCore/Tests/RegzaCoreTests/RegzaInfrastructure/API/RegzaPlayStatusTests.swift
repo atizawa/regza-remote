@@ -20,7 +20,7 @@ import Testing
 
     @Test func broadcastUsesProgramTimes() throws {
         let now = Date(timeIntervalSince1970: 1_793_664_000 + 600)
-        let nowPlaying = RegzaNowPlaying(playStatus: try decode(broadcast), now: now)
+        let nowPlaying = NowPlayingData(playStatus: try decode(broadcast), now: now)
         #expect(nowPlaying.kind == .broadcast)
         #expect(nowPlaying.channelName == "日テレ１")
         #expect(nowPlaying.channelCode == "JP-G7fe20410")
@@ -38,7 +38,7 @@ import Testing
     }
 
     @Test func recordedUsesPlayingAction() throws {
-        let nowPlaying = RegzaNowPlaying(playStatus: try decode(recorded))
+        let nowPlaying = NowPlayingData(playStatus: try decode(recorded))
         #expect(nowPlaying.kind == .recorded)
         #expect(nowPlaying.title == "おかあさんといっしょ　ファミリーコンサート２０２６春〜きっと、あしたは〜")
         #expect(nowPlaying.channelName == "ＮＨＫＥテレ１東京")
@@ -50,30 +50,30 @@ import Testing
     }
 
     @Test func shortChannelNames() {
-        #expect(RegzaNowPlaying.shortChannelName("ＮＨＫ総合１・東京") == "NHK総合")
-        #expect(RegzaNowPlaying.shortChannelName("ＮＨＫＥテレ１東京") == "NHKEテレ")
-        #expect(RegzaNowPlaying.shortChannelName("ＴＢＳ１") == "TBS")
-        #expect(RegzaNowPlaying.shortChannelName("ＴＯＫＹＯ　ＭＸ１") == "TOKYO MX")
-        #expect(RegzaNowPlaying.shortChannelName("ＢＳフジ・１８１") == "BSフジ")
-        #expect(RegzaNowPlaying.shortChannelName("テレビ朝日") == "テレビ朝日")
-        #expect(RegzaNowPlaying.shortChannelName("ザ・シネマ") == "ザ・シネマ")
-        #expect(RegzaNowPlaying.shortChannelName("ＮＥＷＳ２４") == "NEWS24")
-        #expect(RegzaNowPlaying.shortChannelName("−") == nil)
+        #expect(NowPlayingData.shortChannelName("ＮＨＫ総合１・東京") == "NHK総合")
+        #expect(NowPlayingData.shortChannelName("ＮＨＫＥテレ１東京") == "NHKEテレ")
+        #expect(NowPlayingData.shortChannelName("ＴＢＳ１") == "TBS")
+        #expect(NowPlayingData.shortChannelName("ＴＯＫＹＯ　ＭＸ１") == "TOKYO MX")
+        #expect(NowPlayingData.shortChannelName("ＢＳフジ・１８１") == "BSフジ")
+        #expect(NowPlayingData.shortChannelName("テレビ朝日") == "テレビ朝日")
+        #expect(NowPlayingData.shortChannelName("ザ・シネマ") == "ザ・シネマ")
+        #expect(NowPlayingData.shortChannelName("ＮＥＷＳ２４") == "NEWS24")
+        #expect(NowPlayingData.shortChannelName("−") == nil)
         // 収まらない長さなら nil (番号で出す)
-        #expect(RegzaNowPlaying.shortChannelName("とても長い放送局の名前") == nil)
+        #expect(NowPlayingData.shortChannelName("とても長い放送局の名前") == nil)
     }
 
     @Test func shortChannelForSatellite() throws {
         let bs =
             #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G000400b5","channel_number":181,"rcu_channel_number":8,"start_time":1700000000,"duration":600}}"#
-        #expect(RegzaNowPlaying(playStatus: try decode(bs)).shortChannel == "BS181")
+        #expect(NowPlayingData(playStatus: try decode(bs)).shortChannel == "BS181")
         let cs =
             #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G00070037","channel_number":55,"start_time":1700000000,"duration":600}}"#
-        #expect(RegzaNowPlaying(playStatus: try decode(cs)).shortChannel == "CS055")
+        #expect(NowPlayingData(playStatus: try decode(cs)).shortChannel == "CS055")
     }
 
     @Test func otherKinds() throws {
-        #expect(RegzaNowPlaying(playStatus: try decode(#"{"status":0,"content_type":"external"}"#)).kind == .external)
-        #expect(RegzaNowPlaying(playStatus: try decode(#"{"status":0,"content_type":"other"}"#)).kind == .standby)
+        #expect(NowPlayingData(playStatus: try decode(#"{"status":0,"content_type":"external"}"#)).kind == .external)
+        #expect(NowPlayingData(playStatus: try decode(#"{"status":0,"content_type":"other"}"#)).kind == .standby)
     }
 }

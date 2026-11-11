@@ -1,7 +1,7 @@
 import Foundation
 
 /// テレビに登録されているチャンネル (`GET /v2/remote/settings/channel_list`)。
-public struct RegzaChannel: Decodable, Hashable, Sendable, Identifiable {
+public struct ChannelData: Decodable, Hashable, Sendable, Identifiable {
     /// 放送の種類。UI でも選ぶので、型は SharedModels に置く
     public typealias Band = BroadcastBand
 
@@ -53,9 +53,9 @@ public struct RegzaChannel: Decodable, Hashable, Sendable, Identifiable {
     }
 }
 
-extension RegzaChannel {
+extension ChannelData {
     /// チャンネルの中にある放送の種類 (地デジ・BS・CS の順)
-    public static func bands(in channels: [RegzaChannel]) -> [Band] {
+    public static func bands(in channels: [ChannelData]) -> [Band] {
         Band.allCases.filter { band in channels.contains { $0.band == band } }
     }
 
@@ -64,9 +64,9 @@ extension RegzaChannel {
     /// CS はテレビから代表の印が来ないので、すべて出す
     /// - Parameter programName: そのチャンネルでいま放送中の番組名。分からなければ nil (サブチャンネルは代表だけにする)
     public static func channelList(
-        _ channels: [RegzaChannel], in band: Band?, nowPlayingChannelCode: String?,
-        programName: (RegzaChannel) -> String? = { _ in nil }
-    ) -> [RegzaChannel] {
+        _ channels: [ChannelData], in band: Band?, nowPlayingChannelCode: String?,
+        programName: (ChannelData) -> String? = { _ in nil }
+    ) -> [ChannelData] {
         let channels = channels.filter { $0.band == band }
         guard band != .cs else { return channels }
         return channels.groupingSubchannels { subchannel, representative in
@@ -77,26 +77,15 @@ extension RegzaChannel {
     }
 }
 
-extension RegzaChannel.Band {
-    /// 出す放送の種類。選んでいればそれ、なければいま見ている放送の種類、それもなければ最初のもの
-    public static func preferred(
-        among bands: [RegzaChannel.Band], selected: RegzaChannel.Band?, nowPlaying: RegzaChannel.Band?
-    ) -> RegzaChannel.Band? {
-        if let selected, bands.contains(selected) { return selected }
-        if let nowPlaying, bands.contains(nowPlaying) { return nowPlaying }
-        return bands.first
-    }
-}
-
-extension Sequence where Element == RegzaChannel {
+extension Sequence where Element == ChannelData {
     /// 同じ放送局のサブチャンネル (リモコン番号が同じチャンネル) をまとめる。番組表とチャンネル一覧で同じ局の並びにする。
     /// リモコン番号ごとに代表 (`SHOW_REPRESENT` の印のあるもの、なければ最初のもの) を残し、
     /// サブチャンネルは `showsSubchannel` が true を返したものだけ残す。リモコン番号のないチャンネルはそのまま残す。並びは変えない
     public func groupingSubchannels(
-        showing showsSubchannel: (_ subchannel: RegzaChannel, _ representative: RegzaChannel) -> Bool = { _, _ in false }
-    ) -> [RegzaChannel] {
+        showing showsSubchannel: (_ subchannel: ChannelData, _ representative: ChannelData) -> Bool = { _, _ in false }
+    ) -> [ChannelData] {
         let channels = Array(self)
-        var representatives: [Int: RegzaChannel] = [:]
+        var representatives: [Int: ChannelData] = [:]
         for channel in channels.filter(\.isRepresentative) + channels.filter({ !$0.isRepresentative })
         where channel.remoteNumber > 0 && representatives[channel.remoteNumber] == nil {
             representatives[channel.remoteNumber] = channel

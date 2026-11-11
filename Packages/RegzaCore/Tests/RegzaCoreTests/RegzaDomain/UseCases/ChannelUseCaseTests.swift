@@ -14,7 +14,7 @@ import Testing
             try UseCaseFixtures.program(
                 id: 2, serviceId: 0x11, start: UseCaseFixtures.date(hour: 12, minute: 30), minutes: 60, name: "代表の番組"),
         ]
-        let tv = SampleTVRepository(connection: RegzaConnection(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
+        let tv = SampleTVRepository(connection: ConnectionData(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
         let useCase = ChannelUseCase(tv: tv, guide: SampleGuideRepository(guideHost: "192.0.2.2", programs: programs))
 
         #expect(useCase.bands == [.terrestrial, .bs, .cs])
@@ -40,7 +40,7 @@ import Testing
 
     @Test func liveChannelsAreThoseMirakurunReceives() throws {
         let channels = try UseCaseFixtures.channels()
-        let tv = SampleTVRepository(connection: RegzaConnection(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
+        let tv = SampleTVRepository(connection: ConnectionData(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
         // 番組表がまだなければ、CS 以外の代表のチャンネル
         let noGuide = ChannelUseCase(tv: tv, guide: SampleGuideRepository(guideHost: "192.0.2.2", programs: []))
         #expect(noGuide.liveBands == [.terrestrial, .bs])

@@ -13,8 +13,8 @@ import Testing
             try UseCaseFixtures.reservation(
                 id: "2", channelCode: "JP-G00000009", start: UseCaseFixtures.date(day: 1, hour: 21), series: true),
         ])
-        let useCase = RecordingUseCase(recording: recording)
-        let items = useCase.items(channels: try UseCaseFixtures.channels(), now: UseCaseFixtures.now)
+        let useCase = RecordingUseCase(recording: recording, guide: SampleGuideRepository(guideHost: "", programs: []))
+        let items = useCase.items(channels: try UseCaseFixtures.channels().map(UseCaseModelMapper.channel), now: UseCaseFixtures.now)
 
         let recordingNow = try #require(items.first)
         #expect(recordingNow.timeText == "11月7日(土) 12:45 〜 13:15")

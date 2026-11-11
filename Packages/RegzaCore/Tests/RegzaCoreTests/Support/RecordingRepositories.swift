@@ -8,26 +8,26 @@ import Foundation
 @MainActor
 final class RecordingTVRepository: TVRepositoryProtocol {
     var events: [String] = []
-    var connection = RegzaConnection(host: "192.0.2.1")
-    var channels: [RegzaChannel] = []
-    var timeshiftSettings: RegzaTimeshiftSettings? { nil }
+    var connection = ConnectionData(host: "192.0.2.1")
+    var channels: [ChannelData] = []
+    var timeshiftSettings: TimeshiftSettingsData? { nil }
     var isSample: Bool { false }
 
     func loadChannels(force: Bool) async throws(RegzaError) {}
     func loadTimeshiftSettings() async {}
     func send(_ key: RegzaKey) async throws(RegzaError) { events.append("key \(key)") }
 
-    func tune(to channel: RegzaChannel) async throws(RegzaError) -> RegzaNowPlaying? {
+    func tune(to channel: ChannelData) async throws(RegzaError) -> NowPlayingData? {
         events.append("tune \(channel.code)")
         return nil
     }
 
     func seek(to seconds: Int) async throws(RegzaError) {}
-    func refresh() async throws(RegzaError) -> RegzaNowPlaying { throw .notConfigured }
-    func lastNowPlaying() async -> RegzaNowPlaying? { nil }
-    func locateMovedTV() async -> RegzaConnection? { nil }
-    func save(_ connection: RegzaConnection) async {}
-    func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError> { .failure(.notConfigured) }
+    func refresh() async throws(RegzaError) -> NowPlayingData { throw .notConfigured }
+    func lastNowPlaying() async -> NowPlayingData? { nil }
+    func locateMovedTV() async -> ConnectionData? { nil }
+    func save(_ connection: ConnectionData) async {}
+    func testConnection(_ connection: ConnectionData) async -> Result<NowPlayingData, RegzaError> { .failure(.notConfigured) }
     func pairingUserID() -> String { "" }
 }
 
@@ -55,9 +55,9 @@ final class RecordingStreamRepository: StreamRepositoryProtocol {
 
 /// テレビ 1 台と、192.0.2.2 で動いている EPGStation が見つかる機器探し
 struct RecordingDeviceRepository: DeviceRepositoryProtocol {
-    func devices() -> AsyncStream<RegzaDevice> {
+    func devices() -> AsyncStream<DeviceData> {
         AsyncStream { continuation in
-            continuation.yield(RegzaDevice(host: "192.0.2.10", model: "Z000", size: "55", supportsPIN: true))
+            continuation.yield(DeviceData(host: "192.0.2.10", model: "Z000", size: "55", supportsPIN: true))
             continuation.finish()
         }
     }
@@ -70,6 +70,6 @@ struct RecordingDeviceRepository: DeviceRepositoryProtocol {
 
 struct SamplePairingSession: PairingSession {
     func start() async throws {}
-    func confirm(pin: String) async throws -> RegzaConnection { RegzaConnection() }
+    func confirm(pin: String) async throws -> ConnectionData { ConnectionData() }
     func cancel() async {}
 }

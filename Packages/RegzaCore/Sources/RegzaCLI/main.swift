@@ -21,7 +21,7 @@ func main() async {
     // 見本では、テレビと番組表 (Mirakurun)・録画サーバー (EPGStation) も見本の返事を使う (Android の見本と同じ登録)
     let store = MemoryConnectionStore(
         connection: options.sample && options.host.isEmpty
-            ? SampleTransport.connection : RegzaConnection(host: options.host, user: options.user, password: options.password)
+            ? SampleTransport.connection : ConnectionData(host: options.host, user: options.user, password: options.password)
     )
     if options.sample {
         store.guideHost = SampleTransport.guideHost

@@ -97,12 +97,12 @@ import Testing
         #expect(model.channels.count == 2)
         #expect(recording.reservations.map(\.id) == ["1"])
 
-        let other = RegzaConnection(host: "192.0.2.20", user: "user", password: "password")
-        await model.save(other)
+        let other = ConnectionData(host: "192.0.2.20", user: "user", password: "password")
+        await model.save(UseCaseModelMapper.connection(other))
         model.send(.stopPolling)
 
         #expect(store.load() == other)
-        #expect(model.connection == other)
+        #expect(model.connection == UseCaseModelMapper.connection(other))
         #expect(model.channels.isEmpty)
         // 予約は前のテレビのものなので出さない
         #expect(recording.reservations.isEmpty)
@@ -117,7 +117,7 @@ import Testing
     }
 
     @Test func sampleModeDoesNotTalkToTV() async {
-        let model = AppViewModel.sample(connection: RegzaConnection(host: "192.0.2.1"), nowPlaying: nil, channels: []).remote
+        let model = AppViewModel.sample(connection: ConnectionData(host: "192.0.2.1"), nowPlaying: nil, channels: []).remote
         model.send(.press(.power))
         try? await model.loadChannels(force: true)
         #expect(model.state.tapCount == 1)

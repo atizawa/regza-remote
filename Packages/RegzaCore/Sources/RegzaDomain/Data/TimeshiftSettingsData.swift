@@ -5,9 +5,9 @@ import Foundation
 /// `active_time_list` は曜日ごとの録画する時間帯で、`00f80001` のような 16 進の値の下位 24 ビットが 0〜23 時を表す。
 /// 例: テレビの設定が「平日 19 時〜翌 1 時」なら平日は `00f80001` (19〜23 時と、その日の 0 時台)。
 /// 翌日の 0 時台は翌日の値の 0 ビット目に入る
-public struct RegzaTimeshiftSettings: Decodable, Sendable, Equatable {
+public struct TimeshiftSettingsData: Decodable, Sendable, Equatable {
     public var isEnabled: Bool
-    /// 録画している局 (`RegzaChannel.code`)
+    /// 録画している局 (`ChannelData.code`)
     public var targetChannels: [String]
     /// 曜日 (`Calendar` の weekday、日曜 = 1) ごとの録画する時間のビット
     var activeHours: [Int: UInt32]

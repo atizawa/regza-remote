@@ -23,7 +23,7 @@ import Testing
     }
 
     @Test func startOverOnlyWhileRecording() throws {
-        let settings = try JSONDecoder().decode(RegzaTimeshiftSettings.self, from: Data(json.utf8))
+        let settings = try JSONDecoder().decode(TimeshiftSettingsData.self, from: Data(json.utf8))
         let channel = "JP-G00000001"
         // 2026-11-04 は水曜日
         #expect(settings.canStartOver(channelCode: channel, programStart: jst("2026-11-04 21:00"), now: jst("2026-11-04 21:30")))

@@ -1,6 +1,6 @@
 import Foundation
 
-/// チャンネル一覧の 1 局 (UI で使う形)。ChannelUseCase が Domain の RegzaChannel から作る
+/// チャンネル一覧の 1 局 (UI で使う形)。ChannelUseCase が Domain の ChannelData から作る
 public struct ChannelItem: Equatable, Sendable, Identifiable {
     /// チャンネルの ID (`JP-G…`)。選局などの操作は、これで送る
     public var code: String
@@ -17,11 +17,15 @@ public struct ChannelItem: Equatable, Sendable, Identifiable {
     public var canStartOver: Bool
     /// 控えめに出す (同じ放送局のサブチャンネル。CS は局ごとに別なので控えめにしない)
     public var isSubchannel: Bool
+    public var band: BroadcastBand
+    public var isRepresentative: Bool
+    public var remoteNumber: Int
     public var id: String { code }
 
     public init(
         code: String, name: String, numberText: String, programName: String?, isNowPlaying: Bool,
-        hasPrograms: Bool, canStartOver: Bool, isSubchannel: Bool
+        hasPrograms: Bool, canStartOver: Bool, isSubchannel: Bool,
+        band: BroadcastBand = .other, isRepresentative: Bool = true, remoteNumber: Int = 0
     ) {
         self.code = code
         self.name = name
@@ -31,5 +35,8 @@ public struct ChannelItem: Equatable, Sendable, Identifiable {
         self.hasPrograms = hasPrograms
         self.canStartOver = canStartOver
         self.isSubchannel = isSubchannel
+        self.band = band
+        self.isRepresentative = isRepresentative
+        self.remoteNumber = remoteNumber
     }
 }

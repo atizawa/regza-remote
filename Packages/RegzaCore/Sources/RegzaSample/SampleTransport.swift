@@ -14,7 +14,7 @@ public struct SampleTransport: HTTPTransport {
     }
 
     /// 見本で登録しておくテレビと録画サーバー (CLI の --sample と Android の見本で同じものを使う)。RFC 5737 の例示用のアドレス
-    public static let connection = RegzaConnection(host: "192.0.2.10", user: "sample", password: "sample")
+    public static let connection = ConnectionData(host: "192.0.2.10", user: "sample", password: "sample")
     public static let guideHost = "192.0.2.20"
     public static let streamHost = "192.0.2.30"
 

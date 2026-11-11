@@ -9,10 +9,10 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     @ObservationIgnored private let store: any RegzaConnectionStore
     @ObservationIgnored private var client: MirakurunAPIClient
     /// 1 チャンネルの番組表で読んだ番組 (番組の id から引くため)
-    @ObservationIgnored private var channelPrograms: [String: [MirakurunProgram]] = [:]
+    @ObservationIgnored private var channelPrograms: [String: [ProgramData]] = [:]
 
     public private(set) var guideHost: String
-    public private(set) var guidePrograms: [String: [MirakurunProgram]] = [:]
+    public private(set) var guidePrograms: [String: [ProgramData]] = [:]
     public private(set) var guideProgramsLoadedAt: Date?
 
     public init(
@@ -49,26 +49,26 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
         guideProgramsLoadedAt = Date()
     }
 
-    static func byChannel(_ programs: [MirakurunProgram]) -> [String: [MirakurunProgram]] {
+    static func byChannel(_ programs: [ProgramData]) -> [String: [ProgramData]] {
         Dictionary(grouping: programs, by: \.channelCode).mapValues { $0.sorted { $0.start < $1.start } }
     }
 
-    public func programs(for channel: RegzaChannel) async throws(RegzaError) -> [MirakurunProgram] {
+    public func programs(channelCode: String) async throws(RegzaError) -> [ProgramData] {
         guard let guide = guideClient() else { throw .notConfigured }
         do {
-            guard let ids = BroadcastID.ids(channelCode: channel.code) else { return [] }
+            guard let ids = BroadcastID.ids(channelCode: channelCode) else { return [] }
             let now = Date()
             let programs = try await guide.request(MirakurunChannelProgramsRequest(networkID: ids.networkId, serviceID: ids.serviceId))
                 .filter { $0.end > now }
             guard guide === client else { throw RegzaError.notConfigured }
-            channelPrograms[channel.code] = programs
+            channelPrograms[channelCode] = programs
             return programs
         } catch {
             throw RegzaError(error)
         }
     }
 
-    public func program(id: Int, channelCode: String) -> MirakurunProgram? {
+    public func program(id: Int, channelCode: String) -> ProgramData? {
         guidePrograms[channelCode]?.first { $0.id == id } ?? channelPrograms[channelCode]?.first { $0.id == id }
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// 番組 (UI で使う形)。GuideUseCase が Domain の MirakurunProgram から作る
+/// 番組 (UI で使う形)。GuideUseCase が Domain の ProgramData から作る
 public struct ProgramItem: Equatable, Sendable, Identifiable {
     public var id: Int
     /// 放送しているチャンネルの ID (`JP-G…`)
@@ -21,6 +21,8 @@ public struct ProgramItem: Equatable, Sendable, Identifiable {
     public var isOnAir: Bool
     /// 録画予約している
     public var isReserved: Bool
+
+    public func isOnAir(at date: Date) -> Bool { start <= date && date < end }
 
     public init(
         id: Int, channelCode: String, name: String, description: String, start: Date, end: Date,

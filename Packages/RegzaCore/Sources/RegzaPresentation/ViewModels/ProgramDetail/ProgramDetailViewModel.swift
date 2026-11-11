@@ -10,13 +10,13 @@ public final class ProgramDetailViewModel {
     package let guide: any GuideUseCaseProtocol
     package let recording: any RecordingUseCaseProtocol
     package let stream: any StreamUseCaseProtocol
-    package let program: MirakurunProgram
-    package let channel: RegzaChannel
+    package let program: ProgramItem
+    package let channel: ChannelItem
 
     package init(
         remote: RemoteViewModel, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol,
         stream: any StreamUseCaseProtocol,
-        program: MirakurunProgram, channel: RegzaChannel
+        program: ProgramItem, channel: ChannelItem
     ) {
         self.remote = remote
         self.guide = guide
@@ -56,14 +56,15 @@ public final class ProgramDetailViewModel {
             message: reserveMessage ?? tuneMessage,
             reservedText: reservation.map(Self.reservedText),
             reservationIsSeries: reservation?.isSeries,
-            canTune: program.isOnAir(),
+            canTune: program.isOnAir(at: Date()),
             canReserve: program.end > Date(),
-            canStream: program.isOnAir() && stream.canStream,
-            canStartOver: program.isOnAir() && remote.tv.canStartOver(channelCode: program.channelCode, programStart: program.start)
+            canStream: program.isOnAir(at: Date()) && stream.canStream,
+            canStartOver: program.isOnAir(at: Date())
+                && remote.tv.canStartOver(channelCode: program.channelCode, programStart: program.start)
         )
     }
 
-    private static func reservedText(_ reservation: RegzaReservation) -> String {
+    private static func reservedText(_ reservation: ReservationItem) -> String {
         guard reservation.isSeries else { return "録画予約済み" }
         return reservation.repeatLabel.map { "連ドラ予約済み（\($0)）" } ?? "連ドラ予約済み"
     }

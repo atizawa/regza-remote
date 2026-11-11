@@ -8,9 +8,9 @@ package import RegzaDomain
 public final class ProgramListViewModel {
     package let guide: any GuideUseCaseProtocol
     package let recording: any RecordingUseCaseProtocol
-    package let channel: RegzaChannel
+    package let channel: ChannelItem
 
-    package init(guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, channel: RegzaChannel) {
+    package init(guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, channel: ChannelItem) {
         self.guide = guide
         self.recording = recording
         self.channel = channel
@@ -22,7 +22,7 @@ public final class ProgramListViewModel {
     /// 画面からの操作
     public typealias Action = ProgramListAction
 
-    private var programs: [MirakurunProgram]?
+    private var programs: [ProgramItem]?
     private var loadError: RegzaError?
     @ObservationIgnored private let work = Work()
 

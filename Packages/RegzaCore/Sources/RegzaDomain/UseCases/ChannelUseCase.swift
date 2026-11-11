@@ -4,27 +4,27 @@ import Foundation
 @MainActor
 public protocol ChannelUseCaseProtocol: AnyObject {
     /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
-    var bands: [RegzaChannel.Band] { get }
+    var bands: [BroadcastBand] { get }
 
     /// チャンネルの ID のチャンネル。テレビに登録されていなければ nil
-    func channel(code: String) -> RegzaChannel?
+    func channel(code: String) -> ChannelItem?
 
     /// ライブ視聴で見られる局がある放送の種類
-    var liveBands: [RegzaChannel.Band] { get }
+    var liveBands: [BroadcastBand] { get }
 
     /// ライブ視聴の局の一覧 (UI の型)。見ている局は isNowPlaying にする
-    func liveItems(band: RegzaChannel.Band?, watchingCode: String, now: Date) -> [ChannelItem]
+    func liveItems(band: BroadcastBand?, watchingCode: String, now: Date) -> [ChannelItem]
 
     /// 一覧に出すチャンネル (UI の型)。サブチャンネルは代表と、いま映っているものだけにする
-    func items(band: RegzaChannel.Band?, nowPlayingCode: String?, now: Date) -> [ChannelItem]
+    func items(band: BroadcastBand?, nowPlayingCode: String?, now: Date) -> [ChannelItem]
 }
 
 extension ChannelUseCaseProtocol {
-    public func liveItems(band: RegzaChannel.Band?, watchingCode: String) -> [ChannelItem] {
+    public func liveItems(band: BroadcastBand?, watchingCode: String) -> [ChannelItem] {
         liveItems(band: band, watchingCode: watchingCode, now: Date())
     }
 
-    public func items(band: RegzaChannel.Band?, nowPlayingCode: String?) -> [ChannelItem] {
+    public func items(band: BroadcastBand?, nowPlayingCode: String?) -> [ChannelItem] {
         items(band: band, nowPlayingCode: nowPlayingCode, now: Date())
     }
 }
@@ -41,17 +41,17 @@ public final class ChannelUseCase: ChannelUseCaseProtocol {
     }
 
     /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
-    public var bands: [RegzaChannel.Band] { RegzaChannel.bands(in: tv.channels) }
+    public var bands: [BroadcastBand] { ChannelData.bands(in: tv.channels) }
 
     /// チャンネルの ID のチャンネル。テレビに登録されていなければ nil
-    public func channel(code: String) -> RegzaChannel? {
-        tv.channels.first { $0.code == code }
+    public func channel(code: String) -> ChannelItem? {
+        tv.channels.first { $0.code == code }.map(UseCaseModelMapper.channel)
     }
 
     // MARK: - ライブ視聴 (EPGStation) で見られる局
 
     /// EPGStation で見られる局 (Mirakurun が受信している局。番組表がまだなければ CS 以外)。サブチャンネルは代表だけ
-    private var liveChannels: [RegzaChannel] {
+    private var liveChannels: [ChannelData] {
         tv.channels.filter { channel in
             guard channel.isRepresentative || channel.band == .cs else { return false }
             return guide.guidePrograms.isEmpty ? channel.band != .cs : guide.guidePrograms[channel.code] != nil
@@ -59,12 +59,12 @@ public final class ChannelUseCase: ChannelUseCaseProtocol {
     }
 
     /// ライブ視聴で見られる局がある放送の種類
-    public var liveBands: [RegzaChannel.Band] {
-        RegzaChannel.Band.allCases.filter { band in liveChannels.contains { $0.band == band } }
+    public var liveBands: [BroadcastBand] {
+        ChannelData.Band.allCases.filter { band in liveChannels.contains { $0.band == band } }
     }
 
     /// ライブ視聴の局の一覧 (UI の型)。見ている局は isNowPlaying にする
-    public func liveItems(band: RegzaChannel.Band?, watchingCode: String, now: Date = Date()) -> [ChannelItem] {
+    public func liveItems(band: BroadcastBand?, watchingCode: String, now: Date = Date()) -> [ChannelItem] {
         liveChannels.filter { $0.band == band }.map { channel in
             ChannelItem(
                 code: channel.code,
@@ -74,14 +74,14 @@ public final class ChannelUseCase: ChannelUseCaseProtocol {
                 isNowPlaying: channel.code == watchingCode,
                 hasPrograms: guide.guidePrograms[channel.code] != nil,
                 canStartOver: false,
-                isSubchannel: false
+                isSubchannel: false, band: channel.band, isRepresentative: channel.isRepresentative, remoteNumber: channel.remoteNumber
             )
         }
     }
 
     /// 一覧に出すチャンネル (UI の型)。サブチャンネルは代表と、いま映っているものだけにする
-    public func items(band: RegzaChannel.Band?, nowPlayingCode: String?, now: Date = Date()) -> [ChannelItem] {
-        let listed = RegzaChannel.channelList(tv.channels, in: band, nowPlayingChannelCode: nowPlayingCode) {
+    public func items(band: BroadcastBand?, nowPlayingCode: String?, now: Date = Date()) -> [ChannelItem] {
+        let listed = ChannelData.channelList(tv.channels, in: band, nowPlayingChannelCode: nowPlayingCode) {
             guide.currentProgram(for: $0, at: now)?.name
         }
         return listed.map { channel in
@@ -94,7 +94,8 @@ public final class ChannelUseCase: ChannelUseCaseProtocol {
                 isNowPlaying: channel.code == nowPlayingCode,
                 hasPrograms: guide.hasGuide && guide.guidePrograms[channel.code] != nil,
                 canStartOver: program.map { tv.canStartOver(channelCode: channel.code, programStart: $0.start) } ?? false,
-                isSubchannel: !channel.isRepresentative && channel.band != .cs
+                isSubchannel: !channel.isRepresentative && channel.band != .cs,
+                band: channel.band, isRepresentative: channel.isRepresentative, remoteNumber: channel.remoteNumber
             )
         }
     }

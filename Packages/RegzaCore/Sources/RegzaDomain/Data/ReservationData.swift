@@ -4,10 +4,10 @@ import Foundation
 ///
 /// 連ドラ予約は次の回が番組表に載ると `start_time` と `title` がその回に更新される。
 /// 次の回がまだ見つかっていない間は、最後に録画した回の時刻のまま残る。
-public struct RegzaReservation: Decodable, Hashable, Sendable, Identifiable {
+public struct ReservationData: Decodable, Hashable, Sendable, Identifiable {
     public var id: String
     public var title: String
-    /// チャンネル一覧の `RegzaChannel.code` と同じ
+    /// チャンネル一覧の `ChannelData.code` と同じ
     public var channelCode: String
     /// 予約した番組のテレビの番組 ID。連ドラ予約で次の回が未定のときは event_id が `ffff`
     public var epgContentID: String
@@ -54,7 +54,7 @@ public struct RegzaReservation: Decodable, Hashable, Sendable, Identifiable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
-        title = RegzaNowPlaying.cleanTitle(try container.decodeIfPresent(String.self, forKey: .title) ?? "")
+        title = NowPlayingData.cleanTitle(try container.decodeIfPresent(String.self, forKey: .title) ?? "")
         channelCode = try container.decodeIfPresent(String.self, forKey: .channelCode) ?? ""
         epgContentID = try container.decodeIfPresent(String.self, forKey: .epgContentID) ?? ""
         start = Date(timeIntervalSince1970: TimeInterval(try container.decodeIfPresent(Int.self, forKey: .start) ?? 0))

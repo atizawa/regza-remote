@@ -26,12 +26,12 @@ public final class TVSetupViewModel {
     /// 一覧に出すテレビの状態
     public typealias Status = TVSetupStatus
 
-    private var draft: RegzaConnection
+    private var draft: ConnectionItem
     private var devices: [DeviceItem] = []
     private var isScanning = false
     private var scanMessage: String?
     /// PIN 登録中 (テレビに PIN が表示されている間) のセッション
-    @ObservationIgnored private var pairing: (any PairingSession)?
+    @ObservationIgnored private var pairing: (any PairingRegistration)?
     private var isWaitingForPIN = false
     private var pin = ""
     private var isPairing = false

@@ -2,9 +2,9 @@ import RegzaDomain
 import RegzaTVAPI
 
 struct RegzaTimeshiftSettingsResponse: APIResponse {
-    let value: RegzaTimeshiftSettings
+    let value: TimeshiftSettingsData
 
     init(_ output: RegzaTVAPI.Components.Schemas.TimeshiftSettings) async throws {
-        value = try RegzaResponseDecoding.model(from: output)
+        value = try RegzaDataMapper.model(from: output)
     }
 }

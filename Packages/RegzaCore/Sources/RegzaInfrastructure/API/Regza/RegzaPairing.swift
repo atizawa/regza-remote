@@ -17,7 +17,7 @@ public actor RegzaPairing {
     public init(host: String, user: String = PairingUserID.make(), transport: any HTTPTransport = RegzaHTTP.transport) {
         self.host = host
         self.user = user
-        client = RegzaAPIClient(connection: RegzaConnection(host: host, user: user), transport: transport)
+        client = RegzaAPIClient(connection: ConnectionData(host: host, user: user), transport: transport)
     }
 
     /// テレビに PIN を表示させる
@@ -26,14 +26,14 @@ public actor RegzaPairing {
     }
 
     /// PIN で登録を確定し、保存すべき接続情報を返す
-    public func confirm(pin: String) async throws -> RegzaConnection {
+    public func confirm(pin: String) async throws -> ConnectionData {
         guard let challenge, let encrypted = challenge.password, let salt = challenge.salt else {
             throw RegzaError.notConfigured
         }
         guard let password = Self.decryptPassword(encrypted, pin: pin, salt: salt) else {
             throw RegzaError.invalidPIN
         }
-        let connection = RegzaConnection(host: host, user: user, password: password)
+        let connection = ConnectionData(host: host, user: user, password: password)
         await client.update(connection: connection)
         do {
             try await client.request(RegzaConfirmPairingRequest())

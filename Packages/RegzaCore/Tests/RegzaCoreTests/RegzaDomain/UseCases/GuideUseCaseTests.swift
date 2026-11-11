@@ -65,13 +65,15 @@ import Testing
             guide: SampleGuideRepository(guideHost: "", programs: []), recording: SampleRecordingRepository(reservations: []))
 
         let byCast = guide.searchResult(
-            ProgramSearchResult(program: onAir, matches: [.init(term: "見本太郎", field: .cast)]), channel: channel, now: UseCaseFixtures.now)
+            ProgramSearchResult(program: onAir, matches: [.init(term: "見本太郎", field: .cast)]), channel: UseCaseModelMapper.channel(channel),
+            now: UseCaseFixtures.now)
         #expect(byCast.timeText == "放送中 〜13:30")
         #expect(byCast.reason == "見本太郎 が出演")
         #expect(byCast.channelName == "テスト局１")
 
         let byTitle = guide.searchResult(
-            ProgramSearchResult(program: later, matches: [.init(term: "見本", field: .title)]), channel: channel, now: UseCaseFixtures.now)
+            ProgramSearchResult(program: later, matches: [.init(term: "見本", field: .title)]), channel: UseCaseModelMapper.channel(channel),
+            now: UseCaseFixtures.now)
         #expect(byTitle.timeText == "11/8(日) 21:00〜")
         // 番組名に入っていれば、理由は言わない
         #expect(byTitle.reason == nil)
@@ -82,7 +84,7 @@ import Testing
         let guide = GuideUseCase(
             guide: SampleGuideRepository(guideHost: "192.0.2.2", programs: [program]),
             recording: SampleRecordingRepository(reservations: []))
-        #expect(guide.program(id: 7, channelCode: "JP-G00000001") == program)
+        #expect(guide.program(id: 7, channelCode: "JP-G00000001")?.id == program.id)
         #expect(guide.program(id: 7, channelCode: "JP-G00000002") == nil)
     }
 }

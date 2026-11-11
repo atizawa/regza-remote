@@ -33,12 +33,12 @@ public final class GuideGridViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let bands = Self.bands(remote.channels, guide.guidePrograms)
+        let bands = Self.bands(remote.channels, guide.guideChannelCodes)
         let band = remote.band(among: bands)
         let now = Date()
         let window = Self.window(now: now, day: selectedDay)
         let columns = remote.channels
-            .filter { $0.band == band && guide.guidePrograms[$0.code] != nil }
+            .filter { $0.band == band && guide.guideChannelCodes.contains($0.code) }
             .groupingSubchannels()
             .map { guide.column($0, now: now) }
             .map { column in
@@ -77,7 +77,7 @@ public final class GuideGridViewModel {
         defer { hasLoaded = true }
         try? await remote.loadChannels()
         await guide.loadGuidePrograms()
-        search.updateIndex(guide.guidePrograms, loadedAt: guide.guideProgramsLoadedAt)
+        search.updateIndex()
         try? await recording.loadReservations()
     }
 
@@ -89,9 +89,9 @@ public final class GuideGridViewModel {
         return start...start.addingTimeInterval(TimeInterval(hours * 3600))
     }
 
-    private static func bands(_ channels: [RegzaChannel], _ programs: [String: [MirakurunProgram]]) -> [BroadcastBand] {
+    private static func bands(_ channels: [ChannelItem], _ programs: Set<String>) -> [BroadcastBand] {
         BroadcastBand.allCases.filter { band in
-            channels.contains { $0.band == band && programs[$0.code] != nil }
+            channels.contains { $0.band == band && programs.contains($0.code) }
         }
     }
 }

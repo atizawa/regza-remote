@@ -17,18 +17,18 @@ public enum RegzaDiscovery {
     static let concurrency = 96
 
     /// 見つかったテレビを IP アドレス順に返す
-    public static func scan(timeout: TimeInterval = 1.5) async -> [RegzaDevice] {
-        var found: [RegzaDevice] = []
+    public static func scan(timeout: TimeInterval = 1.5) async -> [DeviceData] {
+        var found: [DeviceData] = []
         for await device in devices(timeout: timeout) { found.append(device) }
         return found.sorted { IPv4Network.parse($0.host) ?? 0 < IPv4Network.parse($1.host) ?? 0 }
     }
 
     /// 見つかった順にテレビを流す。全アドレスを調べ終えると終わる
-    public static func devices(timeout: TimeInterval = 1.5) -> AsyncStream<RegzaDevice> {
+    public static func devices(timeout: TimeInterval = 1.5) -> AsyncStream<DeviceData> {
         AsyncStream { continuation in
             let task = Task {
                 let hosts = localNetworks().flatMap(\.hosts)
-                await withTaskGroup(of: RegzaDevice?.self) { group in
+                await withTaskGroup(of: DeviceData?.self) { group in
                     var iterator = hosts.makeIterator()
                     for _ in 0..<concurrency {
                         guard let host = iterator.next() else { break }
@@ -49,7 +49,7 @@ public enum RegzaDiscovery {
 
     /// IP アドレスが変わったテレビを探し、新しいアドレスを返す。
     /// 登録はテレビごとなので、保存済みの資格情報で認証が通ったものを同じテレビとみなす
-    public static func locate(_ connection: RegzaConnection, timeout: TimeInterval = 1.5) async -> String? {
+    public static func locate(_ connection: ConnectionData, timeout: TimeInterval = 1.5) async -> String? {
         for await device in devices(timeout: timeout) where device.host != connection.trimmedHost {
             var candidate = connection
             candidate.host = device.host
@@ -58,7 +58,7 @@ public enum RegzaDiscovery {
         return nil
     }
 
-    private static func authenticates(_ connection: RegzaConnection) async -> Bool {
+    private static func authenticates(_ connection: ConnectionData) async -> Bool {
         let client = RegzaAPIClient(connection: connection)
         do {
             _ = try await client.request(RegzaPlayStatusRequest())
@@ -77,20 +77,20 @@ public enum RegzaDiscovery {
     /// 1 台に問い合わせる。REGZA でなければ nil
     public static func probe(
         host: String, timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport
-    ) async -> RegzaDevice? {
-        let client = RegzaAPIClient(connection: RegzaConnection(host: host), timeout: timeout, transport: transport)
+    ) async -> DeviceData? {
+        let client = RegzaAPIClient(connection: ConnectionData(host: host), timeout: timeout, transport: transport)
         guard let feature = try? await client.request(RegzaFeatureRequest()) else { return nil }
         return device(host: host, feature: feature)
     }
 
-    static func device(host: String, featureJSON data: Data) -> RegzaDevice? {
+    static func device(host: String, featureJSON data: Data) -> DeviceData? {
         guard let feature = try? JSONDecoder().decode(RegzaFeatureResponse.self, from: data) else { return nil }
         return device(host: host, feature: feature)
     }
 
-    private static func device(host: String, feature: RegzaFeatureResponse) -> RegzaDevice? {
+    private static func device(host: String, feature: RegzaFeatureResponse) -> DeviceData? {
         guard feature.isTV else { return nil }
-        return RegzaDevice(
+        return DeviceData(
             host: host,
             model: feature.model ?? "",
             size: feature.size ?? "",

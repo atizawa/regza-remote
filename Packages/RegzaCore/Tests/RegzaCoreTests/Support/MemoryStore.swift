@@ -5,20 +5,20 @@ import Foundation
 
 final class MemoryStore: RegzaConnectionStore, @unchecked Sendable {
     private let lock = NSLock()
-    private var connection: RegzaConnection
+    private var connection: ConnectionData
     private var values: (guideHost: String, streamHost: String, ownStreamIDs: [Int]) = ("", "", [])
 
-    init(connection: RegzaConnection) {
+    init(connection: ConnectionData) {
         self.connection = connection
     }
 
-    func load() -> RegzaConnection {
+    func load() -> ConnectionData {
         lock.lock()
         defer { lock.unlock() }
         return connection
     }
 
-    func save(_ connection: RegzaConnection) {
+    func save(_ connection: ConnectionData) {
         lock.lock()
         self.connection = connection
         lock.unlock()

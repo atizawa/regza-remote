@@ -5,12 +5,12 @@ import RegzaDomain
 @MainActor
 @Observable
 public final class RegzaConnectionState {
-    public private(set) var connection: RegzaConnection
+    public private(set) var connection: ConnectionData
     public private(set) var revision = 0
 
-    public init(connection: RegzaConnection) { self.connection = connection }
+    public init(connection: ConnectionData) { self.connection = connection }
 
-    func update(_ connection: RegzaConnection) {
+    func update(_ connection: ConnectionData) {
         guard self.connection != connection else { return }
         self.connection = connection
         revision += 1

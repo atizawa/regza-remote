@@ -30,7 +30,7 @@ extension AppViewModel {
             remote: model,
             channels: ChannelUseCase(tv: tv, guide: guide),
             guide: GuideUseCase(guide: guide, recording: recording),
-            recording: RecordingUseCase(recording: recording),
+            recording: RecordingUseCase(recording: recording, guide: guide),
             stream: StreamUseCase(stream: stream, guide: guide),
             setup: SetupUseCase(devices: NetworkDeviceRepository(transport: transport), guide: guide, stream: stream) {
                 [weak tv, weak model] host in
@@ -43,7 +43,7 @@ extension AppViewModel {
 }
 
 extension RemoteViewModel {
-    /// テレビに登録されているチャンネル (Domain の型)。画面のない入口 (iOS の Siri) が、チャンネルの名前から選ぶのに使う。
+    /// テレビに登録されているチャンネル (SharedModel)。画面のない入口 (iOS の Siri) が、チャンネルの名前から選ぶのに使う。
     /// 取得前は空なので、先に loadChannels を送って待つ
-    public var registeredChannels: [RegzaChannel] { channels }
+    public var registeredChannels: [ChannelItem] { channels }
 }

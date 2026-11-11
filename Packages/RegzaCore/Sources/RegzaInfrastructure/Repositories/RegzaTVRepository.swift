@@ -12,10 +12,10 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     @ObservationIgnored private let client: RegzaAPIClient
     @ObservationIgnored private let connectionState: RegzaConnectionState
 
-    public var connection: RegzaConnection { connectionState.connection }
-    public private(set) var channels: [RegzaChannel] = []
+    public var connection: ConnectionData { connectionState.connection }
+    public private(set) var channels: [ChannelData] = []
     /// 読み込んだ設定と、そのときの接続。接続が変わったら使わない
-    private var loadedTimeshift: (settings: RegzaTimeshiftSettings, revision: Int)?
+    private var loadedTimeshift: (settings: TimeshiftSettingsData, revision: Int)?
     public var isSample: Bool { false }
 
     public init(
@@ -29,7 +29,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         self.remote = remote ?? RegzaRemote(client: client)
     }
 
-    public var timeshiftSettings: RegzaTimeshiftSettings? {
+    public var timeshiftSettings: TimeshiftSettingsData? {
         loadedTimeshift.flatMap { $0.revision == connectionState.revision ? $0.settings : nil }
     }
 
@@ -62,7 +62,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         }
     }
 
-    public func tune(to channel: RegzaChannel) async throws(RegzaError) -> RegzaNowPlaying? {
+    public func tune(to channel: ChannelData) async throws(RegzaError) -> NowPlayingData? {
         do {
             try await remote.tune(to: channel)
         } catch {
@@ -79,7 +79,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         }
     }
 
-    public func refresh() async throws(RegzaError) -> RegzaNowPlaying {
+    public func refresh() async throws(RegzaError) -> NowPlayingData {
         do {
             return try await remote.refresh()
         } catch {
@@ -87,11 +87,11 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         }
     }
 
-    public func lastNowPlaying() async -> RegzaNowPlaying? {
+    public func lastNowPlaying() async -> NowPlayingData? {
         await remote.nowPlaying
     }
 
-    public func locateMovedTV() async -> RegzaConnection? {
+    public func locateMovedTV() async -> ConnectionData? {
         let original = connection
         guard let host = await RegzaDiscovery.locate(original),
             // 探している間に設定画面で接続先が変えられていたら、そちらを優先する
@@ -106,14 +106,14 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         return moved
     }
 
-    public func save(_ connection: RegzaConnection) async {
+    public func save(_ connection: ConnectionData) async {
         store.save(connection)
         connectionState.update(connection)
         channels = []
         await remote.update(connection: store.load())
     }
 
-    public func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError> {
+    public func testConnection(_ connection: ConnectionData) async -> Result<NowPlayingData, RegzaError> {
         do {
             let testClient = await client.replacingConnection(connection)
             return .success(try await RegzaRemote(client: testClient).refresh())

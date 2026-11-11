@@ -269,7 +269,7 @@ extension AppViewModel: IntrospectableActions {
     }
 
     /// 引数 channel の code のチャンネル
-    private func channel(_ arguments: [String: JSONValue]) throws -> RegzaChannel {
+    private func channel(_ arguments: [String: JSONValue]) throws -> ChannelItem {
         let code = try arguments.string("channel")
         guard let channel = channels.channel(code: code) else {
             throw IntrospectionError.unavailable("チャンネル \(code) はテレビに登録されていません")

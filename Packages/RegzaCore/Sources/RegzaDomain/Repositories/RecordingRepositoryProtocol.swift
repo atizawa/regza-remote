@@ -4,21 +4,21 @@ import Foundation
 @MainActor
 public protocol RecordingRepositoryProtocol: AnyObject {
     /// 録画予約。予定のあるものを先に、時刻順に並べる
-    var reservations: [RegzaReservation] { get }
+    var reservations: [ReservationData] { get }
 
     func loadReservations() async throws(RegzaError)
     /// 番組表の番組を録画予約する。`series` なら連ドラ予約 (次の回以降も録画する)
-    func reserve(_ program: MirakurunProgram, series: Bool) async throws(RegzaError)
-    func cancel(_ reservation: RegzaReservation) async throws(RegzaError)
+    func reserve(_ program: ProgramData, series: Bool) async throws(RegzaError)
+    func cancel(_ reservation: ReservationData) async throws(RegzaError)
 }
 
 extension RecordingRepositoryProtocol {
     /// その番組の予約。なければ nil
-    public func reservation(for program: MirakurunProgram) -> RegzaReservation? {
+    public func reservation(for program: ProgramData) -> ReservationData? {
         reservations.first { $0.isReservation(of: program.epgContentID) }
     }
 
-    public func isReserved(_ program: MirakurunProgram) -> Bool {
+    public func isReserved(_ program: ProgramData) -> Bool {
         reservation(for: program) != nil
     }
 }

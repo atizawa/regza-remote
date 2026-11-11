@@ -29,14 +29,14 @@ enum AndroidStorageKey {
 final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
     private let lock = NSLock()
     private let storage: MainActorStorage
-    private var connection: RegzaConnection
+    private var connection: ConnectionData
     private let userID: String
     private var values: (guideHost: String, streamHost: String, ownStreamIDs: [Int])
 
     /// メインスレッドから作る
     @MainActor init(storage: any RegzaAndroidStorage) {
         func value(_ key: String) -> String { storage.value(forKey: key) ?? "" }
-        connection = RegzaConnection(
+        connection = ConnectionData(
             host: value(AndroidStorageKey.host), user: value(AndroidStorageKey.user), password: value(AndroidStorageKey.password)
         )
         // PIN 登録に使う ID は、初めて使うときに作って保存する (ただし iOS のキーチェーンと違い、アプリを削除すると消える)
@@ -53,8 +53,8 @@ final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
         self.storage = MainActorStorage(storage)
     }
 
-    func load() -> RegzaConnection { lock.withLock { connection } }
-    func save(_ connection: RegzaConnection) {
+    func load() -> ConnectionData { lock.withLock { connection } }
+    func save(_ connection: ConnectionData) {
         lock.withLock { self.connection = connection }
         storage.set([
             AndroidStorageKey.host: connection.host, AndroidStorageKey.user: connection.user,

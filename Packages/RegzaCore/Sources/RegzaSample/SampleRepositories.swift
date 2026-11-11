@@ -10,22 +10,22 @@ import RegzaPresentation
 extension AppViewModel {
     /// 見本のデータで、アプリ全体の ViewModel を作る (テレビにはつながない)
     public static func sample(
-        connection: RegzaConnection,
-        nowPlaying: RegzaNowPlaying?,
-        channels: [RegzaChannel],
+        connection: ConnectionData,
+        nowPlaying: NowPlayingData?,
+        channels: [ChannelData],
         guideHost: String = "",
-        programs: [MirakurunProgram] = [],
-        reservations: [RegzaReservation] = []
+        programs: [ProgramData] = [],
+        reservations: [ReservationData] = []
     ) -> AppViewModel {
         let tv = SampleTVRepository(connection: connection, channels: channels, nowPlaying: nowPlaying)
         let guide = SampleGuideRepository(guideHost: guideHost, programs: programs)
         let stream = SampleStreamRepository()
         let recording = SampleRecordingRepository(reservations: reservations)
         return AppViewModel(
-            remote: RemoteViewModel(tv: TVUseCase(tv: tv), nowPlaying: nowPlaying),
+            remote: RemoteViewModel(tv: TVUseCase(tv: tv), nowPlaying: nowPlaying.map(UseCaseModelMapper.nowPlaying)),
             channels: ChannelUseCase(tv: tv, guide: guide),
             guide: GuideUseCase(guide: guide, recording: recording),
-            recording: RecordingUseCase(recording: recording),
+            recording: RecordingUseCase(recording: recording, guide: guide),
             stream: StreamUseCase(stream: stream, guide: guide),
             setup: SetupUseCase(devices: SampleDeviceRepository(), guide: guide, stream: stream)
         )
@@ -36,13 +36,13 @@ extension AppViewModel {
 @MainActor
 @Observable
 public final class SampleTVRepository: TVRepositoryProtocol {
-    public private(set) var connection: RegzaConnection
-    public private(set) var channels: [RegzaChannel]
-    public var timeshiftSettings: RegzaTimeshiftSettings? { nil }
+    public private(set) var connection: ConnectionData
+    public private(set) var channels: [ChannelData]
+    public var timeshiftSettings: TimeshiftSettingsData? { nil }
     public var isSample: Bool { true }
-    private var nowPlaying: RegzaNowPlaying?
+    private var nowPlaying: NowPlayingData?
 
-    public init(connection: RegzaConnection, channels: [RegzaChannel], nowPlaying: RegzaNowPlaying?) {
+    public init(connection: ConnectionData, channels: [ChannelData], nowPlaying: NowPlayingData?) {
         self.connection = connection
         self.channels = channels
         self.nowPlaying = nowPlaying
@@ -52,26 +52,26 @@ public final class SampleTVRepository: TVRepositoryProtocol {
     public func loadTimeshiftSettings() async {}
     public func send(_ key: RegzaKey) async throws(RegzaError) {}
 
-    public func tune(to channel: RegzaChannel) async throws(RegzaError) -> RegzaNowPlaying? {
-        nowPlaying = RegzaNowPlaying(kind: .broadcast, channelName: channel.name, channelCode: channel.code)
+    public func tune(to channel: ChannelData) async throws(RegzaError) -> NowPlayingData? {
+        nowPlaying = NowPlayingData(kind: .broadcast, channelName: channel.name, channelCode: channel.code)
         return nowPlaying
     }
 
     public func seek(to seconds: Int) async throws(RegzaError) {}
 
-    public func refresh() async throws(RegzaError) -> RegzaNowPlaying {
+    public func refresh() async throws(RegzaError) -> NowPlayingData {
         guard let nowPlaying else { throw .notConfigured }
         return nowPlaying
     }
 
-    public func lastNowPlaying() async -> RegzaNowPlaying? { nowPlaying }
-    public func locateMovedTV() async -> RegzaConnection? { nil }
+    public func lastNowPlaying() async -> NowPlayingData? { nowPlaying }
+    public func locateMovedTV() async -> ConnectionData? { nil }
 
-    public func save(_ connection: RegzaConnection) async {
+    public func save(_ connection: ConnectionData) async {
         self.connection = connection
     }
 
-    public func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError> {
+    public func testConnection(_ connection: ConnectionData) async -> Result<NowPlayingData, RegzaError> {
         nowPlaying.map { .success($0) } ?? .failure(.notConfigured)
     }
 
@@ -83,10 +83,10 @@ public final class SampleTVRepository: TVRepositoryProtocol {
 @Observable
 public final class SampleGuideRepository: GuideRepositoryProtocol {
     public private(set) var guideHost: String
-    public private(set) var guidePrograms: [String: [MirakurunProgram]]
+    public private(set) var guidePrograms: [String: [ProgramData]]
     public private(set) var guideProgramsLoadedAt: Date?
 
-    public init(guideHost: String, programs: [MirakurunProgram]) {
+    public init(guideHost: String, programs: [ProgramData]) {
         self.guideHost = guideHost
         guidePrograms = Dictionary(grouping: programs, by: \.channelCode).mapValues { $0.sorted { $0.start < $1.start } }
         guideProgramsLoadedAt = programs.isEmpty ? nil : .distantFuture
@@ -94,11 +94,11 @@ public final class SampleGuideRepository: GuideRepositoryProtocol {
 
     public func loadGuidePrograms() async {}
 
-    public func programs(for channel: RegzaChannel) async throws(RegzaError) -> [MirakurunProgram] {
-        (guidePrograms[channel.code] ?? []).filter { $0.end > Date() }
+    public func programs(channelCode: String) async throws(RegzaError) -> [ProgramData] {
+        (guidePrograms[channelCode] ?? []).filter { $0.end > Date() }
     }
 
-    public func program(id: Int, channelCode: String) -> MirakurunProgram? {
+    public func program(id: Int, channelCode: String) -> ProgramData? {
         guidePrograms[channelCode]?.first { $0.id == id }
     }
 
@@ -111,19 +111,19 @@ public final class SampleGuideRepository: GuideRepositoryProtocol {
 @MainActor
 @Observable
 public final class SampleRecordingRepository: RecordingRepositoryProtocol {
-    public private(set) var reservations: [RegzaReservation]
+    public private(set) var reservations: [ReservationData]
 
-    public init(reservations: [RegzaReservation]) {
+    public init(reservations: [ReservationData]) {
         self.reservations = reservations
     }
 
     public func loadReservations() async throws(RegzaError) {}
 
-    public func reserve(_ program: MirakurunProgram, series: Bool) async throws(RegzaError) {
+    public func reserve(_ program: ProgramData, series: Bool) async throws(RegzaError) {
         throw .unsupported
     }
 
-    public func cancel(_ reservation: RegzaReservation) async throws(RegzaError) {
+    public func cancel(_ reservation: ReservationData) async throws(RegzaError) {
         reservations.removeAll { $0.id == reservation.id }
     }
 }
@@ -151,7 +151,7 @@ public final class SampleStreamRepository: StreamRepositoryProtocol {
 public struct SampleDeviceRepository: DeviceRepositoryProtocol {
     public init() {}
 
-    public func devices() -> AsyncStream<RegzaDevice> { AsyncStream { $0.finish() } }
+    public func devices() -> AsyncStream<DeviceData> { AsyncStream { $0.finish() } }
     public func pairing(host: String, user: String) -> any PairingSession { SamplePairing() }
     public func findGuideServers() async -> [String] { [] }
     public func findStreamServers() async -> [String] { [] }
@@ -160,6 +160,6 @@ public struct SampleDeviceRepository: DeviceRepositoryProtocol {
 
 struct SamplePairing: PairingSession {
     func start() async throws { throw RegzaError.unsupported }
-    func confirm(pin: String) async throws -> RegzaConnection { throw RegzaError.unsupported }
+    func confirm(pin: String) async throws -> ConnectionData { throw RegzaError.unsupported }
     func cancel() async {}
 }

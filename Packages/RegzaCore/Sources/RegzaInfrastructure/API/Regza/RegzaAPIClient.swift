@@ -10,12 +10,12 @@ import RegzaTVAPI
 ///
 /// いずれも Digest 認証が必要。PIN 登録は `RegzaPairing` を使う。
 public actor RegzaAPIClient {
-    public private(set) var connection: RegzaConnection
+    public private(set) var connection: ConnectionData
     private let transport: any HTTPTransport
     private let timeout: TimeInterval
     private var digest: RegzaDigestMiddleware
 
-    public init(connection: RegzaConnection, timeout: TimeInterval = 3, transport: any HTTPTransport = RegzaHTTP.transport) {
+    public init(connection: ConnectionData, timeout: TimeInterval = 3, transport: any HTTPTransport = RegzaHTTP.transport) {
         self.connection = connection
         self.timeout = timeout
         self.transport = transport
@@ -26,11 +26,11 @@ public actor RegzaAPIClient {
     public static let securePort = 4430
 
     /// 接続確認などの独立した通信でも、注入された通信方式・タイムアウトを使う。
-    public func replacingConnection(_ connection: RegzaConnection) -> RegzaAPIClient {
+    public func replacingConnection(_ connection: ConnectionData) -> RegzaAPIClient {
         RegzaAPIClient(connection: connection, timeout: timeout, transport: transport)
     }
 
-    public func update(connection: RegzaConnection) {
+    public func update(connection: ConnectionData) {
         guard connection != self.connection else { return }
         self.connection = connection
         digest = RegzaDigestMiddleware(connection: connection)

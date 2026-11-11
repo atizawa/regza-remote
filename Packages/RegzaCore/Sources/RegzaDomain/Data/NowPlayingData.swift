@@ -1,7 +1,7 @@
 import Foundation
 
 /// 画面や Live Activity に出すための視聴状況。
-public struct RegzaNowPlaying: Equatable, Sendable {
+public struct NowPlayingData: Equatable, Sendable {
     public enum Kind: String, Codable, Sendable {
         /// 地デジ・BS・CS の放送
         case broadcast
@@ -17,7 +17,7 @@ public struct RegzaNowPlaying: Equatable, Sendable {
 
     public var kind: Kind
     public var channelName: String
-    /// 放送中のチャンネルの ID。チャンネル一覧の `RegzaChannel.code` と同じ
+    /// 放送中のチャンネルの ID。チャンネル一覧の `ChannelData.code` と同じ
     public var channelCode: String
     public var title: String
     public var description: String
