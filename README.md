@@ -53,6 +53,8 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   - 画面と Live Activity が Domain・通信・組み立てを import していないことは `RegzaKitTests` の `LayerTests` が確かめる
 - 依存オブジェクトの引数・プロパティ・組み立て時の変数は、`remoteViewModel`・`guideUseCase`・`guideRepository`・`regzaAPIClient`・`preferencesManager` のように役割を名前に含める。取得した値は `programs`・`channels` など、内容を表す名前にする。
 - 保存処理は `Infrastructure/Storage` の `SecureStorageManager`・`PreferencesManager` に分け、APIClient と並列に Repository へ注入する。Manager には OS ごとの保存実装を注入し、保存キーの選択と Data の組み立ては Repository が担当する。
+- DI は `RegzaApp/AppFactory+Repositories.swift`（APIClient・Manager → Repository）、`AppFactory+UseCases.swift`（Repository → UseCase）、`AppFactory+ViewModels.swift`（UseCase → ViewModel）にまとめる。iOS・Android・CLI は共通の Factory を使い、通信と保存先は起動時に渡す。Repository または UseCase の protocol を直接渡せるため、テストでも同じ入口から差し替えられる。
+- iOS の `RegzaAppContainer` は組み立てた `AppViewModel` と Manager を受け取れる。Android は `RegzaAndroid.regzaAppFactory()` が SocketTransport＋BoringSSL を保持する Factory を返し、`makeApp(AndroidStorage(...))` で保存先を渡す。通信実装をグローバルに書き換えず、探索処理にも同じ transport を渡す。
 - iOS は `KeychainStorage`・`UserDefaultsStorage`、Android は `RegzaAndroidStorage` を共通の保存プロトコルにつなぐアダプターを使う。Android のパスワードは従来どおり Keystore の鍵で暗号化する。既存の保存キー・値の形式と、iOS の旧登録 ID の移行を維持する。
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）
 - Repository と UseCase は Domain/Data の `ChannelData`・`ProgramData` などを受け渡す。UseCase は Domain に置き、画面側には `RegzaSharedModels` の型を返す。ViewModel は Data を保持せず、番組検索の索引も Domain 内で管理する。
@@ -61,7 +63,12 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 
 ## 開発
 
+Repository・UseCase の単体テストは [Mockolo](https://github.com/uber/mockolo) で生成するモックを使用する。対象は Domain の `@mockable` を付けた protocol。生成結果は `Tests/RegzaCoreTests/Generated/DomainMocks.swift` に置き、protocol を変更したらリポジトリのルートで `mise run generate-mocks` を実行する。Mockolo は `Tools/GenerateMocks/Package.swift` で版を固定し、アプリの依存から分離しているため、通常のアプリビルドやテストで生成ツールをビルドする必要はない。
+
+`Tests/RegzaCoreTests/Support` は、入力値の `DataFixtures.swift`、生成モックの初期値を設定する `RepositoryMocks.swift`、HTTP・保存・本番 Factory をつなぐ `HTTPTestEnvironment.swift`、ViewModel の準備と待機を行う `ViewModelFixtures.swift` に分ける。単体テストの戻り値やエラーはモックの Handler に設定し、呼び出し回数・引数は生成された記録で確認する。通信を含むテストでは本物の Repository と偽の HTTP を使い、画面プレビュー用の SampleRepository とは分ける。
+
 ```sh
+mise run generate-mocks                  # Domain の protocol を変更したときにモックを再生成
 cd Packages/RegzaCore && swift test       # 共有部分のテスト
 cd Android/RegzaAndroidBridge && swift test  # Android の窓口のテスト (Mac で動く)
 cd Android/ScreenGlue && swift test       # 窓口のつなぎを作る道具のテストと、Git に入れたつなぎが古くないかの確認

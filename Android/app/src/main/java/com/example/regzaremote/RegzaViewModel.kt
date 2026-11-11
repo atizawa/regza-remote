@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.lifecycle.AndroidViewModel
 import com.example.regzaremote.core.AppAction
+import com.example.regzaremote.core.RegzaAndroid
 import com.example.regzaremote.core.RegzaAndroidApp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -17,10 +18,10 @@ import kotlinx.coroutines.runBlocking
  * 画面はそれぞれ自分の ViewModel の state を窓口から受け取り (<State の型 (先頭は小文字)>s)、操作を send で送る。
  * 画面の回転などで Activity が作り直されても残るので、Swift の ViewModel もここで 1 つだけ作る
  */
-class RegzaViewModel(application: Application) : AndroidViewModel(application) {
-    /** Swift の窓口。接続情報などは、Swift が Kotlin の保存先 (AndroidStorage) を使って読み書きする */
-    val app: RegzaAndroidApp = RegzaAndroidApp.init(AndroidStorage(application))
-
+class RegzaViewModel @JvmOverloads constructor(
+    application: Application,
+    val app: RegzaAndroidApp = RegzaAndroid.regzaAppFactory().makeApp(AndroidStorage(application)),
+) : AndroidViewModel(application) {
     /** 画面から操作を送る先 (Swift の窓口に送る) */
     val send: Send = AppSend(app)
 

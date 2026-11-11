@@ -18,16 +18,31 @@ public final class RegzaAppContainer {
     /// ロック画面と Dynamic Island の表示。リモコンの state を見て更新する
     public let liveActivity: LiveActivityModel
 
-    private init() {
-        secureStorageManager = SecureStorageManager(storage: KeychainStorage())
-        preferencesManager = PreferencesManager(storage: UserDefaultsStorage())
-        var appViewModel = AppViewModel(secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
-        #if DEBUG
-        // 開発用: 起動引数 -SampleData YES で、テレビにつながない見本の Repository で組み立てる
-        if SampleData.isEnabled { appViewModel = SampleData.makeApp() }
-        #endif
+    public init(
+        appViewModel: AppViewModel,
+        secureStorageManager: SecureStorageManager,
+        preferencesManager: PreferencesManager
+    ) {
+        self.secureStorageManager = secureStorageManager
+        self.preferencesManager = preferencesManager
         self.appViewModel = appViewModel
         liveActivity = LiveActivityModel(remoteViewModel: appViewModel.remoteViewModel)
+    }
+
+    private convenience init() {
+        let secureStorageManager = SecureStorageManager(storage: KeychainStorage())
+        let preferencesManager = PreferencesManager(storage: UserDefaultsStorage())
+        #if DEBUG
+        if SampleData.isEnabled {
+            self.init(
+                appViewModel: SampleData.makeApp(),
+                secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
+            return
+        }
+        #endif
+        let appViewModel = AppFactory.makeLiveAppViewModel(
+            secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, transport: URLSessionTransport())
+        self.init(appViewModel: appViewModel, secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
     }
 
 }

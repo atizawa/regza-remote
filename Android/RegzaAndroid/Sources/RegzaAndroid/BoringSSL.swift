@@ -1,15 +1,13 @@
 import Android
 import CBoringSSL
 import Foundation
+import RegzaAndroidBridge
 import RegzaApp
 
-/// Android では RegzaCore の通信をソケットで送る。Android の URLSession (FoundationNetworking) は、
-/// 送り終えたあとも書き込みの見張りを外さず、返事を待つ間 CPU を使い続けるため。
-/// HTTPS は SDK に入っている BoringSSL で暗号化する。
-/// アプリの起動時に regzaSetUpMainActor が、ViewModel を作る前に 1 回だけ差し替える
-let useSocketTransport: Void = {
-    RegzaHTTP.transport = SocketTransport(tls: BoringSSLProvider())
-}()
+/// OS 固有の通信を明示してアプリを組み立てる。
+public func regzaAppFactory() -> RegzaAndroidAppFactory {
+    RegzaAndroidAppFactory(httpTransport: SocketTransport(tls: BoringSSLProvider()))
+}
 
 /// Android の実行環境のテストから、アプリと同じ SocketTransport で Bionic のソケットを通して HTTP を送る。
 /// 外のサーバーには頼らず、テストが端末内に立てたサーバーへ送るための小さな診断口。

@@ -5,7 +5,6 @@ import Testing
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 @testable import RegzaPresentation
-@testable import RegzaSample
 
 /// チャンネル一覧の ViewModel
 @MainActor
@@ -13,7 +12,7 @@ import Testing
     let fixtures = ViewModelFixtures()
 
     @Test func channelListExplainsUnsupportedModel() async {
-        let live = LiveModels(transport: FakeTransport { _ in ViewModelFixtures.status(404) })
+        let live = HTTPTestEnvironment(transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(404) })
         let viewModel = live.appViewModel.channelListViewModel
         await fixtures.send(viewModel) { $0.send(.reload) }
         #expect(viewModel.state.loadErrorMessage == "この機種はチャンネル一覧の取得に対応していません。")
@@ -21,10 +20,10 @@ import Testing
     }
 
     @Test func channelListExplainsRejectedTune() async throws {
-        let live = LiveModels(
-            transport: FakeTransport { request in
+        let live = HTTPTestEnvironment(
+            transport: FakeHTTPTransport { request in
                 request.url.path.hasSuffix("channel_list")
-                    ? ViewModelFixtures.status(200, ViewModelFixtures.channelList) : ViewModelFixtures.status(200, #"{"status":1}"#)
+                    ? FakeHTTPTransport.response(200, TestData.channelListJSON) : FakeHTTPTransport.response(200, #"{"status":1}"#)
             })
         let viewModel = live.appViewModel.channelListViewModel
         await fixtures.send(viewModel) { $0.send(.reload) }

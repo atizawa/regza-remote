@@ -1,6 +1,7 @@
 import Foundation
 
 /// テレビの録画予約。予約の一覧は、読み込んだものを持っておく (接続が変わったら使わない)
+/// @mockable
 @MainActor
 public protocol RecordingRepositoryProtocol: AnyObject {
     /// 録画予約。予定のあるものを先に、時刻順に並べる

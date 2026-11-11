@@ -27,7 +27,7 @@ let package = Package(
         ),
         .testTarget(
             name: "RegzaAndroidBridgeTests",
-            dependencies: ["RegzaAndroidBridge", .product(name: "RegzaSample", package: "RegzaCore")],
+            dependencies: ["RegzaAndroidBridge", .product(name: "RegzaApp", package: "RegzaCore")],
             // 窓口の非同期の関数 (Java の Future になる) を MainActor から呼ぶので、窓口と同じ 5 のモードにする
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

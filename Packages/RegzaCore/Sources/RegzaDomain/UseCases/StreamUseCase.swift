@@ -1,6 +1,7 @@
 import Foundation
 
 /// ライブ視聴 (EPGStation): 配信を頼む・再生できるまで待つ・見続ける・止める
+/// @mockable
 @MainActor
 public protocol StreamUseCaseProtocol: AnyObject {
     /// EPGStation のアドレス。未設定なら空

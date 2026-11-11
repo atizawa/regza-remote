@@ -2,13 +2,12 @@ import Android
 import CAndroidMainLoop
 
 /// Android で Swift を使う準備。アプリの起動時 (Application.onCreate) に、メインスレッドから呼ぶ。
-/// 通信をソケットで送るように差し替え (useSocketTransport)、Android のメインスレッドで Swift の MainActor を動かす。
+/// Android のメインスレッドで Swift の MainActor を動かす。
 ///
 /// MainActor の仕事は libdispatch の main queue に入るが、Android のメインスレッドは Looper で回っていて、
 /// main queue を誰も片づけないので、そのままでは MainActor の仕事が動かずに止まる。
 /// main queue に仕事が来ると libdispatch が書き込む eventfd を Looper に見張らせ、来たら片づける
 public func regzaSetUpMainActor() {
-    _ = useSocketTransport
     _ = mainActorOnLooper
 }
 

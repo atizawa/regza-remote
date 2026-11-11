@@ -46,10 +46,8 @@ func main() async {
         transport = SocketTransport()
     }
     // 番組表 (Mirakurun) や録画サーバーへの通信も同じ方法で送る
-    RegzaHTTP.transport = transport
-    let appViewModel = AppViewModel(
-        secureStorageManager: secureStorageManager, preferencesManager: preferencesManager,
-        regzaRemote: RegzaRemote(connection: connection, transport: transport))
+    let appViewModel = AppFactory.makeLiveAppViewModel(
+        secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, transport: transport)
     let session = IntrospectionSession(root: appViewModel)
     if !options.host.isEmpty, !options.sample {
         // チャンネル一覧などを使う操作のため、先に読んでおく

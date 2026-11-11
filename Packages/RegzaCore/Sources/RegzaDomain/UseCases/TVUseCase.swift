@@ -1,6 +1,7 @@
 import Foundation
 
 /// テレビ (REGZA) の操作: リモコンのキー・選局・いま映っているもの・チャンネル・接続の保存
+/// @mockable
 @MainActor
 public protocol TVUseCaseProtocol: AnyObject {
     /// 保存してある接続

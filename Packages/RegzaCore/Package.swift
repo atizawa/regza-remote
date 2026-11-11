@@ -87,10 +87,10 @@ let package = Package(
         // 組み立てる場所 (Composition Root): どの Repository の実装を使うかを決めて AppViewModel を作る
         .target(name: "RegzaApp", dependencies: ["RegzaPresentation", "RegzaInfrastructure"]),
         // 見本の Repository (テレビにも録画サーバーにもつながない)
-        .target(name: "RegzaSample", dependencies: ["RegzaDomain", "RegzaPresentation", "RegzaInfrastructure"]),
+        .target(name: "RegzaSample", dependencies: ["RegzaApp", "RegzaDomain"]),
         .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp", "RegzaSample"]),
         .testTarget(
             name: "RegzaCoreTests",
-            dependencies: ["RegzaApp", "RegzaSample", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels"]),
+            dependencies: ["RegzaApp", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels"]),
     ]
 )

@@ -5,7 +5,6 @@ import Testing
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 @testable import RegzaPresentation
-@testable import RegzaSample
 
 /// いま映っているものの詳細のシートの ViewModel
 @MainActor
@@ -15,13 +14,13 @@ import Testing
     @Test func offersPowerOnOnlyInStandby() throws {
         let channels = try GuideViewModelTests().channels()
 
-        let standbyViewModel = fixtures.sampleApp(channels: channels, nowPlaying: NowPlayingData(kind: .standby)).nowPlayingViewModel
+        let standbyViewModel = fixtures.makeApp(nowPlaying: NowPlayingData(kind: .standby), channels: channels).nowPlayingViewModel
         #expect(standbyViewModel.state.canPowerOn)
         #expect(standbyViewModel.state.title == "テレビ")
 
-        let broadcastViewModel = fixtures.sampleApp(
-            channels: channels,
-            nowPlaying: NowPlayingData(kind: .broadcast, channelCode: "JP-G00000001", title: "見本の番組", description: "見本の説明")
+        let broadcastViewModel = fixtures.makeApp(
+            nowPlaying: NowPlayingData(kind: .broadcast, channelCode: "JP-G00000001", title: "見本の番組", description: "見本の説明"),
+            channels: channels
         ).nowPlayingViewModel
         let state = broadcastViewModel.state
         #expect(!state.canPowerOn)

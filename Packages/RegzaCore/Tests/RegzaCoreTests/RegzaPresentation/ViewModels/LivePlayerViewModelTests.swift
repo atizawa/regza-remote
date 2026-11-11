@@ -5,7 +5,6 @@ import Testing
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 @testable import RegzaPresentation
-@testable import RegzaSample
 
 /// ライブ視聴の ViewModel
 @MainActor
@@ -13,18 +12,19 @@ import Testing
     let fixtures = ViewModelFixtures()
 
     func makePlayer(channelCode: String, _ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
-        throws -> (LivePlayerViewModel, FakeTransport, MemoryStore)
+        throws -> (LivePlayerViewModel, FakeHTTPTransport, TestStorage)
     {
-        let store = MemoryStore(connection: ConnectionData(host: "192.0.2.10"))
+        let store = TestStorage(connection: ConnectionData(host: "192.0.2.10"))
         // 配信を頼めるのは、番組表と EPGStation の両方を設定しているとき
         store.guideHost = "192.0.2.2"
         store.streamHost = "192.0.2.30"
-        let transport = FakeTransport(respond)
-        let live = LiveModels(store: store, transport: transport)
+        let transport = FakeHTTPTransport(respond)
+        let live = HTTPTestEnvironment(store: store, transport: transport)
         let livePlayerViewModel = LivePlayerViewModel(
-            remoteViewModel: live.remoteViewModel, channelUseCase: live.channelUseCase, guideUseCase: live.guideUseCase,
-            streamUseCase: live.streamUseCase,
-            channel: try fixtures.channel(code: channelCode)
+            remoteViewModel: live.appViewModel.remoteViewModel, channelUseCase: live.appViewModel.channelUseCase,
+            guideUseCase: live.appViewModel.guideUseCase,
+            streamUseCase: live.appViewModel.streamUseCase,
+            channel: TestData.channel(code: channelCode)
         )
         return (livePlayerViewModel, transport, store)
     }
@@ -40,11 +40,11 @@ import Testing
         let (livePlayerViewModel, transport, store) = try makePlayer(channelCode: "JP-G00000001") { request in
             switch (request.method, request.url.path) {
             case ("GET", let path) where path.hasPrefix("/api/streams/live/"):
-                ViewModelFixtures.status(200, #"{"streamId":5}"#)
+                FakeHTTPTransport.response(200, #"{"streamId":5}"#)
             case ("GET", "/streamfiles/stream5.m3u8"):
-                ViewModelFixtures.status(200, "#EXTM3U\nsegment0.ts\n")
+                FakeHTTPTransport.response(200, "#EXTM3U\nsegment0.ts\n")
             default:
-                ViewModelFixtures.status(200, "{}")
+                FakeHTTPTransport.response(200, "{}")
             }
         }
         livePlayerViewModel.send(.start)
@@ -63,7 +63,7 @@ import Testing
     }
 
     @Test func explainsWhenStreamDoesNotStart() async throws {
-        let (livePlayerViewModel, _, store) = try makePlayer(channelCode: "JP-G00000001") { _ in ViewModelFixtures.status(500) }
+        let (livePlayerViewModel, _, store) = try makePlayer(channelCode: "JP-G00000001") { _ in FakeHTTPTransport.response(500) }
         livePlayerViewModel.send(.start)
         await wait { if case .failed = livePlayerViewModel.state.phase { true } else { false } }
         guard case .failed(let message, let canRetry) = livePlayerViewModel.state.phase else {
@@ -76,7 +76,7 @@ import Testing
     }
 
     @Test func refusesChannelThatEPGStationDoesNotKnow() async throws {
-        let (livePlayerViewModel, transport, _) = try makePlayer(channelCode: "unknown") { _ in ViewModelFixtures.status(200, "{}") }
+        let (livePlayerViewModel, transport, _) = try makePlayer(channelCode: "unknown") { _ in FakeHTTPTransport.response(200, "{}") }
         livePlayerViewModel.send(.start)
         await wait { livePlayerViewModel.state.phase != .preparing }
         #expect(livePlayerViewModel.state.phase == .failed(message: "このチャンネルは EPGStation で見られません。", canRetry: false))

@@ -5,7 +5,6 @@ import Testing
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 @testable import RegzaPresentation
-@testable import RegzaSample
 
 /// 画面の移り変わりと Introspection
 @MainActor
@@ -13,7 +12,7 @@ import Testing
     let guideScreens = GuideViewModelTests()
 
     func makeApp(configured: Bool = true) throws -> AppViewModel {
-        AppViewModel.sample(
+        ViewModelFixtures().makeApp(
             connection: ConnectionData(host: configured ? "192.0.2.10" : ""), nowPlaying: nil, channels: try guideScreens.channels()
         )
     }

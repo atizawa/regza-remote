@@ -1,6 +1,7 @@
 import Foundation
 
 /// 番組表 (録画サーバー Mirakurun)。全局の番組表は、読み込んだものを持っておく
+/// @mockable
 @MainActor
 public protocol GuideRepositoryProtocol: AnyObject {
     /// Mirakurun のアドレス。未設定なら空

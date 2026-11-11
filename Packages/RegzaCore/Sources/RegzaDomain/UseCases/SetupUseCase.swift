@@ -1,6 +1,7 @@
 import Foundation
 
 /// 設定: テレビや録画サーバーを探す・テレビへの PIN 登録・録画サーバーとの連携
+/// @mockable
 @MainActor
 public protocol SetupUseCaseProtocol: AnyObject {
     /// 同じネットワークのテレビを、見つかった順に返す (UI の型)

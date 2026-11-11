@@ -17,14 +17,14 @@ public enum RegzaDiscovery {
     static let concurrency = 96
 
     /// 見つかったテレビを IP アドレス順に返す
-    public static func scan(timeout: TimeInterval = 1.5) async -> [DeviceData] {
+    public static func scan(timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport) async -> [DeviceData] {
         var found: [DeviceData] = []
-        for await device in devices(timeout: timeout) { found.append(device) }
+        for await device in devices(timeout: timeout, transport: transport) { found.append(device) }
         return found.sorted { IPv4Network.parse($0.host) ?? 0 < IPv4Network.parse($1.host) ?? 0 }
     }
 
     /// 見つかった順にテレビを流す。全アドレスを調べ終えると終わる
-    public static func devices(timeout: TimeInterval = 1.5) -> AsyncStream<DeviceData> {
+    public static func devices(timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport) -> AsyncStream<DeviceData> {
         AsyncStream { continuation in
             let task = Task {
                 let hosts = localNetworks().flatMap(\.hosts)
@@ -32,12 +32,12 @@ public enum RegzaDiscovery {
                     var iterator = hosts.makeIterator()
                     for _ in 0..<concurrency {
                         guard let host = iterator.next() else { break }
-                        group.addTask { await probe(host: host, timeout: timeout) }
+                        group.addTask { await probe(host: host, timeout: timeout, transport: transport) }
                     }
                     for await device in group {
                         if let device { continuation.yield(device) }
                         if !Task.isCancelled, let host = iterator.next() {
-                            group.addTask { await probe(host: host, timeout: timeout) }
+                            group.addTask { await probe(host: host, timeout: timeout, transport: transport) }
                         }
                     }
                 }
@@ -49,17 +49,19 @@ public enum RegzaDiscovery {
 
     /// IP アドレスが変わったテレビを探し、新しいアドレスを返す。
     /// 登録はテレビごとなので、保存済みの資格情報で認証が通ったものを同じテレビとみなす
-    public static func locate(_ connection: ConnectionData, timeout: TimeInterval = 1.5) async -> String? {
-        for await device in devices(timeout: timeout) where device.host != connection.trimmedHost {
+    public static func locate(_ connection: ConnectionData, timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport)
+        async -> String?
+    {
+        for await device in devices(timeout: timeout, transport: transport) where device.host != connection.trimmedHost {
             var candidate = connection
             candidate.host = device.host
-            if await authenticates(candidate) { return device.host }
+            if await authenticates(candidate, transport: transport) { return device.host }
         }
         return nil
     }
 
-    private static func authenticates(_ connection: ConnectionData) async -> Bool {
-        let regzaAPIClient = RegzaAPIClient(connection: connection)
+    private static func authenticates(_ connection: ConnectionData, transport: any HTTPTransport) async -> Bool {
+        let regzaAPIClient = RegzaAPIClient(connection: connection, transport: transport)
         do {
             _ = try await regzaAPIClient.request(RegzaPlayStatusRequest())
             return true

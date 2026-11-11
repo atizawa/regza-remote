@@ -24,15 +24,6 @@ public final class RegzaAndroidApp {
     /// Flow ごとの番号で待機を終わらせる。終了と待機の開始が前後しても取りこぼさないよう、終了済みも一時的に覚える。
     @MainActor private var stateWaits: [Int64: StateWait] = [:]
 
-    /// Kotlin の保存先 (Keystore と SharedPreferences) で組み立てる。Android では先に regzaSetUpMainActor を呼んでおく
-    public convenience init(storage: any RegzaAndroidStorage) {
-        self.init(
-            appViewModel: onMainActor {
-                let managers = makeStorageManagers(storage)
-                return AppViewModel(secureStorageManager: managers.secureStorageManager, preferencesManager: managers.preferencesManager)
-            })
-    }
-
     /// 組み立てた ViewModel から作る (テストでは、テレビにつながない見本の ViewModel を渡す)
     init(appViewModel: AppViewModel) {
         self.appViewModel = appViewModel

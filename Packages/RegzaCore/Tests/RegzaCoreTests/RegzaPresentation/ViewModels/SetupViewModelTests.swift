@@ -5,7 +5,6 @@ import Testing
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 @testable import RegzaPresentation
-@testable import RegzaSample
 
 /// 設定の ViewModel
 @MainActor
@@ -23,9 +22,9 @@ import Testing
     }
 
     @Test func tvStatusAsksForPIN() {
-        let live = LiveModels(transport: FakeTransport { _ in ViewModelFixtures.status(500) })
-        let remoteViewModel = live.remoteViewModel
-        let tvSetupViewModel = TVSetupViewModel(remoteViewModel: remoteViewModel, setupUseCase: live.setupUseCase)
+        let live = HTTPTestEnvironment(transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(500) })
+        let remoteViewModel = live.appViewModel.remoteViewModel
+        let tvSetupViewModel = TVSetupViewModel(remoteViewModel: remoteViewModel, setupUseCase: live.appViewModel.setupUseCase)
         // 保存済みの接続から始める
         #expect(tvSetupViewModel.state.host == remoteViewModel.connection.host)
         #expect(tvSetupViewModel.state.user == remoteViewModel.connection.user)
@@ -42,12 +41,12 @@ import Testing
     }
 
     @Test func unlinkingGuideAlsoUnlinksStream() async {
-        let store = MemoryStore(connection: ConnectionData(host: "192.0.2.10"))
+        let store = TestStorage(connection: ConnectionData(host: "192.0.2.10"))
         // Repository は、作ったときに保存済みのアドレスを読む
         store.guideHost = "192.0.2.2"
         store.streamHost = "192.0.2.2:8888"
-        let live = LiveModels(store: store, transport: FakeTransport { _ in ViewModelFixtures.status(500) })
-        let serverSetupViewModel = ServerSetupViewModel(setupUseCase: live.setupUseCase)
+        let live = HTTPTestEnvironment(store: store, transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(500) })
+        let serverSetupViewModel = ServerSetupViewModel(setupUseCase: live.appViewModel.setupUseCase)
         #expect(serverSetupViewModel.state.guide.status == "192.0.2.2")
         #expect(serverSetupViewModel.state.stream.isLinked)
 
@@ -63,11 +62,12 @@ import Testing
     }
 
     @Test func suggestsEPGStationOnMirakurunServer() async {
-        let live = LiveModels(
-            transport: FakeTransport { request in
-                request.url.path == "/api/version" ? ViewModelFixtures.status(200, #"{"version":"2.0.0"}"#) : ViewModelFixtures.status(404)
+        let live = HTTPTestEnvironment(
+            transport: FakeHTTPTransport { request in
+                request.url.path == "/api/version"
+                    ? FakeHTTPTransport.response(200, #"{"version":"2.0.0"}"#) : FakeHTTPTransport.response(404)
             })
-        let serverSetupViewModel = ServerSetupViewModel(setupUseCase: live.setupUseCase)
+        let serverSetupViewModel = ServerSetupViewModel(setupUseCase: live.appViewModel.setupUseCase)
         serverSetupViewModel.send(.setHost(.guide, "192.0.2.2:40772"))
 
         await serverSetupViewModel.suggestStreamHost()
@@ -82,17 +82,19 @@ import Testing
     // MARK: - 設定の画面 (SettingsViewModel)
 
     /// 設定の画面と、閉じた回数
-    func makeSettings(store: MemoryStore = MemoryStore(connection: ConnectionData(host: "192.0.2.10")), transport: FakeTransport)
-        -> (SettingsViewModel, LiveModels, () -> Int)
+    func makeSettings(store: TestStorage = TestStorage(connection: ConnectionData(host: "192.0.2.10")), transport: FakeHTTPTransport)
+        -> (SettingsViewModel, HTTPTestEnvironment, () -> Int)
     {
-        let live = LiveModels(store: store, transport: transport)
+        let live = HTTPTestEnvironment(store: store, transport: transport)
         var closed = 0
-        let settingsViewModel = SettingsViewModel(remoteViewModel: live.remoteViewModel, setupUseCase: live.setupUseCase) { closed += 1 }
+        let settingsViewModel = SettingsViewModel(
+            remoteViewModel: live.appViewModel.remoteViewModel, setupUseCase: live.appViewModel.setupUseCase
+        ) { closed += 1 }
         return (settingsViewModel, live, { closed })
     }
 
     @Test func settingsCombineSaveConditions() {
-        let (settingsViewModel, _, _) = makeSettings(transport: FakeTransport { _ in ViewModelFixtures.status(500) })
+        let (settingsViewModel, _, _) = makeSettings(transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(500) })
         #expect(settingsViewModel.state.path.isEmpty)
         #expect(settingsViewModel.state.canSave)
         // 録画サーバーのポートが正しくなければ保存できない
@@ -106,14 +108,14 @@ import Testing
 
     /// CLI と振る舞いのテストに見せる状態には、パスワードを出さない (部品の操作は「tv.〜」で送る)
     @Test func settingsHidePassword() throws {
-        let (settingsViewModel, _, _) = makeSettings(transport: FakeTransport { _ in ViewModelFixtures.status(500) })
+        let (settingsViewModel, _, _) = makeSettings(transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(500) })
         try settingsViewModel.perform("tv.setPassword", ["password": .string("secret")])
         #expect(settingsViewModel.state.tv.password == "secret")
         #expect(!settingsViewModel.introspectionState.json.contains("secret"))
     }
 
     @Test func settingsSaveThenClose() async {
-        let (settingsViewModel, live, closed) = makeSettings(transport: FakeTransport { _ in ViewModelFixtures.status(500) })
+        let (settingsViewModel, live, closed) = makeSettings(transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(500) })
         settingsViewModel.send(.server(.setHost(.guide, "192.0.2.2")))
         await fixtures.send(settingsViewModel) { $0.send(.save) }
         #expect(live.store.guideHost == "192.0.2.2")
@@ -121,9 +123,9 @@ import Testing
     }
 
     @Test func unlinkingClosesItsPage() async {
-        let store = MemoryStore(connection: ConnectionData(host: "192.0.2.10"))
+        let store = TestStorage(connection: ConnectionData(host: "192.0.2.10"))
         store.guideHost = "192.0.2.2"
-        let (settingsViewModel, _, _) = makeSettings(store: store, transport: FakeTransport { _ in ViewModelFixtures.status(500) })
+        let (settingsViewModel, _, _) = makeSettings(store: store, transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(500) })
         settingsViewModel.send(.openPage(.guide))
         #expect(settingsViewModel.state.path == [.guide])
 
@@ -134,8 +136,9 @@ import Testing
 
     @Test func openingStreamPageSuggestsEPGStation() async {
         let (settingsViewModel, _, _) = makeSettings(
-            transport: FakeTransport { request in
-                request.url.path == "/api/version" ? ViewModelFixtures.status(200, #"{"version":"2.0.0"}"#) : ViewModelFixtures.status(404)
+            transport: FakeHTTPTransport { request in
+                request.url.path == "/api/version"
+                    ? FakeHTTPTransport.response(200, #"{"version":"2.0.0"}"#) : FakeHTTPTransport.response(404)
             })
         settingsViewModel.send(.server(.setHost(.guide, "192.0.2.2:40772")))
         await fixtures.send(settingsViewModel) { $0.send(.openPage(.stream)) }

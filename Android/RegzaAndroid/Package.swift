@@ -74,6 +74,7 @@ let package = Package(
         .target(
             name: "RegzaAndroid",
             dependencies: [
+                .product(name: "RegzaAndroidBridge", package: "RegzaAndroidBridge"),
                 "CAndroidMainLoop",
                 "CBoringSSL",
                 "RegzaSharedJava",

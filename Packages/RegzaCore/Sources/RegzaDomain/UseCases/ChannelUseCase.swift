@@ -1,6 +1,7 @@
 import Foundation
 
 /// チャンネル: テレビに登録されているチャンネルを、放送の種類ごとに、放送中の番組名つきで並べる
+/// @mockable
 @MainActor
 public protocol ChannelUseCaseProtocol: AnyObject {
     /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)

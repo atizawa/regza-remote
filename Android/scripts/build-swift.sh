@@ -105,7 +105,7 @@ configs=.build/swift/configs
 rm -rf "$configs" && mkdir -p "$configs"
 # SwiftPM のプラグイン (RegzaAndroid の Java のつなぎ) は、ソースの中の swift-java.config を読むので、共通の設定をそこに書き出す
 # (書き出したものは Git に入れない)
-swift_java_config "" RegzaAndroid/Sources/RegzaAndroid/swift-java.config > /dev/null
+swift_java_config "RegzaAndroid/RegzaAndroid.swift-java.config" RegzaAndroid/Sources/RegzaAndroid/swift-java.config > /dev/null
 
 # iOS と共有のパッケージや窓口のパッケージにはプラグインをかけられないので、Mac で動く swift-java のツールで、ソースを直接読む。
 # Android 向けのビルドとはビルドの設定が違い、同じ置き場だと互いのキャッシュを捨て合うので、置き場を分ける

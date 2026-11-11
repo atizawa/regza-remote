@@ -47,8 +47,8 @@ public protocol HTTPTransport: Sendable {
 }
 
 public enum RegzaHTTP {
-    /// RegzaCore の通信が使う送り方。Android はテレビとやり取りする前に差し替える
-    nonisolated(unsafe) public static var transport: any HTTPTransport = URLSessionTransport()
+    /// 単体のクライアントを使う際の既定値。アプリの Factory には OS の実装を明示して渡す。
+    public static let transport: any HTTPTransport = URLSessionTransport()
 }
 
 /// URLSession で送る

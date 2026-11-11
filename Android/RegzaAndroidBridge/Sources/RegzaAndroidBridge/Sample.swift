@@ -11,7 +11,6 @@ extension RegzaAndroidApp {
     public static func sample(storage: any RegzaAndroidStorage, fixture: String) -> RegzaAndroidApp? {
         guard let fixture = fixture.isEmpty ? SampleFixture() : try? SampleFixture(json: fixture) else { return nil }
         let transport = SampleTransport(fixture: fixture)
-        RegzaHTTP.transport = transport
         return RegzaAndroidApp(
             appViewModel: onMainActor {
                 if storage.value(forKey: AndroidStorageKey.host) == nil {
@@ -25,9 +24,10 @@ extension RegzaAndroidApp {
                 }
 
                 let managers = makeStorageManagers(storage)
-                return AppViewModel(
+                let appViewModel = AppFactory.makeLiveAppViewModel(
                     secureStorageManager: managers.secureStorageManager, preferencesManager: managers.preferencesManager,
                     transport: transport)
+                return appViewModel
             })
     }
 }

@@ -4,54 +4,35 @@ import Foundation
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 @testable import RegzaPresentation
-@testable import RegzaSample
 
 /// ViewModel のテストで使う、テレビの応答の見本と、画面の ViewModel の組み立て
 @MainActor
 struct ViewModelFixtures {
-    nonisolated static let channelList = """
-        {"status":0,"total":2,"channel_list":[\
-        {"channel_number":11,"rcu_channel_number":1,"channel":"JP-G00000001","ex_channel_number":"DUV_011-1","name":"テスト局１","show_setting":"SHOW_REPRESENT"},\
-        {"channel_number":183,"rcu_channel_number":8,"channel":"JP-G00000002","ex_channel_number":"DBS_183","name":"テストBS","show_setting":"SHOW"}]}
-        """
-    nonisolated static let reservationList = """
-        {"status":0,"rsv_list":[\
-        {"rsv_id":"1","title":"テスト番組","channel":"JP-G00000001","epg_content_id":"JP-0000000000010002","start_time":4000000000,"duration":1800}]}
-        """
-
-    nonisolated static func ok(_ body: String) -> HTTPResponse {
-        HTTPResponse(statusCode: 200, headers: [:], body: Data(body.utf8))
-    }
-
-    func makeModels(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
-        -> (RemoteViewModel, GuideUseCase, RecordingUseCase, StreamUseCase)
+    func makeHTTPModels(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
+        -> (RemoteViewModel, any GuideUseCaseProtocol, any RecordingUseCaseProtocol, any StreamUseCaseProtocol)
     {
-        let live = LiveModels(transport: FakeTransport(respond))
-        return (live.remoteViewModel, live.guideUseCase, live.recordingUseCase, live.streamUseCase)
-    }
-
-    /// 見本の Repository でつないだもの (テレビにつながない)
-    func sampleApp(channels: [ChannelData], nowPlaying: NowPlayingData? = nil, programs: [ProgramData] = []) -> AppViewModel {
-        AppViewModel.sample(
-            connection: ConnectionData(host: "192.0.2.1"), nowPlaying: nowPlaying, channels: channels,
-            guideHost: programs.isEmpty ? "" : "192.0.2.2", programs: programs
+        let live = HTTPTestEnvironment(transport: FakeHTTPTransport(respond))
+        return (
+            live.appViewModel.remoteViewModel, live.appViewModel.guideUseCase, live.appViewModel.recordingUseCase,
+            live.appViewModel.streamUseCase
         )
     }
 
-    nonisolated static func status(_ code: Int, _ body: String = "") -> HTTPResponse {
-        HTTPResponse(statusCode: code, headers: [:], body: Data(body.utf8))
-    }
-
-    /// 番組 (network 1・service 1・event 2)。テレビの番組 ID は JP-0000000100010002
-    func program(startingIn offset: TimeInterval) throws -> ProgramData {
-        let start = Int((Date().timeIntervalSince1970 + offset) * 1000)
-        let json = #"{"id":100010002,"eventId":2,"networkId":1,"serviceId":1,"startAt":\#(start),"duration":1800000,"name":"テスト番組"}"#
-        return try JSONDecoder().decode(ProgramData.self, from: Data(json.utf8))
-    }
-
-    func channel(code: String) throws -> ChannelItem {
-        let json = #"{"channel_number":11,"channel":"\#(code)","name":"テスト局"}"#
-        return UseCaseModelMapper.channel(try JSONDecoder().decode(ChannelData.self, from: Data(json.utf8)))
+    /// テストで必要な入力を明示して、Repository の偽物を直接注入する。
+    func makeApp(
+        connection: ConnectionData = .init(host: "192.0.2.1"),
+        nowPlaying: NowPlayingData? = nil, channels: [ChannelData],
+        guideHost: String? = nil, programs: [ProgramData] = [], reservations: [ReservationData] = [],
+        isSample: Bool = false
+    ) -> AppViewModel {
+        let tvRepository = TVRepositoryProtocolMock(connection: connection, channels: channels, nowPlaying: nowPlaying)
+        tvRepository.isSample = isSample
+        return AppFactory.makeAppViewModel(
+            tvRepository: tvRepository,
+            guideRepository: GuideRepositoryProtocolMock(guideHost: guideHost ?? (programs.isEmpty ? "" : "192.0.2.2"), programs: programs),
+            recordingRepository: RecordingRepositoryProtocolMock(reservations: reservations),
+            streamRepository: StreamRepositoryProtocolMock(streamHost: ""), deviceRepository: DeviceRepositoryProtocolMock(),
+            initialNowPlaying: nowPlaying.map(UseCaseModelMapper.nowPlaying))
     }
 
     /// 操作を送り、処理が終わるまで待つ

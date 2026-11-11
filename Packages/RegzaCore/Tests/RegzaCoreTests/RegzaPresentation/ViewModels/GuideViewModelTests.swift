@@ -5,7 +5,6 @@ import Testing
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 @testable import RegzaPresentation
-@testable import RegzaSample
 
 /// 番組表と検索の ViewModel
 @MainActor
@@ -20,11 +19,11 @@ import Testing
     }
 
     func channels() throws -> [ChannelData] {
-        try #require(try JSONDecoder().decode(RegzaChannelList.self, from: Data(ViewModelFixtures.channelList.utf8)).channels)
+        try #require(try JSONDecoder().decode(RegzaChannelList.self, from: Data(TestData.channelListJSON.utf8)).channels)
     }
 
     @Test func gridShowsChannelsThatHavePrograms() async throws {
-        let appViewModel = fixtures.sampleApp(
+        let appViewModel = fixtures.makeApp(
             channels: try channels(),
             programs: [
                 try program(id: 1, startingIn: 0),
@@ -79,7 +78,7 @@ import Testing
     }
 
     @Test func searchFindsProgramsAndReadsConditions() async throws {
-        let appViewModel = fixtures.sampleApp(
+        let appViewModel = fixtures.makeApp(
             channels: try channels(),
             programs: [
                 try program(id: 1, startingIn: -60, name: "あおぞら散歩"),

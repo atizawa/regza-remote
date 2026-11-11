@@ -1,6 +1,5 @@
 import Foundation
 import RegzaApp
-import RegzaSample
 import Testing
 
 @testable import RegzaAndroidBridge
@@ -13,55 +12,52 @@ struct RegzaAndroidAppTests {
     /// 見本の局 (network 1 の service 1〜2)
     static let channelCodes = [BroadcastID.channelCode(networkId: 1, serviceId: 1), BroadcastID.channelCode(networkId: 1, serviceId: 2)]
 
-    static func channels() throws -> [ChannelData] {
+    static func channelsJSON() -> String {
         let items = channelCodes.enumerated().map { index, code in
             #"{"channel":"\#(code)","channel_number":\#(11 + index * 10),"rcu_channel_number":\#(index + 1),"name":"テスト局\#(index + 1)","ex_channel_number":"DUV_\#(11 + index * 10)","show_setting":"SHOW_REPRESENT"}"#
         }
-        return try JSONDecoder().decode([ChannelData].self, from: Data("[\(items.joined(separator: ","))]".utf8))
+        return #"{"status":0,"channel_list":[\#(items.joined(separator: ","))]}"#
     }
 
-    /// テスト局１の番組。放送中のもの (id 1) と、明日のもの (id 2)
-    static func programs() throws -> [ProgramData] {
+    static func programsJSON() -> String {
         let now = Date().timeIntervalSince1970
         let items = [(1, now - 600, "放送中の番組"), (2, now + 86_400, "明日の番組")].map { id, start, name in
             #"{"id":\#(id),"eventId":\#(id),"networkId":1,"serviceId":1,"startAt":\#(Int(start * 1000)),"duration":1800000,"name":"\#(name)"}"#
         }
-        return try JSONDecoder().decode([ProgramData].self, from: Data("[\(items.joined(separator: ","))]".utf8))
+        return "[\(items.joined(separator: ","))]"
     }
 
     /// 窓口と、その中の ViewModel
     struct Fixture {
         let bridge: RegzaAndroidApp
         let appViewModel: AppViewModel
+        let httpTransport: FixtureTransport
     }
 
-    func make(host: String = "192.0.2.1", guide: Bool = true) throws -> Fixture {
-        let appViewModel = AppViewModel.sample(
-            connection: ConnectionData(host: host), nowPlaying: nil, channels: try Self.channels(),
-            guideHost: guide ? "192.0.2.2" : "", programs: guide ? try Self.programs() : []
-        )
-        return Fixture(bridge: RegzaAndroidApp(appViewModel: appViewModel), appViewModel: appViewModel)
-    }
-
-    /// 本物の Repository を偽の通信でつなぎ、ライブ視聴 (EPGStation) も設定してあるものを組み立てる (配信は頼まない)
-    func makeWithStream() async throws -> Fixture {
-        let managers = makeStorageManagers(
-            MemoryStorage([
-                AndroidStorageKey.host: "192.0.2.1", AndroidStorageKey.guideHost: "192.0.2.2", AndroidStorageKey.streamHost: "192.0.2.30",
+    func make(host: String = "192.0.2.1", guide: Bool = true, streamHost: String = "") async throws -> Fixture {
+        let secureStorageManager = SecureStorageManager(storage: MemorySecureStorage())
+        let preferencesManager = PreferencesManager(
+            storage: MemoryPreferencesStorage(values: [
+                .host: host, .guideHost: guide ? "192.0.2.2" : "", .streamHost: streamHost,
             ]))
-        let transport = ChannelListTransport()
-        let appViewModel = AppViewModel(
-            secureStorageManager: managers.secureStorageManager, preferencesManager: managers.preferencesManager, transport: transport)
-        // 局を引けるよう、チャンネル一覧を読んでおく
-        appViewModel.remoteViewModel.send(.loadChannels(force: false))
-        _ = await Introspector(root: appViewModel).waitUntilIdle()
-        return Fixture(bridge: RegzaAndroidApp(appViewModel: appViewModel), appViewModel: appViewModel)
+        let httpTransport = FixtureTransport(channelsJSON: Self.channelsJSON(), programsJSON: Self.programsJSON())
+        let appViewModel = AppFactory.makeLiveAppViewModel(
+            secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, transport: httpTransport)
+        if !host.isEmpty {
+            appViewModel.guideGridViewModel.send(.load)
+            _ = await Introspector(root: appViewModel).waitUntilIdle()
+        }
+        return Fixture(bridge: RegzaAndroidApp(appViewModel: appViewModel), appViewModel: appViewModel, httpTransport: httpTransport)
+    }
+
+    func makeWithStream() async throws -> Fixture {
+        try await make(streamHost: "192.0.2.30")
     }
 
     // MARK: - アプリ全体の状態
 
     @Test func startsFromTVSettingsWhenNotConfigured() async throws {
-        let fixture = try make(host: "")
+        let fixture = try await make(host: "")
         #expect(await fixture.bridge.appState(route: nil)?.isShowingSettings == true)
         #expect(await fixture.bridge.settingsState(route: nil)?.path == [.tv])
     }
@@ -106,15 +102,16 @@ struct RegzaAndroidAppTests {
     }
 
     @Test func keysAreSentToTheRemote() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         fixture.bridge.perform(RemoteAction.press(.power))
         #expect(fixture.appViewModel.remoteViewModel.state.tapCount == 1)
+        try await waitUntil { fixture.httpTransport.paths.contains("/remote/remote.htm") }
         #expect(await fixture.bridge.remoteState(route: nil) == fixture.appViewModel.remoteViewModel.state)
     }
 
     /// いま映っているものの詳細は、開いている間だけ state をそのまま渡す
     @Test func nowPlayingDetailIsPassedWhileShowing() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         #expect(await fixture.bridge.nowPlayingState(route: nil) == nil)
         fixture.bridge.perform(AppAction.showNowPlaying)
         fixture.bridge.perform(NowPlayingAction.appear)
@@ -142,7 +139,7 @@ struct RegzaAndroidAppTests {
 
     /// タブの最初の画面の state は、route を渡さずに型で引く
     @Test func tabRootStatesAreFoundByType() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         fixture.bridge.perform(AppAction.selectTab(.channels))
         #expect(await fixture.bridge.appState(route: nil)?.tab == .channels)
         #expect(await fixture.bridge.channelListState(route: nil) == fixture.appViewModel.channelListViewModel.state)
@@ -152,7 +149,7 @@ struct RegzaAndroidAppTests {
 
     /// path の画面の state は、route で引く
     @Test func opensProgramsAndDetailThenGoesBack() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         let code = Self.channelCodes[0]
         let programs = AppRoute.channelPrograms(channelCode: code)
         let detail = AppRoute.programDetail(programID: 1, channelCode: code)
@@ -174,13 +171,13 @@ struct RegzaAndroidAppTests {
 
     /// 見つからない番組の画面の state は nil
     @Test func unknownProgramHasNoState() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         #expect(await fixture.bridge.programDetailState(route: .programDetail(programID: 999, channelCode: Self.channelCodes[0])) == nil)
     }
 
     /// next は、渡した state から変わるまで待って返す (呼ぶ前に変わっていれば、すぐ返す)
     @Test func nextStateWaitsForChange() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         let before = try #require(await fixture.bridge.appState(route: nil))
         async let next = fixture.bridge.nextAppState(route: nil, after: before, waitID: 1)
         fixture.bridge.perform(AppAction.selectTab(.guide))
@@ -194,7 +191,7 @@ struct RegzaAndroidAppTests {
 
     /// Flow が終わったら、変化を待っている Swift の Task も終わり、待機を残さない
     @Test func endingStateWaitReleasesPendingTask() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         let before = try #require(await fixture.bridge.appState(route: nil))
         let next = Task { await fixture.bridge.nextAppState(route: nil, after: before, waitID: 3) }
         try await waitUntil { fixture.bridge.stateWaitCount == 1 }
@@ -207,7 +204,7 @@ struct RegzaAndroidAppTests {
 
     /// Flow の終了が swift-java の Task の開始より先に届いても、あとから始まった待機をすぐ終わらせる
     @Test func endingStateWaitBeforeItStartsIsNotLost() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         let before = try #require(await fixture.bridge.appState(route: nil))
 
         await fixture.bridge.endStateWait(4)
@@ -218,7 +215,7 @@ struct RegzaAndroidAppTests {
 
     /// 画面ごとの操作は、その型を Action にしている ViewModel に届く
     @Test func screenActionsReachTheirViewModel() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         fixture.bridge.perform(AppAction.selectTab(.channels))
         #expect(!fixture.appViewModel.channelListViewModel.isBusy)
         fixture.bridge.perform(ChannelListAction.reload)
@@ -227,7 +224,7 @@ struct RegzaAndroidAppTests {
 
     /// 戻る道の画面の操作は、いまのタブで開いている画面の ViewModel に届く
     @Test func screenActionsReachOpenedScreens() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         let code = Self.channelCodes[0]
         fixture.bridge.perform(AppAction.selectTab(.channels))
         fixture.bridge.perform(AppAction.push(.channelPrograms(channelCode: code)))
@@ -241,7 +238,7 @@ struct RegzaAndroidAppTests {
 
     /// 番組表の操作 (GuideGridAction) で日付を選ぶと、番組表の state がそのまま届く
     @Test func selectsDayWithGuideAction() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         fixture.bridge.perform(AppAction.selectTab(.guide))
         fixture.bridge.perform(GuideGridAction.load)
         try await waitUntil { (await fixture.bridge.guideGridState(route: nil)?.days.count ?? 0) > 1 }
@@ -256,7 +253,7 @@ struct RegzaAndroidAppTests {
 
     /// 検索の操作 (GuideSearchAction) で読み取った条件を外すと、検索の state がそのまま届く
     @Test func removesSearchConditionWithSearchAction() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         fixture.bridge.perform(AppAction.selectTab(.guide))
         fixture.bridge.perform(AppAction.push(.search))
         fixture.bridge.perform(GuideSearchAction.setText("明日の夜"))
@@ -271,9 +268,20 @@ struct RegzaAndroidAppTests {
 
     // MARK: - 設定
 
+    @Test func platformFactoryUsesInjectedStorageAndTransport() async throws {
+        let httpTransport = FixtureTransport(channelsJSON: Self.channelsJSON(), programsJSON: Self.programsJSON())
+        let appFactory = RegzaAndroidAppFactory(httpTransport: httpTransport)
+        let storage = MemoryStorage(["host": "192.0.2.10", "user": "user", "password": "password"])
+        let bridge = appFactory.makeApp(storage: storage)
+
+        bridge.perform(RemoteAction.press(.volumeUp))
+        try await waitUntil { httpTransport.paths.contains("/remote/remote.htm") }
+        #expect(await bridge.remoteState(route: nil)?.isConfigured == true)
+    }
+
     /// 設定の操作 (SettingsAction) を送ると、設定の state がそのまま届く
     @Test func settingsActionsReachSettings() async throws {
-        let fixture = try make()
+        let fixture = try await make()
         fixture.bridge.perform(AppAction.showSettings)
         #expect(await fixture.bridge.settingsState(route: nil)?.path == [])
 
@@ -295,8 +303,8 @@ struct RegzaAndroidAppTests {
 
     @Test func playerOpensOnlyWhenStreamIsConfigured() async throws {
         let code = Self.channelCodes[0]
-        // 見本の配信はいつも配信できないので、それで組み立てたものは開かない
-        let unconfigured = try make()
+        // 配信先が未設定なら、プレイヤーを開かない
+        let unconfigured = try await make()
         unconfigured.bridge.perform(AppAction.play(channelCode: code))
         #expect(await unconfigured.bridge.livePlayerState(route: nil) == nil)
 
@@ -311,7 +319,7 @@ struct RegzaAndroidAppTests {
         #expect(await fixture.bridge.livePlayerState(route: nil) == nil)
     }
 
-    /// 条件が満たされるまで待つ (見本の ViewModel も、読み込みは Task で進むため)
+    /// 条件が満たされるまで待つ (読み込みは Task で進むため)
     private func waitUntil(_ condition: () async -> Bool) async throws {
         for _ in 0..<200 {
             if await condition() { return }
@@ -321,17 +329,25 @@ struct RegzaAndroidAppTests {
     }
 }
 
-/// テレビのチャンネル一覧だけに答える偽の通信 (ほかは空の成功を返す)
-struct ChannelListTransport: HTTPTransport {
+/// 本番の Factory・Repository を通すための、テスト専用 HTTP 応答と送信記録。
+final class FixtureTransport: HTTPTransport, @unchecked Sendable {
+    private let channelsJSON: String
+    private let programsJSON: String
+    private let lock = NSLock()
+    private var recordedPaths: [String] = []
+    init(channelsJSON: String, programsJSON: String) {
+        self.channelsJSON = channelsJSON
+        self.programsJSON = programsJSON
+    }
+    var paths: [String] { lock.withLock { recordedPaths } }
     func send(_ request: HTTPRequest) async throws -> HTTPResponse {
+        lock.withLock { recordedPaths.append(request.url.path) }
         let body: String
-        if request.url.path == "/v2/remote/settings/channel_list" {
-            let channels = RegzaAndroidAppTests.channelCodes.enumerated().map { index, code in
-                #"{"channel":"\#(code)","channel_number":\#(11 + index * 10),"rcu_channel_number":\#(index + 1),"name":"テスト局\#(index + 1)","ex_channel_number":"DUV_\#(11 + index * 10)","show_setting":"SHOW_REPRESENT"}"#
-            }
-            body = #"{"status":0,"channel_list":[\#(channels.joined(separator: ","))]}"#
-        } else {
-            body = #"{"status":0}"#
+        switch request.url.path {
+        case "/v2/remote/settings/channel_list": body = channelsJSON
+        case "/api/programs": body = programsJSON
+        case "/remote/remote.htm": body = "0"
+        default: body = #"{"status":0}"#
         }
         return HTTPResponse(statusCode: 200, headers: [:], body: Data(body.utf8))
     }

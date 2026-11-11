@@ -1,8 +1,8 @@
 import Foundation
 import Observation
+import RegzaApp
 // 見本は組み立ての一つなので、Domain の型 (見本の Repository・エンティティ) も見せる
 @_exported import RegzaDomain
-import RegzaPresentation
 
 // テレビにも録画サーバーにもつながない、見本の Repository。
 // 開発用の見本の画面 (iOS の起動引数 -SampleData)、テスト、プレビューで使う
@@ -21,16 +21,10 @@ extension AppViewModel {
         let guideRepository = SampleGuideRepository(guideHost: guideHost, programs: programs)
         let streamRepository = SampleStreamRepository()
         let recordingRepository = SampleRecordingRepository(reservations: reservations)
-        return AppViewModel(
-            remoteViewModel: RemoteViewModel(
-                tvUseCase: TVUseCase(tvRepository: tvRepository), nowPlaying: nowPlaying.map(UseCaseModelMapper.nowPlaying)),
-            channelUseCase: ChannelUseCase(tvRepository: tvRepository, guideRepository: guideRepository),
-            guideUseCase: GuideUseCase(guideRepository: guideRepository, recordingRepository: recordingRepository),
-            recordingUseCase: RecordingUseCase(recordingRepository: recordingRepository, guideRepository: guideRepository),
-            streamUseCase: StreamUseCase(streamRepository: streamRepository, guideRepository: guideRepository),
-            setupUseCase: SetupUseCase(
-                deviceRepository: SampleDeviceRepository(), guideRepository: guideRepository, streamRepository: streamRepository)
-        )
+        return AppFactory.makeAppViewModel(
+            tvRepository: tvRepository, guideRepository: guideRepository, recordingRepository: recordingRepository,
+            streamRepository: streamRepository, deviceRepository: SampleDeviceRepository(),
+            initialNowPlaying: nowPlaying.map(UseCaseModelMapper.nowPlaying))
     }
 }
 

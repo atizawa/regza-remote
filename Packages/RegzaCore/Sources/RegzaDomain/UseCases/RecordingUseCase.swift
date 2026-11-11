@@ -1,5 +1,6 @@
 import Foundation
 
+/// @mockable
 @MainActor
 public protocol RecordingUseCaseProtocol: AnyObject {
     var reservations: [ReservationItem] { get }

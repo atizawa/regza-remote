@@ -10,7 +10,7 @@ public struct NetworkDeviceRepository: DeviceRepositoryProtocol {
     }
 
     public func devices() -> AsyncStream<DeviceData> {
-        RegzaDiscovery.devices()
+        RegzaDiscovery.devices(transport: transport)
     }
 
     public func pairing(host: String, user: String) -> any PairingSession {
@@ -18,11 +18,11 @@ public struct NetworkDeviceRepository: DeviceRepositoryProtocol {
     }
 
     public func findGuideServers() async -> [String] {
-        await MirakurunDiscovery.find()
+        await MirakurunDiscovery.find(transport: transport)
     }
 
     public func findStreamServers() async -> [String] {
-        await EPGStationDiscovery.find()
+        await EPGStationDiscovery.find(transport: transport)
     }
 
     public func isStreamServer(host: String) async -> Bool {

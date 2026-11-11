@@ -4,7 +4,7 @@ import RegzaInfrastructure
 
 /// テレビにも録画サーバーにもつながずに動かすための、見本の返事をする通信。実在の機器の情報は入れない。
 /// 本物の Repository につなぐので、返事の読み取りまでアプリと同じ処理を通る (CLI の --sample、Android の JVM のテスト)。
-/// 全体の既定の通信 (RegzaHTTP.transport) も差し替えると、外への通信は起きない
+/// Factory に渡すと、そのアプリの通信だけを見本に置き換えられる
 public struct SampleTransport: HTTPTransport {
     /// テストごとに差し替える返事 (なければ見本の返事だけ)
     public var fixture: SampleFixture

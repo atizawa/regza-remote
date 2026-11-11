@@ -1,5 +1,6 @@
 import Foundation
 
+/// @mockable
 @MainActor
 public protocol GuideUseCaseProtocol: AnyObject {
     var guideHost: String { get }

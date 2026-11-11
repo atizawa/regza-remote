@@ -2,14 +2,13 @@ import Foundation
 import Testing
 
 @testable import RegzaDomain
-@testable import RegzaSample
 
 /// TVUseCase (テレビ) がエンティティから UI の型を作るところと、手順や決まりを確かめる (通信はしない)
 @MainActor
 @Suite struct TVUseCaseTests {
     @Test func nowPlayingItemUsesDomainTexts() {
         let tvUseCase = TVUseCase(
-            tvRepository: SampleTVRepository(connection: ConnectionData(host: "192.0.2.1"), channels: [], nowPlaying: nil))
+            tvRepository: TVRepositoryProtocolMock(connection: ConnectionData(host: "192.0.2.1"), channels: [], nowPlaying: nil))
         let recorded = tvUseCase.item(
             NowPlayingData(
                 kind: .recorded, channelName: "テスト局１", title: "見本の録画", position: 60, duration: 120, isAdvancing: true
@@ -28,16 +27,22 @@ import Testing
     }
 
     @Test func startOverJumpsAfterTuning() async throws {
-        let repository = RecordingTVRepository()
+        let repository = TVRepositoryProtocolMock()
+        var events: [String] = []
+        repository.sendHandler = { events.append("key \($0)") }
+        repository.tuneHandler = {
+            events.append("tune \($0.code)")
+            return nil
+        }
         let tvUseCase = TVUseCase(tvRepository: repository)
-        let channel = try #require(UseCaseFixtures.channels().first)
+        let channel = try #require(TestData.channels().first)
 
         repository.channels = [channel]
         try await tvUseCase.startOver()
-        #expect(repository.events == ["key jumpToStart"])
+        #expect(events == ["key jumpToStart"])
 
         // 切り替えた直後は「始めにジャンプ」が効かないので、選局のあとに送る
         _ = try await tvUseCase.tuneAndStartOver(UseCaseModelMapper.channel(channel))
-        #expect(repository.events == ["key jumpToStart", "tune JP-G00000001", "key jumpToStart"])
+        #expect(events == ["key jumpToStart", "tune JP-G00000001", "key jumpToStart"])
     }
 }

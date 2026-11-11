@@ -2,6 +2,7 @@ import Foundation
 
 /// 録画サーバー EPGStation のライブ配信。EPGStation は配信を自動では止めないので、
 /// このアプリが頼んだ配信を覚えておき、止められなかった配信はあとで止める
+/// @mockable
 @MainActor
 public protocol StreamRepositoryProtocol: AnyObject {
     /// EPGStation のアドレス。未設定なら空

@@ -1,6 +1,7 @@
 import Foundation
 
 /// テレビ (REGZA) とのやり取り。接続・チャンネル・タイムシフトマシンの設定は、読み込んだものを持っておく
+/// @mockable
 @MainActor
 public protocol TVRepositoryProtocol: AnyObject {
     /// 保存してある接続

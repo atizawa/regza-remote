@@ -5,21 +5,20 @@ import Testing
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 @testable import RegzaPresentation
-@testable import RegzaSample
 
 /// リモコンの ViewModel を、偽の通信と保存先で確かめる (iOS と Android で同じふるまいになることの確認)
 @MainActor
 @Suite struct RemoteViewModelTests {
-    func makeModel(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse) -> (RemoteViewModel, FakeTransport, MemoryStore) {
-        let transport = FakeTransport(respond)
-        let live = LiveModels(transport: transport)
-        return (live.remoteViewModel, transport, live.store)
+    func makeModel(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse) -> (RemoteViewModel, FakeHTTPTransport, TestStorage) {
+        let transport = FakeHTTPTransport(respond)
+        let live = HTTPTestEnvironment(transport: transport)
+        return (live.appViewModel.remoteViewModel, transport, live.store)
     }
 
     @Test func tuneShowsChannelRightAway() async throws {
         let (remoteViewModel, transport, _) = makeModel { request in
             request.url.path.hasSuffix("channel_list")
-                ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
+                ? FakeHTTPTransport.response(200, TestData.channelListJSON) : FakeHTTPTransport.response(200, #"{"status":0}"#)
         }
         try await remoteViewModel.loadChannels()
         let channel = try #require(remoteViewModel.channels.last)
@@ -40,7 +39,7 @@ import Testing
     @Test func pressingKeyShowsItUntilTuning() async throws {
         let (remoteViewModel, _, _) = makeModel { request in
             request.url.path.hasSuffix("channel_list")
-                ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
+                ? FakeHTTPTransport.response(200, TestData.channelListJSON) : FakeHTTPTransport.response(200, #"{"status":0}"#)
         }
         // 画面のない入口 (Siri など) は、送った操作が終わるまで待てる
         await remoteViewModel.sendAndWait(.press(.volumeUp))
@@ -68,7 +67,7 @@ import Testing
         let (remoteViewModel, _, _) = makeModel { request in
             if failing.value { return HTTPResponse(statusCode: 500, headers: [:], body: Data()) }
             return request.url.path.hasSuffix("channel_list")
-                ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
+                ? FakeHTTPTransport.response(200, TestData.channelListJSON) : FakeHTTPTransport.response(200, #"{"status":0}"#)
         }
         try await remoteViewModel.loadChannels()
         let channel = try #require(remoteViewModel.channels.first)
@@ -83,15 +82,15 @@ import Testing
     }
 
     @Test func savingAnotherTVForgetsWhatWasLoaded() async throws {
-        let live = LiveModels(
-            transport: FakeTransport { request in
+        let live = HTTPTestEnvironment(
+            transport: FakeHTTPTransport { request in
                 switch request.url.path {
-                case "/v2/remote/settings/channel_list": ViewModelFixtures.ok(ViewModelFixtures.channelList)
-                case "/v2/remote/pvr/reserves/list": ViewModelFixtures.ok(ViewModelFixtures.reservationList)
+                case "/v2/remote/settings/channel_list": FakeHTTPTransport.response(200, TestData.channelListJSON)
+                case "/v2/remote/pvr/reserves/list": FakeHTTPTransport.response(200, TestData.reservationListJSON)
                 default: HTTPResponse(statusCode: 500, headers: [:], body: Data())
                 }
             })
-        let (remoteViewModel, store, recordingUseCase) = (live.remoteViewModel, live.store, live.recordingUseCase)
+        let (remoteViewModel, store, recordingUseCase) = (live.appViewModel.remoteViewModel, live.store, live.appViewModel.recordingUseCase)
         try await remoteViewModel.loadChannels()
         try await recordingUseCase.loadReservations()
         #expect(remoteViewModel.channels.count == 2)
@@ -109,16 +108,18 @@ import Testing
     }
 
     @Test func streamNeedsGuide() {
-        let live = LiveModels(transport: FakeTransport { _ in ViewModelFixtures.ok("") })
-        live.streamUseCase.saveStreamHost(" 192.0.2.30 ")
+        let live = HTTPTestEnvironment(transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(200, "") })
+        live.appViewModel.streamUseCase.saveStreamHost(" 192.0.2.30 ")
         #expect(live.store.streamHost == "192.0.2.30")
         // EPGStation は Mirakurun から放送を受け取るので、番組表がないと使わない
-        #expect(!live.streamUseCase.canStream)
+        #expect(!live.appViewModel.streamUseCase.canStream)
     }
 
     @Test func sampleModeDoesNotTalkToTV() async {
-        let remoteViewModel = AppViewModel.sample(connection: ConnectionData(host: "192.0.2.1"), nowPlaying: nil, channels: [])
-            .remoteViewModel
+        let remoteViewModel = ViewModelFixtures().makeApp(
+            connection: ConnectionData(host: "192.0.2.1"), nowPlaying: nil, channels: [], isSample: true
+        )
+        .remoteViewModel
         remoteViewModel.send(.press(.power))
         try? await remoteViewModel.loadChannels(force: true)
         #expect(remoteViewModel.state.tapCount == 1)
@@ -127,7 +128,8 @@ import Testing
 
     @Test func introspectionPressesKeys() async throws {
         let (remoteViewModel, transport, _) = makeModel { request in
-            request.url.path == "/remote/remote.htm" ? ViewModelFixtures.ok("0") : HTTPResponse(statusCode: 500, headers: [:], body: Data())
+            request.url.path == "/remote/remote.htm"
+                ? FakeHTTPTransport.response(200, "0") : HTTPResponse(statusCode: 500, headers: [:], body: Data())
         }
         let introspector = Introspector(root: remoteViewModel)
         try introspector.perform("remote", "press", ["key": .string("power")])

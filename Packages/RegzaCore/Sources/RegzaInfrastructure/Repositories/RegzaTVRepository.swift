@@ -13,6 +13,8 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     @ObservationIgnored private let regzaAPIClient: RegzaAPIClient
     @ObservationIgnored private let connectionState: RegzaConnectionState
 
+    @ObservationIgnored private let locateTV: @Sendable (ConnectionData) async -> String?
+
     public var connection: ConnectionData { connectionState.connection }
     public private(set) var channels: [ChannelData] = []
     /// 読み込んだ設定と、そのときの接続。接続が変わったら使わない
@@ -22,9 +24,11 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     public init(
         secureStorageManager: SecureStorageManager, preferencesManager: PreferencesManager, regzaAPIClient: RegzaAPIClient,
         connectionState: RegzaConnectionState,
-        regzaRemote: RegzaRemote? = nil
+        regzaRemote: RegzaRemote? = nil,
+        locateTV: @escaping @Sendable (ConnectionData) async -> String? = { await RegzaDiscovery.locate($0) }
     ) {
         if let regzaRemote { precondition(regzaRemote.regzaAPIClient === regzaAPIClient, "remote と Repository は同じ APIClient を共有してください") }
+        self.locateTV = locateTV
         self.secureStorageManager = secureStorageManager
         self.preferencesManager = preferencesManager
         self.regzaAPIClient = regzaAPIClient
@@ -96,7 +100,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
 
     public func locateMovedTV() async -> ConnectionData? {
         let original = connection
-        guard let host = await RegzaDiscovery.locate(original),
+        guard let host = await locateTV(original),
             // 探している間に設定画面で接続先が変えられていたら、そちらを優先する
             !Task.isCancelled, connection == original
         else { return nil }
