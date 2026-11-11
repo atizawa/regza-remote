@@ -43,7 +43,7 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     public func loadGuidePrograms() async {
         guard let guide = guideClient() else { return }
         if let guideProgramsLoadedAt, Date().timeIntervalSince(guideProgramsLoadedAt) < 30 * 60 { return }
-        guard let programs = try? await guide.allPrograms() else { return }
+        guard let programs = try? await guide.request(MirakurunAllProgramsRequest()) else { return }
         guard guide === client else { return }
         guidePrograms = Self.byChannel(programs)
         guideProgramsLoadedAt = Date()
@@ -56,8 +56,10 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     public func programs(for channel: RegzaChannel) async throws(RegzaError) -> [MirakurunProgram] {
         guard let guide = guideClient() else { throw .notConfigured }
         do {
+            guard let ids = BroadcastID.ids(channelCode: channel.code) else { return [] }
             let now = Date()
-            let programs = try await guide.programs(channelCode: channel.code).filter { $0.end > now }
+            let programs = try await guide.request(MirakurunChannelProgramsRequest(networkID: ids.networkId, serviceID: ids.serviceId))
+                .filter { $0.end > now }
             guard guide === client else { throw RegzaError.notConfigured }
             channelPrograms[channel.code] = programs
             return programs

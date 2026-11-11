@@ -37,7 +37,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         guard force || channels.isEmpty else { return }
         let revision = connectionState.revision
         do {
-            let channels = try await client.channels()
+            let channels = try await client.request(RegzaChannelsRequest())
             guard revision == connectionState.revision else { return }
             self.channels = channels
         } catch {
@@ -48,7 +48,9 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     public func loadTimeshiftSettings() async {
         guard timeshiftSettings == nil else { return }
         let revision = connectionState.revision
-        guard let settings = try? await client.timeshiftSettings(), revision == connectionState.revision else { return }
+        guard let settings = try? await client.request(RegzaTimeshiftSettingsRequest()), revision == connectionState.revision else {
+            return
+        }
         loadedTimeshift = (settings, revision)
     }
 

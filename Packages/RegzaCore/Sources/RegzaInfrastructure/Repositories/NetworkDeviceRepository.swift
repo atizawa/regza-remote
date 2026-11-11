@@ -18,15 +18,15 @@ public struct NetworkDeviceRepository: DeviceRepositoryProtocol {
     }
 
     public func findGuideServers() async -> [String] {
-        await MirakurunAPIClient.find()
+        await MirakurunDiscovery.find()
     }
 
     public func findStreamServers() async -> [String] {
-        await EPGStationAPIClient.find()
+        await EPGStationDiscovery.find()
     }
 
     public func isStreamServer(host: String) async -> Bool {
-        await EPGStationAPIClient(host: host, timeout: 3, transport: transport).isAvailable()
+        (try? await EPGStationAPIClient(host: host, timeout: 3, transport: transport).request(EPGStationVersionRequest())) ?? false
     }
 }
 

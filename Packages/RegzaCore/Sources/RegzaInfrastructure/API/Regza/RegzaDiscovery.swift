@@ -9,23 +9,6 @@ import Glibc
 import Android
 #endif
 
-/// `GET /public/feature` (認証不要) の応答。
-struct RegzaFeature: Decodable {
-    let status: Int
-    let deviceType: String?
-    let model: String?
-    let size: String?
-    let ipcFeature: [String]?
-
-    enum CodingKeys: String, CodingKey {
-        case status, model, size
-        case deviceType = "device_type"
-        case ipcFeature = "ipc_feature"
-    }
-
-    var isTV: Bool { status == 0 && deviceType == "DTV" }
-}
-
 /// 同じネットワーク内のアドレスに `/public/feature` を問い合わせて REGZA を探す。
 ///
 /// SSDP のマルチキャストは iOS では特別な entitlement が必要なので使わない。
@@ -78,14 +61,14 @@ public enum RegzaDiscovery {
     private static func authenticates(_ connection: RegzaConnection) async -> Bool {
         let client = RegzaAPIClient(connection: connection)
         do {
-            _ = try await client.playStatus()
+            _ = try await client.request(RegzaPlayStatusRequest())
             return true
         } catch RegzaError.commandRejected {
             // 認証は通っている
             return true
         } catch RegzaError.httpStatus(404), RegzaError.unsupported {
             // v2 API が無い機種は旧 API で確かめる
-            return (try? await client.status()) != nil
+            return (try? await client.request(RegzaLegacyStatusRequest())) != nil
         } catch {
             return false
         }
@@ -96,12 +79,17 @@ public enum RegzaDiscovery {
         host: String, timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport
     ) async -> RegzaDevice? {
         let client = RegzaAPIClient(connection: RegzaConnection(host: host), timeout: timeout, transport: transport)
-        guard let data = try? await client.featureData() else { return nil }
-        return device(host: host, featureJSON: data)
+        guard let feature = try? await client.request(RegzaFeatureRequest()) else { return nil }
+        return device(host: host, feature: feature)
     }
 
     static func device(host: String, featureJSON data: Data) -> RegzaDevice? {
-        guard let feature = try? JSONDecoder().decode(RegzaFeature.self, from: data), feature.isTV else { return nil }
+        guard let feature = try? JSONDecoder().decode(RegzaFeatureResponse.self, from: data) else { return nil }
+        return device(host: host, feature: feature)
+    }
+
+    private static func device(host: String, feature: RegzaFeatureResponse) -> RegzaDevice? {
+        guard feature.isTV else { return nil }
         return RegzaDevice(
             host: host,
             model: feature.model ?? "",

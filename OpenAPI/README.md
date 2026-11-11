@@ -43,7 +43,13 @@ iOS・Android・macOS・Linux は同じ生成クライアントを使う。
 Mirakurun の生成 DTO は Domain 型に直接変換し、番組表全体の JSON 再エンコードはしない。
 
 Repository が使う窓口の名前は `RegzaAPIClient`・`MirakurunAPIClient`・`EPGStationAPIClient` に揃える。
-APIClient は API の操作をまとめ、Repository は Domain への変換・キャッシュ・保存を担当する。
+APIClient は接続設定・認証状態と共通の実行窓口 `request(_:)` を持つ。
+Repository などの呼び出し元は `client.request(RegzaChannelsRequest())` のように Request を渡す。
+操作ごとのメソッドは APIClient に追加しない。サーバー探索と配信準備の待機は専用の型に分ける。
+Request は対応する Response 型と OpenAPI の型付き操作を定義し、Response は結果判定と Domain 型への変換を担当する。
+同じ応答形式の操作は Response を共有する。本文を使わない操作には NoContentAPIResponse を使う。
+パス・HTTP メソッド・シリアライズは OpenAPI の生成コードが担当し、Request 側に重ねて定義しない。
+Repository は取得結果のキャッシュ・保存とアプリ用の状態管理を担当する。
 APIClient は RegzaApp の組み立てで作り、Repository の initializer に注入する。
 Repository は別の Repository を保持しない。番組表が設定済みかという配信条件は StreamUseCase が判断する。
 テレビ用と録画用 Repository は、同じ RegzaAPIClient と RegzaConnectionState を共有する。
@@ -78,16 +84,32 @@ Infrastructure の配置:
 API/
   Regza/
     RegzaAPIClient.swift
-    RegzaAPIClient+Generated.swift
+    RegzaAPIRequest.swift
+    Requests/
+    Responses/
     RegzaConnectionState.swift
     RegzaDiscovery.swift
     RegzaPairing.swift
     RegzaRemote.swift
     Models/
     Middleware/
-  Mirakurun/MirakurunAPIClient.swift
-  EPGStation/EPGStationAPIClient.swift
+  Mirakurun/
+    MirakurunAPIClient.swift
+    MirakurunDiscovery.swift
+    MirakurunAPIRequest.swift
+    Requests/
+    Responses/
+  EPGStation/
+    EPGStationAPIClient.swift
+    EPGStationDiscovery.swift
+    EPGStationStreaming.swift
+    EPGStationAPIRequest.swift
+    Requests/
+    Responses/
 Network/
+  APIRequest.swift
+  APIResponse.swift
+  NoContentAPIResponse.swift
   OpenAPIHTTPTransport.swift
   OpenAPIMiddleware.swift
   HTTPTransport.swift

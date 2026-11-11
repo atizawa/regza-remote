@@ -34,20 +34,21 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
     }
 
     public func isPlayable(channelCode: String) -> Bool {
-        EPGStationAPIClient.channelID(channelCode: channelCode) != nil
+        BroadcastID.ids(channelCode: channelCode) != nil
     }
 
     public func startLiveStream(channelCode: String) async throws(RegzaError) -> Int {
         guard let server = streamServer() else { throw .notConfigured }
-        guard let channelID = EPGStationAPIClient.channelID(channelCode: channelCode) else { throw .unsupported }
+        guard let ids = BroadcastID.ids(channelCode: channelCode) else { throw .unsupported }
+        let channelID = ids.networkId * 100_000 + ids.serviceId
         let streamID: Int
         do {
-            streamID = try await server.startLiveStream(channelID: channelID)
+            streamID = try await server.request(EPGStationStartStreamRequest(channelID: channelID, mode: 0))
         } catch {
             throw RegzaError(error)
         }
         guard server === client else {
-            try? await server.stop(streamID: streamID)
+            try? await server.request(EPGStationStopStreamRequest(streamID: streamID))
             throw .notConfigured
         }
         if !store.ownStreamIDs.contains(streamID) { store.ownStreamIDs.append(streamID) }
@@ -57,21 +58,23 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
     public func waitUntilReady(streamID: Int) async throws(RegzaError) -> URL {
         guard let server = streamServer() else { throw .notConfigured }
         do {
-            try await server.waitUntilReady(streamID: streamID)
+            try await EPGStationStreaming(client: server).waitUntilReady(streamID: streamID)
         } catch {
             throw RegzaError(error)
         }
         guard server === client else { throw .notConfigured }
-        guard let url = server.playlistURL(streamID: streamID) else { throw .invalidHost }
+        guard let url = EPGStationStreaming(client: server).playlistURL(streamID: streamID) else { throw .invalidHost }
         return url
     }
 
     public func keep(streamID: Int) async {
-        try? await streamServer()?.keep(streamID: streamID)
+        try? await streamServer()?.request(EPGStationKeepStreamRequest(streamID: streamID))
     }
 
     public func stop(streamID: Int) async {
-        guard let server = streamServer(), (try? await server.stop(streamID: streamID)) != nil else { return }
+        guard let server = streamServer(), (try? await server.request(EPGStationStopStreamRequest(streamID: streamID))) != nil else {
+            return
+        }
         guard server === client else { return }
         store.ownStreamIDs.removeAll { $0 == streamID }
     }
@@ -79,7 +82,9 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
     public func cleanUp() async {
         guard let server = streamServer() else { return }
         for id in store.ownStreamIDs {
-            do { try await server.stop(streamID: id) } catch RegzaError.httpStatus(404) {} catch { continue }
+            do { try await server.request(EPGStationStopStreamRequest(streamID: id)) } catch RegzaError.httpStatus(404) {} catch {
+                continue
+            }
             guard server === client else { return }
             store.ownStreamIDs.removeAll { $0 == id }
         }
@@ -90,7 +95,7 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
         for id in store.ownStreamIDs {
             // 止める指示が届いたか、もう無い (404) ときだけ忘れる
             do {
-                try await server.stop(streamID: id)
+                try await server.request(EPGStationStopStreamRequest(streamID: id))
                 store.ownStreamIDs.removeAll { $0 == id }
             } catch RegzaError.httpStatus(404) {
                 store.ownStreamIDs.removeAll { $0 == id }
@@ -99,10 +104,10 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
     }
 
     public func stopStalled() async {
-        guard let server = streamServer(), let streams = try? await server.streams() else { return }
+        guard let server = streamServer(), let streams = try? await server.request(EPGStationStreamsRequest()) else { return }
         guard server === client else { return }
         for stream in streams where !stream.isEnabled {
-            try? await server.stop(streamID: stream.id)
+            try? await server.request(EPGStationStopStreamRequest(streamID: stream.id))
             guard server === client else { return }
             store.ownStreamIDs.removeAll { $0 == stream.id }
         }

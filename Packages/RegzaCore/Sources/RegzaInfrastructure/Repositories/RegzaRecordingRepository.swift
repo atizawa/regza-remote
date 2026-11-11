@@ -24,7 +24,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
         let revision = connectionState.revision
         let list: [RegzaReservation]
         do {
-            list = try await client.reservations()
+            list = try await client.request(RegzaReservationsRequest())
         } catch {
             throw RegzaError(error)
         }
@@ -43,13 +43,14 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
     public func reserve(_ program: MirakurunProgram, series: Bool) async throws(RegzaError) {
         let revision = connectionState.revision
         do {
-            try await client.reserve(
-                channel: program.channelCode,
-                epgContentID: program.epgContentID,
-                start: program.start,
-                duration: Int(program.end.timeIntervalSince(program.start)),
-                series: series
-            )
+            try await client.request(
+                RegzaReserveRequest(
+                    channel: program.channelCode,
+                    epgContentID: program.epgContentID,
+                    start: program.start,
+                    duration: Int(program.end.timeIntervalSince(program.start)),
+                    series: series
+                ))
         } catch {
             throw RegzaError(error)
         }
@@ -60,7 +61,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
     public func cancel(_ reservation: RegzaReservation) async throws(RegzaError) {
         let revision = connectionState.revision
         do {
-            try await client.cancelReservation(id: reservation.id)
+            try await client.request(RegzaCancelReservationRequest(id: reservation.id))
         } catch {
             throw RegzaError(error)
         }

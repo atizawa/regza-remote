@@ -11,14 +11,7 @@ public actor RegzaPairing {
     public nonisolated let host: String
     public nonisolated let user: String
     private let client: RegzaAPIClient
-    private var challenge: Challenge?
-
-    struct Challenge: Decodable, Equatable {
-        let status: Int
-        /// 16 進文字列
-        let password: String?
-        let salt: String?
-    }
+    private var challenge: RegzaPairingChallengeResponse?
 
     /// - Parameter user: テレビに登録するユーザー ID。MAC アドレス形式 (`AA-BB-CC-DD-EE-FF`)
     public init(host: String, user: String = PairingUserID.make(), transport: any HTTPTransport = RegzaHTTP.transport) {
@@ -29,12 +22,7 @@ public actor RegzaPairing {
 
     /// テレビに PIN を表示させる
     public func start() async throws {
-        let data = try await client.startPairing(user: user)
-        guard let challenge = try? JSONDecoder().decode(Challenge.self, from: data) else {
-            throw RegzaError.unsupported
-        }
-        guard challenge.status == 0 else { throw RegzaError.commandRejected(String(challenge.status)) }
-        self.challenge = challenge
+        challenge = try await client.request(RegzaStartPairingRequest(user: user))
     }
 
     /// PIN で登録を確定し、保存すべき接続情報を返す
@@ -47,14 +35,11 @@ public actor RegzaPairing {
         }
         let connection = RegzaConnection(host: host, user: user, password: password)
         await client.update(connection: connection)
-        let data: Data
         do {
-            data = try await client.confirmPairing()
+            try await client.request(RegzaConfirmPairingRequest())
         } catch RegzaError.unauthorized {
             throw RegzaError.invalidPIN
         }
-        let status = (try? JSONDecoder().decode(Challenge.self, from: data))?.status
-        guard status == 0 else { throw RegzaError.commandRejected(status.map(String.init) ?? "?") }
         return connection
     }
 
@@ -62,7 +47,7 @@ public actor RegzaPairing {
     public func cancel() async {
         guard challenge != nil else { return }
         challenge = nil
-        try? await client.cancelPairing(user: user)
+        try? await client.request(RegzaCancelPairingRequest(user: user))
     }
 
     /// 鍵は PBKDF2-HMAC-SHA1 (PIN, salt, 1331 回) の先頭 16 バイト、AES-128-CBC (IV はゼロ) で復号する

@@ -73,7 +73,7 @@ public actor RegzaRemote {
     }
 
     public func send(_ key: RegzaKey) async throws {
-        try await client.send(key)
+        try await client.request(RegzaSendKeyRequest(key: key))
         lastCommand = key
         needsPlayStatus = true
         if key.mayStartContentSwitch {
@@ -82,7 +82,7 @@ public actor RegzaRemote {
     }
 
     public func tune(to channel: RegzaChannel) async throws {
-        try await client.tune(to: channel.code)
+        try await client.request(RegzaTuneRequest(code: channel.code))
         lastCommand = nil
         needsPlayStatus = true
         // 映像が切り替わるので、キーと同じく落ち着くまで play/status は問い合わせない
@@ -96,7 +96,7 @@ public actor RegzaRemote {
     }
 
     public func seek(to seconds: Int) async throws {
-        try await client.seek(to: seconds)
+        try await client.request(RegzaSeekRequest(seconds: seconds))
     }
 
     /// 視聴状況を取得して更新する。
@@ -118,7 +118,7 @@ public actor RegzaRemote {
         // v2 API で一度取れてからは、旧 API で見張って play/status を必要なときだけにする
         guard supportsPlayStatus == true, let current = nowPlaying else { return try await fetch() }
 
-        let status = try await client.status()
+        let status = try await client.request(RegzaLegacyStatusRequest())
         let probe = Probe(status)
         let previous = lastProbe
         lastProbe = probe
@@ -172,7 +172,7 @@ public actor RegzaRemote {
         let updated: RegzaNowPlaying
         if supportsPlayStatus != false {
             do {
-                let status = try await client.playStatus()
+                let status = try await client.request(RegzaPlayStatusRequest())
                 supportsPlayStatus = true
                 lastPlayStatusAt = Date()
                 needsPlayStatus = false
@@ -216,7 +216,7 @@ public actor RegzaRemote {
             return cached.program
         }
         // 番組表が取れなくても視聴状況はそのまま返す
-        let program = try? await guide.program(id: id)
+        let program = try? await guide.request(MirakurunProgramRequest(id: id))
         // 今と次の番組だけ覚えておけば足りるので、増えすぎたら捨てる
         if programCache.count > 8 { programCache = [:] }
         programCache[id] = (program, Date())
@@ -224,6 +224,6 @@ public actor RegzaRemote {
     }
 
     private func legacyStatus() async throws -> RegzaNowPlaying {
-        RegzaNowPlaying(status: try await client.status(), previous: nowPlaying)
+        RegzaNowPlaying(status: try await client.request(RegzaLegacyStatusRequest()), previous: nowPlaying)
     }
 }
