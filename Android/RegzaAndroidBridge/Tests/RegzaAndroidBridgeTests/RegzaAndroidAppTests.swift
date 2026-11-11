@@ -32,15 +32,15 @@ struct RegzaAndroidAppTests {
     /// 窓口と、その中の ViewModel
     struct Fixture {
         let bridge: RegzaAndroidApp
-        let app: AppViewModel
+        let appViewModel: AppViewModel
     }
 
     func make(host: String = "192.0.2.1", guide: Bool = true) throws -> Fixture {
-        let app = AppViewModel.sample(
+        let appViewModel = AppViewModel.sample(
             connection: ConnectionData(host: host), nowPlaying: nil, channels: try Self.channels(),
             guideHost: guide ? "192.0.2.2" : "", programs: guide ? try Self.programs() : []
         )
-        return Fixture(bridge: RegzaAndroidApp(app: app), app: app)
+        return Fixture(bridge: RegzaAndroidApp(appViewModel: appViewModel), appViewModel: appViewModel)
     }
 
     /// 本物の Repository を偽の通信でつなぎ、ライブ視聴 (EPGStation) も設定してあるものを組み立てる (配信は頼まない)
@@ -50,11 +50,12 @@ struct RegzaAndroidAppTests {
                 AndroidStorageKey.host: "192.0.2.1", AndroidStorageKey.guideHost: "192.0.2.2", AndroidStorageKey.streamHost: "192.0.2.30",
             ]))
         let transport = ChannelListTransport()
-        let app = AppViewModel(secureStorage: managers.secureStorage, preferences: managers.preferences, transport: transport)
+        let appViewModel = AppViewModel(
+            secureStorageManager: managers.secureStorageManager, preferencesManager: managers.preferencesManager, transport: transport)
         // 局を引けるよう、チャンネル一覧を読んでおく
-        app.remote.send(.loadChannels(force: false))
-        _ = await Introspector(root: app).waitUntilIdle()
-        return Fixture(bridge: RegzaAndroidApp(app: app), app: app)
+        appViewModel.remoteViewModel.send(.loadChannels(force: false))
+        _ = await Introspector(root: appViewModel).waitUntilIdle()
+        return Fixture(bridge: RegzaAndroidApp(appViewModel: appViewModel), appViewModel: appViewModel)
     }
 
     // MARK: - アプリ全体の状態
@@ -75,28 +76,29 @@ struct RegzaAndroidAppTests {
         ])
         let managers = makeStorageManagers(storage)
         #expect(
-            RegzaTVRepository.loadConnection(secureStorage: managers.secureStorage, preferences: managers.preferences)
+            RegzaTVRepository.loadConnection(
+                secureStorageManager: managers.secureStorageManager, preferencesManager: managers.preferencesManager)
                 == ConnectionData(host: "192.0.2.1", user: "user", password: "secret"))
-        #expect(managers.preferences.value(forKey: .guideHost) == "192.0.2.2")
-        #expect(managers.preferences.value(forKey: .streamHost) == nil)
-        #expect(managers.preferences.integers(forKey: .ownStreamIDs) == [1, 2])
-        #expect(!managers.secureStorage.value(forKey: .pairingUserID, orCreate: PairingUserID.make).isEmpty)
+        #expect(managers.preferencesManager.value(forKey: .guideHost) == "192.0.2.2")
+        #expect(managers.preferencesManager.value(forKey: .streamHost) == nil)
+        #expect(managers.preferencesManager.integers(forKey: .ownStreamIDs) == [1, 2])
+        #expect(!managers.secureStorageManager.value(forKey: .pairingUserID, orCreate: PairingUserID.make).isEmpty)
         try await waitUntil { storage.values[AndroidStorageKey.pairingUserID] != nil }
         // 作った ID は次に開いたときも同じ
         #expect(
-            makeStorageManagers(storage).secureStorage.value(forKey: .pairingUserID, orCreate: PairingUserID.make)
-                == managers.secureStorage.value(forKey: .pairingUserID, orCreate: PairingUserID.make))
+            makeStorageManagers(storage).secureStorageManager.value(forKey: .pairingUserID, orCreate: PairingUserID.make)
+                == managers.secureStorageManager.value(forKey: .pairingUserID, orCreate: PairingUserID.make))
     }
 
     /// 変わった値は、メインスレッドで Kotlin の保存先に書く
     @Test func storeWritesChangedValues() async throws {
         let storage = MemoryStorage([:])
         let managers = makeStorageManagers(storage)
-        managers.preferences.setValue("192.0.2.1", forKey: .host)
-        managers.preferences.setValue("user", forKey: .user)
-        managers.secureStorage.setValue("secret", forKey: .password)
-        managers.preferences.setValue("192.0.2.30", forKey: .streamHost)
-        managers.preferences.setIntegers([3, 4], forKey: .ownStreamIDs)
+        managers.preferencesManager.setValue("192.0.2.1", forKey: .host)
+        managers.preferencesManager.setValue("user", forKey: .user)
+        managers.secureStorageManager.setValue("secret", forKey: .password)
+        managers.preferencesManager.setValue("192.0.2.30", forKey: .streamHost)
+        managers.preferencesManager.setIntegers([3, 4], forKey: .ownStreamIDs)
         try await waitUntil { storage.values[AndroidStorageKey.ownStreamIDs] == "3,4" }
         #expect(storage.values[AndroidStorageKey.host] == "192.0.2.1")
         #expect(storage.values[AndroidStorageKey.password] == "secret")
@@ -106,8 +108,8 @@ struct RegzaAndroidAppTests {
     @Test func keysAreSentToTheRemote() async throws {
         let fixture = try make()
         fixture.bridge.perform(RemoteAction.press(.power))
-        #expect(fixture.app.remote.state.tapCount == 1)
-        #expect(await fixture.bridge.remoteState(route: nil) == fixture.app.remote.state)
+        #expect(fixture.appViewModel.remoteViewModel.state.tapCount == 1)
+        #expect(await fixture.bridge.remoteState(route: nil) == fixture.appViewModel.remoteViewModel.state)
     }
 
     /// いま映っているものの詳細は、開いている間だけ state をそのまま渡す
@@ -116,7 +118,7 @@ struct RegzaAndroidAppTests {
         #expect(await fixture.bridge.nowPlayingState(route: nil) == nil)
         fixture.bridge.perform(AppAction.showNowPlaying)
         fixture.bridge.perform(NowPlayingAction.appear)
-        #expect(await fixture.bridge.nowPlayingState(route: nil) == fixture.app.nowPlaying.state)
+        #expect(await fixture.bridge.nowPlayingState(route: nil) == fixture.appViewModel.nowPlayingViewModel.state)
         fixture.bridge.perform(AppAction.closeNowPlaying)
         #expect(await fixture.bridge.nowPlayingState(route: nil) == nil)
     }
@@ -143,8 +145,8 @@ struct RegzaAndroidAppTests {
         let fixture = try make()
         fixture.bridge.perform(AppAction.selectTab(.channels))
         #expect(await fixture.bridge.appState(route: nil)?.tab == .channels)
-        #expect(await fixture.bridge.channelListState(route: nil) == fixture.app.channelList.state)
-        #expect(await fixture.bridge.reservationListState(route: nil) == fixture.app.reservationList.state)
+        #expect(await fixture.bridge.channelListState(route: nil) == fixture.appViewModel.channelListViewModel.state)
+        #expect(await fixture.bridge.reservationListState(route: nil) == fixture.appViewModel.reservationListViewModel.state)
         #expect(await fixture.bridge.guideGridState(route: nil)?.hasGuide == true)
     }
 
@@ -218,9 +220,9 @@ struct RegzaAndroidAppTests {
     @Test func screenActionsReachTheirViewModel() async throws {
         let fixture = try make()
         fixture.bridge.perform(AppAction.selectTab(.channels))
-        #expect(!fixture.app.channelList.isBusy)
+        #expect(!fixture.appViewModel.channelListViewModel.isBusy)
         fixture.bridge.perform(ChannelListAction.reload)
-        #expect(fixture.app.channelList.isBusy)
+        #expect(fixture.appViewModel.channelListViewModel.isBusy)
     }
 
     /// 戻る道の画面の操作は、いまのタブで開いている画面の ViewModel に届く
@@ -234,7 +236,7 @@ struct RegzaAndroidAppTests {
 
         fixture.bridge.perform(ProgramListAction.appear)
         try await waitUntil { await fixture.bridge.programListState(route: route)?.days != nil }
-        #expect(await fixture.bridge.programListState(route: route) == fixture.app.programList(channelCode: code)?.state)
+        #expect(await fixture.bridge.programListState(route: route) == fixture.appViewModel.programList(channelCode: code)?.state)
     }
 
     /// 番組表の操作 (GuideGridAction) で日付を選ぶと、番組表の state がそのまま届く
@@ -247,7 +249,7 @@ struct RegzaAndroidAppTests {
         let day = try #require(await fixture.bridge.guideGridState(route: nil)?.days[1])
         fixture.bridge.perform(GuideGridAction.selectDay(day.date))
         let guide = try #require(await fixture.bridge.guideGridState(route: nil))
-        #expect(guide == fixture.app.guideGrid.state)
+        #expect(guide == fixture.appViewModel.guideGridViewModel.state)
         #expect(guide.selectedDayIndex == 1)
         #expect(!guide.isToday)
     }
@@ -264,7 +266,7 @@ struct RegzaAndroidAppTests {
         fixture.bridge.perform(GuideSearchAction.removeCondition(before.conditions[0].condition))
         let after = try #require(await fixture.bridge.guideSearchState(route: .search))
         #expect(after.conditions == Array(before.conditions.dropFirst()))
-        #expect(after == fixture.app.guideGrid.search.state)
+        #expect(after == fixture.appViewModel.guideGridViewModel.guideSearchViewModel.state)
     }
 
     // MARK: - 設定
@@ -280,7 +282,7 @@ struct RegzaAndroidAppTests {
         let setup = try #require(await fixture.bridge.settingsState(route: nil))
         #expect(setup.path == [.stream])
         #expect(setup.servers.stream.host == "192.0.2.30")
-        #expect(setup == fixture.app.settings?.state)
+        #expect(setup == fixture.appViewModel.settingsViewModel?.state)
 
         fixture.bridge.perform(SettingsAction.setPath([]))
         #expect(await fixture.bridge.settingsState(route: nil)?.path == [])

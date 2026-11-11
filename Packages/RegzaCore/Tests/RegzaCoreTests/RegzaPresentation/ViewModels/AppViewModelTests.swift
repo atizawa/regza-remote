@@ -19,21 +19,21 @@ import Testing
     }
 
     @Test func opensAndClosesScreensPerTab() throws {
-        let app = try makeApp()
-        let channel = try #require(app.remote.channels.first)
-        app.send(.selectTab(.channels))
-        app.send(.push(.channelPrograms(channelCode: channel.code)))
-        let list = try #require(app.programList(channelCode: channel.code))
+        let appViewModel = try makeApp()
+        let channel = try #require(appViewModel.remoteViewModel.channels.first)
+        appViewModel.send(.selectTab(.channels))
+        appViewModel.send(.push(.channelPrograms(channelCode: channel.code)))
+        let listViewModel = try #require(appViewModel.programList(channelCode: channel.code))
         // 戻る道にある間は同じ ViewModel を使う
-        #expect(app.programList(channelCode: channel.code) === list)
-        #expect(app.state.path(of: .channels) == [.channelPrograms(channelCode: channel.code)])
+        #expect(appViewModel.programList(channelCode: channel.code) === listViewModel)
+        #expect(appViewModel.state.path(of: .channels) == [.channelPrograms(channelCode: channel.code)])
         // ほかのタブの戻る道には入らない
-        #expect(app.state.path(of: .guide).isEmpty)
+        #expect(appViewModel.state.path(of: .guide).isEmpty)
 
-        app.send(.pop)
-        #expect(app.state.path(of: .channels).isEmpty)
+        appViewModel.send(.pop)
+        #expect(appViewModel.state.path(of: .channels).isEmpty)
         // 閉じた画面の ViewModel は捨て、開き直すと作り直す
-        #expect(app.programList(channelCode: channel.code) !== list)
+        #expect(appViewModel.programList(channelCode: channel.code) !== listViewModel)
     }
 
     /// 画面を見分ける文字列は、同じ画面なら同じで、違う画面なら違う
@@ -47,28 +47,28 @@ import Testing
     }
 
     @Test func settingsStartFromTVWhenNotConfigured() throws {
-        let app = try makeApp(configured: false)
-        app.send(.showSettings)
-        #expect(app.state.isShowingSettings)
+        let appViewModel = try makeApp(configured: false)
+        appViewModel.send(.showSettings)
+        #expect(appViewModel.state.isShowingSettings)
         // テレビが未設定なら、テレビの設定の画面から始める
-        #expect(app.settings?.state.path == [.tv])
-        app.send(.closeSettings)
-        #expect(!app.state.isShowingSettings)
-        #expect(app.settings == nil)
+        #expect(appViewModel.settingsViewModel?.state.path == [.tv])
+        appViewModel.send(.closeSettings)
+        #expect(!appViewModel.state.isShowingSettings)
+        #expect(appViewModel.settingsViewModel == nil)
     }
 
     @Test func playNeedsStreamServer() throws {
-        let app = try makeApp()
-        let channel = try #require(app.remote.channels.first)
+        let appViewModel = try makeApp()
+        let channel = try #require(appViewModel.remoteViewModel.channels.first)
         // EPGStation が設定されていないので開かない
-        app.send(.play(channelCode: channel.code))
-        #expect(app.state.playingChannelCode == nil)
-        #expect(app.player == nil)
+        appViewModel.send(.play(channelCode: channel.code))
+        #expect(appViewModel.state.playingChannelCode == nil)
+        #expect(appViewModel.livePlayerViewModel == nil)
     }
 
     @Test func introspectionShowsStateAndActions() throws {
-        let app = try makeApp()
-        let introspector = Introspector(root: app)
+        let appViewModel = try makeApp()
+        let introspector = Introspector(root: appViewModel)
         try introspector.perform("app", "selectTab", ["tab": .string("guide")])
         let node = try introspector.node("app")
         #expect(node.path == "app")

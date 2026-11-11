@@ -7,18 +7,19 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class ChannelListViewModel {
-    public let remote: RemoteViewModel
-    package let channels: any ChannelUseCaseProtocol
-    package let guide: any GuideUseCaseProtocol
-    package let stream: any StreamUseCaseProtocol
+    public let remoteViewModel: RemoteViewModel
+    package let channelUseCase: any ChannelUseCaseProtocol
+    package let guideUseCase: any GuideUseCaseProtocol
+    package let streamUseCase: any StreamUseCaseProtocol
 
     package init(
-        remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol
+        remoteViewModel: RemoteViewModel, channelUseCase: any ChannelUseCaseProtocol, guideUseCase: any GuideUseCaseProtocol,
+        streamUseCase: any StreamUseCaseProtocol
     ) {
-        self.remote = remote
-        self.channels = channels
-        self.guide = guide
-        self.stream = stream
+        self.remoteViewModel = remoteViewModel
+        self.channelUseCase = channelUseCase
+        self.guideUseCase = guideUseCase
+        self.streamUseCase = streamUseCase
     }
 
     /// 画面に出すもの
@@ -35,19 +36,19 @@ public final class ChannelListViewModel {
 
     /// 画面に出すもの。自分の状態と、土台・番組表・配信の状態から作る
     public var state: State {
-        let bands = channels.bands
-        let band = remote.band(among: bands)
-        let rows = channels.items(band: band, nowPlayingCode: remote.state.nowPlaying?.channelCode)
+        let bands = channelUseCase.bands
+        let band = remoteViewModel.band(among: bands)
+        let rows = channelUseCase.items(band: band, nowPlayingCode: remoteViewModel.state.nowPlaying?.channelCode)
         return State(
             isLoading: isLoading,
-            loadErrorMessage: remote.channels.isEmpty ? loadError.map(Self.message) : nil,
-            hasNoChannels: remote.channels.isEmpty,
+            loadErrorMessage: remoteViewModel.channels.isEmpty ? loadError.map(Self.message) : nil,
+            hasNoChannels: remoteViewModel.channels.isEmpty,
             tuneError: tuneError,
             tuningCode: tuningCode,
             bands: bands,
             band: band,
             rows: rows,
-            canStream: stream.canStream
+            canStream: streamUseCase.canStream
         )
     }
 
@@ -56,8 +57,8 @@ public final class ChannelListViewModel {
         case .appear:
             work.run {
                 await self.load(force: false)
-                await self.guide.loadGuidePrograms()
-                await self.remote.tv.loadTimeshiftSettings()
+                await self.guideUseCase.loadGuidePrograms()
+                await self.remoteViewModel.tvUseCase.loadTimeshiftSettings()
             }
         case .reload: work.run { await self.load(force: true) }
         case .tune(let code): work.run { await self.tune(code: code, startOver: false) }
@@ -76,7 +77,7 @@ public final class ChannelListViewModel {
         isLoading = true
         defer { isLoading = false }
         do {
-            try await remote.loadChannels(force: force)
+            try await remoteViewModel.loadChannels(force: force)
             loadError = nil
         } catch {
             loadError = error
@@ -84,17 +85,17 @@ public final class ChannelListViewModel {
     }
 
     private func tune(code: String, startOver: Bool) async {
-        guard let channel = channels.channel(code: code) else { return }
+        guard let channel = channelUseCase.channel(code: code) else { return }
         tuningCode = code
         defer { tuningCode = nil }
         tuneError = nil
         do {
             if !startOver {
-                try await remote.tune(to: channel)
-            } else if channel.code == remote.state.nowPlaying?.channelCode {
-                try await remote.startOver()
+                try await remoteViewModel.tune(to: channel)
+            } else if channel.code == remoteViewModel.state.nowPlaying?.channelCode {
+                try await remoteViewModel.startOver()
             } else {
-                try await remote.tuneAndStartOver(channel)
+                try await remoteViewModel.tuneAndStartOver(channel)
             }
         } catch .commandRejected {
             tuneError = "\(channel.name) に切り替えられませんでした。テレビの電源が入っているか確認してください。"

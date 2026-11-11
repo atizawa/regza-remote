@@ -10,7 +10,7 @@ package import RegzaDomain
 @Observable
 public final class RemoteViewModel {
     /// テレビの操作。接続とチャンネルは、この先の Repository が持つ
-    package let tv: any TVUseCaseProtocol
+    package let tvUseCase: any TVUseCaseProtocol
 
     /// 画面に出すもの
     public typealias State = RemoteState
@@ -29,14 +29,14 @@ public final class RemoteViewModel {
 
     public var state: State {
         State(
-            isConfigured: tv.connection.isConfigured,
+            isConfigured: tvUseCase.connection.isConfigured,
             nowPlaying: nowPlaying,
             errorMessage: lastError?.localizedDescription,
             isConnected: isConnected,
             lastCommandLabel: lastCommand?.label,
             tapCount: tapCount,
             isSearchingTV: isSearchingTV,
-            isSampleMode: tv.isSample,
+            isSampleMode: tvUseCase.isSample,
             selectedBand: selectedBand,
             nowPlayingBand: nowPlayingChannel?.band
         )
@@ -49,8 +49,8 @@ public final class RemoteViewModel {
     private static let searchInterval: TimeInterval = 180
 
     /// - Parameter nowPlaying: 最初に出しておく「いま映っているもの」(見本など)
-    package init(tv: any TVUseCaseProtocol, nowPlaying: NowPlayingItem? = nil) {
-        self.tv = tv
+    package init(tvUseCase: any TVUseCaseProtocol, nowPlaying: NowPlayingItem? = nil) {
+        self.tvUseCase = tvUseCase
         self.nowPlaying = nowPlaying
         isConnected = nowPlaying != nil
     }
@@ -80,16 +80,16 @@ public final class RemoteViewModel {
 
     private func press(_ key: RegzaKey) {
         tapCount += 1
-        guard !tv.isSample else { return }
+        guard !tvUseCase.isSample else { return }
         run {
             do {
-                try await self.tv.send(key)
+                try await self.tvUseCase.send(key)
                 self.lastCommand = key
                 // テレビ側の状態が変わるのを少し待ってから反映する
                 try? await Task.sleep(for: .milliseconds(400))
                 _ = await self.fetch()
                 self.lastError = nil
-                self.nowPlaying = await self.tv.lastNowPlaying()
+                self.nowPlaying = await self.tvUseCase.lastNowPlaying()
             } catch {
                 self.lastError = RegzaError(error)
             }
@@ -98,9 +98,9 @@ public final class RemoteViewModel {
 
     private func seek(to seconds: Int) async {
         do {
-            try await tv.seek(to: seconds)
+            try await tvUseCase.seek(to: seconds)
             _ = await fetch()
-            nowPlaying = await tv.lastNowPlaying()
+            nowPlaying = await tvUseCase.lastNowPlaying()
         } catch {
             lastError = error
         }
@@ -110,26 +110,26 @@ public final class RemoteViewModel {
 
     /// チャンネル一覧を取得する。チャンネルの登録はあまり変わらないので、取得済みなら使い回す
     func loadChannels(force: Bool = false) async throws(RegzaError) {
-        guard !tv.isSample else { return }
-        try await tv.loadChannels(force: force)
+        guard !tvUseCase.isSample else { return }
+        try await tvUseCase.loadChannels(force: force)
     }
 
     func tune(to channel: ChannelItem) async throws(RegzaError) {
         tapCount += 1
         // 切り替えの最中はテレビに問い合わせないので、取り直さずに、選んだチャンネルに切り替わったものとして出す。
         // 番組名などは定期の取得で落ち着いてから反映する
-        tuned(try await tv.tune(to: channel))
+        tuned(try await tvUseCase.tune(to: channel))
     }
 
     /// いま映っている番組を最初から再生する
     func startOver() async throws(RegzaError) {
-        try await tv.startOver()
+        try await tvUseCase.startOver()
     }
 
     /// チャンネルを切り替えてから、その番組を最初から再生する
     func tuneAndStartOver(_ channel: ChannelItem) async throws(RegzaError) {
         tapCount += 1
-        tuned(try await tv.tuneAndStartOver(channel))
+        tuned(try await tvUseCase.tuneAndStartOver(channel))
     }
 
     private func tuned(_ nowPlaying: NowPlayingItem?) {
@@ -142,7 +142,7 @@ public final class RemoteViewModel {
     // MARK: - 状態の定期取得
 
     private func startPolling(interval: Duration = .seconds(2)) {
-        guard pollingTask == nil, tv.connection.isConfigured, !tv.isSample else { return }
+        guard pollingTask == nil, tvUseCase.connection.isConfigured, !tvUseCase.isSample else { return }
         pollingTask = Task {
             while !Task.isCancelled {
                 await refresh()
@@ -172,7 +172,7 @@ public final class RemoteViewModel {
     /// isConnected だけを落とす (画面やロック画面は「接続できません」を添えて出す)
     private func fetch() async -> Result<NowPlayingItem, RegzaError> {
         do {
-            let value = try await tv.refresh()
+            let value = try await tvUseCase.refresh()
             isConnected = true
             return .success(value)
         } catch {
@@ -187,14 +187,14 @@ public final class RemoteViewModel {
         lastSearch = Date()
         isSearchingTV = true
         defer { isSearchingTV = false }
-        guard await tv.locateMovedTV() != nil else { return }
+        guard await tvUseCase.locateMovedTV() != nil else { return }
         await refresh()
     }
 
     // MARK: - 設定 (設定の ViewModel から使う)
 
     func save(_ connection: ConnectionItem) async {
-        await tv.save(connection)
+        await tvUseCase.save(connection)
         nowPlaying = nil
         isConnected = false
         lastCommand = nil
@@ -205,20 +205,20 @@ public final class RemoteViewModel {
 
     /// PIN 登録に使うこのアプリ用のユーザー ID
     func pairingUserID() -> String {
-        tv.pairingUserID()
+        tvUseCase.pairingUserID()
     }
 
     /// 保存前の接続情報で視聴状況を取得してみる
     func testConnection(_ connection: ConnectionItem) async -> Result<NowPlayingItem, RegzaError> {
-        await tv.testConnection(connection)
+        await tvUseCase.testConnection(connection)
     }
 
     // MARK: - ほかの ViewModel が読むもの (画面は state を読む)
 
-    package var connection: ConnectionItem { tv.connection }
+    package var connection: ConnectionItem { tvUseCase.connection }
     /// テレビに登録されているチャンネル。取得前は空
-    package var channels: [ChannelItem] { tv.channels }
-    var isSampleMode: Bool { tv.isSample }
+    package var channels: [ChannelItem] { tvUseCase.channels }
+    var isSampleMode: Bool { tvUseCase.isSample }
 
     /// いま映っている放送のチャンネル
     package var nowPlayingChannel: ChannelItem? {

@@ -5,16 +5,16 @@ import SwiftUI
 
 /// テレビから取得した視聴状況。録画再生中はシークできる
 struct NowPlayingCard: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(RemoteViewModel.self) private var remoteViewModel
     @State private var seekPosition: Double?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if model.state.isSearchingTV {
+            if remoteViewModel.state.isSearchingTV {
                 status("テレビが見つからないため、探しています…", systemImage: "magnifyingglass")
-            } else if let message = model.state.errorMessage {
+            } else if let message = remoteViewModel.state.errorMessage {
                 status(message, systemImage: "exclamationmark.triangle.fill", isWarning: true)
-            } else if let nowPlaying = model.state.nowPlaying {
+            } else if let nowPlaying = remoteViewModel.state.nowPlaying {
                 switch nowPlaying.kind {
                 case .recorded: playback(nowPlaying)
                 case .broadcast: broadcast(nowPlaying)
@@ -112,7 +112,7 @@ struct NowPlayingCard: View {
                 in: 0...Double(nowPlaying.duration)
             ) { editing in
                 if !editing, let seekPosition {
-                    model.send(.seek(Int(seekPosition)))
+                    remoteViewModel.send(.seek(Int(seekPosition)))
                     self.seekPosition = nil
                 }
             }

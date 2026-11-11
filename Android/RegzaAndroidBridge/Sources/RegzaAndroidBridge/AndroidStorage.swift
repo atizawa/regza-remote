@@ -74,7 +74,9 @@ final class AndroidStorageAdapter: SecureStorage, PreferencesStorage, @unchecked
 }
 
 @MainActor
-func makeStorageManagers(_ storage: any RegzaAndroidStorage) -> (secureStorage: SecureStorageManager, preferences: PreferencesManager) {
+func makeStorageManagers(_ storage: any RegzaAndroidStorage) -> (
+    secureStorageManager: SecureStorageManager, preferencesManager: PreferencesManager
+) {
     let adapter = AndroidStorageAdapter(storage: storage)
     return (SecureStorageManager(storage: adapter), PreferencesManager(storage: adapter))
 }

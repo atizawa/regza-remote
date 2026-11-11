@@ -8,7 +8,7 @@ import RegzaPresentation
 @MainActor
 @Observable
 public final class LiveActivityModel {
-    private let remote: RemoteViewModel
+    private let remoteViewModel: RemoteViewModel
     /// Live Activity を出しているか
     public private(set) var isOn = LiveActivityController.isActive
     @ObservationIgnored private var shown: RegzaActivityAttributes.ContentState?
@@ -16,8 +16,8 @@ public final class LiveActivityModel {
     /// 1 本ずつ順に出す (重なると、古い内容の更新があとから届くことがある)
     @ObservationIgnored private var updating: Task<Void, Never>?
 
-    public init(remote: RemoteViewModel) {
-        self.remote = remote
+    public init(remoteViewModel: RemoteViewModel) {
+        self.remoteViewModel = remoteViewModel
         observe()
     }
 
@@ -25,15 +25,15 @@ public final class LiveActivityModel {
         do {
             if enabled {
                 // つながっていないのに「接続済み」で始めないよう、先に取り直す
-                await remote.sendAndWait(.refresh)
-                let state = RegzaActivityAttributes.ContentState(remote.state)
+                await remoteViewModel.sendAndWait(.refresh)
+                let state = RegzaActivityAttributes.ContentState(remoteViewModel.state)
                 try LiveActivityController.start(state)
                 shown = state
             } else {
                 await LiveActivityController.end()
             }
         } catch {
-            remote.send(.report("Live Activity を開始できませんでした: \(error.localizedDescription)"))
+            remoteViewModel.send(.report("Live Activity を開始できませんでした: \(error.localizedDescription)"))
         }
         isOn = LiveActivityController.isActive
         scheduleBackgroundRefresh()
@@ -53,7 +53,7 @@ public final class LiveActivityModel {
     }
 
     private func show() async {
-        let state = RegzaActivityAttributes.ContentState(remote.state)
+        let state = RegzaActivityAttributes.ContentState(remoteViewModel.state)
         guard state != shown else { return }
         let programEndChanged = state.programEnd != shown?.programEnd
         shown = state
@@ -66,13 +66,13 @@ public final class LiveActivityModel {
 
     /// Live Activity が出ていれば、閉じている間に iOS に起こしてもらう時刻を予約する
     public func scheduleBackgroundRefresh() {
-        BackgroundRefresh.schedule(programEnd: RegzaActivityAttributes.ContentState(remote.state).programEnd)
+        BackgroundRefresh.schedule(programEnd: RegzaActivityAttributes.ContentState(remoteViewModel.state).programEnd)
     }
 
     /// 閉じている間に起こされたときの処理。取り直して Live Activity を更新し、次を予約する
     public func refreshInBackground() async {
         guard LiveActivityController.isActive else { return }
-        await remote.sendAndWait(.refresh)
+        await remoteViewModel.sendAndWait(.refresh)
         await update()
         scheduleBackgroundRefresh()
     }
@@ -80,7 +80,7 @@ public final class LiveActivityModel {
     /// state が変わるたびに Live Activity を更新する
     private func observe() {
         withObservationTracking {
-            _ = remote.state
+            _ = remoteViewModel.state
         } onChange: { [weak self] in
             // 変わる直前に呼ばれるので、変わり終わってから読む。出している間の変わり目も逃さないよう、先に見張り直す
             Task { @MainActor in

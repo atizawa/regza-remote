@@ -27,7 +27,7 @@ struct ViewModelFixtures {
         -> (RemoteViewModel, GuideUseCase, RecordingUseCase, StreamUseCase)
     {
         let live = LiveModels(transport: FakeTransport(respond))
-        return (live.remote, live.guide, live.recording, live.stream)
+        return (live.remoteViewModel, live.guideUseCase, live.recordingUseCase, live.streamUseCase)
     }
 
     /// 見本の Repository でつないだもの (テレビにつながない)

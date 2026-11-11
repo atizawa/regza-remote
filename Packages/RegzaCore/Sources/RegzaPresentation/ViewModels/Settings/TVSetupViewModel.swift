@@ -7,17 +7,17 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class TVSetupViewModel {
-    public let remote: RemoteViewModel
-    package let setup: any SetupUseCaseProtocol
+    public let remoteViewModel: RemoteViewModel
+    package let setupUseCase: any SetupUseCaseProtocol
     /// このアプリ用のユーザー ID。手入力のユーザー名は他のツールと共有している
     /// かもしれないので使い回さない (同じ ID で登録し直すと、前のパスワードが無効になる)
     public let pairingUserID: String
 
-    package init(remote: RemoteViewModel, setup: any SetupUseCaseProtocol) {
-        self.remote = remote
-        self.setup = setup
-        draft = remote.connection
-        pairingUserID = remote.pairingUserID()
+    package init(remoteViewModel: RemoteViewModel, setupUseCase: any SetupUseCaseProtocol) {
+        self.remoteViewModel = remoteViewModel
+        self.setupUseCase = setupUseCase
+        draft = remoteViewModel.connection
+        pairingUserID = remoteViewModel.pairingUserID()
     }
 
     /// 画面に出すもの
@@ -73,7 +73,7 @@ public final class TVSetupViewModel {
     func send(_ action: TVSetupAction) {
         switch action {
         case .appear:
-            if !remote.connection.isConfigured && devices.isEmpty && !isScanning { work.run { await self.scan() } }
+            if !remoteViewModel.connection.isConfigured && devices.isEmpty && !isScanning { work.run { await self.scan() } }
         case .setHost(let host): draft.host = host
         case .setUser(let user): draft.user = user
         case .setPassword(let password): draft.password = password
@@ -113,7 +113,7 @@ public final class TVSetupViewModel {
         defer { isScanning = false }
         scanMessage = nil
         devices = []
-        for await device in setup.findTVs() {
+        for await device in setupUseCase.findTVs() {
             devices.append(device)
             // 1 台目は選んでおく。登録は利用者がボタンを押してから
             if devices.count == 1, draft.host.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -136,7 +136,7 @@ public final class TVSetupViewModel {
         defer { isPairing = false }
         pairingMessage = nil
         // 登録し直すときはアプリの ID を使い回し、テレビの登録機器が増えないようにする
-        let session = setup.pairing(host: draft.host, user: pairingUserID)
+        let session = setupUseCase.pairing(host: draft.host, user: pairingUserID)
         do {
             try await session.start()
             pairing = session
@@ -158,7 +158,7 @@ public final class TVSetupViewModel {
             draft = try await pairing.confirm(pin: pin)
             self.pairing = nil
             isWaitingForPIN = false
-            await remote.save(draft)
+            await remoteViewModel.save(draft)
             hasRegistered = true
         } catch {
             // PIN の打ち間違いはそのまま入力し直せるようにする
@@ -186,7 +186,7 @@ public final class TVSetupViewModel {
     private func test() async {
         isTesting = true
         defer { isTesting = false }
-        switch await remote.testConnection(draft) {
+        switch await remoteViewModel.testConnection(draft) {
         case .success(let nowPlaying):
             let detail = nowPlaying.title.isEmpty ? nowPlaying.channelName : nowPlaying.title
             testResult = detail.isEmpty ? "接続できました" : "接続できました: \(detail)"
@@ -199,7 +199,7 @@ public final class TVSetupViewModel {
 
     /// 入力した接続情報を保存する (設定の画面の「保存」から、SettingsViewModel が呼ぶ)
     func save() async {
-        await remote.save(draft)
+        await remoteViewModel.save(draft)
     }
 }
 

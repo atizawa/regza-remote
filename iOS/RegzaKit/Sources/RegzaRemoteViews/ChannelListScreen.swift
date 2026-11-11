@@ -6,7 +6,7 @@ import SwiftUI
 /// テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える
 struct ChannelListScreen: View {
     @State private var viewModel: ChannelListViewModel
-    @Environment(AppViewModel.self) private var app
+    @Environment(AppViewModel.self) private var appViewModel
 
     init(viewModel: ChannelListViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -14,7 +14,7 @@ struct ChannelListScreen: View {
 
     var body: some View {
         let state = viewModel.state
-        NavigationStack(path: app.path(of: .channels)) {
+        NavigationStack(path: appViewModel.path(of: .channels)) {
             content(state)
                 .navigationTitle("チャンネル")
                 // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
@@ -112,7 +112,7 @@ struct ChannelListScreen: View {
             .disabled(state.tuningCode != nil)
             if row.hasPrograms {
                 Button {
-                    app.send(.push(.channelPrograms(channelCode: row.code)))
+                    appViewModel.send(.push(.channelPrograms(channelCode: row.code)))
                 } label: {
                     Image(systemName: "calendar")
                         // ボタンの色 (緑) が混ざらないよう、灰色に固定する
@@ -135,7 +135,7 @@ struct ChannelListScreen: View {
         }
         if state.canStream {
             Button("アプリで見る", systemImage: "play.tv") {
-                app.send(.play(channelCode: row.code))
+                appViewModel.send(.play(channelCode: row.code))
             }
         }
         if row.canStartOver {
@@ -145,7 +145,7 @@ struct ChannelListScreen: View {
         }
         if row.hasPrograms {
             Button("番組表", systemImage: "calendar") {
-                app.send(.push(.channelPrograms(channelCode: row.code)))
+                appViewModel.send(.push(.channelPrograms(channelCode: row.code)))
             }
         }
     }

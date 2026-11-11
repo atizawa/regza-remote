@@ -7,14 +7,14 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class NowPlayingViewModel {
-    public let remote: RemoteViewModel
-    package let guide: any GuideUseCaseProtocol
-    package let stream: any StreamUseCaseProtocol
+    public let remoteViewModel: RemoteViewModel
+    package let guideUseCase: any GuideUseCaseProtocol
+    package let streamUseCase: any StreamUseCaseProtocol
 
-    package init(remote: RemoteViewModel, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol) {
-        self.remote = remote
-        self.guide = guide
-        self.stream = stream
+    package init(remoteViewModel: RemoteViewModel, guideUseCase: any GuideUseCaseProtocol, streamUseCase: any StreamUseCaseProtocol) {
+        self.remoteViewModel = remoteViewModel
+        self.guideUseCase = guideUseCase
+        self.streamUseCase = streamUseCase
     }
 
     /// 画面に出すもの
@@ -26,7 +26,7 @@ public final class NowPlayingViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let remoteState = remote.state
+        let remoteState = remoteViewModel.state
         let nowPlaying = remoteState.nowPlaying
         let isConnected = !remoteState.isSearchingTV && remoteState.errorMessage == nil
         let isWatching = nowPlaying?.kind == .broadcast || nowPlaying?.kind == .recorded
@@ -35,7 +35,7 @@ public final class NowPlayingViewModel {
             title: isConnected && isWatching ? "視聴中" : "テレビ",
             description: description.isEmpty ? nil : description,
             canPowerOn: nowPlaying?.kind == .standby && remoteState.errorMessage == nil,
-            playableChannelCode: stream.canStream && nowPlaying?.kind == .broadcast ? remote.nowPlayingChannel?.code : nil,
+            playableChannelCode: streamUseCase.canStream && nowPlaying?.kind == .broadcast ? remoteViewModel.nowPlayingChannel?.code : nil,
             canStartOver: canStartOver(nowPlaying)
         )
     }
@@ -44,18 +44,18 @@ public final class NowPlayingViewModel {
         switch action {
         case .appear:
             work.run {
-                await self.remote.tv.loadTimeshiftSettings()
-                try? await self.remote.loadChannels()
+                await self.remoteViewModel.tvUseCase.loadTimeshiftSettings()
+                try? await self.remoteViewModel.loadChannels()
             }
-        case .powerOn: remote.send(.press(.power))
-        case .startOver: work.run { try? await self.remote.startOver() }
+        case .powerOn: remoteViewModel.send(.press(.power))
+        case .startOver: work.run { try? await self.remoteViewModel.startOver() }
         }
     }
 
     private func canStartOver(_ nowPlaying: NowPlayingItem?) -> Bool {
         guard let nowPlaying, nowPlaying.kind == .broadcast, nowPlaying.hasTimeline else { return false }
         let start = nowPlaying.updatedAt.addingTimeInterval(-TimeInterval(nowPlaying.position))
-        return remote.tv.canStartOver(channelCode: nowPlaying.channelCode, programStart: start)
+        return remoteViewModel.tvUseCase.canStartOver(channelCode: nowPlaying.channelCode, programStart: start)
     }
 }
 

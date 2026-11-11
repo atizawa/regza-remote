@@ -7,19 +7,19 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class SettingsViewModel {
-    public let remote: RemoteViewModel
-    let tv: TVSetupViewModel
-    let servers: ServerSetupViewModel
+    public let remoteViewModel: RemoteViewModel
+    let tvSetupViewModel: TVSetupViewModel
+    let serverSetupViewModel: ServerSetupViewModel
     /// 設定を閉じる (AppViewModel が渡す)
     @ObservationIgnored private let close: @MainActor () -> Void
 
-    package init(remote: RemoteViewModel, setup: any SetupUseCaseProtocol, close: @escaping @MainActor () -> Void) {
-        self.remote = remote
-        tv = TVSetupViewModel(remote: remote, setup: setup)
-        servers = ServerSetupViewModel(setup: setup)
+    package init(remoteViewModel: RemoteViewModel, setupUseCase: any SetupUseCaseProtocol, close: @escaping @MainActor () -> Void) {
+        self.remoteViewModel = remoteViewModel
+        tvSetupViewModel = TVSetupViewModel(remoteViewModel: remoteViewModel, setupUseCase: setupUseCase)
+        serverSetupViewModel = ServerSetupViewModel(setupUseCase: setupUseCase)
         self.close = close
         // テレビが未設定なら、テレビの設定の画面から始める
-        path = remote.connection.isConfigured ? [] : [.tv]
+        path = remoteViewModel.connection.isConfigured ? [] : [.tv]
     }
 
     /// 画面に出すもの
@@ -32,11 +32,11 @@ public final class SettingsViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let tv = tv.state
-        let servers = servers.state
+        let tv = tvSetupViewModel.state
+        let servers = serverSetupViewModel.state
         return State(
             path: path,
-            canClose: remote.state.isConfigured,
+            canClose: remoteViewModel.state.isConfigured,
             canSave: tv.canSave && servers.isValid,
             tv: tv,
             servers: servers
@@ -50,20 +50,20 @@ public final class SettingsViewModel {
         case .back: open(path.dropLast())
         case .save:
             work.run {
-                await self.servers.save()
-                await self.tv.save()
+                await self.serverSetupViewModel.save()
+                await self.tvSetupViewModel.save()
                 self.close()
             }
         case .close: close()
         case .tv(.confirmPairing):
             // PIN で登録できたら (保存も済んでいる) 閉じる
             work.run {
-                await self.tv.confirmPairing()
-                if self.tv.state.hasRegistered { self.close() }
+                await self.tvSetupViewModel.confirmPairing()
+                if self.tvSetupViewModel.state.hasRegistered { self.close() }
             }
-        case .tv(let action): tv.send(action)
+        case .tv(let action): tvSetupViewModel.send(action)
         case .server(let action):
-            servers.send(action)
+            serverSetupViewModel.send(action)
             // 連携を解除したら、その設定の画面を閉じる
             if case .unlink(let server) = action { path.removeAll { $0 == SettingsPage(server) } }
         }
@@ -71,13 +71,13 @@ public final class SettingsViewModel {
 
     private func open(_ newPath: [SettingsPage]) {
         // ライブ視聴の設定を開いたら、Mirakurun と同じサーバーで EPGStation が動いていれば候補に出す
-        if newPath.last == .stream, path.last != .stream { servers.send(.suggestStreamHost) }
+        if newPath.last == .stream, path.last != .stream { serverSetupViewModel.send(.suggestStreamHost) }
         path = newPath
     }
 
     /// 画面を閉じた。PIN を入れずに閉じたら、テレビの PIN 表示を消しておく (AppViewModel が呼ぶ)
     func dismiss() {
-        tv.send(.close)
+        tvSetupViewModel.send(.close)
     }
 }
 
@@ -90,7 +90,7 @@ extension SettingsPage {
 
 extension SettingsViewModel: IntrospectableActions {
     public var introspectionName: String { "settings" }
-    public var isBusy: Bool { work.isBusy || tv.isBusy || servers.isBusy }
+    public var isBusy: Bool { work.isBusy || tvSetupViewModel.isBusy || serverSetupViewModel.isBusy }
 
     /// パスワードは見せない (入っているかどうかだけ)
     nonisolated public static func introspectionJSON(of state: State) -> JSONValue {
@@ -114,8 +114,8 @@ extension SettingsViewModel: IntrospectableActions {
     }
 
     public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        if name.hasPrefix("tv.") { return .tv(try tv.introspectionAction(String(name.dropFirst(3)), arguments)) }
-        if name.hasPrefix("server.") { return .server(try servers.introspectionAction(String(name.dropFirst(7)), arguments)) }
+        if name.hasPrefix("tv.") { return .tv(try tvSetupViewModel.introspectionAction(String(name.dropFirst(3)), arguments)) }
+        if name.hasPrefix("server.") { return .server(try serverSetupViewModel.introspectionAction(String(name.dropFirst(7)), arguments)) }
         switch name {
         case "openPage":
             guard let page = SettingsPage(rawValue: try arguments.string("page")) else { throw IntrospectionError.invalidArgument("page") }

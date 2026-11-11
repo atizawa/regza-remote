@@ -18,7 +18,7 @@ import RegzaApp
 
 /// アプリ全体の窓口。アプリに 1 つ作り、ViewModel の state を読んで操作を送る
 public final class RegzaAndroidApp {
-    let app: AppViewModel
+    let appViewModel: AppViewModel
 
     /// Kotlin の Flow が待っている state。Java の Future を取り消しても swift-java が Swift の Task を取り消さないので、
     /// Flow ごとの番号で待機を終わらせる。終了と待機の開始が前後しても取りこぼさないよう、終了済みも一時的に覚える。
@@ -27,32 +27,32 @@ public final class RegzaAndroidApp {
     /// Kotlin の保存先 (Keystore と SharedPreferences) で組み立てる。Android では先に regzaSetUpMainActor を呼んでおく
     public convenience init(storage: any RegzaAndroidStorage) {
         self.init(
-            app: onMainActor {
+            appViewModel: onMainActor {
                 let managers = makeStorageManagers(storage)
-                return AppViewModel(secureStorage: managers.secureStorage, preferences: managers.preferences)
+                return AppViewModel(secureStorageManager: managers.secureStorageManager, preferencesManager: managers.preferencesManager)
             })
     }
 
     /// 組み立てた ViewModel から作る (テストでは、テレビにつながない見本の ViewModel を渡す)
-    init(app: AppViewModel) {
-        self.app = app
+    init(appViewModel: AppViewModel) {
+        self.appViewModel = appViewModel
         onMainActor {
             // 未登録なら、テレビの登録の画面から始める
-            if !app.remote.state.isConfigured { app.send(.showSettings) }
+            if !appViewModel.remoteViewModel.state.isConfigured { appViewModel.send(.showSettings) }
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
-            Task { await app.cleanUpStreams() }
+            Task { await appViewModel.cleanUpStreams() }
         }
     }
 
     // MARK: state
 
     /// AppViewModel と開いている画面の ViewModel (手前から)
-    @MainActor private var viewModels: [AnyObject] { [app] + app.openViewModels }
+    @MainActor private var viewModels: [AnyObject] { [appViewModel] + appViewModel.openViewModels }
 
     /// route の画面の ViewModel の state。route が nil なら、開いている ViewModel のうち state を返せる最初のもの
     /// (タブの最初の画面・リモコン・設定などは 1 つずつしかない)。開いていなければ nil
     @MainActor func state<State>(route: AppRoute?, _ state: @MainActor (AnyObject) -> State?) -> State? {
-        if let route { return app.viewModel(for: route).flatMap(state) }
+        if let route { return appViewModel.viewModel(for: route).flatMap(state) }
         return viewModels.lazy.compactMap(state).first
     }
 

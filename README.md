@@ -51,6 +51,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   - Live Activity は `RemoteViewModel.state` の変わり目を見て表示を更新し、番組の終了時刻が変われば起こしてもらう時刻を予約し直す
   - ボタンの App Intent（`RegzaKeyIntent`）は `LiveActivityIntent` なので、ウィジェットの拡張から押してもアプリのプロセスで動く。Siri の App Intent はふつうの `AppIntent` で、拡張にも登録すると拡張のプロセスで動くことがあるので、アプリにだけ登録する
   - 画面と Live Activity が Domain・通信・組み立てを import していないことは `RegzaKitTests` の `LayerTests` が確かめる
+- 依存オブジェクトの引数・プロパティ・組み立て時の変数は、`remoteViewModel`・`guideUseCase`・`guideRepository`・`regzaAPIClient`・`preferencesManager` のように役割を名前に含める。取得した値は `programs`・`channels` など、内容を表す名前にする。
 - 保存処理は `Infrastructure/Storage` の `SecureStorageManager`・`PreferencesManager` に分け、APIClient と並列に Repository へ注入する。Manager には OS ごとの保存実装を注入し、保存キーの選択と Data の組み立ては Repository が担当する。
 - iOS は `KeychainStorage`・`UserDefaultsStorage`、Android は `RegzaAndroidStorage` を共通の保存プロトコルにつなぐアダプターを使う。Android のパスワードは従来どおり Keystore の鍵で暗号化する。既存の保存キー・値の形式と、iOS の旧登録 ID の移行を維持する。
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）

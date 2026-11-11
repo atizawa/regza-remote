@@ -9,37 +9,44 @@ import Foundation
 @MainActor
 struct LiveModels {
     let store: MemoryStore
-    let tv: RegzaTVRepository
-    let remote: RemoteViewModel
-    let channels: ChannelUseCase
-    let guide: GuideUseCase
-    let recording: RecordingUseCase
-    let stream: StreamUseCase
-    let setup: SetupUseCase
+    let tvRepository: RegzaTVRepository
+    let remoteViewModel: RemoteViewModel
+    let channelUseCase: ChannelUseCase
+    let guideUseCase: GuideUseCase
+    let recordingUseCase: RecordingUseCase
+    let streamUseCase: StreamUseCase
+    let setupUseCase: SetupUseCase
 
     init(
         store: MemoryStore = MemoryStore(connection: ConnectionData(host: "192.0.2.10", user: "user", password: "password")),
         transport: FakeTransport
     ) {
         self.store = store
-        let client = RegzaAPIClient(connection: store.load(), transport: transport)
+        let regzaAPIClient = RegzaAPIClient(connection: store.load(), transport: transport)
         let connectionState = RegzaConnectionState(connection: store.load())
-        tv = RegzaTVRepository(
-            secureStorage: store.secureStorage, preferences: store.preferences, client: client, connectionState: connectionState)
-        remote = RemoteViewModel(tv: TVUseCase(tv: tv))
-        let guide = MirakurunGuideRepository(
-            preferences: store.preferences, client: MirakurunAPIClient(host: store.guideHost, transport: transport))
-        let stream = EPGStationStreamRepository(
-            preferences: store.preferences, client: EPGStationAPIClient(host: store.streamHost, transport: transport))
-        let recording = RegzaRecordingRepository(client: client, connectionState: connectionState)
-        channels = ChannelUseCase(tv: tv, guide: guide)
-        self.guide = GuideUseCase(guide: guide, recording: recording)
-        self.recording = RecordingUseCase(recording: recording, guide: guide)
-        self.stream = StreamUseCase(stream: stream, guide: guide)
-        setup = SetupUseCase(devices: NetworkDeviceRepository(transport: transport), guide: guide, stream: stream)
+        tvRepository = RegzaTVRepository(
+            secureStorageManager: store.secureStorageManager, preferencesManager: store.preferencesManager, regzaAPIClient: regzaAPIClient,
+            connectionState: connectionState)
+        remoteViewModel = RemoteViewModel(tvUseCase: TVUseCase(tvRepository: tvRepository))
+        let guideRepository = MirakurunGuideRepository(
+            preferencesManager: store.preferencesManager,
+            mirakurunAPIClient: MirakurunAPIClient(host: store.guideHost, transport: transport))
+        let streamRepository = EPGStationStreamRepository(
+            preferencesManager: store.preferencesManager,
+            epgStationAPIClient: EPGStationAPIClient(host: store.streamHost, transport: transport))
+        let recordingRepository = RegzaRecordingRepository(regzaAPIClient: regzaAPIClient, connectionState: connectionState)
+        channelUseCase = ChannelUseCase(tvRepository: tvRepository, guideRepository: guideRepository)
+        self.guideUseCase = GuideUseCase(guideRepository: guideRepository, recordingRepository: recordingRepository)
+        self.recordingUseCase = RecordingUseCase(recordingRepository: recordingRepository, guideRepository: guideRepository)
+        self.streamUseCase = StreamUseCase(streamRepository: streamRepository, guideRepository: guideRepository)
+        setupUseCase = SetupUseCase(
+            deviceRepository: NetworkDeviceRepository(transport: transport), guideRepository: guideRepository,
+            streamRepository: streamRepository)
     }
 
-    var app: AppViewModel {
-        AppViewModel(remote: remote, channels: channels, guide: guide, recording: recording, stream: stream, setup: setup)
+    var appViewModel: AppViewModel {
+        AppViewModel(
+            remoteViewModel: remoteViewModel, channelUseCase: channelUseCase, guideUseCase: guideUseCase,
+            recordingUseCase: recordingUseCase, streamUseCase: streamUseCase, setupUseCase: setupUseCase)
     }
 }

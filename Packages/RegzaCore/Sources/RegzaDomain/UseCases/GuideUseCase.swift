@@ -37,55 +37,55 @@ extension GuideUseCaseProtocol {
 /// Repository の Data と検索索引を内部に保ち、SharedModel だけを返す。
 @MainActor
 public final class GuideUseCase: GuideUseCaseProtocol {
-    private let guide: any GuideRepositoryProtocol
-    private let recording: any RecordingRepositoryProtocol
+    private let guideRepository: any GuideRepositoryProtocol
+    private let recordingRepository: any RecordingRepositoryProtocol
     private var searchIndex = ProgramSearchIndex([])
     private var indexedAt: Date?
     private var indexedHost: String?
 
-    public init(guide: any GuideRepositoryProtocol, recording: any RecordingRepositoryProtocol) {
-        self.guide = guide
-        self.recording = recording
+    public init(guideRepository: any GuideRepositoryProtocol, recordingRepository: any RecordingRepositoryProtocol) {
+        self.guideRepository = guideRepository
+        self.recordingRepository = recordingRepository
     }
 
-    public var guideHost: String { guide.guideHost }
-    public var hasGuide: Bool { guide.hasGuide }
-    public var guideChannelCodes: Set<String> { Set(guide.guidePrograms.keys) }
-    public var guideProgramsLoadedAt: Date? { guide.guideProgramsLoadedAt }
+    public var guideHost: String { guideRepository.guideHost }
+    public var hasGuide: Bool { guideRepository.hasGuide }
+    public var guideChannelCodes: Set<String> { Set(guideRepository.guidePrograms.keys) }
+    public var guideProgramsLoadedAt: Date? { guideRepository.guideProgramsLoadedAt }
 
-    public func loadGuidePrograms() async { await guide.loadGuidePrograms() }
+    public func loadGuidePrograms() async { await guideRepository.loadGuidePrograms() }
 
     public func programs(for channel: ChannelItem) async throws(RegzaError) -> [ProgramItem] {
-        let programs = try await guide.programs(channelCode: channel.code)
+        let programs = try await guideRepository.programs(channelCode: channel.code)
         return programs.map { item($0, now: Date()) }
     }
 
     public func program(id: Int, channelCode: String) -> ProgramItem? {
-        guide.program(id: id, channelCode: channelCode).map { item($0, now: Date()) }
+        guideRepository.program(id: id, channelCode: channelCode).map { item($0, now: Date()) }
     }
 
     public func currentProgram(for channel: ChannelItem, at date: Date = Date()) -> ProgramItem? {
-        guide.guidePrograms[channel.code]?.first { $0.isOnAir(at: date) }.map { item($0, now: date) }
+        guideRepository.guidePrograms[channel.code]?.first { $0.isOnAir(at: date) }.map { item($0, now: date) }
     }
 
     public func saveGuideHost(_ host: String) async {
-        await guide.saveGuideHost(host)
+        await guideRepository.saveGuideHost(host)
         searchIndex = ProgramSearchIndex([])
         indexedAt = nil
         indexedHost = nil
     }
 
     public func item(_ program: ProgramItem, now: Date = Date()) -> ProgramItem {
-        guard let data = guide.program(id: program.id, channelCode: program.channelCode) else { return program }
+        guard let data = guideRepository.program(id: program.id, channelCode: program.channelCode) else { return program }
         return item(data, now: now)
     }
 
     func item(_ data: ProgramData, now: Date = Date()) -> ProgramItem {
-        UseCaseModelMapper.program(data, isReserved: recording.isReserved(data), now: now)
+        UseCaseModelMapper.program(data, isReserved: recordingRepository.isReserved(data), now: now)
     }
 
     public func texts(of program: ProgramItem) -> [ProgramTextItem] {
-        guard let data = guide.program(id: program.id, channelCode: program.channelCode) else { return [] }
+        guard let data = guideRepository.program(id: program.id, channelCode: program.channelCode) else { return [] }
         return UseCaseModelMapper.programTexts(data)
     }
 
@@ -103,29 +103,31 @@ public final class GuideUseCase: GuideUseCaseProtocol {
     public func column(_ channel: ChannelItem, now: Date = Date()) -> GuideColumn {
         GuideColumn(
             channelCode: channel.code, channelName: channel.name,
-            programs: (guide.guidePrograms[channel.code] ?? []).map { item($0, now: now) })
+            programs: (guideRepository.guidePrograms[channel.code] ?? []).map { item($0, now: now) })
     }
 
     public func guideDays(now: Date = Date()) -> [GuideDay] {
-        ([nil] + Self.days(guide.guidePrograms, now: now)).map {
+        ([nil] + Self.days(guideRepository.guidePrograms, now: now)).map {
             GuideDay(date: $0, label: Self.label(of: $0, now: now), kind: Self.kind(of: $0))
         }
     }
 
     public func updateSearchIndex() async {
-        let loadedAt = guide.guideProgramsLoadedAt
-        let host = guide.guideHost
+        let loadedAt = guideRepository.guideProgramsLoadedAt
+        let host = guideRepository.guideHost
         guard loadedAt != indexedAt || host != indexedHost || searchIndex.isEmpty else { return }
-        let programs = guide.guidePrograms.values.flatMap { $0 }
+        let programs = guideRepository.guidePrograms.values.flatMap { $0 }
         let index = await Task.detached { ProgramSearchIndex(programs) }.value
-        guard loadedAt == guide.guideProgramsLoadedAt, host == guide.guideHost else { return }
+        guard loadedAt == guideRepository.guideProgramsLoadedAt, host == guideRepository.guideHost else { return }
         searchIndex = index
         indexedAt = loadedAt
         indexedHost = host
     }
 
     public func search(_ query: ProgramSearchQuery, channels: [ChannelItem], now: Date = Date()) -> [SearchResultItem] {
-        guard !query.isEmpty, indexedHost == guide.guideHost, indexedAt == guide.guideProgramsLoadedAt else { return [] }
+        guard !query.isEmpty, indexedHost == guideRepository.guideHost, indexedAt == guideRepository.guideProgramsLoadedAt else {
+            return []
+        }
         return searchIndex.search(query, now: now).compactMap { result in
             guard let channel = channels.first(where: { $0.code.caseInsensitiveCompare(result.program.channelCode) == .orderedSame }) else {
                 return nil
@@ -135,7 +137,7 @@ public final class GuideUseCase: GuideUseCaseProtocol {
     }
 
     public func searchResult(_ result: SearchResultItem, now: Date) -> SearchResultItem? {
-        guard let data = guide.program(id: result.program.id, channelCode: result.program.channelCode) else { return nil }
+        guard let data = guideRepository.program(id: result.program.id, channelCode: result.program.channelCode) else { return nil }
         var result = result
         result.program = item(data, now: now)
         result.timeText = Self.searchTimeText(of: data, now: now)

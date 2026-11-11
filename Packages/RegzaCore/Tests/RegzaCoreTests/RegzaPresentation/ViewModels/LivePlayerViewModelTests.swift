@@ -21,11 +21,12 @@ import Testing
         store.streamHost = "192.0.2.30"
         let transport = FakeTransport(respond)
         let live = LiveModels(store: store, transport: transport)
-        let player = LivePlayerViewModel(
-            remote: live.remote, channels: live.channels, guide: live.guide, stream: live.stream,
+        let livePlayerViewModel = LivePlayerViewModel(
+            remoteViewModel: live.remoteViewModel, channelUseCase: live.channelUseCase, guideUseCase: live.guideUseCase,
+            streamUseCase: live.streamUseCase,
             channel: try fixtures.channel(code: channelCode)
         )
-        return (player, transport, store)
+        return (livePlayerViewModel, transport, store)
     }
 
     /// 条件を満たすまで待つ (配信の準備は別の Task で進む)
@@ -36,7 +37,7 @@ import Testing
     }
 
     @Test func playsThenStopsTheStream() async throws {
-        let (player, transport, store) = try makePlayer(channelCode: "JP-G00000001") { request in
+        let (livePlayerViewModel, transport, store) = try makePlayer(channelCode: "JP-G00000001") { request in
             switch (request.method, request.url.path) {
             case ("GET", let path) where path.hasPrefix("/api/streams/live/"):
                 ViewModelFixtures.status(200, #"{"streamId":5}"#)
@@ -46,26 +47,27 @@ import Testing
                 ViewModelFixtures.status(200, "{}")
             }
         }
-        player.send(.start)
-        await wait { if case .ready = player.state.phase { true } else { false } }
+        livePlayerViewModel.send(.start)
+        await wait { if case .ready = livePlayerViewModel.state.phase { true } else { false } }
 
-        #expect(player.state.phase == .ready(url: try #require(URL(string: "http://192.0.2.30:8888/streamfiles/stream5.m3u8"))))
+        #expect(
+            livePlayerViewModel.state.phase == .ready(url: try #require(URL(string: "http://192.0.2.30:8888/streamfiles/stream5.m3u8"))))
         // 止められずに残ったときに次に開いて止められるよう、頼んだ配信を覚えておく
         #expect(store.ownStreamIDs == [5])
 
-        player.send(.end)
-        #expect(player.state.phase == .preparing)
+        livePlayerViewModel.send(.end)
+        #expect(livePlayerViewModel.state.phase == .preparing)
         await wait { store.ownStreamIDs.isEmpty }
         #expect(store.ownStreamIDs.isEmpty)
         #expect(transport.paths.contains("/api/streams/5"))
     }
 
     @Test func explainsWhenStreamDoesNotStart() async throws {
-        let (player, _, store) = try makePlayer(channelCode: "JP-G00000001") { _ in ViewModelFixtures.status(500) }
-        player.send(.start)
-        await wait { if case .failed = player.state.phase { true } else { false } }
-        guard case .failed(let message, let canRetry) = player.state.phase else {
-            Issue.record("失敗にならなかった: \(player.state.phase)")
+        let (livePlayerViewModel, _, store) = try makePlayer(channelCode: "JP-G00000001") { _ in ViewModelFixtures.status(500) }
+        livePlayerViewModel.send(.start)
+        await wait { if case .failed = livePlayerViewModel.state.phase { true } else { false } }
+        guard case .failed(let message, let canRetry) = livePlayerViewModel.state.phase else {
+            Issue.record("失敗にならなかった: \(livePlayerViewModel.state.phase)")
             return
         }
         #expect(message.hasPrefix("再生できませんでした。"))
@@ -74,10 +76,10 @@ import Testing
     }
 
     @Test func refusesChannelThatEPGStationDoesNotKnow() async throws {
-        let (player, transport, _) = try makePlayer(channelCode: "unknown") { _ in ViewModelFixtures.status(200, "{}") }
-        player.send(.start)
-        await wait { player.state.phase != .preparing }
-        #expect(player.state.phase == .failed(message: "このチャンネルは EPGStation で見られません。", canRetry: false))
+        let (livePlayerViewModel, transport, _) = try makePlayer(channelCode: "unknown") { _ in ViewModelFixtures.status(200, "{}") }
+        livePlayerViewModel.send(.start)
+        await wait { livePlayerViewModel.state.phase != .preparing }
+        #expect(livePlayerViewModel.state.phase == .failed(message: "このチャンネルは EPGStation で見られません。", canRetry: false))
         #expect(transport.paths.isEmpty)
     }
 }

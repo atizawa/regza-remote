@@ -6,7 +6,7 @@ struct MirakurunChannelProgramsRequest: MirakurunAPIRequest {
     let networkID: Int
     let serviceID: Int
 
-    func send(using client: MirakurunAPI.Client) async throws -> [MirakurunAPI.Components.Schemas.Program] {
-        try await client.getPrograms(query: .init(networkId: networkID, serviceId: serviceID)).ok.body.json
+    func send(using apiClient: MirakurunAPI.Client) async throws -> [MirakurunAPI.Components.Schemas.Program] {
+        try await apiClient.getPrograms(query: .init(networkId: networkID, serviceId: serviceID)).ok.body.json
     }
 }

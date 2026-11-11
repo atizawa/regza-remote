@@ -6,8 +6,8 @@ import SwiftUI
 /// タブバーの上に出すミニプレーヤー。どのタブでもテレビで映っているものが分かる。
 /// iPhone で再生しているものと間違えないよう、テレビのアイコンとチャンネル名を添える
 struct NowPlayingAccessory: View {
-    @Environment(RemoteViewModel.self) private var model
-    @Environment(AppViewModel.self) private var app
+    @Environment(RemoteViewModel.self) private var remoteViewModel
+    @Environment(AppViewModel.self) private var appViewModel
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
 
     var body: some View {
@@ -28,7 +28,7 @@ struct NowPlayingAccessory: View {
             Spacer(minLength: 0)
             if let key = trailingKey {
                 Button {
-                    model.send(.press(key))
+                    remoteViewModel.send(.press(key))
                 } label: {
                     Image(systemName: key.systemImage ?? "circle")
                         .font(.body.weight(.semibold))
@@ -41,10 +41,12 @@ struct NowPlayingAccessory: View {
         }
         .padding(.horizontal, Design.outer)
         .contentShape(Rectangle())
-        .onTapGesture { app.send(.showNowPlaying) }
+        .onTapGesture { appViewModel.send(.showNowPlaying) }
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("番組の詳細を開きます")
-        .sheet(isPresented: Binding(get: { app.state.isShowingNowPlaying }, set: { if !$0 { app.send(.closeNowPlaying) } })) {
+        .sheet(
+            isPresented: Binding(get: { appViewModel.state.isShowingNowPlaying }, set: { if !$0 { appViewModel.send(.closeNowPlaying) } })
+        ) {
             NowPlayingScreen()
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -53,7 +55,7 @@ struct NowPlayingAccessory: View {
 
     // MARK: - 表示する内容
 
-    private var nowPlaying: NowPlayingItem? { model.state.nowPlaying }
+    private var nowPlaying: NowPlayingItem? { remoteViewModel.state.nowPlaying }
 
     private var icon: String {
         switch nowPlaying?.kind {
@@ -66,25 +68,25 @@ struct NowPlayingAccessory: View {
 
     /// 上の小さな行: チャンネル名や「録画」 (文言は Android と同じ NowPlayingItem.captionText)
     private var caption: String? {
-        if model.state.isSearchingTV || model.state.errorMessage != nil { return nil }
+        if remoteViewModel.state.isSearchingTV || remoteViewModel.state.errorMessage != nil { return nil }
         return nowPlaying?.captionText
     }
 
     /// 下の大きな行: 番組名や状態 (文言は Android と同じ NowPlayingItem.headlineText)
     private var headline: String {
-        if model.state.isSearchingTV { return "テレビを探しています…" }
-        if model.state.errorMessage != nil { return "テレビに接続できません" }
+        if remoteViewModel.state.isSearchingTV { return "テレビを探しています…" }
+        if remoteViewModel.state.errorMessage != nil { return "テレビに接続できません" }
         return nowPlaying?.headlineText ?? "接続中…"
     }
 
     private var progress: Double? {
-        guard let nowPlaying, nowPlaying.hasTimeline, model.state.errorMessage == nil else { return nil }
+        guard let nowPlaying, nowPlaying.hasTimeline, remoteViewModel.state.errorMessage == nil else { return nil }
         return nowPlaying.progress
     }
 
     /// 右端のボタン: 録画は再生/一時停止、放送は消音、待機中は電源
     private var trailingKey: RegzaKey? {
-        guard let nowPlaying, model.state.errorMessage == nil else { return nil }
+        guard let nowPlaying, remoteViewModel.state.errorMessage == nil else { return nil }
         switch nowPlaying.kind {
         case .recorded: return nowPlaying.isAdvancing ? .pause : .play
         case .broadcast: return .mute

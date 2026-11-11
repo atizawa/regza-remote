@@ -6,22 +6,22 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class ProgramDetailViewModel {
-    public let remote: RemoteViewModel
-    package let guide: any GuideUseCaseProtocol
-    package let recording: any RecordingUseCaseProtocol
-    package let stream: any StreamUseCaseProtocol
+    public let remoteViewModel: RemoteViewModel
+    package let guideUseCase: any GuideUseCaseProtocol
+    package let recordingUseCase: any RecordingUseCaseProtocol
+    package let streamUseCase: any StreamUseCaseProtocol
     package let program: ProgramItem
     package let channel: ChannelItem
 
     package init(
-        remote: RemoteViewModel, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol,
-        stream: any StreamUseCaseProtocol,
+        remoteViewModel: RemoteViewModel, guideUseCase: any GuideUseCaseProtocol, recordingUseCase: any RecordingUseCaseProtocol,
+        streamUseCase: any StreamUseCaseProtocol,
         program: ProgramItem, channel: ChannelItem
     ) {
-        self.remote = remote
-        self.guide = guide
-        self.recording = recording
-        self.stream = stream
+        self.remoteViewModel = remoteViewModel
+        self.guideUseCase = guideUseCase
+        self.recordingUseCase = recordingUseCase
+        self.streamUseCase = streamUseCase
         self.program = program
         self.channel = channel
     }
@@ -44,10 +44,10 @@ public final class ProgramDetailViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let reservation = recording.reservation(for: program)
+        let reservation = recordingUseCase.reservation(for: program)
         return State(
-            program: guide.item(program),
-            texts: guide.texts(of: program),
+            program: guideUseCase.item(program),
+            texts: guideUseCase.texts(of: program),
             channelCode: channel.code,
             channelName: channel.name,
             isTuning: isTuning,
@@ -58,9 +58,9 @@ public final class ProgramDetailViewModel {
             reservationIsSeries: reservation?.isSeries,
             canTune: program.isOnAir(at: Date()),
             canReserve: program.end > Date(),
-            canStream: program.isOnAir(at: Date()) && stream.canStream,
+            canStream: program.isOnAir(at: Date()) && streamUseCase.canStream,
             canStartOver: program.isOnAir(at: Date())
-                && remote.tv.canStartOver(channelCode: program.channelCode, programStart: program.start)
+                && remoteViewModel.tvUseCase.canStartOver(channelCode: program.channelCode, programStart: program.start)
         )
     }
 
@@ -73,8 +73,8 @@ public final class ProgramDetailViewModel {
         switch action {
         case .appear:
             work.run {
-                if self.recording.reservations.isEmpty { try? await self.recording.loadReservations() }
-                await self.remote.tv.loadTimeshiftSettings()
+                if self.recordingUseCase.reservations.isEmpty { try? await self.recordingUseCase.loadReservations() }
+                await self.remoteViewModel.tvUseCase.loadTimeshiftSettings()
             }
         case .reserve(let series): work.run { await self.reserve(series: series) }
         case .cancelReservation: work.run { await self.cancelReservation() }
@@ -87,9 +87,9 @@ public final class ProgramDetailViewModel {
         defer { reserving = nil }
         reserveMessage = nil
         do {
-            try await recording.reserve(program, series: series)
+            try await recordingUseCase.reserve(program, series: series)
             reserveCount += 1
-            if !recording.isReserved(program) {
+            if !recordingUseCase.isReserved(program) {
                 // テレビの一覧にまだ反映されていない
                 reserveMessage = "予約しました。テレビの予約一覧に反映されるまで少しかかることがあります。"
             }
@@ -102,12 +102,12 @@ public final class ProgramDetailViewModel {
     }
 
     private func cancelReservation() async {
-        guard let reservation = recording.reservation(for: program) else { return }
+        guard let reservation = recordingUseCase.reservation(for: program) else { return }
         reserving = .cancel
         defer { reserving = nil }
         reserveMessage = nil
         do {
-            try await recording.cancel(reservation)
+            try await recordingUseCase.cancel(reservation)
             reserveCount += 1
         } catch {
             reserveMessage = "予約を取り消せませんでした: \(error.localizedDescription)"
@@ -119,10 +119,10 @@ public final class ProgramDetailViewModel {
         defer { isTuning = false }
         do {
             if startOver {
-                try await remote.tuneAndStartOver(channel)
+                try await remoteViewModel.tuneAndStartOver(channel)
                 tuneMessage = "テレビを\(channel.name)に切り替えて、最初から再生しました。"
             } else {
-                try await remote.tune(to: channel)
+                try await remoteViewModel.tune(to: channel)
                 tuneMessage = "テレビを\(channel.name)に切り替えました。"
             }
         } catch {

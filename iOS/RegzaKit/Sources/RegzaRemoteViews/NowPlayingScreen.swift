@@ -5,11 +5,11 @@ import SwiftUI
 
 /// ミニプレーヤーを押したときの詳細。録画ならシークもできる
 struct NowPlayingScreen: View {
-    @Environment(AppViewModel.self) private var app
+    @Environment(AppViewModel.self) private var appViewModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        let viewModel = app.nowPlaying
+        let viewModel = appViewModel.nowPlayingViewModel
         let state = viewModel.state
         NavigationStack {
             ScrollView {
@@ -25,7 +25,7 @@ struct NowPlayingScreen: View {
                         actionButton("電源を入れる", systemImage: "power") { viewModel.send(.powerOn) }
                     }
                     if let code = state.playableChannelCode {
-                        actionButton("アプリで見る", systemImage: "play.tv") { app.send(.play(channelCode: code)) }
+                        actionButton("アプリで見る", systemImage: "play.tv") { appViewModel.send(.play(channelCode: code)) }
                     }
                     if state.canStartOver {
                         actionButton("この番組を最初から見る", systemImage: "backward.end.alt") { viewModel.send(.startOver) }
@@ -49,12 +49,12 @@ struct NowPlayingScreen: View {
             // このシートを開いている間は、アプリで見る画面をシートの上から出す
             .fullScreenCover(
                 isPresented: Binding(
-                    get: { app.state.playingChannelCode != nil },
-                    set: { if !$0 { app.send(.closePlayer) } }
+                    get: { appViewModel.state.playingChannelCode != nil },
+                    set: { if !$0 { appViewModel.send(.closePlayer) } }
                 )
             ) {
-                if let player = app.player {
-                    LivePlayerScreen(viewModel: player)
+                if let livePlayerViewModel = appViewModel.livePlayerViewModel {
+                    LivePlayerScreen(viewModel: livePlayerViewModel)
                 }
             }
         }

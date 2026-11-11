@@ -13,7 +13,7 @@ extension RegzaAndroidApp {
         let transport = SampleTransport(fixture: fixture)
         RegzaHTTP.transport = transport
         return RegzaAndroidApp(
-            app: onMainActor {
+            appViewModel: onMainActor {
                 if storage.value(forKey: AndroidStorageKey.host) == nil {
                     // CLI の --sample と同じ見本のテレビと録画サーバーを登録する
                     let connection = SampleTransport.connection
@@ -25,7 +25,9 @@ extension RegzaAndroidApp {
                 }
 
                 let managers = makeStorageManagers(storage)
-                return AppViewModel(secureStorage: managers.secureStorage, preferences: managers.preferences, transport: transport)
+                return AppViewModel(
+                    secureStorageManager: managers.secureStorageManager, preferencesManager: managers.preferencesManager,
+                    transport: transport)
             })
     }
 }

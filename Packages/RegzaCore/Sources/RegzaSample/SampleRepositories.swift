@@ -17,17 +17,19 @@ extension AppViewModel {
         programs: [ProgramData] = [],
         reservations: [ReservationData] = []
     ) -> AppViewModel {
-        let tv = SampleTVRepository(connection: connection, channels: channels, nowPlaying: nowPlaying)
-        let guide = SampleGuideRepository(guideHost: guideHost, programs: programs)
-        let stream = SampleStreamRepository()
-        let recording = SampleRecordingRepository(reservations: reservations)
+        let tvRepository = SampleTVRepository(connection: connection, channels: channels, nowPlaying: nowPlaying)
+        let guideRepository = SampleGuideRepository(guideHost: guideHost, programs: programs)
+        let streamRepository = SampleStreamRepository()
+        let recordingRepository = SampleRecordingRepository(reservations: reservations)
         return AppViewModel(
-            remote: RemoteViewModel(tv: TVUseCase(tv: tv), nowPlaying: nowPlaying.map(UseCaseModelMapper.nowPlaying)),
-            channels: ChannelUseCase(tv: tv, guide: guide),
-            guide: GuideUseCase(guide: guide, recording: recording),
-            recording: RecordingUseCase(recording: recording, guide: guide),
-            stream: StreamUseCase(stream: stream, guide: guide),
-            setup: SetupUseCase(devices: SampleDeviceRepository(), guide: guide, stream: stream)
+            remoteViewModel: RemoteViewModel(
+                tvUseCase: TVUseCase(tvRepository: tvRepository), nowPlaying: nowPlaying.map(UseCaseModelMapper.nowPlaying)),
+            channelUseCase: ChannelUseCase(tvRepository: tvRepository, guideRepository: guideRepository),
+            guideUseCase: GuideUseCase(guideRepository: guideRepository, recordingRepository: recordingRepository),
+            recordingUseCase: RecordingUseCase(recordingRepository: recordingRepository, guideRepository: guideRepository),
+            streamUseCase: StreamUseCase(streamRepository: streamRepository, guideRepository: guideRepository),
+            setupUseCase: SetupUseCase(
+                deviceRepository: SampleDeviceRepository(), guideRepository: guideRepository, streamRepository: streamRepository)
         )
     }
 }

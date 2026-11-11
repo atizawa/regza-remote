@@ -6,12 +6,12 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class ServerSetupViewModel {
-    package let setup: any SetupUseCaseProtocol
+    package let setupUseCase: any SetupUseCaseProtocol
 
-    package init(setup: any SetupUseCaseProtocol) {
-        self.setup = setup
-        guideHost = setup.linkedGuideHost
-        streamHost = setup.linkedStreamHost
+    package init(setupUseCase: any SetupUseCaseProtocol) {
+        self.setupUseCase = setupUseCase
+        guideHost = setupUseCase.linkedGuideHost
+        streamHost = setupUseCase.linkedStreamHost
     }
 
     /// 録画サーバーの種類
@@ -37,13 +37,13 @@ public final class ServerSetupViewModel {
         State(
             guide: ServerState(
                 host: guideHost, defaultPort: ServerPort.mirakurun, hosts: guideHosts, isScanning: isScanningGuide,
-                message: guideMessage, status: Self.status(guideHost), isLinked: !setup.linkedGuideHost.isEmpty,
+                message: guideMessage, status: Self.status(guideHost), isLinked: !setupUseCase.linkedGuideHost.isEmpty,
                 unlinkTitle: "Mirakurun との連携を解除しますか？",
                 unlinkMessage: "番組名・番組表・番組表からの録画予約が使えなくなります。ライブ視聴（EPGStation）の連携も解除されます。"
             ),
             stream: ServerState(
                 host: streamHost, defaultPort: ServerPort.epgStation, hosts: streamHosts, isScanning: isScanningStream,
-                message: streamMessage, status: Self.status(streamHost), isLinked: !setup.linkedStreamHost.isEmpty,
+                message: streamMessage, status: Self.status(streamHost), isLinked: !setupUseCase.linkedStreamHost.isEmpty,
                 unlinkTitle: "EPGStation との連携を解除しますか？",
                 unlinkMessage: "アプリでのライブ視聴が使えなくなります。"
             ),
@@ -73,7 +73,7 @@ public final class ServerSetupViewModel {
         isScanningGuide = true
         defer { isScanningGuide = false }
         guideMessage = nil
-        guideHosts = await setup.findGuideServers()
+        guideHosts = await setupUseCase.findGuideServers()
         if let first = guideHosts.first, guideHost.trimmingCharacters(in: .whitespaces).isEmpty {
             guideHost = first
         }
@@ -86,7 +86,7 @@ public final class ServerSetupViewModel {
         isScanningStream = true
         defer { isScanningStream = false }
         streamMessage = nil
-        streamHosts = await setup.findStreamServers()
+        streamHosts = await setupUseCase.findStreamServers()
         if let first = streamHosts.first, streamHost.trimmingCharacters(in: .whitespaces).isEmpty {
             streamHost = first
         }
@@ -98,7 +98,7 @@ public final class ServerSetupViewModel {
     func suggestStreamHost() async {
         guard streamHost.trimmingCharacters(in: .whitespaces).isEmpty, streamHosts.isEmpty else { return }
         // Mirakurun のアドレスからポートを除いたもの
-        guard let server = await setup.streamServer(sameAs: ServerAddress(guideHost).address) else { return }
+        guard let server = await setupUseCase.streamServer(sameAs: ServerAddress(guideHost).address) else { return }
         streamHosts = [server]
         streamHost = server
         streamMessage = "Mirakurun と同じサーバーで EPGStation が見つかりました。よければ「保存」を押してください。"
@@ -109,9 +109,9 @@ public final class ServerSetupViewModel {
         if server == .guide {
             guideHost = ""
             guideHosts = []
-            await setup.unlinkGuide()
+            await setupUseCase.unlinkGuide()
         } else {
-            setup.unlinkStream()
+            setupUseCase.unlinkStream()
         }
         streamHost = ""
         streamHosts = []
@@ -119,7 +119,7 @@ public final class ServerSetupViewModel {
 
     /// 入力したアドレスを保存する (設定の画面の「保存」から、SettingsViewModel が呼ぶ)
     func save() async {
-        await setup.saveServers(guideHost: ServerAddress(guideHost).saved, streamHost: ServerAddress(streamHost).saved)
+        await setupUseCase.saveServers(guideHost: ServerAddress(guideHost).saved, streamHost: ServerAddress(streamHost).saved)
     }
 }
 

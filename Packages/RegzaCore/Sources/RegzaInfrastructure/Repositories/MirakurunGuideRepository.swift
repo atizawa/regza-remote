@@ -6,8 +6,8 @@ import RegzaDomain
 @MainActor
 @Observable
 public final class MirakurunGuideRepository: GuideRepositoryProtocol {
-    @ObservationIgnored private let preferences: PreferencesManager
-    @ObservationIgnored private var client: MirakurunAPIClient
+    @ObservationIgnored private let preferencesManager: PreferencesManager
+    @ObservationIgnored private var mirakurunAPIClient: MirakurunAPIClient
     /// 1 チャンネルの番組表で読んだ番組 (番組の id から引くため)
     @ObservationIgnored private var channelPrograms: [String: [ProgramData]] = [:]
 
@@ -16,35 +16,35 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     public private(set) var guideProgramsLoadedAt: Date?
 
     public init(
-        preferences: PreferencesManager,
-        client: MirakurunAPIClient
+        preferencesManager: PreferencesManager,
+        mirakurunAPIClient: MirakurunAPIClient
     ) {
-        self.preferences = preferences
-        self.client = client
-        guideHost = client.host
+        self.preferencesManager = preferencesManager
+        self.mirakurunAPIClient = mirakurunAPIClient
+        guideHost = mirakurunAPIClient.host
     }
 
     public func saveGuideHost(_ host: String) async {
         let host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         guard host != guideHost else { return }
-        preferences.setValue(host, forKey: .guideHost)
+        preferencesManager.setValue(host, forKey: .guideHost)
         guideHost = host
-        client = client.replacingHost(host)
+        mirakurunAPIClient = mirakurunAPIClient.replacingHost(host)
         channelPrograms = [:]
         guidePrograms = [:]
         guideProgramsLoadedAt = nil
     }
 
     private func guideClient() -> MirakurunAPIClient? {
-        hasGuide ? client : nil
+        hasGuide ? mirakurunAPIClient : nil
     }
 
     /// 全チャンネルの番組を読む。数 MB あるので 30 分に 1 回まで
     public func loadGuidePrograms() async {
-        guard let guide = guideClient() else { return }
+        guard let guideAPIClient = guideClient() else { return }
         if let guideProgramsLoadedAt, Date().timeIntervalSince(guideProgramsLoadedAt) < 30 * 60 { return }
-        guard let programs = try? await guide.request(MirakurunAllProgramsRequest()) else { return }
-        guard guide === client else { return }
+        guard let programs = try? await guideAPIClient.request(MirakurunAllProgramsRequest()) else { return }
+        guard guideAPIClient === mirakurunAPIClient else { return }
         guidePrograms = Self.byChannel(programs)
         guideProgramsLoadedAt = Date()
     }
@@ -54,13 +54,15 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     }
 
     public func programs(channelCode: String) async throws(RegzaError) -> [ProgramData] {
-        guard let guide = guideClient() else { throw .notConfigured }
+        guard let guideAPIClient = guideClient() else { throw .notConfigured }
         do {
             guard let ids = BroadcastID.ids(channelCode: channelCode) else { return [] }
             let now = Date()
-            let programs = try await guide.request(MirakurunChannelProgramsRequest(networkID: ids.networkId, serviceID: ids.serviceId))
-                .filter { $0.end > now }
-            guard guide === client else { throw RegzaError.notConfigured }
+            let programs = try await guideAPIClient.request(
+                MirakurunChannelProgramsRequest(networkID: ids.networkId, serviceID: ids.serviceId)
+            )
+            .filter { $0.end > now }
+            guard guideAPIClient === mirakurunAPIClient else { throw RegzaError.notConfigured }
             channelPrograms[channelCode] = programs
             return programs
         } catch {

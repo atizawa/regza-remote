@@ -6,17 +6,17 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class GuideGridViewModel {
-    public let remote: RemoteViewModel
-    package let guide: any GuideUseCaseProtocol
-    package let recording: any RecordingUseCaseProtocol
+    public let remoteViewModel: RemoteViewModel
+    package let guideUseCase: any GuideUseCaseProtocol
+    package let recordingUseCase: any RecordingUseCaseProtocol
     /// 番組表から開く検索。開き直しても前に探した言葉を残すので、番組表と一緒に持つ
-    public let search: GuideSearchViewModel
+    public let guideSearchViewModel: GuideSearchViewModel
 
-    package init(remote: RemoteViewModel, guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol) {
-        self.remote = remote
-        self.guide = guide
-        self.recording = recording
-        search = GuideSearchViewModel(remote: remote, guide: guide)
+    package init(remoteViewModel: RemoteViewModel, guideUseCase: any GuideUseCaseProtocol, recordingUseCase: any RecordingUseCaseProtocol) {
+        self.remoteViewModel = remoteViewModel
+        self.guideUseCase = guideUseCase
+        self.recordingUseCase = recordingUseCase
+        guideSearchViewModel = GuideSearchViewModel(remoteViewModel: remoteViewModel, guideUseCase: guideUseCase)
     }
 
     /// 1 画面に出す時間 (今の時刻の正時から 24 時間)
@@ -33,24 +33,24 @@ public final class GuideGridViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let bands = Self.bands(remote.channels, guide.guideChannelCodes)
-        let band = remote.band(among: bands)
+        let bands = Self.bands(remoteViewModel.channels, guideUseCase.guideChannelCodes)
+        let band = remoteViewModel.band(among: bands)
         let now = Date()
         let window = Self.window(now: now, day: selectedDay)
-        let columns = remote.channels
-            .filter { $0.band == band && guide.guideChannelCodes.contains($0.code) }
+        let columns = remoteViewModel.channels
+            .filter { $0.band == band && guideUseCase.guideChannelCodes.contains($0.code) }
             .groupingSubchannels()
-            .map { guide.column($0, now: now) }
+            .map { guideUseCase.column($0, now: now) }
             .map { column in
                 var column = column
                 column.programs = column.programs.filter { $0.end > window.lowerBound && $0.start < window.upperBound }
                 return column
             }
-        let days = guide.guideDays(now: now)
+        let days = guideUseCase.guideDays(now: now)
         return State(
-            hasGuide: guide.hasGuide,
+            hasGuide: guideUseCase.hasGuide,
             hasLoaded: hasLoaded,
-            canSearch: guide.hasGuide && hasLoaded && !columns.isEmpty,
+            canSearch: guideUseCase.hasGuide && hasLoaded && !columns.isEmpty,
             bands: bands,
             band: band,
             columns: columns,
@@ -75,10 +75,10 @@ public final class GuideGridViewModel {
 
     private func load() async {
         defer { hasLoaded = true }
-        try? await remote.loadChannels()
-        await guide.loadGuidePrograms()
-        search.updateIndex()
-        try? await recording.loadReservations()
+        try? await remoteViewModel.loadChannels()
+        await guideUseCase.loadGuidePrograms()
+        guideSearchViewModel.updateIndex()
+        try? await recordingUseCase.loadReservations()
     }
 
     // MARK: - 表に出す時間・日付
@@ -99,7 +99,7 @@ public final class GuideGridViewModel {
 extension GuideGridViewModel: IntrospectableActions {
     public var introspectionName: String { "guideGrid" }
     public var isBusy: Bool { work.isBusy }
-    public var introspectionChildren: [any Introspectable] { [search] }
+    public var introspectionChildren: [any Introspectable] { [guideSearchViewModel] }
 
     /// 番組表は 1 週間分あると大きいので、局ごとに番組の数と放送中の番組名だけを見せる
     nonisolated public static func introspectionJSON(of state: State) -> JSONValue {

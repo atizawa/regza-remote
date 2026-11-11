@@ -5,36 +5,37 @@ import SwiftUI
 
 /// 番組を探す画面。番組表のナビゲーションバーの虫眼鏡から開く
 struct GuideSearchScreen: View {
-    let search: GuideSearchViewModel
+    let guideSearchViewModel: GuideSearchViewModel
     let onSelect: (SearchResultItem) -> Void
     @State private var isPresented = false
 
     var body: some View {
-        GuideSearchResults(search: search, onSelect: onSelect)
+        GuideSearchResults(guideSearchViewModel: guideSearchViewModel, onSelect: onSelect)
             .navigationTitle("番組を探す")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
-                text: Binding(get: { search.state.text }, set: { search.send(.setText($0)) }), isPresented: $isPresented,
+                text: Binding(get: { guideSearchViewModel.state.text }, set: { guideSearchViewModel.send(.setText($0)) }),
+                isPresented: $isPresented,
                 placement: .navigationBarDrawer(displayMode: .always), prompt: "番組名・出演者・「明日の夜のドラマ」"
             )
             // 開いたらすぐ打てるようにする (前に探した言葉が残っていれば結果を見せる)
-            .onAppear { if search.state.text.isEmpty { isPresented = true } }
+            .onAppear { if guideSearchViewModel.state.text.isEmpty { isPresented = true } }
     }
 }
 
 /// 検索の結果。時刻順に並べ、なぜ見つかったか (「〇〇 が出演」など) を添える
 struct GuideSearchResults: View {
-    let search: GuideSearchViewModel
+    let guideSearchViewModel: GuideSearchViewModel
     let onSelect: (SearchResultItem) -> Void
 
     var body: some View {
-        let state = search.state
+        let state = guideSearchViewModel.state
         List {
             if !state.conditions.isEmpty {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        ConditionChips(conditions: state.conditions) { search.send(.removeCondition($0)) }
-                        Button("「\(state.text)」をそのまま探す") { search.send(.searchLiterally) }
+                        ConditionChips(conditions: state.conditions) { guideSearchViewModel.send(.removeCondition($0)) }
+                        Button("「\(state.text)」をそのまま探す") { guideSearchViewModel.send(.searchLiterally) }
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(AppTheme.accent)
                     }

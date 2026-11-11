@@ -11,13 +11,13 @@ import Testing
 @MainActor
 @Suite struct IntrospectionTests {
     @Test func introspectionReachesScreensOnPath() async throws {
-        let app = LiveModels(
+        let appViewModel = LiveModels(
             transport: FakeTransport { request in
                 request.url.path.hasSuffix("channel_list")
                     ? ViewModelFixtures.status(200, ViewModelFixtures.channelList) : ViewModelFixtures.status(500)
             }
-        ).app
-        let introspector = Introspector(root: app)
+        ).appViewModel
+        let introspector = Introspector(root: appViewModel)
         try introspector.perform("app/channelList", "reload")
         _ = await introspector.waitUntilIdle()
         try introspector.perform("app", "selectTab", ["tab": .string("channels")])

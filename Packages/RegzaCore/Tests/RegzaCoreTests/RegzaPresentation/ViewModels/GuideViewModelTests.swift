@@ -24,14 +24,16 @@ import Testing
     }
 
     @Test func gridShowsChannelsThatHavePrograms() async throws {
-        let app = fixtures.sampleApp(
+        let appViewModel = fixtures.sampleApp(
             channels: try channels(),
             programs: [
                 try program(id: 1, startingIn: 0),
                 try program(id: 2, startingIn: 3 * 86_400),
             ])
-        let (remote, guide, recording) = (app.remote, app.guide, app.recording)
-        let viewModel = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
+        let (remoteViewModel, guideUseCase, recordingUseCase) = (
+            appViewModel.remoteViewModel, appViewModel.guideUseCase, appViewModel.recordingUseCase
+        )
+        let viewModel = GuideGridViewModel(remoteViewModel: remoteViewModel, guideUseCase: guideUseCase, recordingUseCase: recordingUseCase)
         let state = viewModel.state
 
         // 番組表があるのは地デジのテスト局１だけ。BS の局は番組表がないので出さない
@@ -77,32 +79,35 @@ import Testing
     }
 
     @Test func searchFindsProgramsAndReadsConditions() async throws {
-        let app = fixtures.sampleApp(
+        let appViewModel = fixtures.sampleApp(
             channels: try channels(),
             programs: [
                 try program(id: 1, startingIn: -60, name: "あおぞら散歩"),
                 try program(id: 2, startingIn: 86_400, name: "みどり劇場"),
             ])
-        let (remote, guide, recording) = (app.remote, app.guide, app.recording)
-        let grid = GuideGridViewModel(remote: remote, guide: guide, recording: recording)
-        let search = grid.search
+        let (remoteViewModel, guideUseCase, recordingUseCase) = (
+            appViewModel.remoteViewModel, appViewModel.guideUseCase, appViewModel.recordingUseCase
+        )
+        let gridViewModel = GuideGridViewModel(
+            remoteViewModel: remoteViewModel, guideUseCase: guideUseCase, recordingUseCase: recordingUseCase)
+        let guideSearchViewModel = gridViewModel.guideSearchViewModel
         // 番組表を読むと索引を作る (読めなくても、見本の番組表はそのまま使う)
-        await fixtures.send(grid) { $0.send(.load) }
-        #expect(!search.state.isIndexing)
+        await fixtures.send(gridViewModel) { $0.send(.load) }
+        #expect(!guideSearchViewModel.state.isIndexing)
 
-        search.send(.setText("あおぞら"))
-        var state = search.state
+        guideSearchViewModel.send(.setText("あおぞら"))
+        var state = guideSearchViewModel.state
         #expect(state.results.map(\.program.id) == [1])
         #expect(state.results.first?.channelName == "テスト局１")
         #expect(state.results.first?.timeText.hasPrefix("放送中 〜") == true)
         #expect(state.results.first?.reason == nil)
 
         // 「明日」は条件として読み取り、外すこともできる
-        search.send(.setText("明日のみどり"))
-        #expect(search.state.conditions.map(\.label).contains("明日"))
-        #expect(search.state.results.map(\.program.id) == [2])
-        search.send(.removeCondition(.day))
-        state = search.state
+        guideSearchViewModel.send(.setText("明日のみどり"))
+        #expect(guideSearchViewModel.state.conditions.map(\.label).contains("明日"))
+        #expect(guideSearchViewModel.state.results.map(\.program.id) == [2])
+        guideSearchViewModel.send(.removeCondition(.day))
+        state = guideSearchViewModel.state
         #expect(!state.conditions.contains { $0.condition == .day })
         #expect(state.results.map(\.program.id) == [2])
     }

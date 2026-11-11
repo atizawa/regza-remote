@@ -5,33 +5,34 @@ import Foundation
 
 /// テストの組み立てで使う Manager のセット。
 final class MemoryStore: Sendable {
-    let secureStorage: SecureStorageManager
-    let preferences: PreferencesManager
+    let secureStorageManager: SecureStorageManager
+    let preferencesManager: PreferencesManager
 
     init(connection: ConnectionData) {
-        secureStorage = SecureStorageManager(
+        secureStorageManager = SecureStorageManager(
             storage: MemorySecureStorage(values: [
                 .password: connection.password, .pairingUserID: "00:00:5e:00:53:00",
             ]))
-        preferences = PreferencesManager(storage: MemoryPreferencesStorage(values: [.host: connection.host, .user: connection.user]))
+        preferencesManager = PreferencesManager(
+            storage: MemoryPreferencesStorage(values: [.host: connection.host, .user: connection.user]))
     }
 
     func load() -> ConnectionData {
-        RegzaTVRepository.loadConnection(secureStorage: secureStorage, preferences: preferences)
+        RegzaTVRepository.loadConnection(secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
     }
 
     var guideHost: String {
-        get { preferences.value(forKey: .guideHost) ?? "" }
-        set { preferences.setValue(newValue.trimmingCharacters(in: .whitespaces), forKey: .guideHost) }
+        get { preferencesManager.value(forKey: .guideHost) ?? "" }
+        set { preferencesManager.setValue(newValue.trimmingCharacters(in: .whitespaces), forKey: .guideHost) }
     }
 
     var streamHost: String {
-        get { preferences.value(forKey: .streamHost) ?? "" }
-        set { preferences.setValue(newValue, forKey: .streamHost) }
+        get { preferencesManager.value(forKey: .streamHost) ?? "" }
+        set { preferencesManager.setValue(newValue, forKey: .streamHost) }
     }
 
     var ownStreamIDs: [Int] {
-        get { preferences.integers(forKey: .ownStreamIDs) }
-        set { preferences.setIntegers(newValue, forKey: .ownStreamIDs) }
+        get { preferencesManager.integers(forKey: .ownStreamIDs) }
+        set { preferencesManager.setIntegers(newValue, forKey: .ownStreamIDs) }
     }
 }

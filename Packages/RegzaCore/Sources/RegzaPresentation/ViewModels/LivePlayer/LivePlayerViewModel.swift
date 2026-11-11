@@ -8,19 +8,20 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class LivePlayerViewModel {
-    public let remote: RemoteViewModel
-    package let channels: any ChannelUseCaseProtocol
-    package let guide: any GuideUseCaseProtocol
-    package let stream: any StreamUseCaseProtocol
+    public let remoteViewModel: RemoteViewModel
+    package let channelUseCase: any ChannelUseCaseProtocol
+    package let guideUseCase: any GuideUseCaseProtocol
+    package let streamUseCase: any StreamUseCaseProtocol
 
     package init(
-        remote: RemoteViewModel, channels: any ChannelUseCaseProtocol, guide: any GuideUseCaseProtocol, stream: any StreamUseCaseProtocol,
+        remoteViewModel: RemoteViewModel, channelUseCase: any ChannelUseCaseProtocol, guideUseCase: any GuideUseCaseProtocol,
+        streamUseCase: any StreamUseCaseProtocol,
         channel: ChannelItem
     ) {
-        self.remote = remote
-        self.channels = channels
-        self.guide = guide
-        self.stream = stream
+        self.remoteViewModel = remoteViewModel
+        self.channelUseCase = channelUseCase
+        self.guideUseCase = guideUseCase
+        self.streamUseCase = streamUseCase
         self.channel = channel
     }
 
@@ -42,17 +43,17 @@ public final class LivePlayerViewModel {
 
     public var state: State {
         let now = Date()
-        let bands = channels.liveBands
-        let band = remote.band(among: bands)
+        let bands = channelUseCase.liveBands
+        let band = remoteViewModel.band(among: bands)
         return State(
             channelCode: channel.code,
             channelName: channel.name,
             phase: phase,
-            program: guide.currentProgram(for: channel, at: now).map { guide.item($0, now: now) },
+            program: guideUseCase.currentProgram(for: channel, at: now).map { guideUseCase.item($0, now: now) },
             preparingMessage: "\(channel.name) の配信を準備しています…（20 秒ほど）",
             bands: bands,
             band: band,
-            channels: channels.liveItems(band: band, watchingCode: channel.code, now: now)
+            channels: channelUseCase.liveItems(band: band, watchingCode: channel.code, now: now)
         )
     }
 
@@ -60,19 +61,19 @@ public final class LivePlayerViewModel {
         switch action {
         case .appear:
             work.run {
-                try? await self.remote.loadChannels()
-                await self.guide.loadGuidePrograms()
+                try? await self.remoteViewModel.loadChannels()
+                await self.guideUseCase.loadGuidePrograms()
             }
         case .start:
             start()
         case .switchChannel(let code):
-            guard code != channel.code, let newChannel = channels.channel(code: code) else { return }
+            guard code != channel.code, let newChannel = channelUseCase.channel(code: code) else { return }
             end()
             channel = newChannel
             start()
         case .retryAfterStoppingStalled:
             work.run {
-                await self.stream.stopStalled()
+                await self.streamUseCase.stopStalled()
                 self.start()
             }
         case .end:
@@ -94,30 +95,30 @@ public final class LivePlayerViewModel {
         phase = .preparing
         if let streamID {
             self.streamID = nil
-            let stream = stream
-            Task { await stream.stop(streamID: streamID) }
+            let streamUseCase = streamUseCase
+            Task { await streamUseCase.stop(streamID: streamID) }
         }
     }
 
     private func run(_ channel: ChannelItem) async {
         phase = .preparing
-        guard stream.isPlayable(channelCode: channel.code) else {
+        guard streamUseCase.isPlayable(channelCode: channel.code) else {
             phase = .failed(message: "このチャンネルは EPGStation で見られません。", canRetry: false)
             return
         }
         var requested: Int?
         do {
             // 前に止められずに残った、このアプリの配信は、頼む前に止める (StreamUseCase)
-            let streamID = try await stream.startLiveStream(channelCode: channel.code)
+            let streamID = try await streamUseCase.startLiveStream(channelCode: channel.code)
             requested = streamID
             self.streamID = streamID
-            let url = try await stream.waitUntilReady(streamID: streamID)
+            let url = try await streamUseCase.waitUntilReady(streamID: streamID)
             try Task.checkCancellation()
             phase = .ready(url: url)
             // 見ていることを知らせ続ける (知らせないと EPGStation が配信を止める)
             while !Task.isCancelled {
                 try await Task.sleep(for: .seconds(10))
-                await stream.keep(streamID: streamID)
+                await streamUseCase.keep(streamID: streamID)
             }
         } catch {
             // 局を切り替えたり閉じたりして止めた (Repository は取り消しも RegzaError にして返す)
@@ -125,7 +126,7 @@ public final class LivePlayerViewModel {
             // 始まらなかった配信は残さない
             if let requested, streamID == requested {
                 self.streamID = nil
-                await stream.stop(streamID: requested)
+                await streamUseCase.stop(streamID: requested)
             }
             phase = .failed(
                 message: """

@@ -12,22 +12,22 @@ public final class RegzaAppContainer {
     public static let shared = RegzaAppContainer()
 
     /// Repository に渡す、OS の保存先を包んだ Manager。
-    public let secureStorage: SecureStorageManager
-    public let preferences: PreferencesManager
-    public let app: AppViewModel
+    public let secureStorageManager: SecureStorageManager
+    public let preferencesManager: PreferencesManager
+    public let appViewModel: AppViewModel
     /// ロック画面と Dynamic Island の表示。リモコンの state を見て更新する
     public let liveActivity: LiveActivityModel
 
     private init() {
-        secureStorage = SecureStorageManager(storage: KeychainStorage())
-        preferences = PreferencesManager(storage: UserDefaultsStorage())
-        var app = AppViewModel(secureStorage: secureStorage, preferences: preferences)
+        secureStorageManager = SecureStorageManager(storage: KeychainStorage())
+        preferencesManager = PreferencesManager(storage: UserDefaultsStorage())
+        var appViewModel = AppViewModel(secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
         #if DEBUG
         // 開発用: 起動引数 -SampleData YES で、テレビにつながない見本の Repository で組み立てる
-        if SampleData.isEnabled { app = SampleData.makeApp() }
+        if SampleData.isEnabled { appViewModel = SampleData.makeApp() }
         #endif
-        self.app = app
-        liveActivity = LiveActivityModel(remote: app.remote)
+        self.appViewModel = appViewModel
+        liveActivity = LiveActivityModel(remoteViewModel: appViewModel.remoteViewModel)
     }
 
 }

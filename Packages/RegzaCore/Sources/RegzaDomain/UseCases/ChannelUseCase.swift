@@ -32,29 +32,29 @@ extension ChannelUseCaseProtocol {
 /// チャンネル: テレビに登録されているチャンネルを、放送の種類ごとに、放送中の番組名つきで並べる
 @MainActor
 public final class ChannelUseCase: ChannelUseCaseProtocol {
-    private let tv: any TVRepositoryProtocol
-    private let guide: any GuideRepositoryProtocol
+    private let tvRepository: any TVRepositoryProtocol
+    private let guideRepository: any GuideRepositoryProtocol
 
-    public init(tv: any TVRepositoryProtocol, guide: any GuideRepositoryProtocol) {
-        self.tv = tv
-        self.guide = guide
+    public init(tvRepository: any TVRepositoryProtocol, guideRepository: any GuideRepositoryProtocol) {
+        self.tvRepository = tvRepository
+        self.guideRepository = guideRepository
     }
 
     /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
-    public var bands: [BroadcastBand] { ChannelData.bands(in: tv.channels) }
+    public var bands: [BroadcastBand] { ChannelData.bands(in: tvRepository.channels) }
 
     /// チャンネルの ID のチャンネル。テレビに登録されていなければ nil
     public func channel(code: String) -> ChannelItem? {
-        tv.channels.first { $0.code == code }.map(UseCaseModelMapper.channel)
+        tvRepository.channels.first { $0.code == code }.map(UseCaseModelMapper.channel)
     }
 
     // MARK: - ライブ視聴 (EPGStation) で見られる局
 
     /// EPGStation で見られる局 (Mirakurun が受信している局。番組表がまだなければ CS 以外)。サブチャンネルは代表だけ
     private var liveChannels: [ChannelData] {
-        tv.channels.filter { channel in
+        tvRepository.channels.filter { channel in
             guard channel.isRepresentative || channel.band == .cs else { return false }
-            return guide.guidePrograms.isEmpty ? channel.band != .cs : guide.guidePrograms[channel.code] != nil
+            return guideRepository.guidePrograms.isEmpty ? channel.band != .cs : guideRepository.guidePrograms[channel.code] != nil
         }
     }
 
@@ -70,9 +70,9 @@ public final class ChannelUseCase: ChannelUseCaseProtocol {
                 code: channel.code,
                 name: channel.name,
                 numberText: channel.formattedNumber,
-                programName: guide.currentProgram(for: channel, at: now)?.name,
+                programName: guideRepository.currentProgram(for: channel, at: now)?.name,
                 isNowPlaying: channel.code == watchingCode,
-                hasPrograms: guide.guidePrograms[channel.code] != nil,
+                hasPrograms: guideRepository.guidePrograms[channel.code] != nil,
                 canStartOver: false,
                 isSubchannel: false, band: channel.band, isRepresentative: channel.isRepresentative, remoteNumber: channel.remoteNumber
             )
@@ -81,19 +81,19 @@ public final class ChannelUseCase: ChannelUseCaseProtocol {
 
     /// 一覧に出すチャンネル (UI の型)。サブチャンネルは代表と、いま映っているものだけにする
     public func items(band: BroadcastBand?, nowPlayingCode: String?, now: Date = Date()) -> [ChannelItem] {
-        let listed = ChannelData.channelList(tv.channels, in: band, nowPlayingChannelCode: nowPlayingCode) {
-            guide.currentProgram(for: $0, at: now)?.name
+        let listed = ChannelData.channelList(tvRepository.channels, in: band, nowPlayingChannelCode: nowPlayingCode) {
+            guideRepository.currentProgram(for: $0, at: now)?.name
         }
         return listed.map { channel in
-            let program = guide.currentProgram(for: channel, at: now)
+            let program = guideRepository.currentProgram(for: channel, at: now)
             return ChannelItem(
                 code: channel.code,
                 name: channel.name,
                 numberText: channel.formattedNumber,
                 programName: program?.name,
                 isNowPlaying: channel.code == nowPlayingCode,
-                hasPrograms: guide.hasGuide && guide.guidePrograms[channel.code] != nil,
-                canStartOver: program.map { tv.canStartOver(channelCode: channel.code, programStart: $0.start) } ?? false,
+                hasPrograms: guideRepository.hasGuide && guideRepository.guidePrograms[channel.code] != nil,
+                canStartOver: program.map { tvRepository.canStartOver(channelCode: channel.code, programStart: $0.start) } ?? false,
                 isSubchannel: !channel.isRepresentative && channel.band != .cs,
                 band: channel.band, isRepresentative: channel.isRepresentative, remoteNumber: channel.remoteNumber
             )

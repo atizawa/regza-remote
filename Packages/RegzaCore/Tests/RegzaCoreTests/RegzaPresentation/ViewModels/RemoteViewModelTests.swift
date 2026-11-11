@@ -13,73 +13,73 @@ import Testing
     func makeModel(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse) -> (RemoteViewModel, FakeTransport, MemoryStore) {
         let transport = FakeTransport(respond)
         let live = LiveModels(transport: transport)
-        return (live.remote, transport, live.store)
+        return (live.remoteViewModel, transport, live.store)
     }
 
     @Test func tuneShowsChannelRightAway() async throws {
-        let (model, transport, _) = makeModel { request in
+        let (remoteViewModel, transport, _) = makeModel { request in
             request.url.path.hasSuffix("channel_list")
                 ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
         }
-        try await model.loadChannels()
-        let channel = try #require(model.channels.last)
+        try await remoteViewModel.loadChannels()
+        let channel = try #require(remoteViewModel.channels.last)
 
-        try await model.tune(to: channel)
+        try await remoteViewModel.tune(to: channel)
 
         // テレビに問い合わせ直さずに、選んだチャンネルに切り替わったものとして出す
-        #expect(model.state.nowPlaying?.channelCode == channel.code)
-        #expect(model.nowPlayingChannel == channel)
-        #expect(model.state.errorMessage == nil)
-        #expect(model.lastError == nil)
-        #expect(model.state.tapCount == 1)
+        #expect(remoteViewModel.state.nowPlaying?.channelCode == channel.code)
+        #expect(remoteViewModel.nowPlayingChannel == channel)
+        #expect(remoteViewModel.state.errorMessage == nil)
+        #expect(remoteViewModel.lastError == nil)
+        #expect(remoteViewModel.state.tapCount == 1)
         #expect(transport.paths.last == "/v2/remote/status/channel")
-        #expect(model.state.isConnected)
-        #expect(model.state.lastCommandLabel == nil)
+        #expect(remoteViewModel.state.isConnected)
+        #expect(remoteViewModel.state.lastCommandLabel == nil)
     }
 
     @Test func pressingKeyShowsItUntilTuning() async throws {
-        let (model, _, _) = makeModel { request in
+        let (remoteViewModel, _, _) = makeModel { request in
             request.url.path.hasSuffix("channel_list")
                 ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
         }
         // 画面のない入口 (Siri など) は、送った操作が終わるまで待てる
-        await model.sendAndWait(.press(.volumeUp))
-        #expect(!model.isBusy)
-        #expect(model.state.lastCommandLabel == RegzaKey.volumeUp.label)
+        await remoteViewModel.sendAndWait(.press(.volumeUp))
+        #expect(!remoteViewModel.isBusy)
+        #expect(remoteViewModel.state.lastCommandLabel == RegzaKey.volumeUp.label)
 
-        try await model.loadChannels()
-        try await model.tune(to: try #require(model.channels.first))
-        #expect(model.state.lastCommandLabel == nil)
+        try await remoteViewModel.loadChannels()
+        try await remoteViewModel.tune(to: try #require(remoteViewModel.channels.first))
+        #expect(remoteViewModel.state.lastCommandLabel == nil)
     }
 
     @Test func refreshFailureKeepsError() async {
-        let (model, _, _) = makeModel { _ in HTTPResponse(statusCode: 500, headers: [:], body: Data()) }
-        await model.refresh()
+        let (remoteViewModel, _, _) = makeModel { _ in HTTPResponse(statusCode: 500, headers: [:], body: Data()) }
+        await remoteViewModel.refresh()
 
-        #expect(model.lastError == .httpStatus(500))
-        #expect(model.state.errorMessage == RegzaError.httpStatus(500).localizedDescription)
-        #expect(model.state.nowPlaying == nil)
-        #expect(!model.state.isConnected)
+        #expect(remoteViewModel.lastError == .httpStatus(500))
+        #expect(remoteViewModel.state.errorMessage == RegzaError.httpStatus(500).localizedDescription)
+        #expect(remoteViewModel.state.nowPlaying == nil)
+        #expect(!remoteViewModel.state.isConnected)
     }
 
     @Test func refreshFailureKeepsWhatWasShowingAsDisconnected() async throws {
         final class Failing: @unchecked Sendable { var value = false }
         let failing = Failing()
-        let (model, _, _) = makeModel { request in
+        let (remoteViewModel, _, _) = makeModel { request in
             if failing.value { return HTTPResponse(statusCode: 500, headers: [:], body: Data()) }
             return request.url.path.hasSuffix("channel_list")
                 ? ViewModelFixtures.ok(ViewModelFixtures.channelList) : ViewModelFixtures.ok(#"{"status":0}"#)
         }
-        try await model.loadChannels()
-        let channel = try #require(model.channels.first)
-        try await model.tune(to: channel)
+        try await remoteViewModel.loadChannels()
+        let channel = try #require(remoteViewModel.channels.first)
+        try await remoteViewModel.tune(to: channel)
 
         failing.value = true
-        await model.refresh()
+        await remoteViewModel.refresh()
 
         // 一時的な失敗で番組情報が消えないよう、直前のものを残し、つながっていないことだけを出す (ロック画面も同じ state を読む)
-        #expect(model.state.nowPlaying?.channelCode == channel.code)
-        #expect(!model.state.isConnected)
+        #expect(remoteViewModel.state.nowPlaying?.channelCode == channel.code)
+        #expect(!remoteViewModel.state.isConnected)
     }
 
     @Test func savingAnotherTVForgetsWhatWasLoaded() async throws {
@@ -91,49 +91,50 @@ import Testing
                 default: HTTPResponse(statusCode: 500, headers: [:], body: Data())
                 }
             })
-        let (model, store, recording) = (live.remote, live.store, live.recording)
-        try await model.loadChannels()
-        try await recording.loadReservations()
-        #expect(model.channels.count == 2)
-        #expect(recording.reservations.map(\.id) == ["1"])
+        let (remoteViewModel, store, recordingUseCase) = (live.remoteViewModel, live.store, live.recordingUseCase)
+        try await remoteViewModel.loadChannels()
+        try await recordingUseCase.loadReservations()
+        #expect(remoteViewModel.channels.count == 2)
+        #expect(recordingUseCase.reservations.map(\.id) == ["1"])
 
         let other = ConnectionData(host: "192.0.2.20", user: "user", password: "password")
-        await model.save(UseCaseModelMapper.connection(other))
-        model.send(.stopPolling)
+        await remoteViewModel.save(UseCaseModelMapper.connection(other))
+        remoteViewModel.send(.stopPolling)
 
         #expect(store.load() == other)
-        #expect(model.connection == UseCaseModelMapper.connection(other))
-        #expect(model.channels.isEmpty)
+        #expect(remoteViewModel.connection == UseCaseModelMapper.connection(other))
+        #expect(remoteViewModel.channels.isEmpty)
         // 予約は前のテレビのものなので出さない
-        #expect(recording.reservations.isEmpty)
+        #expect(recordingUseCase.reservations.isEmpty)
     }
 
     @Test func streamNeedsGuide() {
         let live = LiveModels(transport: FakeTransport { _ in ViewModelFixtures.ok("") })
-        live.stream.saveStreamHost(" 192.0.2.30 ")
+        live.streamUseCase.saveStreamHost(" 192.0.2.30 ")
         #expect(live.store.streamHost == "192.0.2.30")
         // EPGStation は Mirakurun から放送を受け取るので、番組表がないと使わない
-        #expect(!live.stream.canStream)
+        #expect(!live.streamUseCase.canStream)
     }
 
     @Test func sampleModeDoesNotTalkToTV() async {
-        let model = AppViewModel.sample(connection: ConnectionData(host: "192.0.2.1"), nowPlaying: nil, channels: []).remote
-        model.send(.press(.power))
-        try? await model.loadChannels(force: true)
-        #expect(model.state.tapCount == 1)
-        #expect(model.state.isSampleMode)
+        let remoteViewModel = AppViewModel.sample(connection: ConnectionData(host: "192.0.2.1"), nowPlaying: nil, channels: [])
+            .remoteViewModel
+        remoteViewModel.send(.press(.power))
+        try? await remoteViewModel.loadChannels(force: true)
+        #expect(remoteViewModel.state.tapCount == 1)
+        #expect(remoteViewModel.state.isSampleMode)
     }
 
     @Test func introspectionPressesKeys() async throws {
-        let (model, transport, _) = makeModel { request in
+        let (remoteViewModel, transport, _) = makeModel { request in
             request.url.path == "/remote/remote.htm" ? ViewModelFixtures.ok("0") : HTTPResponse(statusCode: 500, headers: [:], body: Data())
         }
-        let introspector = Introspector(root: model)
+        let introspector = Introspector(root: remoteViewModel)
         try introspector.perform("remote", "press", ["key": .string("power")])
-        #expect(model.isBusy)
+        #expect(remoteViewModel.isBusy)
         #expect(await introspector.waitUntilIdle())
         #expect(transport.paths.first == "/remote/remote.htm")
-        #expect(model.state.tapCount == 1)
+        #expect(remoteViewModel.state.tapCount == 1)
         #expect(throws: IntrospectionError.invalidArgument("key")) {
             try introspector.perform("remote", "press", ["key": .string("nothing")])
         }

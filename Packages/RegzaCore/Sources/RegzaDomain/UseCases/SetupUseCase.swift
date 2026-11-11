@@ -34,24 +34,25 @@ public protocol SetupUseCaseProtocol: AnyObject {
 /// 設定: テレビや録画サーバーを探す・テレビへの PIN 登録・録画サーバーとの連携
 @MainActor
 public final class SetupUseCase: SetupUseCaseProtocol {
-    private let devices: any DeviceRepositoryProtocol
-    private let guide: any GuideRepositoryProtocol
-    private let stream: any StreamRepositoryProtocol
+    private let deviceRepository: any DeviceRepositoryProtocol
+    private let guideRepository: any GuideRepositoryProtocol
+    private let streamRepository: any StreamRepositoryProtocol
     private let onGuideHostChange: @MainActor (String) async -> Void
 
     public init(
-        devices: any DeviceRepositoryProtocol, guide: any GuideRepositoryProtocol, stream: any StreamRepositoryProtocol,
+        deviceRepository: any DeviceRepositoryProtocol, guideRepository: any GuideRepositoryProtocol,
+        streamRepository: any StreamRepositoryProtocol,
         onGuideHostChange: @escaping @MainActor (String) async -> Void = { _ in }
     ) {
-        self.devices = devices
-        self.guide = guide
-        self.stream = stream
+        self.deviceRepository = deviceRepository
+        self.guideRepository = guideRepository
+        self.streamRepository = streamRepository
         self.onGuideHostChange = onGuideHostChange
     }
 
     /// 同じネットワークのテレビを、見つかった順に返す (UI の型)
     public func findTVs() -> AsyncStream<DeviceItem> {
-        let found = devices.devices()
+        let found = deviceRepository.devices()
         return AsyncStream { continuation in
             let task = Task {
                 for await device in found {
@@ -65,33 +66,33 @@ public final class SetupUseCase: SetupUseCaseProtocol {
 
     /// テレビに PIN を表示させてから確定するまでの 1 回の登録
     public func pairing(host: String, user: String) -> any PairingRegistration {
-        PairingUseCaseSession(session: devices.pairing(host: host, user: user))
+        PairingUseCaseSession(session: deviceRepository.pairing(host: host, user: user))
     }
 
     public func findGuideServers() async -> [String] {
-        await devices.findGuideServers()
+        await deviceRepository.findGuideServers()
     }
 
     public func findStreamServers() async -> [String] {
-        await devices.findStreamServers()
+        await deviceRepository.findStreamServers()
     }
 
     /// Mirakurun と同じサーバーで EPGStation が動いていれば、そのアドレスを返す
     public func streamServer(sameAs guideServer: String) async -> String? {
-        guard !guideServer.isEmpty, await devices.isStreamServer(host: guideServer) else { return nil }
+        guard !guideServer.isEmpty, await deviceRepository.isStreamServer(host: guideServer) else { return nil }
         return guideServer
     }
 
     /// 保存済みの連携しているアドレス
-    public var linkedGuideHost: String { guide.guideHost }
-    public var linkedStreamHost: String { stream.streamHost }
+    public var linkedGuideHost: String { guideRepository.guideHost }
+    public var linkedStreamHost: String { streamRepository.streamHost }
 
     /// 録画サーバーのアドレスを保存する
     public func saveServers(guideHost: String, streamHost: String) async {
-        let previousHost = guide.guideHost
-        await guide.saveGuideHost(guideHost)
-        if guide.guideHost != previousHost { await onGuideHostChange(guide.guideHost) }
-        stream.saveStreamHost(streamHost)
+        let previousHost = guideRepository.guideHost
+        await guideRepository.saveGuideHost(guideHost)
+        if guideRepository.guideHost != previousHost { await onGuideHostChange(guideRepository.guideHost) }
+        streamRepository.saveStreamHost(streamHost)
     }
 
     /// 番組表 (Mirakurun) との連携をやめる。EPGStation は Mirakurun から放送を受け取るので、ライブ視聴の連携も一緒にやめる
@@ -101,7 +102,7 @@ public final class SetupUseCase: SetupUseCaseProtocol {
 
     /// ライブ視聴 (EPGStation) との連携をやめる
     public func unlinkStream() {
-        stream.saveStreamHost("")
+        streamRepository.saveStreamHost("")
     }
 }
 

@@ -6,7 +6,7 @@ import SwiftUI
 /// 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる
 struct GuideGridScreen: View {
     @State private var viewModel: GuideGridViewModel
-    @Environment(AppViewModel.self) private var app
+    @Environment(AppViewModel.self) private var appViewModel
     @Environment(\.showSettings) private var showSettings
     /// 表の左上がスクロールでどれだけずれたか (固定する局名の行と時刻の列を合わせる)
     @State private var scrollOrigin = ScrollOrigin()
@@ -22,7 +22,7 @@ struct GuideGridScreen: View {
     private var metrics: GuideMetrics { GuideMetrics(dynamicTypeSize: min(dynamicTypeSize, Self.maximumDynamicTypeSize)) }
 
     var body: some View {
-        NavigationStack(path: app.path(of: .guide)) {
+        NavigationStack(path: appViewModel.path(of: .guide)) {
             content
                 .navigationTitle("番組表")
                 .navigationBarTitleDisplayMode(.inline)
@@ -30,7 +30,7 @@ struct GuideGridScreen: View {
                     // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
                     if viewModel.state.canSearch {
                         ToolbarItem(placement: .topBarTrailing) {
-                            Button("番組を探す", systemImage: "magnifyingglass") { app.send(.push(.search)) }
+                            Button("番組を探す", systemImage: "magnifyingglass") { appViewModel.send(.push(.search)) }
                         }
                     }
                 }
@@ -95,7 +95,7 @@ struct GuideGridScreen: View {
             HStack(alignment: .top, spacing: 0) {
                 ForEach(columns) { column in
                     ProgramColumn(column: column, window: window, metrics: metrics) { program in
-                        app.send(.push(.programDetail(programID: program.id, channelCode: column.channelCode)))
+                        appViewModel.send(.push(.programDetail(programID: program.id, channelCode: column.channelCode)))
                     }
                 }
             }
@@ -161,11 +161,11 @@ struct GuideGridScreen: View {
         if UserDefaults.standard.bool(forKey: "SampleData"), UserDefaults.standard.bool(forKey: "SampleDetail"),
             let column = viewModel.state.columns.first, let program = column.programs.first(where: \.isOnAir)
         {
-            app.send(.setPath(.guide, [.programDetail(programID: program.id, channelCode: column.channelCode)]))
+            appViewModel.send(.setPath(.guide, [.programDetail(programID: program.id, channelCode: column.channelCode)]))
         }
         if UserDefaults.standard.bool(forKey: "SampleData"), let text = UserDefaults.standard.string(forKey: "SampleSearch") {
-            app.send(.setPath(.guide, [.search]))
-            viewModel.search.send(.setText(text))
+            appViewModel.send(.setPath(.guide, [.search]))
+            viewModel.guideSearchViewModel.send(.setText(text))
         }
         #endif
     }

@@ -22,14 +22,15 @@ func main() async {
     let connection =
         options.sample && options.host.isEmpty
         ? SampleTransport.connection : ConnectionData(host: options.host, user: options.user, password: options.password)
-    let secureStorage = SecureStorageManager(
+    let secureStorageManager = SecureStorageManager(
         storage: MemorySecureStorage(values: [
             .password: connection.password, .pairingUserID: "00:00:5e:00:53:01",
         ]))
-    let preferences = PreferencesManager(storage: MemoryPreferencesStorage(values: [.host: connection.host, .user: connection.user]))
+    let preferencesManager = PreferencesManager(
+        storage: MemoryPreferencesStorage(values: [.host: connection.host, .user: connection.user]))
     if options.sample {
-        preferences.setValue(SampleTransport.guideHost, forKey: .guideHost)
-        preferences.setValue(SampleTransport.streamHost, forKey: .streamHost)
+        preferencesManager.setValue(SampleTransport.guideHost, forKey: .guideHost)
+        preferencesManager.setValue(SampleTransport.streamHost, forKey: .streamHost)
     }
     let transport: any HTTPTransport
     if options.sample {
@@ -46,12 +47,13 @@ func main() async {
     }
     // 番組表 (Mirakurun) や録画サーバーへの通信も同じ方法で送る
     RegzaHTTP.transport = transport
-    let app = AppViewModel(
-        secureStorage: secureStorage, preferences: preferences, remote: RegzaRemote(connection: connection, transport: transport))
-    let session = IntrospectionSession(root: app)
+    let appViewModel = AppViewModel(
+        secureStorageManager: secureStorageManager, preferencesManager: preferencesManager,
+        regzaRemote: RegzaRemote(connection: connection, transport: transport))
+    let session = IntrospectionSession(root: appViewModel)
     if !options.host.isEmpty, !options.sample {
         // チャンネル一覧などを使う操作のため、先に読んでおく
-        app.remote.send(.loadChannels(force: false))
+        appViewModel.remoteViewModel.send(.loadChannels(force: false))
         _ = await session.introspector.waitUntilIdle()
     }
 

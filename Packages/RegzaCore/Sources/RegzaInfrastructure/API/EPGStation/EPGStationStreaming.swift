@@ -2,9 +2,9 @@ import Foundation
 import RegzaDomain
 
 struct EPGStationStreaming {
-    let client: EPGStationAPIClient
+    let epgStationAPIClient: EPGStationAPIClient
     func playlistURL(streamID: Int) -> URL? {
-        guard let context = try? client.playlistContext() else { return nil }
+        guard let context = try? epgStationAPIClient.playlistContext() else { return nil }
         return try? EPGStationPlaylistRequest(streamID: streamID).url(baseURL: context.baseURL)
     }
 
@@ -13,10 +13,12 @@ struct EPGStationStreaming {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             try Task.checkCancellation()
-            if (try? await executeAPIRequest(EPGStationPlaylistRequest(streamID: streamID), using: client.playlistContext())) == true {
+            if (try? await executeAPIRequest(EPGStationPlaylistRequest(streamID: streamID), using: epgStationAPIClient.playlistContext()))
+                == true
+            {
                 return
             }
-            try? await client.request(EPGStationKeepStreamRequest(streamID: streamID))
+            try? await epgStationAPIClient.request(EPGStationKeepStreamRequest(streamID: streamID))
             try await Task.sleep(for: .seconds(1))
         }
         throw RegzaError.network("配信の準備ができませんでした")

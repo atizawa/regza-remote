@@ -5,7 +5,7 @@ import SwiftUI
 
 struct ProgramDetailScreen: View {
     @State private var viewModel: ProgramDetailViewModel
-    @Environment(AppViewModel.self) private var app
+    @Environment(AppViewModel.self) private var appViewModel
 
     init(viewModel: ProgramDetailViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -98,7 +98,7 @@ struct ProgramDetailScreen: View {
             }
             if state.canStream {
                 Button {
-                    app.send(.play(channelCode: state.channelCode))
+                    appViewModel.send(.play(channelCode: state.channelCode))
                 } label: {
                     actionLabel("アプリで見る", systemImage: "play.tv", isBusy: false)
                 }

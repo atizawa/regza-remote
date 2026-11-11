@@ -6,12 +6,12 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class ReservationListViewModel {
-    public let remote: RemoteViewModel
-    package let recording: any RecordingUseCaseProtocol
+    public let remoteViewModel: RemoteViewModel
+    package let recordingUseCase: any RecordingUseCaseProtocol
 
-    package init(remote: RemoteViewModel, recording: any RecordingUseCaseProtocol) {
-        self.remote = remote
-        self.recording = recording
+    package init(remoteViewModel: RemoteViewModel, recordingUseCase: any RecordingUseCaseProtocol) {
+        self.remoteViewModel = remoteViewModel
+        self.recordingUseCase = recordingUseCase
     }
 
     /// 画面に出すもの
@@ -27,7 +27,7 @@ public final class ReservationListViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let items = recording.items(channels: remote.channels)
+        let items = recordingUseCase.items(channels: remoteViewModel.channels)
         return State(
             hasLoaded: hasLoaded,
             isLoading: isLoading,
@@ -52,9 +52,9 @@ public final class ReservationListViewModel {
             isLoading = false
         }
         // 局名を出すためにチャンネル一覧も読む (取れなくても予約は出す)
-        try? await remote.loadChannels()
+        try? await remoteViewModel.loadChannels()
         do {
-            try await recording.loadReservations()
+            try await recordingUseCase.loadReservations()
             loadError = nil
         } catch {
             loadError = error
@@ -63,9 +63,9 @@ public final class ReservationListViewModel {
 
     private func cancel(id: String) async {
         cancelError = nil
-        let title = recording.reservations.first { $0.id == id }?.title ?? ""
+        let title = recordingUseCase.reservations.first { $0.id == id }?.title ?? ""
         do {
-            try await recording.cancel(id: id)
+            try await recordingUseCase.cancel(id: id)
         } catch {
             cancelError = "「\(title)」の予約を取り消せませんでした: \(error.localizedDescription)"
         }
@@ -88,7 +88,7 @@ extension ReservationListViewModel: IntrospectableActions {
         case "load": return .load
         case "cancel":
             let id = try arguments.string("reservation")
-            guard recording.reservations.contains(where: { $0.id == id }) else {
+            guard recordingUseCase.reservations.contains(where: { $0.id == id }) else {
                 throw IntrospectionError.unavailable("予約 \(id) はありません")
             }
             return .cancel(id)

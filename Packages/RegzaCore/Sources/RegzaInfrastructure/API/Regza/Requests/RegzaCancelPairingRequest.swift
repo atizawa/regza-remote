@@ -5,7 +5,7 @@ struct RegzaCancelPairingRequest: RegzaAPIRequest {
 
     let user: String
 
-    func send(using client: RegzaTVAPI.Client) async throws {
-        _ = try await client.cancelConnection(body: .urlEncodedForm(.init(user_id: user)))
+    func send(using apiClient: RegzaTVAPI.Client) async throws {
+        _ = try await apiClient.cancelConnection(body: .urlEncodedForm(.init(user_id: user)))
     }
 }

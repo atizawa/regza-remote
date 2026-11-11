@@ -9,8 +9,9 @@ import Testing
 @Suite struct StreamUseCaseTests {
     @Test func streamCleansUpBeforeStarting() async throws {
         let repository = RecordingStreamRepository()
-        let stream = StreamUseCase(stream: repository, guide: SampleGuideRepository(guideHost: "192.0.2.20", programs: []))
-        let id = try await stream.startLiveStream(channelCode: "JP-G00000001")
+        let streamUseCase = StreamUseCase(
+            streamRepository: repository, guideRepository: SampleGuideRepository(guideHost: "192.0.2.20", programs: []))
+        let id = try await streamUseCase.startLiveStream(channelCode: "JP-G00000001")
         #expect(id == 5)
         // 前に止められずに残った、このアプリの配信を先に止めてから頼む
         #expect(repository.events == ["cleanUp", "start JP-G00000001"])

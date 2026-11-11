@@ -25,31 +25,31 @@ extension RecordingUseCaseProtocol {
 /// 操作対象は番組の ID で Repository から解決し、画面から Data を受け取らない。
 @MainActor
 public final class RecordingUseCase: RecordingUseCaseProtocol {
-    private let recording: any RecordingRepositoryProtocol
-    private let guide: any GuideRepositoryProtocol
+    private let recordingRepository: any RecordingRepositoryProtocol
+    private let guideRepository: any GuideRepositoryProtocol
 
-    public init(recording: any RecordingRepositoryProtocol, guide: any GuideRepositoryProtocol) {
-        self.recording = recording
-        self.guide = guide
+    public init(recordingRepository: any RecordingRepositoryProtocol, guideRepository: any GuideRepositoryProtocol) {
+        self.recordingRepository = recordingRepository
+        self.guideRepository = guideRepository
     }
 
     public var reservations: [ReservationItem] {
-        recording.reservations.map { UseCaseModelMapper.reservation($0, now: Date()) }
+        recordingRepository.reservations.map { UseCaseModelMapper.reservation($0, now: Date()) }
     }
 
     public func items(channels: [ChannelItem], now: Date = Date()) -> [ReservationItem] {
-        recording.reservations.map { data in
+        recordingRepository.reservations.map { data in
             UseCaseModelMapper.reservation(data, channelName: channels.first { $0.code == data.channelCode }?.name, now: now)
         }
     }
 
     public func loadReservations() async throws(RegzaError) {
-        try await recording.loadReservations()
+        try await recordingRepository.loadReservations()
     }
 
     public func reservation(for program: ProgramItem) -> ReservationItem? {
-        guard let data = guide.program(id: program.id, channelCode: program.channelCode),
-            let reservation = recording.reservation(for: data)
+        guard let data = guideRepository.program(id: program.id, channelCode: program.channelCode),
+            let reservation = recordingRepository.reservation(for: data)
         else { return nil }
         return UseCaseModelMapper.reservation(reservation, now: Date())
     }
@@ -59,8 +59,8 @@ public final class RecordingUseCase: RecordingUseCaseProtocol {
     }
 
     public func reserve(_ program: ProgramItem, series: Bool = false) async throws(RegzaError) {
-        guard let data = guide.program(id: program.id, channelCode: program.channelCode) else { throw .unsupported }
-        try await recording.reserve(data, series: series)
+        guard let data = guideRepository.program(id: program.id, channelCode: program.channelCode) else { throw .unsupported }
+        try await recordingRepository.reserve(data, series: series)
     }
 
     public func cancel(_ reservation: ReservationItem) async throws(RegzaError) {
@@ -68,7 +68,7 @@ public final class RecordingUseCase: RecordingUseCaseProtocol {
     }
 
     public func cancel(id: String) async throws(RegzaError) {
-        guard let data = recording.reservations.first(where: { $0.id == id }) else { return }
-        try await recording.cancel(data)
+        guard let data = recordingRepository.reservations.first(where: { $0.id == id }) else { return }
+        try await recordingRepository.cancel(data)
     }
 }

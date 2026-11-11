@@ -5,7 +5,7 @@ struct RegzaCancelReservationRequest: RegzaAPIRequest {
 
     let id: String
 
-    func send(using client: RegzaTVAPI.Client) async throws -> RegzaTVAPI.Components.Schemas.Result {
-        try await client.cancelReservation(path: .init(rsv_id: id)).ok.body.json
+    func send(using apiClient: RegzaTVAPI.Client) async throws -> RegzaTVAPI.Components.Schemas.Result {
+        try await apiClient.cancelReservation(path: .init(rsv_id: id)).ok.body.json
     }
 }

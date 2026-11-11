@@ -14,7 +14,7 @@ import Testing
 
     @Test func channelListExplainsUnsupportedModel() async {
         let live = LiveModels(transport: FakeTransport { _ in ViewModelFixtures.status(404) })
-        let viewModel = live.app.channelList
+        let viewModel = live.appViewModel.channelListViewModel
         await fixtures.send(viewModel) { $0.send(.reload) }
         #expect(viewModel.state.loadErrorMessage == "この機種はチャンネル一覧の取得に対応していません。")
         #expect(!viewModel.state.isLoading)
@@ -26,7 +26,7 @@ import Testing
                 request.url.path.hasSuffix("channel_list")
                     ? ViewModelFixtures.status(200, ViewModelFixtures.channelList) : ViewModelFixtures.status(200, #"{"status":1}"#)
             })
-        let viewModel = live.app.channelList
+        let viewModel = live.appViewModel.channelListViewModel
         await fixtures.send(viewModel) { $0.send(.reload) }
         #expect(viewModel.state.bands == [ChannelData.Band.terrestrial, .bs])
         let row = try #require(viewModel.state.rows.first)

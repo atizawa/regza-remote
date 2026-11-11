@@ -6,13 +6,13 @@ import RegzaDomain
 @MainActor
 @Observable
 public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
-    @ObservationIgnored private let client: RegzaAPIClient
+    @ObservationIgnored private let regzaAPIClient: RegzaAPIClient
     @ObservationIgnored private let connectionState: RegzaConnectionState
     /// 読み込んだ予約と、そのときの接続。接続が変わったら使わない
     private var loaded: (reservations: [ReservationData], revision: Int)?
 
-    public init(client: RegzaAPIClient, connectionState: RegzaConnectionState) {
-        self.client = client
+    public init(regzaAPIClient: RegzaAPIClient, connectionState: RegzaConnectionState) {
+        self.regzaAPIClient = regzaAPIClient
         self.connectionState = connectionState
     }
 
@@ -24,7 +24,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
         let revision = connectionState.revision
         let list: [ReservationData]
         do {
-            list = try await client.request(RegzaReservationsRequest())
+            list = try await regzaAPIClient.request(RegzaReservationsRequest())
         } catch {
             throw RegzaError(error)
         }
@@ -43,7 +43,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
     public func reserve(_ program: ProgramData, series: Bool) async throws(RegzaError) {
         let revision = connectionState.revision
         do {
-            try await client.request(
+            try await regzaAPIClient.request(
                 RegzaReserveRequest(
                     channel: program.channelCode,
                     epgContentID: program.epgContentID,
@@ -61,7 +61,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
     public func cancel(_ reservation: ReservationData) async throws(RegzaError) {
         let revision = connectionState.revision
         do {
-            try await client.request(RegzaCancelReservationRequest(id: reservation.id))
+            try await regzaAPIClient.request(RegzaCancelReservationRequest(id: reservation.id))
         } catch {
             throw RegzaError(error)
         }

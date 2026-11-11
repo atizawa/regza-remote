@@ -14,8 +14,9 @@ import Testing
             try UseCaseFixtures.program(
                 id: 2, serviceId: 0x11, start: UseCaseFixtures.date(hour: 12, minute: 30), minutes: 60, name: "代表の番組"),
         ]
-        let tv = SampleTVRepository(connection: ConnectionData(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
-        let useCase = ChannelUseCase(tv: tv, guide: SampleGuideRepository(guideHost: "192.0.2.2", programs: programs))
+        let tvRepository = SampleTVRepository(connection: ConnectionData(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
+        let useCase = ChannelUseCase(
+            tvRepository: tvRepository, guideRepository: SampleGuideRepository(guideHost: "192.0.2.2", programs: programs))
 
         #expect(useCase.bands == [.terrestrial, .bs, .cs])
         // サブチャンネルは代表と同じ番組なので出さない
@@ -40,22 +41,24 @@ import Testing
 
     @Test func liveChannelsAreThoseMirakurunReceives() throws {
         let channels = try UseCaseFixtures.channels()
-        let tv = SampleTVRepository(connection: ConnectionData(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
+        let tvRepository = SampleTVRepository(connection: ConnectionData(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
         // 番組表がまだなければ、CS 以外の代表のチャンネル
-        let noGuide = ChannelUseCase(tv: tv, guide: SampleGuideRepository(guideHost: "192.0.2.2", programs: []))
-        #expect(noGuide.liveBands == [.terrestrial, .bs])
-        #expect(noGuide.liveItems(band: .terrestrial, watchingCode: "JP-G00000001", now: UseCaseFixtures.now).map(\.name) == ["テスト局１"])
+        let noGuideUseCase = ChannelUseCase(
+            tvRepository: tvRepository, guideRepository: SampleGuideRepository(guideHost: "192.0.2.2", programs: []))
+        #expect(noGuideUseCase.liveBands == [.terrestrial, .bs])
+        #expect(
+            noGuideUseCase.liveItems(band: .terrestrial, watchingCode: "JP-G00000001", now: UseCaseFixtures.now).map(\.name) == ["テスト局１"])
 
         // 番組表があれば、番組表がある (Mirakurun が受信している) 局だけ
-        let withGuide = ChannelUseCase(
-            tv: tv,
-            guide: SampleGuideRepository(
+        let withGuideUseCase = ChannelUseCase(
+            tvRepository: tvRepository,
+            guideRepository: SampleGuideRepository(
                 guideHost: "192.0.2.2",
                 programs: [
                     try UseCaseFixtures.program(id: 1, networkId: 4, serviceId: 1, start: UseCaseFixtures.now)
                 ]))
-        #expect(withGuide.liveBands == [.bs])
-        let bs = withGuide.liveItems(band: .bs, watchingCode: "JP-G00040001", now: UseCaseFixtures.now)
+        #expect(withGuideUseCase.liveBands == [.bs])
+        let bs = withGuideUseCase.liveItems(band: .bs, watchingCode: "JP-G00040001", now: UseCaseFixtures.now)
         #expect(bs.map(\.name) == ["テストBS"])
         #expect(bs.first?.isNowPlaying == true)
     }

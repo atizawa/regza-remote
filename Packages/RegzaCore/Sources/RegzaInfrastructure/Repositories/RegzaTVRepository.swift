@@ -6,11 +6,11 @@ import RegzaDomain
 @MainActor
 @Observable
 public final class RegzaTVRepository: TVRepositoryProtocol {
-    @ObservationIgnored private let secureStorage: SecureStorageManager
-    @ObservationIgnored private let preferences: PreferencesManager
+    @ObservationIgnored private let secureStorageManager: SecureStorageManager
+    @ObservationIgnored private let preferencesManager: PreferencesManager
     /// テレビのリモコン
-    @ObservationIgnored public let remote: RegzaRemote
-    @ObservationIgnored private let client: RegzaAPIClient
+    @ObservationIgnored public let regzaRemote: RegzaRemote
+    @ObservationIgnored private let regzaAPIClient: RegzaAPIClient
     @ObservationIgnored private let connectionState: RegzaConnectionState
 
     public var connection: ConnectionData { connectionState.connection }
@@ -20,15 +20,16 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     public var isSample: Bool { false }
 
     public init(
-        secureStorage: SecureStorageManager, preferences: PreferencesManager, client: RegzaAPIClient, connectionState: RegzaConnectionState,
-        remote: RegzaRemote? = nil
+        secureStorageManager: SecureStorageManager, preferencesManager: PreferencesManager, regzaAPIClient: RegzaAPIClient,
+        connectionState: RegzaConnectionState,
+        regzaRemote: RegzaRemote? = nil
     ) {
-        if let remote { precondition(remote.client === client, "remote と Repository は同じ APIClient を共有してください") }
-        self.secureStorage = secureStorage
-        self.preferences = preferences
-        self.client = client
+        if let regzaRemote { precondition(regzaRemote.regzaAPIClient === regzaAPIClient, "remote と Repository は同じ APIClient を共有してください") }
+        self.secureStorageManager = secureStorageManager
+        self.preferencesManager = preferencesManager
+        self.regzaAPIClient = regzaAPIClient
         self.connectionState = connectionState
-        self.remote = remote ?? RegzaRemote(client: client)
+        self.regzaRemote = regzaRemote ?? RegzaRemote(regzaAPIClient: regzaAPIClient)
     }
 
     public var timeshiftSettings: TimeshiftSettingsData? {
@@ -39,7 +40,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         guard force || channels.isEmpty else { return }
         let revision = connectionState.revision
         do {
-            let channels = try await client.request(RegzaChannelsRequest())
+            let channels = try await regzaAPIClient.request(RegzaChannelsRequest())
             guard revision == connectionState.revision else { return }
             self.channels = channels
         } catch {
@@ -50,7 +51,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     public func loadTimeshiftSettings() async {
         guard timeshiftSettings == nil else { return }
         let revision = connectionState.revision
-        guard let settings = try? await client.request(RegzaTimeshiftSettingsRequest()), revision == connectionState.revision else {
+        guard let settings = try? await regzaAPIClient.request(RegzaTimeshiftSettingsRequest()), revision == connectionState.revision else {
             return
         }
         loadedTimeshift = (settings, revision)
@@ -58,7 +59,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
 
     public func send(_ key: RegzaKey) async throws(RegzaError) {
         do {
-            try await remote.send(key)
+            try await regzaRemote.send(key)
         } catch {
             throw RegzaError(error)
         }
@@ -66,16 +67,16 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
 
     public func tune(to channel: ChannelData) async throws(RegzaError) -> NowPlayingData? {
         do {
-            try await remote.tune(to: channel)
+            try await regzaRemote.tune(to: channel)
         } catch {
             throw RegzaError(error)
         }
-        return await remote.nowPlaying
+        return await regzaRemote.nowPlaying
     }
 
     public func seek(to seconds: Int) async throws(RegzaError) {
         do {
-            try await remote.seek(to: seconds)
+            try await regzaRemote.seek(to: seconds)
         } catch {
             throw RegzaError(error)
         }
@@ -83,14 +84,14 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
 
     public func refresh() async throws(RegzaError) -> NowPlayingData {
         do {
-            return try await remote.refresh()
+            return try await regzaRemote.refresh()
         } catch {
             throw RegzaError(error)
         }
     }
 
     public func lastNowPlaying() async -> NowPlayingData? {
-        await remote.nowPlaying
+        await regzaRemote.nowPlaying
     }
 
     public func locateMovedTV() async -> ConnectionData? {
@@ -104,7 +105,8 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         persist(moved)
         connectionState.update(moved)
         channels = []
-        await remote.update(connection: Self.loadConnection(secureStorage: secureStorage, preferences: preferences))
+        await regzaRemote.update(
+            connection: Self.loadConnection(secureStorageManager: secureStorageManager, preferencesManager: preferencesManager))
         return moved
     }
 
@@ -112,40 +114,41 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         persist(connection)
         connectionState.update(connection)
         channels = []
-        await remote.update(connection: Self.loadConnection(secureStorage: secureStorage, preferences: preferences))
+        await regzaRemote.update(
+            connection: Self.loadConnection(secureStorageManager: secureStorageManager, preferencesManager: preferencesManager))
     }
 
     public func testConnection(_ connection: ConnectionData) async -> Result<NowPlayingData, RegzaError> {
         do {
-            let testClient = await client.replacingConnection(connection)
-            return .success(try await RegzaRemote(client: testClient).refresh())
+            let testAPIClient = await regzaAPIClient.replacingConnection(connection)
+            return .success(try await RegzaRemote(regzaAPIClient: testAPIClient).refresh())
         } catch {
             return .failure(RegzaError(error))
         }
     }
 
     public func pairingUserID() -> String {
-        secureStorage.value(forKey: .pairingUserID, orCreate: PairingUserID.make)
+        secureStorageManager.value(forKey: .pairingUserID, orCreate: PairingUserID.make)
     }
 
     public nonisolated static func loadConnection(
-        secureStorage: SecureStorageManager, preferences: PreferencesManager
+        secureStorageManager: SecureStorageManager, preferencesManager: PreferencesManager
     ) -> ConnectionData {
         ConnectionData(
-            host: preferences.value(forKey: .host) ?? "",
-            user: preferences.value(forKey: .user) ?? "",
-            password: secureStorage.value(forKey: .password) ?? ""
+            host: preferencesManager.value(forKey: .host) ?? "",
+            user: preferencesManager.value(forKey: .user) ?? "",
+            password: secureStorageManager.value(forKey: .password) ?? ""
         )
     }
 
     private func persist(_ connection: ConnectionData) {
-        preferences.setValue(connection.host.trimmingCharacters(in: .whitespaces), forKey: .host)
-        preferences.setValue(connection.user, forKey: .user)
-        secureStorage.setValue(connection.password, forKey: .password)
+        preferencesManager.setValue(connection.host.trimmingCharacters(in: .whitespaces), forKey: .host)
+        preferencesManager.setValue(connection.user, forKey: .user)
+        secureStorageManager.setValue(connection.password, forKey: .password)
     }
 
     /// 組み立て側から、注入された通信設定を保った番組表クライアントへ差し替える。
-    public func updateGuide(client: MirakurunAPIClient?) async {
-        await remote.update(guide: client)
+    public func updateGuide(mirakurunAPIClient: MirakurunAPIClient?) async {
+        await regzaRemote.update(mirakurunAPIClient: mirakurunAPIClient)
     }
 }

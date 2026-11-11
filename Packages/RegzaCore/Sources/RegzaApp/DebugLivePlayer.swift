@@ -8,15 +8,18 @@ extension AppViewModel {
         let json = #"[{"channel":"\#(channelCode)","name":"確認用","channel_number":1}]"#
         guard let channel = (try? JSONDecoder().decode([ChannelData].self, from: Data(json.utf8)))?.first else { return nil }
         // EPGStation は番組表を設定しているときだけ使うので、番組表も設定済みにしておく (番組名は出ない)
-        let preferences = PreferencesManager(
+        let preferencesManager = PreferencesManager(
             storage: MemoryPreferencesStorage(values: [
                 .guideHost: "192.0.2.2", .streamHost: streamHost,
             ]))
-        let guide = MirakurunGuideRepository(preferences: preferences, client: MirakurunAPIClient(host: "192.0.2.2"))
-        let repository = EPGStationStreamRepository(preferences: preferences, client: EPGStationAPIClient(host: streamHost))
-        let stream = StreamUseCase(stream: repository, guide: guide)
+        let guideRepository = MirakurunGuideRepository(
+            preferencesManager: preferencesManager, mirakurunAPIClient: MirakurunAPIClient(host: "192.0.2.2"))
+        let repository = EPGStationStreamRepository(
+            preferencesManager: preferencesManager, epgStationAPIClient: EPGStationAPIClient(host: streamHost))
+        let streamUseCase = StreamUseCase(streamRepository: repository, guideRepository: guideRepository)
         return LivePlayerViewModel(
-            remote: remote, channels: channels, guide: self.guide, stream: stream, channel: UseCaseModelMapper.channel(channel))
+            remoteViewModel: remoteViewModel, channelUseCase: channelUseCase, guideUseCase: self.guideUseCase, streamUseCase: streamUseCase,
+            channel: UseCaseModelMapper.channel(channel))
     }
 }
 

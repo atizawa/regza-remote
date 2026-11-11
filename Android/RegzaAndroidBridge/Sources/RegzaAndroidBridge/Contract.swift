@@ -17,7 +17,7 @@ public struct RegzaContractCommand {
 }
 
 extension RegzaAndroidApp {
-    @MainActor private var session: IntrospectionSession { IntrospectionSession(root: app) }
+    @MainActor private var session: IntrospectionSession { IntrospectionSession(root: appViewModel) }
 
     /// 1 行の命令を読む。空の行なら nil
     public func contractParse(line: String) async -> RegzaContractCommand? {
@@ -60,8 +60,8 @@ extension RegzaAndroidApp {
     public func contractTargetRoute(path: String) async -> AppRoute? {
         await MainActor.run {
             guard let target = try? session.introspector.find(path).introspectionTarget else { return nil }
-            let routes = AppTab.allCases.flatMap { app.state.path(of: $0) }
-            return routes.first { app.viewModel(for: $0) === target }
+            let routes = AppTab.allCases.flatMap { appViewModel.state.path(of: $0) }
+            return routes.first { appViewModel.viewModel(for: $0) === target }
         }
     }
 

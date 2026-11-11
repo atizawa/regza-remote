@@ -64,13 +64,13 @@ public struct ChannelQuery: EntityStringQuery {
     /// テレビに登録されているチャンネル。まだ読んでいなければ読む
     @MainActor
     static func channels() async throws -> [ChannelItem] {
-        let remote = RegzaAppContainer.shared.app.remote
-        guard remote.state.isConfigured else { throw RegzaError.notConfigured }
-        await remote.sendAndWait(.loadChannels(force: false))
-        guard !remote.registeredChannels.isEmpty else {
-            throw RegzaError.network(remote.state.errorMessage ?? "チャンネル一覧を取得できませんでした")
+        let remoteViewModel = RegzaAppContainer.shared.appViewModel.remoteViewModel
+        guard remoteViewModel.state.isConfigured else { throw RegzaError.notConfigured }
+        await remoteViewModel.sendAndWait(.loadChannels(force: false))
+        guard !remoteViewModel.registeredChannels.isEmpty else {
+            throw RegzaError.network(remoteViewModel.state.errorMessage ?? "チャンネル一覧を取得できませんでした")
         }
-        return remote.registeredChannels
+        return remoteViewModel.registeredChannels
     }
 }
 
@@ -96,9 +96,9 @@ public struct TuneChannelIntent: AppIntent {
         }
         // チャンネル一覧の画面と同じ選局 (切り替えられなければ tuneError に説明が入る)
         let container = RegzaAppContainer.shared
-        let channelList = container.app.channelList
-        await channelList.sendAndWait(.tune(target.code))
-        if let error = channelList.state.tuneError { throw RegzaError.commandRejected(error) }
+        let channelListViewModel = container.appViewModel.channelListViewModel
+        await channelListViewModel.sendAndWait(.tune(target.code))
+        if let error = channelListViewModel.state.tuneError { throw RegzaError.commandRejected(error) }
         await container.liveActivity.update()
         return .result(dialog: "\(target.name)に切り替えました")
     }
@@ -173,13 +173,13 @@ public struct RemoteCommandIntent: AppIntent {
     @MainActor
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let container = RegzaAppContainer.shared
-        let remote = container.app.remote
-        guard remote.state.isConfigured else { throw RegzaError.notConfigured }
+        let remoteViewModel = container.appViewModel.remoteViewModel
+        guard remoteViewModel.state.isConfigured else { throw RegzaError.notConfigured }
         let key = command.key
         for _ in 0..<max(1, count) {
             // リモコンの画面と同じ操作 (送ったあと、テレビの状態を取り直す)。送れなければ errorMessage に説明が入る
-            await remote.sendAndWait(.press(key))
-            if let error = remote.state.errorMessage { throw RegzaError.commandRejected(error) }
+            await remoteViewModel.sendAndWait(.press(key))
+            if let error = remoteViewModel.state.errorMessage { throw RegzaError.commandRejected(error) }
         }
         await container.liveActivity.update()
         return .result(dialog: "\(key.label)を送りました")

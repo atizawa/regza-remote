@@ -8,12 +8,12 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class GuideSearchViewModel {
-    public let remote: RemoteViewModel
-    package let guide: any GuideUseCaseProtocol
+    public let remoteViewModel: RemoteViewModel
+    package let guideUseCase: any GuideUseCaseProtocol
 
-    package init(remote: RemoteViewModel, guide: any GuideUseCaseProtocol) {
-        self.remote = remote
-        self.guide = guide
+    package init(remoteViewModel: RemoteViewModel, guideUseCase: any GuideUseCaseProtocol) {
+        self.remoteViewModel = remoteViewModel
+        self.guideUseCase = guideUseCase
     }
 
     /// 画面に出す、読み取った条件
@@ -45,10 +45,11 @@ public final class GuideSearchViewModel {
             isLiteral: isLiteral,
             isIndexing: isIndexing,
             results: results.compactMap { result in
-                guard remote.channels.contains(where: { $0.code.caseInsensitiveCompare(result.channelCode) == .orderedSame }) else {
+                guard remoteViewModel.channels.contains(where: { $0.code.caseInsensitiveCompare(result.channelCode) == .orderedSame })
+                else {
                     return nil
                 }
-                return guide.searchResult(result, now: now)
+                return guideUseCase.searchResult(result, now: now)
             }
         )
     }
@@ -74,12 +75,12 @@ public final class GuideSearchViewModel {
     /// 番組表を読み込み直したときに、探すための索引を作り直す (番組表の画面から呼ぶ)。
     /// 1 週間分で 1 秒ほどかかるので、番組表の表示を待たせないよう裏で作る
     func updateIndex() {
-        let loadedAt = guide.guideProgramsLoadedAt
+        let loadedAt = guideUseCase.guideProgramsLoadedAt
         guard loadedAt != indexedAt || results.isEmpty else { return }
         indexedAt = loadedAt
         isIndexing = true
         Task {
-            await guide.updateSearchIndex()
+            await guideUseCase.updateSearchIndex()
             guard loadedAt == indexedAt else { return }
             isIndexing = false
             refresh()
@@ -95,7 +96,7 @@ public final class GuideSearchViewModel {
         }
         query.genres.removeAll { removed.contains(.genre($0)) }
         self.query = query
-        results = guide.search(query, channels: remote.channels)
+        results = guideUseCase.search(query, channels: remoteViewModel.channels)
     }
 
     private var conditions: [Condition] {

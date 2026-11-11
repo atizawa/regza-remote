@@ -8,12 +8,13 @@ import Testing
 @MainActor
 @Suite struct RecordingUseCaseTests {
     @Test func reservationItemsDescribeScheduleAndChannel() async throws {
-        let recording = SampleRecordingRepository(reservations: [
+        let recordingRepository = SampleRecordingRepository(reservations: [
             try UseCaseFixtures.reservation(id: "1", channelCode: "JP-G00000001", start: UseCaseFixtures.date(hour: 12, minute: 45)),
             try UseCaseFixtures.reservation(
                 id: "2", channelCode: "JP-G00000009", start: UseCaseFixtures.date(day: 1, hour: 21), series: true),
         ])
-        let useCase = RecordingUseCase(recording: recording, guide: SampleGuideRepository(guideHost: "", programs: []))
+        let useCase = RecordingUseCase(
+            recordingRepository: recordingRepository, guideRepository: SampleGuideRepository(guideHost: "", programs: []))
         let items = useCase.items(channels: try UseCaseFixtures.channels().map(UseCaseModelMapper.channel), now: UseCaseFixtures.now)
 
         let recordingNow = try #require(items.first)

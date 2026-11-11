@@ -59,16 +59,16 @@ public enum RegzaDiscovery {
     }
 
     private static func authenticates(_ connection: ConnectionData) async -> Bool {
-        let client = RegzaAPIClient(connection: connection)
+        let regzaAPIClient = RegzaAPIClient(connection: connection)
         do {
-            _ = try await client.request(RegzaPlayStatusRequest())
+            _ = try await regzaAPIClient.request(RegzaPlayStatusRequest())
             return true
         } catch RegzaError.commandRejected {
             // 認証は通っている
             return true
         } catch RegzaError.httpStatus(404), RegzaError.unsupported {
             // v2 API が無い機種は旧 API で確かめる
-            return (try? await client.request(RegzaLegacyStatusRequest())) != nil
+            return (try? await regzaAPIClient.request(RegzaLegacyStatusRequest())) != nil
         } catch {
             return false
         }
@@ -78,8 +78,8 @@ public enum RegzaDiscovery {
     public static func probe(
         host: String, timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport
     ) async -> DeviceData? {
-        let client = RegzaAPIClient(connection: ConnectionData(host: host), timeout: timeout, transport: transport)
-        guard let feature = try? await client.request(RegzaFeatureRequest()) else { return nil }
+        let regzaAPIClient = RegzaAPIClient(connection: ConnectionData(host: host), timeout: timeout, transport: transport)
+        guard let feature = try? await regzaAPIClient.request(RegzaFeatureRequest()) else { return nil }
         return device(host: host, feature: feature)
     }
 

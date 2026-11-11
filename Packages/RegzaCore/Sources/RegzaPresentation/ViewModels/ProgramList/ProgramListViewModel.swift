@@ -6,13 +6,13 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class ProgramListViewModel {
-    package let guide: any GuideUseCaseProtocol
-    package let recording: any RecordingUseCaseProtocol
+    package let guideUseCase: any GuideUseCaseProtocol
+    package let recordingUseCase: any RecordingUseCaseProtocol
     package let channel: ChannelItem
 
-    package init(guide: any GuideUseCaseProtocol, recording: any RecordingUseCaseProtocol, channel: ChannelItem) {
-        self.guide = guide
-        self.recording = recording
+    package init(guideUseCase: any GuideUseCaseProtocol, recordingUseCase: any RecordingUseCaseProtocol, channel: ChannelItem) {
+        self.guideUseCase = guideUseCase
+        self.recordingUseCase = recordingUseCase
         self.channel = channel
     }
 
@@ -30,7 +30,7 @@ public final class ProgramListViewModel {
         State(
             channelCode: channel.code,
             channelName: channel.name,
-            days: programs.map { guide.days($0) },
+            days: programs.map { guideUseCase.days($0) },
             loadErrorMessage: programs == nil ? loadError?.localizedDescription : nil
         )
     }
@@ -40,7 +40,7 @@ public final class ProgramListViewModel {
         case .appear:
             work.run {
                 if self.programs == nil { await self.load() }
-                if self.recording.reservations.isEmpty { try? await self.recording.loadReservations() }
+                if self.recordingUseCase.reservations.isEmpty { try? await self.recordingUseCase.loadReservations() }
             }
         case .reload: work.run { await self.load() }
         }
@@ -48,7 +48,7 @@ public final class ProgramListViewModel {
 
     private func load() async {
         do {
-            programs = try await guide.programs(for: channel)
+            programs = try await guideUseCase.programs(for: channel)
             loadError = nil
         } catch {
             loadError = error

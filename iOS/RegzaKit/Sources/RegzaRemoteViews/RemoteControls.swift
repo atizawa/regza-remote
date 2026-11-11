@@ -34,7 +34,7 @@ enum ButtonSize {
 
 /// キーを 1 つ送るボタン
 struct KeyButton: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(RemoteViewModel.self) private var remoteViewModel
     @Environment(\.remoteKeyTone) private var tone
     let key: RegzaKey
     var title: String?
@@ -50,7 +50,7 @@ struct KeyButton: View {
 
     var body: some View {
         Button {
-            model.send(.press(key))
+            remoteViewModel.send(.press(key))
         } label: {
             VStack(spacing: 2) {
                 if showsIcon, let image = key.systemImage {
@@ -177,14 +177,14 @@ enum Surface {
 
 /// 青・赤・緑・黄のカラーボタン。テレビのリモコンと同じく細長い色の帯にする
 struct ColorKeyButton: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(RemoteViewModel.self) private var remoteViewModel
     @Environment(\.remoteKeyTone) private var tone
     let key: RegzaKey
     let color: Color
 
     var body: some View {
         Button {
-            model.send(.press(key))
+            remoteViewModel.send(.press(key))
         } label: {
             Capsule()
                 .fill(color)
@@ -199,7 +199,7 @@ struct ColorKeyButton: View {
 
 /// 音量・チャンネルの縦長ボタン
 struct RockerControl: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(RemoteViewModel.self) private var remoteViewModel
     let title: String
     let up: RegzaKey
     let down: RegzaKey
@@ -225,7 +225,7 @@ struct RockerControl: View {
 
     private func rockerButton(_ key: RegzaKey, image: String) -> some View {
         Button {
-            model.send(.press(key))
+            remoteViewModel.send(.press(key))
         } label: {
             Image(systemName: image)
                 .font(.title2.weight(.semibold))
@@ -239,7 +239,7 @@ struct RockerControl: View {
 
 /// 十字キーと決定
 struct DirectionPad: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(RemoteViewModel.self) private var remoteViewModel
     var diameter: CGFloat = 200
 
     var body: some View {
@@ -258,7 +258,7 @@ struct DirectionPad: View {
             }
             // 実物のリモコンと同じく、真ん中だけ銀色の一段浮いたボタンにする
             Button {
-                model.send(.press(.enter))
+                remoteViewModel.send(.press(.enter))
             } label: {
                 Text("決定")
                     .font(.headline)
@@ -280,7 +280,7 @@ struct DirectionPad: View {
 
     private func arrow(_ key: RegzaKey) -> some View {
         Button {
-            model.send(.press(key))
+            remoteViewModel.send(.press(key))
         } label: {
             Image(systemName: key.systemImage ?? "circle")
                 .font(.title2.weight(.semibold))
@@ -295,7 +295,7 @@ struct DirectionPad: View {
 /// 番組表とチャンネル一覧の見出しのすぐ下に置く、放送の種類の切り替え。
 /// 見出しの場所には置かず、画面の名前を残す。選んでいるものは、それぞれの画面の state が持つ
 struct BandPicker: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(RemoteViewModel.self) private var remoteViewModel
     let bands: [BroadcastBand]
     let selected: BroadcastBand?
 
@@ -304,7 +304,7 @@ struct BandPicker: View {
             "放送",
             selection: Binding(
                 get: { selected ?? .terrestrial },
-                set: { model.send(.selectBand($0)) }
+                set: { remoteViewModel.send(.selectBand($0)) }
             )
         ) {
             ForEach(bands, id: \.self) { Text($0.label).tag($0) }

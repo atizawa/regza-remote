@@ -5,13 +5,13 @@ import RegzaDomain
 /// UI フレームワークに依存しないので、iOS は SwiftUI / App Intents から、
 /// Android は JNI 経由で同じものを使う。
 public actor RegzaRemote {
-    public nonisolated let client: RegzaAPIClient
+    public nonisolated let regzaAPIClient: RegzaAPIClient
     public private(set) var nowPlaying: NowPlayingData?
     public private(set) var lastCommand: RegzaKey?
     /// v2 API (`play/status`) に対応しているか。未確認なら nil
     private var supportsPlayStatus: Bool?
     /// 放送中の番組名を補う番組表。未設定なら nil
-    public private(set) var guide: MirakurunAPIClient?
+    public private(set) var mirakurunAPIClient: MirakurunAPIClient?
     /// この時刻までは視聴状況を問い合わせない。
     /// 録画の再生を始めるときなど、テレビの映像が切り替わっている最中に `play/status` を問い合わせると、
     /// テレビが再起動する機種がある (決定キーの 0.4 秒後の問い合わせで再起動することを実機で確認)
@@ -49,23 +49,25 @@ public actor RegzaRemote {
     /// 番組名を毎回問い合わせないよう、調べた番組を覚えておく (取れなかったときは 1 分後に調べ直す)
     private var programCache: [Int: (program: ProgramData?, checkedAt: Date)] = [:]
 
-    public init(connection: ConnectionData, guide: MirakurunAPIClient? = nil, transport: any HTTPTransport = RegzaHTTP.transport) {
-        client = RegzaAPIClient(connection: connection, transport: transport)
-        self.guide = guide
+    public init(
+        connection: ConnectionData, mirakurunAPIClient: MirakurunAPIClient? = nil, transport: any HTTPTransport = RegzaHTTP.transport
+    ) {
+        regzaAPIClient = RegzaAPIClient(connection: connection, transport: transport)
+        self.mirakurunAPIClient = mirakurunAPIClient
     }
 
-    public init(client: RegzaAPIClient, guide: MirakurunAPIClient? = nil) {
-        self.client = client
-        self.guide = guide
+    public init(regzaAPIClient: RegzaAPIClient, mirakurunAPIClient: MirakurunAPIClient? = nil) {
+        self.regzaAPIClient = regzaAPIClient
+        self.mirakurunAPIClient = mirakurunAPIClient
     }
 
-    public func update(guide: MirakurunAPIClient?) {
-        self.guide = guide
+    public func update(mirakurunAPIClient: MirakurunAPIClient?) {
+        self.mirakurunAPIClient = mirakurunAPIClient
         programCache = [:]
     }
 
     public func update(connection: ConnectionData) async {
-        await client.update(connection: connection)
+        await regzaAPIClient.update(connection: connection)
         nowPlaying = nil
         supportsPlayStatus = nil
         lastProbe = nil
@@ -73,7 +75,7 @@ public actor RegzaRemote {
     }
 
     public func send(_ key: RegzaKey) async throws {
-        try await client.request(RegzaSendKeyRequest(key: key))
+        try await regzaAPIClient.request(RegzaSendKeyRequest(key: key))
         lastCommand = key
         needsPlayStatus = true
         if key.mayStartContentSwitch {
@@ -82,7 +84,7 @@ public actor RegzaRemote {
     }
 
     public func tune(to channel: ChannelData) async throws {
-        try await client.request(RegzaTuneRequest(code: channel.code))
+        try await regzaAPIClient.request(RegzaTuneRequest(code: channel.code))
         lastCommand = nil
         needsPlayStatus = true
         // 映像が切り替わるので、キーと同じく落ち着くまで play/status は問い合わせない
@@ -96,7 +98,7 @@ public actor RegzaRemote {
     }
 
     public func seek(to seconds: Int) async throws {
-        try await client.request(RegzaSeekRequest(seconds: seconds))
+        try await regzaAPIClient.request(RegzaSeekRequest(seconds: seconds))
     }
 
     /// 視聴状況を取得して更新する。
@@ -118,7 +120,7 @@ public actor RegzaRemote {
         // v2 API で一度取れてからは、旧 API で見張って play/status を必要なときだけにする
         guard supportsPlayStatus == true, let current = nowPlaying else { return try await fetch() }
 
-        let status = try await client.request(RegzaLegacyStatusRequest())
+        let status = try await regzaAPIClient.request(RegzaLegacyStatusRequest())
         let probe = Probe(status)
         let previous = lastProbe
         lastProbe = probe
@@ -172,7 +174,7 @@ public actor RegzaRemote {
         let updated: NowPlayingData
         if supportsPlayStatus != false {
             do {
-                let status = try await client.request(RegzaPlayStatusRequest())
+                let status = try await regzaAPIClient.request(RegzaPlayStatusRequest())
                 supportsPlayStatus = true
                 lastPlayStatusAt = Date()
                 needsPlayStatus = false
@@ -211,12 +213,12 @@ public actor RegzaRemote {
     }
 
     private func program(epgContentID: String?) async -> ProgramData? {
-        guard let guide, let id = epgContentID.flatMap(BroadcastID.programID(epgContentID:)) else { return nil }
+        guard let mirakurunAPIClient, let id = epgContentID.flatMap(BroadcastID.programID(epgContentID:)) else { return nil }
         if let cached = programCache[id], cached.program != nil || Date().timeIntervalSince(cached.checkedAt) < 60 {
             return cached.program
         }
         // 番組表が取れなくても視聴状況はそのまま返す
-        let program = try? await guide.request(MirakurunProgramRequest(id: id))
+        let program = try? await mirakurunAPIClient.request(MirakurunProgramRequest(id: id))
         // 今と次の番組だけ覚えておけば足りるので、増えすぎたら捨てる
         if programCache.count > 8 { programCache = [:] }
         programCache[id] = (program, Date())
@@ -224,6 +226,6 @@ public actor RegzaRemote {
     }
 
     private func legacyStatus() async throws -> NowPlayingData {
-        NowPlayingData(status: try await client.request(RegzaLegacyStatusRequest()), previous: nowPlaying)
+        NowPlayingData(status: try await regzaAPIClient.request(RegzaLegacyStatusRequest()), previous: nowPlaying)
     }
 }

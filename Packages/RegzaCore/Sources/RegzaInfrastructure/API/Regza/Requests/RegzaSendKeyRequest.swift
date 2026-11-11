@@ -7,7 +7,7 @@ struct RegzaSendKeyRequest: RegzaAPIRequest {
 
     let key: RegzaKey
 
-    func send(using client: RegzaTVAPI.Client) async throws -> HTTPBody {
-        try await client.sendKey(query: .init(key: key.code)).ok.body.plainText
+    func send(using apiClient: RegzaTVAPI.Client) async throws -> HTTPBody {
+        try await apiClient.sendKey(query: .init(key: key.code)).ok.body.plainText
     }
 }

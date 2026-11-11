@@ -5,7 +5,7 @@ struct EPGStationKeepStreamRequest: EPGStationAPIRequest {
 
     let streamID: Int
 
-    func send(using client: EPGStationAPI.Client) async throws {
-        _ = try await client.keepStream(path: .init(streamId: streamID))
+    func send(using apiClient: EPGStationAPI.Client) async throws {
+        _ = try await apiClient.keepStream(path: .init(streamId: streamID))
     }
 }

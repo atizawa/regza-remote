@@ -8,34 +8,35 @@ import Testing
 @MainActor
 @Suite struct SetupUseCaseTests {
     @Test func unlinkingGuideAlsoUnlinksStream() async {
-        let guide = SampleGuideRepository(guideHost: "192.0.2.2", programs: [])
-        let stream = SampleStreamRepository()
-        stream.saveStreamHost("192.0.2.2:8888")
-        let setup = SetupUseCase(devices: RecordingDeviceRepository(), guide: guide, stream: stream)
+        let guideRepository = SampleGuideRepository(guideHost: "192.0.2.2", programs: [])
+        let streamRepository = SampleStreamRepository()
+        streamRepository.saveStreamHost("192.0.2.2:8888")
+        let setupUseCase = SetupUseCase(
+            deviceRepository: RecordingDeviceRepository(), guideRepository: guideRepository, streamRepository: streamRepository)
 
-        setup.unlinkStream()
-        #expect(setup.linkedGuideHost == "192.0.2.2")
-        #expect(setup.linkedStreamHost == "")
+        setupUseCase.unlinkStream()
+        #expect(setupUseCase.linkedGuideHost == "192.0.2.2")
+        #expect(setupUseCase.linkedStreamHost == "")
 
-        stream.saveStreamHost("192.0.2.2:8888")
+        streamRepository.saveStreamHost("192.0.2.2:8888")
         // EPGStation は Mirakurun から放送を受け取るので、番組表を外したらライブ視聴も外す
-        await setup.unlinkGuide()
-        #expect(setup.linkedGuideHost == "")
-        #expect(setup.linkedStreamHost == "")
+        await setupUseCase.unlinkGuide()
+        #expect(setupUseCase.linkedGuideHost == "")
+        #expect(setupUseCase.linkedStreamHost == "")
     }
 
     @Test func setupFindsDevicesAndStreamServer() async {
-        let setup = SetupUseCase(
-            devices: RecordingDeviceRepository(),
-            guide: SampleGuideRepository(guideHost: "", programs: []),
-            stream: SampleStreamRepository()
+        let setupUseCase = SetupUseCase(
+            deviceRepository: RecordingDeviceRepository(),
+            guideRepository: SampleGuideRepository(guideHost: "", programs: []),
+            streamRepository: SampleStreamRepository()
         )
         var found: [DeviceItem] = []
-        for await device in setup.findTVs() { found.append(device) }
+        for await device in setupUseCase.findTVs() { found.append(device) }
         #expect(found == [DeviceItem(host: "192.0.2.10", name: "REGZA 55Z000", supportsPIN: true)])
 
-        #expect(await setup.streamServer(sameAs: "192.0.2.2") == "192.0.2.2")
-        #expect(await setup.streamServer(sameAs: "192.0.2.3") == nil)
-        #expect(await setup.streamServer(sameAs: "") == nil)
+        #expect(await setupUseCase.streamServer(sameAs: "192.0.2.2") == "192.0.2.2")
+        #expect(await setupUseCase.streamServer(sameAs: "192.0.2.3") == nil)
+        #expect(await setupUseCase.streamServer(sameAs: "") == nil)
     }
 }

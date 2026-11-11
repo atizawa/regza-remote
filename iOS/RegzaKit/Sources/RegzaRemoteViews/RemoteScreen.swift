@@ -5,7 +5,7 @@ import SwiftUI
 
 /// リモコンの画面。実物の REGZA のリモコンと同じ並びでボタンを出し、押したキーをテレビに送る
 struct RemoteScreen: View {
-    @Environment(RemoteViewModel.self) private var model
+    @Environment(RemoteViewModel.self) private var remoteViewModel
     @State private var isShowingMore = false
 
     var body: some View {
@@ -88,7 +88,7 @@ struct RemoteScreen: View {
         VStack(spacing: Design.item) {
             HStack(spacing: Design.item) {
                 ForEach([RegzaKey.terrestrial, .bs, .cs]) { key in
-                    KeyButton(key: key, size: .compact, isSelected: model.state.nowPlayingBand == key.band)
+                    KeyButton(key: key, size: .compact, isSelected: remoteViewModel.state.nowPlayingBand == key.band)
                 }
             }
             LazyVGrid(
@@ -107,7 +107,7 @@ struct RemoteScreen: View {
             HStack(spacing: Design.item) {
                 KeyButton(key: .previousChapter, size: .primary)
                 KeyButton(key: .skipBackward, size: .primary)
-                KeyButton(key: model.state.nowPlaying?.isAdvancing == true ? .pause : .play, size: .primary)
+                KeyButton(key: remoteViewModel.state.nowPlaying?.isAdvancing == true ? .pause : .play, size: .primary)
                 KeyButton(key: .skipForward, size: .primary)
                 KeyButton(key: .nextChapter, size: .primary)
             }

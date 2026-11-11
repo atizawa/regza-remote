@@ -4,26 +4,26 @@ import SwiftUI
 
 /// タブの中で開く画面。どの画面を開くかは AppViewModel の戻る道が決める
 struct RouteView: View {
-    @Environment(AppViewModel.self) private var app
+    @Environment(AppViewModel.self) private var appViewModel
     let route: AppViewModel.Route
 
     var body: some View {
         switch route {
         case .channelPrograms(let channelCode):
-            if let viewModel = app.programList(channelCode: channelCode) {
+            if let viewModel = appViewModel.programList(channelCode: channelCode) {
                 ProgramListScreen(viewModel: viewModel)
             } else {
                 ContentUnavailableView("チャンネルが見つかりません", systemImage: "list.bullet")
             }
         case .programDetail(let programID, let channelCode):
-            if let viewModel = app.programDetail(programID: programID, channelCode: channelCode) {
+            if let viewModel = appViewModel.programDetail(programID: programID, channelCode: channelCode) {
                 ProgramDetailScreen(viewModel: viewModel)
             } else {
                 ContentUnavailableView("番組が見つかりません", systemImage: "calendar.badge.exclamationmark")
             }
         case .search:
-            GuideSearchScreen(search: app.guideGrid.search) { row in
-                app.send(.push(.programDetail(programID: row.program.id, channelCode: row.channelCode)))
+            GuideSearchScreen(guideSearchViewModel: appViewModel.guideGridViewModel.guideSearchViewModel) { row in
+                appViewModel.send(.push(.programDetail(programID: row.program.id, channelCode: row.channelCode)))
             }
         }
     }

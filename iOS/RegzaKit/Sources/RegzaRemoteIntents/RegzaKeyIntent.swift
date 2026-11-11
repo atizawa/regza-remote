@@ -22,7 +22,7 @@ public struct RegzaKeyIntent: LiveActivityIntent {
     public func perform() async throws -> some IntentResult {
         guard let key = RegzaKey(rawValue: keyName) else { return .result() }
         let container = RegzaAppContainer.shared
-        await container.app.remote.sendAndWait(.press(key))
+        await container.appViewModel.remoteViewModel.sendAndWait(.press(key))
         // アプリがまた止められる前に、Live Activity に出し終える (選局で番組が変われば、起こしてもらう時刻も予約し直す)
         await container.liveActivity.update()
         return .result()

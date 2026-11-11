@@ -7,24 +7,24 @@ import SwiftUI
 /// アプリのルート画面。テレビを操作する「リモコン」と、見るための一覧 (番組表・チャンネル・録画予約) をタブで分ける。
 /// ViewModel は組み立て (RegzaRemoteUI の RootView) が作って渡す。画面は state を読み、send で操作するだけにする
 public struct AppScreen: View {
-    @State private var app: AppViewModel
+    @State private var appViewModel: AppViewModel
     @State private var liveActivity: LiveActivityModel
     /// 開発用: 起動してすぐ開くライブ視聴 (組み立てが、起動引数から作る)
-    private let debugPlayer: LivePlayerViewModel?
+    private let debugPlayerViewModel: LivePlayerViewModel?
     @Environment(\.scenePhase) private var scenePhase
 
-    public init(app: AppViewModel, liveActivity: LiveActivityModel, debugPlayer: LivePlayerViewModel? = nil) {
-        _app = State(initialValue: app)
+    public init(appViewModel: AppViewModel, liveActivity: LiveActivityModel, debugPlayerViewModel: LivePlayerViewModel? = nil) {
+        _appViewModel = State(initialValue: appViewModel)
         _liveActivity = State(initialValue: liveActivity)
-        self.debugPlayer = debugPlayer
+        self.debugPlayerViewModel = debugPlayerViewModel
     }
 
-    private var model: RemoteViewModel { app.remote }
+    private var remoteViewModel: RemoteViewModel { appViewModel.remoteViewModel }
 
     public var body: some View {
         Group {
-            if model.state.isConfigured {
-                TabView(selection: Binding(get: { app.state.tab }, set: { app.send(.selectTab($0)) })) {
+            if remoteViewModel.state.isConfigured {
+                TabView(selection: Binding(get: { appViewModel.state.tab }, set: { appViewModel.send(.selectTab($0)) })) {
                     NavigationStack {
                         RemoteScreen()
                             .navigationTitle("リモコン")
@@ -39,15 +39,15 @@ public struct AppScreen: View {
                     .tabItem { Label("リモコン", systemImage: "appletvremote.gen4.fill") }
                     .tag(AppViewModel.Tab.remote)
 
-                    GuideGridScreen(viewModel: app.guideGrid)
+                    GuideGridScreen(viewModel: appViewModel.guideGridViewModel)
                         .tabItem { Label("番組表", systemImage: "calendar") }
                         .tag(AppViewModel.Tab.guide)
 
-                    ChannelListScreen(viewModel: app.channelList)
+                    ChannelListScreen(viewModel: appViewModel.channelListViewModel)
                         .tabItem { Label("チャンネル", systemImage: "list.bullet") }
                         .tag(AppViewModel.Tab.channels)
 
-                    ReservationListScreen(viewModel: app.reservationList)
+                    ReservationListScreen(viewModel: appViewModel.reservationListViewModel)
                         .tabItem { Label("録画予約", systemImage: "record.circle") }
                         .tag(AppViewModel.Tab.reservations)
                 }
@@ -64,50 +64,50 @@ public struct AppScreen: View {
                     } description: {
                         Text("同じ Wi-Fi のテレビを探して、テレビに表示される PIN で登録してください")
                     } actions: {
-                        Button("設定する") { app.send(.showSettings) }
+                        Button("設定する") { appViewModel.send(.showSettings) }
                             .buttonStyle(.borderedProminent)
                     }
                     .toolbar { remoteToolbar }
                 }
             }
         }
-        .sheet(isPresented: Binding(get: { app.state.isShowingSettings }, set: { if !$0 { app.send(.closeSettings) } })) {
-            if let settings = app.settings {
-                SettingsScreen(settings: settings)
+        .sheet(isPresented: Binding(get: { appViewModel.state.isShowingSettings }, set: { if !$0 { appViewModel.send(.closeSettings) } })) {
+            if let settingsViewModel = appViewModel.settingsViewModel {
+                SettingsScreen(settingsViewModel: settingsViewModel)
             }
         }
         // アプリで見る (ライブ視聴)。いま映っているものの詳細を開いているときは、そのシートの上から出す
         .fullScreenCover(
             isPresented: Binding(
-                get: { app.state.playingChannelCode != nil && !app.state.isShowingNowPlaying },
-                set: { if !$0 { app.send(.closePlayer) } }
+                get: { appViewModel.state.playingChannelCode != nil && !appViewModel.state.isShowingNowPlaying },
+                set: { if !$0 { appViewModel.send(.closePlayer) } }
             )
         ) {
-            if let player = app.player {
-                LivePlayerScreen(viewModel: player)
+            if let livePlayerViewModel = appViewModel.livePlayerViewModel {
+                LivePlayerScreen(viewModel: livePlayerViewModel)
             }
         }
         // 開発用: 起動引数で指定したライブ視聴を、すぐ開く
-        .fullScreenCover(isPresented: .constant(debugPlayer != nil)) {
-            if let debugPlayer {
-                LivePlayerScreen(viewModel: debugPlayer)
+        .fullScreenCover(isPresented: .constant(debugPlayerViewModel != nil)) {
+            if let debugPlayerViewModel {
+                LivePlayerScreen(viewModel: debugPlayerViewModel)
             }
         }
-        .environment(app)
-        .environment(model)
+        .environment(appViewModel)
+        .environment(remoteViewModel)
         .environment(liveActivity)
-        .environment(\.showSettings, ShowSettingsAction { app.send(.showSettings) })
+        .environment(\.showSettings, ShowSettingsAction { appViewModel.send(.showSettings) })
         .tint(AppTheme.accent)
-        .sensoryFeedback(.impact(weight: .light), trigger: model.state.tapCount)
+        .sensoryFeedback(.impact(weight: .light), trigger: remoteViewModel.state.tapCount)
         .task {
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
-            await app.cleanUpStreams()
+            await appViewModel.cleanUpStreams()
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active {
-                model.send(.startPolling)
+                remoteViewModel.send(.startPolling)
             } else {
-                model.send(.stopPolling)
+                remoteViewModel.send(.stopPolling)
                 // 閉じている間も Live Activity を更新できるよう、iOS に起こしてもらう時刻を予約する
                 if phase == .background { liveActivity.scheduleBackgroundRefresh() }
             }
@@ -119,7 +119,7 @@ public struct AppScreen: View {
         // Live Activity のオン・オフはアイコンだけでは分かりにくいので、視聴中の画面と設定画面のスイッチにしている
         ToolbarItemGroup(placement: .topBarTrailing) {
             Button {
-                app.send(.showSettings)
+                appViewModel.send(.showSettings)
             } label: {
                 Image(systemName: "gearshape")
             }
