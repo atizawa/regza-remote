@@ -81,8 +81,8 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     environment("NDK_VERSION", android.ndkVersion)
     doFirst { environment("ANDROID_HOME", sdk.get().asFile.path) }
 
-    inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**", "Plugins/**") })
-    inputs.file(androidDir.resolve("../OpenAPI/regza-tv.yaml"))
+    inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**", "Plugins/**", "Tools/**") })
+    inputs.files(fileTree(androidDir.resolve("../OpenAPI")) { include("regza-tv.yaml", "mirakurun.json", "epgstation.json") })
     inputs.files(
         fileTree(androidDir.resolve("RegzaAndroid")) {
             exclude(

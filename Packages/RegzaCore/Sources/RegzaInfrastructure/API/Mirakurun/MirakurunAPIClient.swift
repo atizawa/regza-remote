@@ -1,4 +1,5 @@
 import Foundation
+import MirakurunAPI
 import RegzaDomain
 
 /// 録画サーバー Mirakurun から番組表を読む。認証は不要。
@@ -26,39 +27,60 @@ public final class MirakurunAPIClient: Sendable {
 
     /// 1 番組。テレビの `epg_content_id` から `programID(epgContentID:)` で求めた ID を渡す
     public func program(id: Int) async throws -> MirakurunProgram {
-        try JSONDecoder().decode(MirakurunProgram.self, from: try await get("/api/programs/\(id)"))
+        try await performOpenAPI {
+            let program = try await openAPI().getProgram(path: .init(id: id)).ok.body.json
+            return try Self.program(program)
+        }
     }
 
     /// 1 チャンネルの番組 (8 日分ほど)。時刻順
     public func programs(channelCode: String) async throws -> [MirakurunProgram] {
         guard let (networkId, serviceId) = BroadcastID.ids(channelCode: channelCode) else { return [] }
-        let data = try await get("/api/programs", query: "networkId=\(networkId)&serviceId=\(serviceId)")
-        return try JSONDecoder().decode([MirakurunProgram].self, from: data).sorted { $0.start < $1.start }
+        return try await performOpenAPI {
+            let programs = try await openAPI().getPrograms(query: .init(networkId: networkId, serviceId: serviceId)).ok.body.json
+            return try programs.map(Self.program).sorted { $0.start < $1.start }
+        }
     }
 
     /// 全チャンネルの番組。数 MB になるので、必要なときだけ呼ぶ
     public func allPrograms() async throws -> [MirakurunProgram] {
-        try JSONDecoder().decode([MirakurunProgram].self, from: try await get("/api/programs"))
+        try await performOpenAPI {
+            let programs = try await openAPI().getPrograms().ok.body.json
+            return try programs.map(Self.program)
+        }
     }
 
     /// Mirakurun が応答するか
     public func isAvailable() async -> Bool {
-        guard let data = try? await get("/api/version"),
-            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return false }
-        return object["current"] != nil
+        (try? await performOpenAPI { try await openAPI().checkVersion().ok.body.json.current != nil }) ?? false
     }
 
-    private func get(_ path: String, query: String? = nil) async throws -> Data {
-        guard !host.isEmpty else { throw RegzaError.notConfigured }
-        let authority = host.contains(":") ? host : "\(host):\(Self.defaultPort)"
-        guard let url = URL(string: "http://\(authority)\(path)" + (query.map { "?\($0)" } ?? "")) else {
-            throw RegzaError.invalidHost
+    private func openAPI() throws -> MirakurunAPI.Client {
+        MirakurunAPI.Client(
+            serverURL: try recordingServerURL(host: host, defaultPort: Self.defaultPort, template: MirakurunAPI.Servers.Server1.url()),
+            transport: OpenAPIHTTPTransport(transport: transport, timeout: timeout),
+            middlewares: [OpenAPIResponseMiddleware(), OpenAPIJSONMiddleware()]
+        )
+    }
+
+    /// 生成 DTO を直接 Domain に変換する。番組表全体を JSON に再エンコードしない。
+    private static func program(_ source: MirakurunAPI.Components.Schemas.Program) throws -> MirakurunProgram {
+        let extended = try (source.extended?.value ?? [:]).map { key, value in
+            guard let text = value as? String else { throw RegzaError.unsupported }
+            return MirakurunProgram.Extended(title: key, text: text)
         }
-        let response = try await transport.send(HTTPRequest(url: url, timeout: timeout))
-        guard (200..<300).contains(response.statusCode) else { throw RegzaError.httpStatus(response.statusCode) }
-        // 番組の説明に入っていた制御文字を、そのまま返すことがある (LenientJSON)
-        return LenientJSON.escapingControlCharactersInStrings(response.body)
+        let genres = try (source.genres ?? []).map { genre in
+            guard let value = genre.lv1 else { throw RegzaError.unsupported }
+            return value
+        }
+        let startAt = Double(source.startAt)
+        let duration = Double(source.duration ?? 0)
+        return MirakurunProgram(
+            id: source.id, networkId: source.networkId, serviceId: source.serviceId,
+            eventId: source.eventId ?? source.id % 100_000,
+            start: Date(timeIntervalSince1970: startAt / 1000), end: Date(timeIntervalSince1970: (startAt + duration) / 1000),
+            name: source.name ?? "", description: source.description ?? "", extended: extended, genres: genres
+        )
     }
 
     // MARK: - 探す

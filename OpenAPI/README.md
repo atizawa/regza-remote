@@ -16,16 +16,31 @@
   取ったサーバーのアドレスを例示用のアドレス (RFC 5737) に置き換えている。
 - サーバーの版を上げたときは、取り直して版と日付をここに書く。
 
-## REGZA の Swift クライアント
+## Swift クライアント
 
-`Packages/RegzaCore` の `RegzaTVAPI` は、Apple の Swift OpenAPI Generator 1.14.4 で
-`regza-tv.yaml` から型とクライアントをビルド時に生成する。仕様はこのファイルだけで管理し、
-生成された Swift は `.build/` に置くのでコミットしない。設定は
-`Packages/RegzaCore/Sources/RegzaTVAPI/openapi-generator-config.yaml`。
+Apple の Swift OpenAPI Generator 1.14.4 で、3 つの API の型とクライアントをビルド時に生成する。
+取得した仕様の原本は変更せず、生成された Swift と中間仕様は `.build/` に置くのでコミットしない。
+各モジュールの設定は `Packages/RegzaCore/Sources/<モジュール>/openapi-generator-config.yaml`。
+
+| モジュール | 仕様 | 生成する操作 |
+|---|---|---|
+| `RegzaTVAPI` | `regza-tv.yaml` | 仕様にあるテレビの操作 |
+| `MirakurunAPI` | `mirakurun.json` | バージョン・番組の一覧・1 番組 |
+| `EPGStationAPI` | `epgstation.json` | バージョン・ライブ配信開始・配信一覧・keep・停止 |
+
+`GenerateAPI` プラグインは、Mirakurun・EPGStation の仕様をホスト用ツール `Tools/PrepareOpenAPI` で
+準備してから生成する。追加の Node.js や外部コマンドは不要。中間仕様はアプリの resource には含めない。
+
+- Mirakurun の Swagger 2.0 は、使う 3 つの GET 操作のパラメーター・応答・参照を OpenAPI 3.0 に変換する。
+  inline の path/query/header パラメーターを対象とし、body・collectionFormat 等の未対応形式はビルドを止める。
+- EPGStation は使う操作を抽出し、原本にない operationId を付ける。
+- 番組と配信一覧のモデルは、従来から読んでいた項目に絞る。未使用の映像・音声の enum 等で番組表が読めなくなるのを防ぐ。
+- 従来の互換性として、番組の eventId・duration は省略可能にする。配信一覧では streamId のない項目を無視し、
+  isEnable がなければ false とする。それ以外の型やパラメーターは原本の定義を使う。
 
 iOS・Android・macOS・Linux は同じ生成クライアントを使う。
 生成型は Infrastructure の内部に閉じ、画面・Domain に公開する型は変えない。
-Mirakurun・EPGStation の生成クライアントへの移行はまだ行っていない。
+Mirakurun の生成 DTO は Domain 型に直接変換し、番組表全体の JSON 再エンコードはしない。
 
 Repository が使う窓口の名前は `RegzaAPIClient`・`MirakurunAPIClient`・`EPGStationAPIClient` に揃える。
 APIClient は API の操作をまとめ、Repository は Domain への変換・キャッシュ・保存を担当する。
@@ -41,13 +56,18 @@ iOS は URLSessionTransport、Android は SocketTransport + BoringSSL、テス�
 HTTP のステータスとヘッダーは書き換えずに受け渡す。
 
 Digest の再認証と nonce の管理は `RegzaDigestMiddleware` が担う。
-`RegzaCompatibilityMiddleware` は、LenientJSON による本文補正と、欠けた Content-Type の補完を行う。
+`OpenAPIJSONMiddleware` は、3 つの API 共通で LenientJSON による本文補正と、欠けた Content-Type の補完を行う。
+`OpenAPIResponseMiddleware` は HTTP エラーをアプリのエラーへ変換する。
+401 を認証エラーとして扱うのは Digest 認証を使う REGZA だけとし、録画サーバーでは従来どおり HTTP ステータスを保持する。
 タイムアウトと録画予約の HTTPS 4430・自己署名証明書の扱いは既存の通信層に引き継ぐ。
 旧 API の応答はバイト列で受け、既存の UTF-8・Shift_JIS・EUC-JP の判定を使う。
 OpenAPI で表現できないシークの秒数だけのクエリは、互換ミドルウェアで Digest 署名の前に補う。
+EPGStation の `/streamfiles/*.m3u8` は REST API の仕様外のファイルなので、既存の HTTPTransport で取得する。
 
 ```sh
 swift build --package-path Packages/RegzaCore --target RegzaTVAPI
+swift build --package-path Packages/RegzaCore --target MirakurunAPI
+swift build --package-path Packages/RegzaCore --target EPGStationAPI
 ```
 
 通常の iOS アプリのビルドでも、仕様が変わると生成し直す。
@@ -69,6 +89,7 @@ API/
   EPGStation/EPGStationAPIClient.swift
 Network/
   OpenAPIHTTPTransport.swift
+  OpenAPIMiddleware.swift
   HTTPTransport.swift
   SocketTransport.swift
 Repositories/

@@ -18,6 +18,32 @@ public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
     public struct Extended: Hashable, Sendable {
         public var title: String
         public var text: String
+
+        public init(title: String, text: String) {
+            self.title = title
+            self.text = text
+        }
+    }
+
+    public init(
+        id: Int, networkId: Int, serviceId: Int, eventId: Int, start: Date, end: Date,
+        name: String = "", description: String = "", extended: [Extended] = [], genres: [Int] = []
+    ) {
+        self.id = id
+        self.networkId = networkId
+        self.serviceId = serviceId
+        self.eventId = eventId
+        self.start = start
+        self.end = end
+        self.name = RegzaNowPlaying.cleanTitle(name)
+        self.description = description
+        let order = ["番組内容", "出演者"]
+        self.extended = extended.sorted { lhs, rhs in
+            let left = order.firstIndex(of: lhs.title) ?? order.count
+            let right = order.firstIndex(of: rhs.title) ?? order.count
+            return left != right ? left < right : lhs.title < rhs.title
+        }
+        self.genres = genres
     }
 
     /// テレビのチャンネル一覧の `RegzaChannel.code` と同じ形式
@@ -43,28 +69,20 @@ public struct MirakurunProgram: Decodable, Hashable, Sendable, Identifiable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(Int.self, forKey: .id)
-        networkId = try container.decode(Int.self, forKey: .networkId)
-        serviceId = try container.decode(Int.self, forKey: .serviceId)
-        eventId = try container.decodeIfPresent(Int.self, forKey: .eventId) ?? id % 100_000
+        let id = try container.decode(Int.self, forKey: .id)
         // ミリ秒
         let startAt = try container.decode(Double.self, forKey: .startAt)
         let duration = try container.decodeIfPresent(Double.self, forKey: .duration) ?? 0
-        start = Date(timeIntervalSince1970: startAt / 1000)
-        end = Date(timeIntervalSince1970: (startAt + duration) / 1000)
-        name = RegzaNowPlaying.cleanTitle(try container.decodeIfPresent(String.self, forKey: .name) ?? "")
-        description = try container.decodeIfPresent(String.self, forKey: .description) ?? ""
         let extended = try container.decodeIfPresent([String: String].self, forKey: .extended) ?? [:]
-        // JSON のキーの順番は残らないので、よく出る見出しを先に並べる
-        let order = ["番組内容", "出演者"]
-        self.extended =
-            extended
-            .map { Extended(title: $0.key, text: $0.value) }
-            .sorted { lhs, rhs in
-                let left = order.firstIndex(of: lhs.title) ?? order.count
-                let right = order.firstIndex(of: rhs.title) ?? order.count
-                return left != right ? left < right : lhs.title < rhs.title
-            }
-        genres = (try container.decodeIfPresent([Genre].self, forKey: .genres) ?? []).map(\.lv1)
+        self.init(
+            id: id, networkId: try container.decode(Int.self, forKey: .networkId),
+            serviceId: try container.decode(Int.self, forKey: .serviceId),
+            eventId: try container.decodeIfPresent(Int.self, forKey: .eventId) ?? id % 100_000,
+            start: Date(timeIntervalSince1970: startAt / 1000), end: Date(timeIntervalSince1970: (startAt + duration) / 1000),
+            name: try container.decodeIfPresent(String.self, forKey: .name) ?? "",
+            description: try container.decodeIfPresent(String.self, forKey: .description) ?? "",
+            extended: extended.map { Extended(title: $0.key, text: $0.value) },
+            genres: (try container.decodeIfPresent([Genre].self, forKey: .genres) ?? []).map(\.lv1)
+        )
     }
 }

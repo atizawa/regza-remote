@@ -157,7 +157,7 @@ public actor RegzaAPIClient {
             serverURL: url,
             transport: OpenAPIHTTPTransport(transport: transport, timeout: timeout),
             middlewares: [
-                RegzaResponseMiddleware(),
+                OpenAPIResponseMiddleware(usesDigestAuthentication: true),
                 RegzaCompatibilityMiddleware(queryOverride: queryOverride),
                 digest,
             ]

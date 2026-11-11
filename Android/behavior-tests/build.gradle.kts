@@ -60,8 +60,8 @@ val buildJvmHost = tasks.register<Exec>("buildJvmHost") {
     // Mac 向けの .dylib に入る Swift や、依存の版・設定が変わったときだけ動く (変わっていなければ、debug のビルドやプレビューの更新で待たない)。
     // RegzaAndroid は、Mac 向けには入らない Android だけの部品 (Looper・BoringSSL) を外し、それ以外をすべて見る
     // (つなぎのフォルダが増えても、ここを直さずに見るように)。依存の版は RegzaAndroid/Package.resolved にだけ書かれる
-    inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**", "Plugins/**") })
-    inputs.file(androidDir.resolve("../OpenAPI/regza-tv.yaml"))
+    inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**", "Plugins/**", "Tools/**") })
+    inputs.files(fileTree(androidDir.resolve("../OpenAPI")) { include("regza-tv.yaml", "mirakurun.json", "epgstation.json") })
     inputs.files(
         fileTree(androidDir.resolve("RegzaAndroid")) {
             include("Package.swift", "Package.resolved", "Sources/**")

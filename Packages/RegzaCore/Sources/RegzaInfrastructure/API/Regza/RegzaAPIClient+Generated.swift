@@ -24,10 +24,6 @@ extension RegzaAPIClient {
 
     /// 通信層のエラーは既存の公開契約を保つ。仕様外の本文は未対応の機種として扱う。
     func generated<Value>(_ operation: () async throws -> Value) async throws -> Value {
-        do { return try await operation() } catch let error as ClientError {
-            if let underlying = error.underlyingError as? RegzaError { throw underlying }
-            if error.underlyingError is CancellationError { throw CancellationError() }
-            throw RegzaError.unsupported
-        }
+        try await performOpenAPI(operation)
     }
 }

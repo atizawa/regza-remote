@@ -1,0 +1,9 @@
+generate:
+  - types
+  - client
+accessModifier: package
+filter:
+  operations:
+    - checkVersion
+    - getPrograms
+    - getProgram

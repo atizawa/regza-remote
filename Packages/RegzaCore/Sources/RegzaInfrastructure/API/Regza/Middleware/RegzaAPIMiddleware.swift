@@ -57,32 +57,6 @@ struct RegzaCompatibilityMiddleware: ClientMiddleware {
     ) async throws -> (HTTPTypes.HTTPResponse, HTTPBody?) {
         var request = request
         if let queryOverride, let path = request.path { request.path = path + "?" + queryOverride }
-        var (response, body) = try await next(request, body, baseURL)
-        guard (200..<300).contains(response.status.code) else { return (response, body) }
-        let expectsJSON = request.headerFields[.accept]?.contains("application/json") == true
-        if response.headerFields[.contentType] == nil {
-            response.headerFields[.contentType] = expectsJSON ? "application/json" : "text/plain"
-        }
-        if expectsJSON, let received = body {
-            let data = try await Data(collecting: received, upTo: .max)
-            body = HTTPBody(LenientJSON.escapingControlCharactersInStrings(data))
-            response.headerFields[.contentLength] = nil
-        }
-        return (response, body)
-    }
-}
-
-/// 認証の再試行が終わった後の HTTP エラーを、従来の公開エラーへ変換する。
-struct RegzaResponseMiddleware: ClientMiddleware {
-    func intercept(
-        _ request: HTTPTypes.HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String,
-        next: @Sendable (HTTPTypes.HTTPRequest, HTTPBody?, URL) async throws -> (HTTPTypes.HTTPResponse, HTTPBody?)
-    ) async throws -> (HTTPTypes.HTTPResponse, HTTPBody?) {
-        let response = try await next(request, body, baseURL)
-        switch response.0.status.code {
-        case 200..<300: return response
-        case 401: throw RegzaError.unauthorized
-        default: throw RegzaError.httpStatus(response.0.status.code)
-        }
+        return try await OpenAPIJSONMiddleware().intercept(request, body: body, baseURL: baseURL, operationID: operationID, next: next)
     }
 }

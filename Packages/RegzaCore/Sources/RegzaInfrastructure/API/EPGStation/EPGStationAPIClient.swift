@@ -1,3 +1,4 @@
+import EPGStationAPI
 import Foundation
 import RegzaDomain
 
@@ -34,15 +35,17 @@ public final class EPGStationAPIClient: Sendable {
 
     /// ライブ配信を頼み、配信の番号を返す。`mode` は EPGStation の設定の画質の順番 (0 が最初の画質)
     public func startLiveStream(channelID: Int, mode: Int = 0) async throws -> Int {
-        let data = try await request("GET", "/api/streams/live/\(channelID)/hls", query: "mode=\(mode)")
-        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let streamID = object["streamId"] as? Int
-        else { throw RegzaError.unsupported }
-        return streamID
+        try await performOpenAPI {
+            try await openAPI().startLiveStream(path: .init(channelId: channelID), query: .init(mode: mode)).ok.body.json.streamId
+        }
     }
 
     public func playlistURL(streamID: Int) -> URL? {
-        url("/streamfiles/stream\(streamID).m3u8", query: nil)
+        guard let url = try? recordingServerURL(host: host, defaultPort: Self.defaultPort, template: EPGStationAPI.Servers.Server1.url()),
+            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        else { return nil }
+        components.path = "/streamfiles/stream\(streamID).m3u8"
+        return components.url
     }
 
     /// 再生できるようになるまで待つ。`timeout` 秒たっても準備できなければ失敗にする
@@ -50,7 +53,7 @@ public final class EPGStationAPIClient: Sendable {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             try Task.checkCancellation()
-            if let data = try? await request("GET", "/streamfiles/stream\(streamID).m3u8"),
+            if let data = try? await playlist(streamID: streamID),
                 String(decoding: data, as: UTF8.self).contains(".ts")
             {
                 return
@@ -64,7 +67,7 @@ public final class EPGStationAPIClient: Sendable {
 
     /// まだ見ていることを知らせる (知らせないと EPGStation が配信を止める)
     public func keep(streamID: Int) async throws {
-        _ = try await request("PUT", "/api/streams/\(streamID)/keep")
+        _ = try await performOpenAPI { try await openAPI().keepStream(path: .init(streamId: streamID)) }
     }
 
     /// EPGStation で動いている配信 (ほかの端末のものも含む)
@@ -75,27 +78,26 @@ public final class EPGStationAPIClient: Sendable {
     }
 
     public func streams() async throws -> [Stream] {
-        let data = try await request("GET", "/api/streams", query: "isHalfWidth=true")
-        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let items = object["items"] as? [[String: Any]]
-        else { throw RegzaError.unsupported }
-        return items.compactMap { item in
-            (item["streamId"] as? Int).map { Stream(id: $0, isEnabled: item["isEnable"] as? Bool ?? false) }
+        try await performOpenAPI {
+            let items = try await openAPI().getStreams(query: .init(isHalfWidth: true)).ok.body.json.items
+            return items.compactMap { item in
+                item.streamId.map { Stream(id: $0, isEnabled: item.isEnable ?? false) }
+            }
         }
     }
 
     /// 配信を止めてチューナーを空ける。
     /// EPGStation は keep が途切れても配信を自動では止めない (160 秒待っても残ることを確認) ので、必ずこちらから止める
     public func stop(streamID: Int) async throws {
-        _ = try await request("DELETE", "/api/streams/\(streamID)")
+        _ = try await performOpenAPI { try await openAPI().stopStream(path: .init(streamId: streamID)) }
     }
 
     /// EPGStation が応答するか
     public func isAvailable() async -> Bool {
-        guard let data = try? await request("GET", "/api/version"),
-            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return false }
-        return object["version"] != nil
+        (try? await performOpenAPI {
+            _ = try await openAPI().getVersion().ok.body.json.version
+            return true
+        }) ?? false
     }
 
     /// 同じネットワークで EPGStation が動いているアドレスを探す
@@ -118,15 +120,19 @@ public final class EPGStationAPIClient: Sendable {
         return found.sorted { IPv4Network.parse($0) ?? 0 < IPv4Network.parse($1) ?? 0 }
     }
 
-    private func url(_ path: String, query: String?) -> URL? {
-        let authority = host.contains(":") ? host : "\(host):\(Self.defaultPort)"
-        return URL(string: "http://\(authority)\(path)" + (query.map { "?\($0)" } ?? ""))
+    private func openAPI() throws -> EPGStationAPI.Client {
+        EPGStationAPI.Client(
+            serverURL: try recordingServerURL(host: host, defaultPort: Self.defaultPort, template: EPGStationAPI.Servers.Server1.url()),
+            transport: OpenAPIHTTPTransport(transport: transport, timeout: timeout),
+            middlewares: [OpenAPIResponseMiddleware(), OpenAPIJSONMiddleware()]
+        )
     }
 
-    private func request(_ method: String, _ path: String, query: String? = nil) async throws -> Data {
+    /// HLS のプレイリストは REST API の仕様外のファイル。
+    private func playlist(streamID: Int) async throws -> Data {
         guard !host.isEmpty else { throw RegzaError.notConfigured }
-        guard let url = url(path, query: query) else { throw RegzaError.invalidHost }
-        let response = try await transport.send(HTTPRequest(method: method, url: url, timeout: timeout))
+        guard let url = playlistURL(streamID: streamID) else { throw RegzaError.invalidHost }
+        let response = try await transport.send(HTTPRequest(url: url, timeout: timeout))
         guard (200..<300).contains(response.statusCode) else { throw RegzaError.httpStatus(response.statusCode) }
         return response.body
     }

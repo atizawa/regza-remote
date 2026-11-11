@@ -1,0 +1,11 @@
+generate:
+  - types
+  - client
+accessModifier: package
+filter:
+  operations:
+    - getVersion
+    - startLiveStream
+    - getStreams
+    - keepStream
+    - stopStream

@@ -26,9 +26,13 @@ let package = Package(
     ],
     targets: [
         .plugin(
-            name: "GenerateRegzaAPI", capability: .buildTool(),
-            dependencies: [.product(name: "swift-openapi-generator", package: "swift-openapi-generator")]
+            name: "GenerateAPI", capability: .buildTool(),
+            dependencies: [
+                .product(name: "swift-openapi-generator", package: "swift-openapi-generator"),
+                .target(name: "PrepareOpenAPI"),
+            ]
         ),
+        .executableTarget(name: "PrepareOpenAPI", path: "Tools/PrepareOpenAPI"),
         .target(
             name: "RegzaTVAPI",
             dependencies: [
@@ -36,7 +40,25 @@ let package = Package(
                 .product(name: "HTTPTypes", package: "swift-http-types"),
             ],
             exclude: ["openapi-generator-config.yaml"],
-            plugins: [.plugin(name: "GenerateRegzaAPI")]
+            plugins: [.plugin(name: "GenerateAPI")]
+        ),
+        .target(
+            name: "MirakurunAPI",
+            dependencies: [
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+            ],
+            exclude: ["openapi-generator-config.yaml"],
+            plugins: [.plugin(name: "GenerateAPI")]
+        ),
+        .target(
+            name: "EPGStationAPI",
+            dependencies: [
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+            ],
+            exclude: ["openapi-generator-config.yaml"],
+            plugins: [.plugin(name: "GenerateAPI")]
         ),
         // Domain: アプリの中心になる型 (Data)、保存先などの protocol (Repositories)、決まりごと (UseCases)。SharedModels だけに依存する
         // SharedModels: UI で使う型。Domain の UseCase がエンティティから作る。Android からも使うので、Java のクラスにできる形にする
@@ -48,6 +70,8 @@ let package = Package(
             dependencies: [
                 "RegzaDomain",
                 "RegzaTVAPI",
+                "MirakurunAPI",
+                "EPGStationAPI",
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "HTTPTypes", package: "swift-http-types"),
             ]),
