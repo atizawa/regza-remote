@@ -1,77 +1,59 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// iOS アプリだけで使うモジュール。iOS と Android で共有するもの (RegzaCore) は Packages/RegzaCore にある。
-// iOS だけの機能 (Live Activity・ウィジェット・Siri) も、画面と同じく共有の ViewModel の state を読み、Action を送る
+// iOS 固有の組み立て・画面・システム連携。共有の Domain・UseCase・ViewModel は RegzaCore に置く。
 let package = Package(
     name: "RegzaKit",
     defaultLocalization: "ja",
     platforms: [.iOS("26.0"), .macOS(.v14)],
     products: [
-        .library(name: "RegzaAppleStorage", targets: ["RegzaAppleStorage"]),
-        .library(name: "RegzaLiveActivity", targets: ["RegzaLiveActivity"]),
-        .library(name: "RegzaRemoteIntents", targets: ["RegzaRemoteIntents"]),
-        .library(name: "RegzaSiriIntents", targets: ["RegzaSiriIntents"]),
-        .library(name: "RegzaWidgets", targets: ["RegzaWidgets"]),
-        .library(name: "RegzaAppContainer", targets: ["RegzaAppContainer"]),
-        .library(name: "RegzaRemoteUI", targets: ["RegzaRemoteUI"]),
+        .library(name: "AppServices", targets: ["AppServices"]),
+        .library(name: "UI", targets: ["UI"]),
+        .library(name: "LiveActivity", targets: ["LiveActivity"]),
+        .library(name: "SystemActions", targets: ["SystemActions"]),
+        .library(name: "Shortcuts", targets: ["Shortcuts"]),
+        .library(name: "Widgets", targets: ["Widgets"]),
     ],
-    dependencies: [
-        .package(path: "../../Packages/RegzaCore")
-    ],
+    dependencies: [.package(path: "../../Packages/RegzaCore")],
     targets: [
-        // Apple: Infrastructure の保存プロトコルを Keychain と UserDefaults で実装する
-        .target(name: "RegzaAppleStorage", dependencies: [.product(name: "RegzaInfrastructure", package: "RegzaCore")]),
-        // iOS: アプリとウィジェットで共通の色
-        .target(name: "RegzaDesign"),
-        // iOS: Live Activity (ロック画面と Dynamic Island) の表示と、閉じている間の更新の予約。
-        // 画面と同じく、RemoteViewModel の state を読むだけにする (Domain・通信・組み立ては使わない)
+        // アプリ・Widget で共有する色やサイズ。
+        .target(name: "Design"),
+        // Live Activity の状態と更新。画面と同じく共有 ViewModel だけを使う。
         .target(
-            name: "RegzaLiveActivity",
+            name: "LiveActivity",
             dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore")],
-            swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]
-        ),
-        // iOS: アプリのプロセスに 1 つだけ置く、アプリ全体の ViewModel の組み立て。
-        // 画面と、画面のない入口 (Live Activity のボタン・Siri・閉じている間の更新) が同じものを使う
+            swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
+        // iOS の保存実装を共通 Factory に渡し、アプリ全体の依存を保持する。
+        // 画面・Siri・Live Activity の操作は同じ AppContainer を使う。
         .target(
-            name: "RegzaAppContainer",
+            name: "AppServices",
             dependencies: [
                 .product(name: "RegzaApp", package: "RegzaCore"),
+                .product(name: "RegzaInfrastructure", package: "RegzaCore"),
                 .product(name: "RegzaSample", package: "RegzaCore"),
-                "RegzaAppleStorage", "RegzaLiveActivity",
-            ]
-        ),
-        // iOS: Live Activity・ウィジェット・コントロールセンターのボタンから、キーを送る App Intent (アプリのプロセスで動く)。
-        // アプリとウィジェットの両方に登録する
-        .target(
-            name: "RegzaRemoteIntents",
-            dependencies: ["RegzaAppContainer", "RegzaLiveActivity", .product(name: "RegzaApp", package: "RegzaCore")]),
-        // iOS: Siri・ショートカットの App Intent。アプリのプロセスの ViewModel を使うので、アプリにだけ登録する
-        // (ウィジェットにも登録すると、拡張機能のプロセスで動くことがある)
-        .target(
-            name: "RegzaSiriIntents",
-            dependencies: ["RegzaAppContainer", "RegzaLiveActivity", .product(name: "RegzaApp", package: "RegzaCore")]),
-        // iOS: Live Activity・ホーム画面のウィジェット・コントロールセンターの見た目 (ウィジェットの拡張機能が使う)
-        .target(
-            name: "RegzaWidgets",
-            dependencies: [
-                .product(name: "RegzaPresentation", package: "RegzaCore"), "RegzaLiveActivity", "RegzaRemoteIntents", "RegzaDesign",
+                "LiveActivity",
             ]),
-        // iOS: SwiftUI の画面。ViewModel の state を読み、send で操作するだけにする。
-        // 使えるのは ViewModel と UI の型 (RegzaPresentation)、色、Live Activity のスイッチだけで、Domain・通信・組み立ては使わない
-        // (RegzaPresentation は Domain を外に見せず、MemberImportVisibility で、読み込んでいないモジュールの機能も見えなくする)
+        // アプリと Widget の両方に登録する、ボタンからの操作。
         .target(
-            name: "RegzaRemoteViews",
-            dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "RegzaDesign", "RegzaLiveActivity"],
-            swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]
-        ),
-        // iOS: アプリの入口。アプリのプロセスの ViewModel (RegzaAppContainer) を画面 (RegzaRemoteViews) に渡す。
-        // 終了時の後片づけもここで受け持つ
+            name: "SystemActions",
+            dependencies: ["AppServices", .product(name: "RegzaPresentation", package: "RegzaCore")]),
+        // アプリだけに登録する Siri・ショートカット。Widget 拡張への依存には含めない。
         .target(
-            name: "RegzaRemoteUI",
-            dependencies: ["RegzaRemoteViews", "RegzaAppContainer", .product(name: "RegzaApp", package: "RegzaCore")]
-        ),
-        // 画面と Live Activity が下の層 (Domain・通信・組み立て) を import していないことを確かめる (Mac の swift test)
+            name: "Shortcuts",
+            dependencies: ["AppServices", "LiveActivity", .product(name: "RegzaApp", package: "RegzaCore")]),
+        // ホーム画面・Live Activity・コントロールセンターの表示。
+        .target(
+            name: "Widgets",
+            dependencies: [
+                .product(name: "RegzaPresentation", package: "RegzaCore"),
+                "LiveActivity", "SystemActions", "Design",
+            ]),
+        // 画面は ViewModel の state と Action を使い、DI・Domain・通信を扱わない。
+        // RootView は Xcode のアプリターゲットに置き、このモジュールへ依存を渡す。
+        .target(
+            name: "UI",
+            dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity"],
+            swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
         .testTarget(name: "RegzaKitTests"),
     ]
 )

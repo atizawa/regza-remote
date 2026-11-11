@@ -1,10 +1,10 @@
 import AppIntents
-import RegzaAppContainer
-import RegzaLiveActivity
-import RegzaRemoteIntents
-import RegzaRemoteUI
-import RegzaSiriIntents
+import AppServices
+import LiveActivity
+import Shortcuts
 import SwiftUI
+import SystemActions
+import UI
 
 @main
 struct RegzaRemoteApp: App {
@@ -16,7 +16,7 @@ struct RegzaRemoteApp: App {
         }
         .backgroundTask(.appRefresh(BackgroundRefresh.identifier)) {
             // 閉じている間に起こされたら、画面と同じ ViewModel で取り直して Live Activity を更新する
-            await RegzaAppContainer.shared.liveActivity.refreshInBackground()
+            await AppContainer.shared.liveActivity.refreshInBackground()
         }
     }
 }
@@ -24,7 +24,7 @@ struct RegzaRemoteApp: App {
 /// ボタン (Live Activity・ウィジェット・コントロールセンター) と Siri の Intent をアプリに登録する
 struct RegzaRemoteAppIntents: AppIntentsPackage {
     static var includedPackages: [any AppIntentsPackage.Type] {
-        [RegzaRemoteIntents.self, RegzaSiriIntents.self]
+        [SystemActionsPackage.self, ShortcutsPackage.self]
     }
 }
 

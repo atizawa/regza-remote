@@ -1,5 +1,7 @@
 package com.example.regzaremote
 
+import com.example.regzaremote.bridge.contractSend
+import com.example.regzaremote.bridge.contractStateJSON
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RegzaContractCommand
 import java.io.File

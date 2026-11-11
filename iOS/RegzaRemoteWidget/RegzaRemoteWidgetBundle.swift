@@ -1,8 +1,8 @@
 import AppIntents
-import RegzaRemoteIntents
-import RegzaWidgets
 import SwiftUI
+import SystemActions
 import WidgetKit
+import Widgets
 
 @main
 struct RegzaRemoteWidgetBundle: WidgetBundle {
@@ -23,6 +23,6 @@ struct RegzaRemoteWidgetBundle: WidgetBundle {
 /// ボタンの Intent だけを登録する (Siri の Intent はアプリのプロセスの ViewModel を使うので、アプリにだけ登録する)
 struct RegzaRemoteWidgetIntents: AppIntentsPackage {
     static var includedPackages: [any AppIntentsPackage.Type] {
-        [RegzaRemoteIntents.self]
+        [SystemActionsPackage.self]
     }
 }

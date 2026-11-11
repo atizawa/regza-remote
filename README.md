@@ -20,16 +20,15 @@ Packages/RegzaCore/           iOS と Android で共有する Swift Package（RE
   RegzaApp                    組み立て（どの Repository を使うかを決めて ViewModel を作る）
   RegzaSample                 テレビにつながない見本の Repository（開発・テスト用）
   RegzaCLI                    ViewModel を動かして確かめる CLI（regza）
-iOS/RegzaKit/                 iOS だけで使う Swift Package（マルチモジュール）
-  RegzaRemoteViews            SwiftUI の画面（ViewModel の state を見て send で送るだけ）
-  RegzaLiveActivity           Live Activity・Dynamic Island の表示と、閉じている間の更新の予約（画面と同じく state を読むだけ）
-  RegzaWidgets                Live Activity・ホーム画面のウィジェット・コントロールセンターの見た目（ウィジェット拡張が使う）
-  RegzaRemoteIntents          ボタン（Live Activity・ウィジェット・コントロールセンター）からキーを送る App Intent
-  RegzaSiriIntents            Siri・ショートカットの App Intent（アプリにだけ登録する）
-  RegzaAppContainer           アプリのプロセスに 1 つだけ置くアプリ全体の ViewModel の組み立て（見本のデータも）
-  RegzaRemoteUI               アプリの入口（RootView。終了時の後片づけなど）
-  RegzaDesign                 アプリとウィジェットで共通の色
-  RegzaAppleStorage           キーチェーンへの接続情報保存
+iOS/RegzaKit/                 iOS だけで使う Swift Package（7 モジュール）
+  AppServices/                iOS の DI・依存の保持（Storage/ に保存実装、Preview/ に見本の組み立て）
+  UI/                         画面（Screens/）・補助 View（Components/）・画面遷移（Navigation/）
+  Design/                     アプリとウィジェットで共通の色
+  LiveActivity/               Live Activity の状態・更新・バックグラウンド更新の予約
+  SystemActions/              Live Activity・ウィジェット・コントロールセンターのボタンからの操作
+  Shortcuts/                  Siri・ショートカット（アプリにだけ登録する）
+  Widgets/                    Live Activity・ホーム画面・コントロールセンターの表示
+iOS/RegzaRemote/              アプリの起動・RootView（依存を画面へ渡す、終了時の後処理）
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
 Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）
   RegzaAndroidBridge/         Android に見せる Swift の窓口（RegzaAndroidApp）。Mac の swift test で確かめる
@@ -47,15 +46,15 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
 - Android の画面のプレビューは、それぞれの画面のファイルの末尾に置く（準備は `SamplePreview.kt`）。見本の返事（`RegzaSample`）で組み立てた共有の ViewModel の state を渡す。state は Swift の値なので、エディタの横のプレビュー（Android Studio が Mac の JVM で描く）では、振る舞いのテストと同じ Mac 向けの Swift のライブラリ（`:behavior-tests:buildJvmHost`。debug のビルドで一緒に作る）を読み込む。「Run Preview」ではエミュレーターでアプリと同じ Android 向けのライブラリを使う。Swift の型は、ライブラリを読み込んだあと（`SamplePreview` の `setUp` と中身）で作る
 - OS だけの機能（iOS の Live Activity・ウィジェット・Siri）も、画面と同じく共有の ViewModel の state を読み、Action を送る。共有の部分は「何を出すか」を state に入れるだけで、OS ごとの口（protocol）は持たない
-  - iOS は、アプリのプロセスに `AppViewModel` を 1 つだけ置き（`RegzaAppContainer`）、画面・Live Activity・ボタン・Siri・閉じている間の更新が同じものを使う。画面のない入口は、操作を送って終わるまで待ち（`sendAndWait`）、state を見て結果を返す
+  - iOS は、アプリのプロセスに `AppViewModel` を 1 つだけ置き（`AppContainer`）、画面・Live Activity・ボタン・Siri・閉じている間の更新が同じものを使う。画面のない入口は、操作を送って終わるまで待ち（`sendAndWait`）、state を見て結果を返す
   - Live Activity は `RemoteViewModel.state` の変わり目を見て表示を更新し、番組の終了時刻が変われば起こしてもらう時刻を予約し直す
   - ボタンの App Intent（`RegzaKeyIntent`）は `LiveActivityIntent` なので、ウィジェットの拡張から押してもアプリのプロセスで動く。Siri の App Intent はふつうの `AppIntent` で、拡張にも登録すると拡張のプロセスで動くことがあるので、アプリにだけ登録する
   - 画面と Live Activity が Domain・通信・組み立てを import していないことは `RegzaKitTests` の `LayerTests` が確かめる
 - 依存オブジェクトの引数・プロパティ・組み立て時の変数は、`remoteViewModel`・`guideUseCase`・`guideRepository`・`regzaAPIClient`・`preferencesManager` のように役割を名前に含める。取得した値は `programs`・`channels` など、内容を表す名前にする。
 - 保存処理は `Infrastructure/Storage` の `SecureStorageManager`・`PreferencesManager` に分け、APIClient と並列に Repository へ注入する。Manager には OS ごとの保存実装を注入し、保存キーの選択と Data の組み立ては Repository が担当する。
 - DI は `RegzaApp/AppFactory+Repositories.swift`（APIClient・Manager → Repository）、`AppFactory+UseCases.swift`（Repository → UseCase）、`AppFactory+ViewModels.swift`（UseCase → ViewModel）にまとめる。iOS・Android・CLI は共通の Factory を使い、通信と保存先は起動時に渡す。Repository または UseCase の protocol を直接渡せるため、テストでも同じ入口から差し替えられる。
-- iOS の `RegzaAppContainer` は組み立てた `AppViewModel` と Manager を受け取れる。Android は `RegzaAndroid.regzaAppFactory()` が SocketTransport＋BoringSSL を保持する Factory を返し、`makeApp(AndroidStorage(...))` で保存先を渡す。通信実装をグローバルに書き換えず、探索処理にも同じ transport を渡す。
-- iOS は `KeychainStorage`・`UserDefaultsStorage`、Android は `RegzaAndroidStorage` を共通の保存プロトコルにつなぐアダプターを使う。Android のパスワードは従来どおり Keystore の鍵で暗号化する。既存の保存キー・値の形式と、iOS の旧登録 ID の移行を維持する。
+- iOS の `AppContainer` は組み立てた `AppViewModel` と Manager を受け取れる。Android は `RegzaAndroid.regzaAppFactory()` が SocketTransport＋BoringSSL を保持する Factory を返し、`makeApp(AndroidStorage(...))` で保存先を渡す。通信実装をグローバルに書き換えず、探索処理にも同じ transport を渡す。
+- iOS は `AppServices/Storage` の `KeychainStorage`・`UserDefaultsStorage`、Android は `RegzaAndroidStorage` を共通の保存プロトコルにつなぐアダプターを使う。Android のパスワードは従来どおり Keystore の鍵で暗号化する。既存の保存キー・値の形式と、iOS の旧登録 ID の移行を維持する。
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）
 - Repository と UseCase は Domain/Data の `ChannelData`・`ProgramData` などを受け渡す。UseCase は Domain に置き、画面側には `RegzaSharedModels` の型を返す。ViewModel は Data を保持せず、番組検索の索引も Domain 内で管理する。
 - `Infrastructure/Mappers` は API の型から Data への変換、`Domain/Mappers` は Data から SharedModel への変換を担当する。
@@ -142,7 +141,7 @@ ViewModels/ChannelList/
 
 ### 3. iOS の画面を作る
 
-`iOS/RegzaKit/Sources/RegzaRemoteViews/<画面>Screen.swift` に `struct <画面>Screen` を置き（`ChannelListScreen`）、`viewModel.state` を見て `viewModel.send(...)` で送る。`RegzaDomain` は import しない（`LayerTests` が確かめる）。
+`iOS/RegzaKit/Sources/UI/Screens/<画面>Screen.swift` に `struct <画面>Screen` を置き（`ChannelListScreen`）、`viewModel.state` を見て `viewModel.send(...)` で送る。`RegzaDomain` は import しない（`LayerTests` が確かめる）。
 
 画面の名前は、iOS も Android も共有の ViewModel のフォルダの名前に `Screen` を付けたものにそろえ、1 画面 1 ファイルにする。`Screen` は画面全体にだけ付け、部品（`KeyButton`・`NowPlayingCard` など）には付けない。そろっていることは `RegzaKitTests` の `ScreenNamingTests` が確かめる。
 
@@ -159,7 +158,15 @@ swift run --package-path ScreenGlue --scratch-path .build/screen-glue -c release
 - swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）。どのモジュールにも共通の設定（Java のパッケージなど）は `RegzaAndroid/swift-java.common.config` に 1 回だけ書き、ビルドのときにモジュールごとの設定と重ねる
 - Kotlin の送り先 `Send`（`send(ChannelListAction.tune(code))` のように、どの Action も `send` で送れる）と、state の `Flow`（`app.channelListStates(route)`）: ビルドのたびに `.build/swift/screen-glue-kotlin/` に作る
 
-Kotlin の画面は `app/src/main/java/com/example/regzaremote/<画面>Screen.kt` に `fun <画面>Screen(` を置き（`ChannelListScreen`）、自分の ViewModel の state を受け取って描き、操作を `send` で送る。ファイルの末尾にはプレビューを置く。タブの最初の画面なら `AppScreen.kt` の `TabRoot`、タブの中で開く画面なら `RouteScreen` に足す。
+Kotlin の画面は `app/src/main/java/com/example/regzaremote/ui/screens/<画面>Screen.kt` に `fun <画面>Screen(` を置き（`ChannelListScreen`）、自分の ViewModel の state を受け取って描き、操作を `send` で送る。ファイルの末尾にはプレビューを置く。タブの最初の画面なら `ui/navigation/AppRoutes.kt` の `TabRoot`、タブの中で開く画面なら同じファイルの `RouteScreen` に足す。
+
+iOS の `UI/Screens` と Android の `ui/screens` に画面を置き、補助 View はそれぞれ `Components`・`ui/components` に分ける。色・余白などは iOS の `Design`、Android の `design` が担当する。
+
+Android のルートパッケージには起動用の `MainActivity.kt`・`RegzaApplication.kt` を置く。`appservices/AppFactory.kt` が保存先を Swift の Factory に渡し、組み立てた App を Android の ViewModel に注入する。`appservices/RegzaViewModel.kt` は App の保持と終了時の処理、`appservices/storage` は Android Keystore・SharedPreferences を担当する。
+
+UI は `ui/screens`（画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui/navigation`（タブの戻る道と表示先）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは増やさず、役割を package で区別する。
+
+Swift の接続コードは、生成する Kotlin の `com.example.regzaremote.bridge`（`Send`・`AppSend`・state の Flow）と、Java の `com.example.regzaremote.core` に分ける。生成結果は `.build/` に置く。変更するときは `ScreenGlue` や swift-java の設定を更新し、生成結果を直接編集しない。
 
 ```kotlin
 rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it, back, send) }

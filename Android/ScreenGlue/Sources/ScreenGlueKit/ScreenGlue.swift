@@ -197,7 +197,7 @@ public struct ScreenGlue {
         }
         return """
             \(header)
-            package com.example.regzaremote
+            package com.example.regzaremote.bridge
 
             \(imports.joined())import com.example.regzaremote.core.AppRoute
             import com.example.regzaremote.core.RegzaAndroidApp

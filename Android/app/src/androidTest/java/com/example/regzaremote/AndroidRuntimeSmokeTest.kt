@@ -2,6 +2,8 @@ package com.example.regzaremote
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.example.regzaremote.bridge.AppSend
+import com.example.regzaremote.bridge.appStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppState
 import com.example.regzaremote.core.AppTab

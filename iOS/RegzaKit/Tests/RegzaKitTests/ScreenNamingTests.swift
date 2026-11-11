@@ -8,8 +8,8 @@ import Testing
     static let repository = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().appendingPathComponent("../../../..").standardized
     static let viewModels = repository.appendingPathComponent("Packages/RegzaCore/Sources/RegzaPresentation/ViewModels")
-    static let iOSScreens = repository.appendingPathComponent("iOS/RegzaKit/Sources/RegzaRemoteViews")
-    static let androidScreens = repository.appendingPathComponent("Android/app/src/main/java/com/example/regzaremote")
+    static let iOSScreens = repository.appendingPathComponent("iOS/RegzaKit/Sources/UI/Screens")
+    static let androidScreens = repository.appendingPathComponent("Android/app/src/main/java/com/example/regzaremote/ui/screens")
 
     /// 共有の ViewModel の名前 (ViewModels/ の下のフォルダ)
     static func screenNames() throws -> [String] {

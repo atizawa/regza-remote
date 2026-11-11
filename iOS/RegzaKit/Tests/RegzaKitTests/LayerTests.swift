@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-/// 画面 (RegzaRemoteViews) と Live Activity (RegzaLiveActivity) が、ViewModel と UI の型 (RegzaPresentation) より下の層
+/// 画面 (UI) と Live Activity (LiveActivity) が、ViewModel と UI の型 (RegzaPresentation) より下の層
 /// (Domain・通信・組み立て) を使っていないことを確かめる。どちらも ViewModel の state を読み、Action を送るだけにする。
 /// RegzaPresentation は Domain を外に見せないが、SwiftPM は依存の先のモジュールを import すること自体は止めないので、
 /// import を見て止める
@@ -9,7 +9,7 @@ import Testing
     /// 画面が読み込んでよいモジュール (Apple のものと、ViewModel・UI の型・色・Live Activity のスイッチ)
     static let viewImports: Set<String> = [
         "SwiftUI", "Foundation", "Observation", "AVKit", "UIKit",
-        "RegzaPresentation", "RegzaDesign", "RegzaLiveActivity",
+        "RegzaPresentation", "Design", "LiveActivity",
     ]
 
     /// Live Activity が読み込んでよいモジュール (Apple のものと、ViewModel・UI の型)
@@ -19,19 +19,19 @@ import Testing
     ]
 
     @Test func viewsImportOnlyPresentation() throws {
-        try Self.check("RegzaRemoteViews", allowed: Self.viewImports)
+        try Self.check("UI", allowed: Self.viewImports)
     }
 
     @Test func liveActivityImportsOnlyPresentation() throws {
-        try Self.check("RegzaLiveActivity", allowed: Self.liveActivityImports)
+        try Self.check("LiveActivity", allowed: Self.liveActivityImports)
     }
 
     static func check(_ module: String, allowed: Set<String>) throws {
         let directory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Sources/\(module)")
-        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "swift" }
+        let enumerator = try #require(FileManager.default.enumerator(at: directory, includingPropertiesForKeys: nil))
+        let files = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
         #expect(!files.isEmpty)
         for file in files {
             let source = try String(contentsOf: file, encoding: .utf8)
