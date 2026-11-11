@@ -6,7 +6,8 @@ import RegzaDomain
 @MainActor
 @Observable
 public final class RegzaTVRepository: TVRepositoryProtocol {
-    @ObservationIgnored public let store: any RegzaConnectionStore
+    @ObservationIgnored private let secureStorage: SecureStorageManager
+    @ObservationIgnored private let preferences: PreferencesManager
     /// テレビのリモコン
     @ObservationIgnored public let remote: RegzaRemote
     @ObservationIgnored private let client: RegzaAPIClient
@@ -19,11 +20,12 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     public var isSample: Bool { false }
 
     public init(
-        store: any RegzaConnectionStore, client: RegzaAPIClient, connectionState: RegzaConnectionState,
+        secureStorage: SecureStorageManager, preferences: PreferencesManager, client: RegzaAPIClient, connectionState: RegzaConnectionState,
         remote: RegzaRemote? = nil
     ) {
         if let remote { precondition(remote.client === client, "remote と Repository は同じ APIClient を共有してください") }
-        self.store = store
+        self.secureStorage = secureStorage
+        self.preferences = preferences
         self.client = client
         self.connectionState = connectionState
         self.remote = remote ?? RegzaRemote(client: client)
@@ -99,18 +101,18 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         else { return nil }
         var moved = original
         moved.host = host
-        store.save(moved)
+        persist(moved)
         connectionState.update(moved)
         channels = []
-        await remote.update(connection: store.load())
+        await remote.update(connection: Self.loadConnection(secureStorage: secureStorage, preferences: preferences))
         return moved
     }
 
     public func save(_ connection: ConnectionData) async {
-        store.save(connection)
+        persist(connection)
         connectionState.update(connection)
         channels = []
-        await remote.update(connection: store.load())
+        await remote.update(connection: Self.loadConnection(secureStorage: secureStorage, preferences: preferences))
     }
 
     public func testConnection(_ connection: ConnectionData) async -> Result<NowPlayingData, RegzaError> {
@@ -123,7 +125,23 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     }
 
     public func pairingUserID() -> String {
-        store.pairingUserID()
+        secureStorage.value(forKey: .pairingUserID, orCreate: PairingUserID.make)
+    }
+
+    public nonisolated static func loadConnection(
+        secureStorage: SecureStorageManager, preferences: PreferencesManager
+    ) -> ConnectionData {
+        ConnectionData(
+            host: preferences.value(forKey: .host) ?? "",
+            user: preferences.value(forKey: .user) ?? "",
+            password: secureStorage.value(forKey: .password) ?? ""
+        )
+    }
+
+    private func persist(_ connection: ConnectionData) {
+        preferences.setValue(connection.host.trimmingCharacters(in: .whitespaces), forKey: .host)
+        preferences.setValue(connection.user, forKey: .user)
+        secureStorage.setValue(connection.password, forKey: .password)
     }
 
     /// 組み立て側から、注入された通信設定を保った番組表クライアントへ差し替える。

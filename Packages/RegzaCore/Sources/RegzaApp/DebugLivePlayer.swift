@@ -8,42 +8,16 @@ extension AppViewModel {
         let json = #"[{"channel":"\#(channelCode)","name":"確認用","channel_number":1}]"#
         guard let channel = (try? JSONDecoder().decode([ChannelData].self, from: Data(json.utf8)))?.first else { return nil }
         // EPGStation は番組表を設定しているときだけ使うので、番組表も設定済みにしておく (番組名は出ない)
-        let store = DebugStore(streamHost: streamHost)
-        let guide = MirakurunGuideRepository(store: store, client: MirakurunAPIClient(host: store.guideHost))
-        let repository = EPGStationStreamRepository(store: store, client: EPGStationAPIClient(host: streamHost))
+        let preferences = PreferencesManager(
+            storage: MemoryPreferencesStorage(values: [
+                .guideHost: "192.0.2.2", .streamHost: streamHost,
+            ]))
+        let guide = MirakurunGuideRepository(preferences: preferences, client: MirakurunAPIClient(host: "192.0.2.2"))
+        let repository = EPGStationStreamRepository(preferences: preferences, client: EPGStationAPIClient(host: streamHost))
         let stream = StreamUseCase(stream: repository, guide: guide)
         return LivePlayerViewModel(
             remote: remote, channels: channels, guide: self.guide, stream: stream, channel: UseCaseModelMapper.channel(channel))
     }
 }
 
-/// 確認用のライブ視聴だけで使う、保存しない保存先
-private final class DebugStore: RegzaConnectionStore, @unchecked Sendable {
-    private let lock = NSLock()
-    private var streams: [Int] = []
-    private let streamHostValue: String
-
-    init(streamHost: String) {
-        streamHostValue = streamHost
-    }
-
-    func load() -> ConnectionData { ConnectionData() }
-    func save(_ connection: ConnectionData) {}
-    func pairingUserID() -> String { "" }
-
-    var guideHost: String {
-        get { "192.0.2.2" }
-        set {}
-    }
-
-    var streamHost: String {
-        get { streamHostValue }
-        set {}
-    }
-
-    var ownStreamIDs: [Int] {
-        get { lock.withLock { streams } }
-        set { lock.withLock { streams = newValue } }
-    }
-}
 #endif

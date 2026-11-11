@@ -12,19 +12,20 @@ extension RegzaAndroidApp {
         guard let fixture = fixture.isEmpty ? SampleFixture() : try? SampleFixture(json: fixture) else { return nil }
         let transport = SampleTransport(fixture: fixture)
         RegzaHTTP.transport = transport
-        if storage.value(forKey: AndroidStorageKey.host) == nil {
-            // CLI の --sample と同じ見本のテレビと録画サーバーを登録する
-            let connection = SampleTransport.connection
-            storage.setValue(connection.host, forKey: AndroidStorageKey.host)
-            storage.setValue(connection.user, forKey: AndroidStorageKey.user)
-            storage.setValue(connection.password, forKey: AndroidStorageKey.password)
-            storage.setValue(SampleTransport.guideHost, forKey: AndroidStorageKey.guideHost)
-            storage.setValue(SampleTransport.streamHost, forKey: AndroidStorageKey.streamHost)
-        }
         return RegzaAndroidApp(
             app: onMainActor {
-                let store = AndroidConnectionStore(storage: storage)
-                return AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport), transport: transport)
+                if storage.value(forKey: AndroidStorageKey.host) == nil {
+                    // CLI の --sample と同じ見本のテレビと録画サーバーを登録する
+                    let connection = SampleTransport.connection
+                    storage.setValue(connection.host, forKey: AndroidStorageKey.host)
+                    storage.setValue(connection.user, forKey: AndroidStorageKey.user)
+                    storage.setValue(connection.password, forKey: AndroidStorageKey.password)
+                    storage.setValue(SampleTransport.guideHost, forKey: AndroidStorageKey.guideHost)
+                    storage.setValue(SampleTransport.streamHost, forKey: AndroidStorageKey.streamHost)
+                }
+
+                let managers = makeStorageManagers(storage)
+                return AppViewModel(secureStorage: managers.secureStorage, preferences: managers.preferences, transport: transport)
             })
     }
 }

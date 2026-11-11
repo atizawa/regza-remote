@@ -11,20 +11,25 @@ extension AppViewModel {
     ///   - remote: テレビのリモコン。番組表を補う Mirakurun を短い待ち時間で渡すときなどに使う。渡さなければ作る
     ///   - transport: 録画サーバーとの通信 (テストや見本の返事に差し替える)
     public convenience init(
-        store: any RegzaConnectionStore,
+        secureStorage: SecureStorageManager,
+        preferences: PreferencesManager,
         remote: RegzaRemote? = nil,
         transport: any HTTPTransport = RegzaHTTP.transport
     ) {
-        let connectionState = RegzaConnectionState(connection: store.load())
+        let connectionState = RegzaConnectionState(
+            connection: RegzaTVRepository.loadConnection(secureStorage: secureStorage, preferences: preferences))
         let client = remote?.client ?? RegzaAPIClient(connection: connectionState.connection, transport: transport)
-        let guideClient = MirakurunAPIClient(host: store.guideHost, transport: transport)
+        let guideClient = MirakurunAPIClient(host: (preferences.value(forKey: .guideHost) ?? ""), transport: transport)
         // 状態の定期確認を待たせないよう、番組名を補う通信だけ待ち時間を短くする。
-        let remoteGuide = MirakurunAPIClient(host: store.guideHost, timeout: 3, transport: transport)
-        let remote = remote ?? RegzaRemote(client: client, guide: store.guideHost.isEmpty ? nil : remoteGuide)
-        let tv = RegzaTVRepository(store: store, client: client, connectionState: connectionState, remote: remote)
+        let remoteGuide = MirakurunAPIClient(host: (preferences.value(forKey: .guideHost) ?? ""), timeout: 3, transport: transport)
+        let remote = remote ?? RegzaRemote(client: client, guide: (preferences.value(forKey: .guideHost) ?? "").isEmpty ? nil : remoteGuide)
+        let tv = RegzaTVRepository(
+            secureStorage: secureStorage, preferences: preferences, client: client, connectionState: connectionState, remote: remote)
         let model = RemoteViewModel(tv: TVUseCase(tv: tv))
-        let guide = MirakurunGuideRepository(store: store, client: guideClient)
-        let stream = EPGStationStreamRepository(store: store, client: EPGStationAPIClient(host: store.streamHost, transport: transport))
+        let guide = MirakurunGuideRepository(preferences: preferences, client: guideClient)
+        let stream = EPGStationStreamRepository(
+            preferences: preferences,
+            client: EPGStationAPIClient(host: (preferences.value(forKey: .streamHost) ?? ""), transport: transport))
         let recording = RegzaRecordingRepository(client: client, connectionState: connectionState)
         self.init(
             remote: model,

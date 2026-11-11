@@ -26,7 +26,11 @@ public final class RegzaAndroidApp {
 
     /// Kotlin の保存先 (Keystore と SharedPreferences) で組み立てる。Android では先に regzaSetUpMainActor を呼んでおく
     public convenience init(storage: any RegzaAndroidStorage) {
-        self.init(app: onMainActor { AppViewModel(store: AndroidConnectionStore(storage: storage)) })
+        self.init(
+            app: onMainActor {
+                let managers = makeStorageManagers(storage)
+                return AppViewModel(secureStorage: managers.secureStorage, preferences: managers.preferences)
+            })
     }
 
     /// 組み立てた ViewModel から作る (テストでは、テレビにつながない見本の ViewModel を渡す)

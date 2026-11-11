@@ -10,6 +10,7 @@ let package = Package(
     name: "RegzaCore",
     platforms: [.iOS("26.0"), .macOS(.v14)],
     products: [
+        .library(name: "RegzaInfrastructure", targets: ["RegzaInfrastructure"]),
         .library(name: "RegzaPresentation", targets: ["RegzaPresentation"]),
         // UI の型だけ (Android で、これらの型の Java のつなぎを作るのに使う)
         .library(name: "RegzaSharedModels", targets: ["RegzaSharedModels"]),

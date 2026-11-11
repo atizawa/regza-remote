@@ -45,12 +45,12 @@ struct RegzaAndroidAppTests {
 
     /// 本物の Repository を偽の通信でつなぎ、ライブ視聴 (EPGStation) も設定してあるものを組み立てる (配信は頼まない)
     func makeWithStream() async throws -> Fixture {
-        let store = AndroidConnectionStore(
-            storage: MemoryStorage([
+        let managers = makeStorageManagers(
+            MemoryStorage([
                 AndroidStorageKey.host: "192.0.2.1", AndroidStorageKey.guideHost: "192.0.2.2", AndroidStorageKey.streamHost: "192.0.2.30",
             ]))
         let transport = ChannelListTransport()
-        let app = AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport), transport: transport)
+        let app = AppViewModel(secureStorage: managers.secureStorage, preferences: managers.preferences, transport: transport)
         // 局を引けるよう、チャンネル一覧を読んでおく
         app.remote.send(.loadChannels(force: false))
         _ = await Introspector(root: app).waitUntilIdle()
@@ -68,29 +68,35 @@ struct RegzaAndroidAppTests {
     // MARK: - 保存先
 
     /// 保存してある値を読み、PIN 登録に使う ID がなければ作って保存する
-    @Test func storeReadsSavedValues() {
+    @Test func storeReadsSavedValues() async throws {
         let storage = MemoryStorage([
             AndroidStorageKey.host: "192.0.2.1", AndroidStorageKey.user: "user", AndroidStorageKey.password: "secret",
             AndroidStorageKey.guideHost: "192.0.2.2", AndroidStorageKey.ownStreamIDs: "1,2",
         ])
-        let store = AndroidConnectionStore(storage: storage)
-        #expect(store.load() == ConnectionData(host: "192.0.2.1", user: "user", password: "secret"))
-        #expect(store.guideHost == "192.0.2.2")
-        #expect(store.streamHost == "")
-        #expect(store.ownStreamIDs == [1, 2])
-        #expect(!store.pairingUserID().isEmpty)
-        #expect(storage.values[AndroidStorageKey.pairingUserID] == store.pairingUserID())
+        let managers = makeStorageManagers(storage)
+        #expect(
+            RegzaTVRepository.loadConnection(secureStorage: managers.secureStorage, preferences: managers.preferences)
+                == ConnectionData(host: "192.0.2.1", user: "user", password: "secret"))
+        #expect(managers.preferences.value(forKey: .guideHost) == "192.0.2.2")
+        #expect(managers.preferences.value(forKey: .streamHost) == nil)
+        #expect(managers.preferences.integers(forKey: .ownStreamIDs) == [1, 2])
+        #expect(!managers.secureStorage.value(forKey: .pairingUserID, orCreate: PairingUserID.make).isEmpty)
+        try await waitUntil { storage.values[AndroidStorageKey.pairingUserID] != nil }
         // 作った ID は次に開いたときも同じ
-        #expect(AndroidConnectionStore(storage: storage).pairingUserID() == store.pairingUserID())
+        #expect(
+            makeStorageManagers(storage).secureStorage.value(forKey: .pairingUserID, orCreate: PairingUserID.make)
+                == managers.secureStorage.value(forKey: .pairingUserID, orCreate: PairingUserID.make))
     }
 
     /// 変わった値は、メインスレッドで Kotlin の保存先に書く
     @Test func storeWritesChangedValues() async throws {
         let storage = MemoryStorage([:])
-        let store = AndroidConnectionStore(storage: storage)
-        store.save(ConnectionData(host: "192.0.2.1", user: "user", password: "secret"))
-        store.streamHost = "192.0.2.30"
-        store.ownStreamIDs = [3, 4]
+        let managers = makeStorageManagers(storage)
+        managers.preferences.setValue("192.0.2.1", forKey: .host)
+        managers.preferences.setValue("user", forKey: .user)
+        managers.secureStorage.setValue("secret", forKey: .password)
+        managers.preferences.setValue("192.0.2.30", forKey: .streamHost)
+        managers.preferences.setIntegers([3, 4], forKey: .ownStreamIDs)
         try await waitUntil { storage.values[AndroidStorageKey.ownStreamIDs] == "3,4" }
         #expect(storage.values[AndroidStorageKey.host] == "192.0.2.1")
         #expect(storage.values[AndroidStorageKey.password] == "secret")

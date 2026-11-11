@@ -3,7 +3,7 @@ import RegzaApp
 
 /// Android の保存先。Kotlin が実装し、パスワードは Android Keystore の鍵で暗号化して SharedPreferences に置く
 /// (iOS のキーチェーンに当たる)。swift-java で Java のインターフェースになり、Kotlin のクラスが実装する。
-/// Java を呼ぶのはメインスレッドからだけにする (AndroidConnectionStore)
+/// Java を呼ぶのはメインスレッドからだけにする (AndroidStorageAdapter)
 public protocol RegzaAndroidStorage {
     /// 保存してある値。なければ (パスワードを復号できなかったときも) nil
     func value(forKey key: String) -> String?
@@ -23,82 +23,58 @@ enum AndroidStorageKey {
     static let ownStreamIDs = "ownStreamIDs"
 }
 
-/// 接続情報の保存先 (RegzaConnectionStore) を、Kotlin の保存先 (RegzaAndroidStorage) で作る。
-/// 作るときに全部読んでメモリに持ち、変わったらメインスレッドで Kotlin の保存先に書く
-/// (Android では、メインスレッド以外から Java を呼ぶと、アプリのクラスが見つからないことがある)
-final class AndroidConnectionStore: RegzaConnectionStore, @unchecked Sendable {
+/// Kotlin の保存先を共通 Manager のプロトコルに接続する。
+/// 同期の読み取りはキャッシュを使い、Java への書き込みは MainActor 上で順に処理する。
+final class AndroidStorageAdapter: SecureStorage, PreferencesStorage, @unchecked Sendable {
+    private let storage: any RegzaAndroidStorage
     private let lock = NSLock()
-    private let storage: MainActorStorage
-    private var connection: ConnectionData
-    private let userID: String
-    private var values: (guideHost: String, streamHost: String, ownStreamIDs: [Int])
+    private var values: [String: String]
+    private var pending: [(key: String, value: String)] = []
+    private var isDraining = false
 
-    /// メインスレッドから作る
     @MainActor init(storage: any RegzaAndroidStorage) {
-        func value(_ key: String) -> String { storage.value(forKey: key) ?? "" }
-        connection = ConnectionData(
-            host: value(AndroidStorageKey.host), user: value(AndroidStorageKey.user), password: value(AndroidStorageKey.password)
-        )
-        // PIN 登録に使う ID は、初めて使うときに作って保存する (ただし iOS のキーチェーンと違い、アプリを削除すると消える)
-        if let userID = storage.value(forKey: AndroidStorageKey.pairingUserID) {
-            self.userID = userID
-        } else {
-            userID = PairingUserID.make()
-            storage.setValue(userID, forKey: AndroidStorageKey.pairingUserID)
+        self.storage = storage
+        let keys = SecureStorageKey.allCases.map(\.rawValue) + PreferencesKey.allCases.map(\.rawValue)
+        values = Dictionary(uniqueKeysWithValues: keys.compactMap { key in storage.value(forKey: key).map { (key, $0) } })
+    }
+
+    func value(forKey key: SecureStorageKey) -> String? { value(key.rawValue) }
+    func value(forKey key: PreferencesKey) -> String? { value(key.rawValue) }
+    func setValue(_ value: String, forKey key: SecureStorageKey) { set(value, key: key.rawValue) }
+    func setValue(_ value: String, forKey key: PreferencesKey) { set(value, key: key.rawValue) }
+
+    private func value(_ key: String) -> String? { lock.withLock { values[key] } }
+
+    private func set(_ value: String, key: String) {
+        let shouldDrain = lock.withLock {
+            values[key] = value
+            pending.append((key, value))
+            if isDraining { return false }
+            isDraining = true
+            return true
         }
-        values = (
-            value(AndroidStorageKey.guideHost), value(AndroidStorageKey.streamHost),
-            value(AndroidStorageKey.ownStreamIDs).split(separator: ",").compactMap { Int($0) }
-        )
-        self.storage = MainActorStorage(storage)
+        if shouldDrain { Task { @MainActor in self.drain() } }
     }
 
-    func load() -> ConnectionData { lock.withLock { connection } }
-    func save(_ connection: ConnectionData) {
-        lock.withLock { self.connection = connection }
-        storage.set([
-            AndroidStorageKey.host: connection.host, AndroidStorageKey.user: connection.user,
-            AndroidStorageKey.password: connection.password,
-        ])
-    }
-    func pairingUserID() -> String { userID }
-
-    var guideHost: String {
-        get { lock.withLock { values.guideHost } }
-        set {
-            lock.withLock { values.guideHost = newValue }
-            storage.set([AndroidStorageKey.guideHost: newValue])
+    @MainActor private func drain() {
+        while let entry = nextWrite() {
+            storage.setValue(entry.value, forKey: entry.key)
         }
     }
 
-    var streamHost: String {
-        get { lock.withLock { values.streamHost } }
-        set {
-            lock.withLock { values.streamHost = newValue }
-            storage.set([AndroidStorageKey.streamHost: newValue])
-        }
-    }
-
-    var ownStreamIDs: [Int] {
-        get { lock.withLock { values.ownStreamIDs } }
-        set {
-            lock.withLock { values.ownStreamIDs = newValue }
-            storage.set([AndroidStorageKey.ownStreamIDs: newValue.map(String.init).joined(separator: ",")])
+    private func nextWrite() -> (key: String, value: String)? {
+        lock.withLock {
+            guard !pending.isEmpty else {
+                isDraining = false
+                return nil
+            }
+            return pending.removeFirst()
         }
     }
 }
 
-/// Kotlin の保存先に、メインスレッドで書く (書いた順に書く)
-private final class MainActorStorage: @unchecked Sendable {
-    private let storage: any RegzaAndroidStorage
-
-    init(_ storage: any RegzaAndroidStorage) {
-        self.storage = storage
-    }
-
-    func set(_ values: [String: String]) {
-        Task { @MainActor in
-            for (key, value) in values { self.storage.setValue(value, forKey: key) }
-        }
-    }
+@MainActor
+func makeStorageManagers(_ storage: any RegzaAndroidStorage) -> (secureStorage: SecureStorageManager, preferences: PreferencesManager) {
+    let adapter = AndroidStorageAdapter(storage: storage)
+    return (SecureStorageManager(storage: adapter), PreferencesManager(storage: adapter))
 }

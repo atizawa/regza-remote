@@ -24,10 +24,13 @@ struct LiveModels {
         self.store = store
         let client = RegzaAPIClient(connection: store.load(), transport: transport)
         let connectionState = RegzaConnectionState(connection: store.load())
-        tv = RegzaTVRepository(store: store, client: client, connectionState: connectionState)
+        tv = RegzaTVRepository(
+            secureStorage: store.secureStorage, preferences: store.preferences, client: client, connectionState: connectionState)
         remote = RemoteViewModel(tv: TVUseCase(tv: tv))
-        let guide = MirakurunGuideRepository(store: store, client: MirakurunAPIClient(host: store.guideHost, transport: transport))
-        let stream = EPGStationStreamRepository(store: store, client: EPGStationAPIClient(host: store.streamHost, transport: transport))
+        let guide = MirakurunGuideRepository(
+            preferences: store.preferences, client: MirakurunAPIClient(host: store.guideHost, transport: transport))
+        let stream = EPGStationStreamRepository(
+            preferences: store.preferences, client: EPGStationAPIClient(host: store.streamHost, transport: transport))
         let recording = RegzaRecordingRepository(client: client, connectionState: connectionState)
         channels = ChannelUseCase(tv: tv, guide: guide)
         self.guide = GuideUseCase(guide: guide, recording: recording)

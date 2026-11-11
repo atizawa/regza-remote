@@ -15,7 +15,7 @@ import javax.crypto.spec.GCMParameterSpec
 /**
  * Swift の保存先 (RegzaAndroidStorage) の Android での実装 (iOS のキーチェーンに当たる)。
  * 値は SharedPreferences に置き、パスワードは Android Keystore の鍵で暗号化する。鍵は端末の外に出せない。
- * どの値をいつ保存するかは Swift (AndroidConnectionStore) が決める
+ * どの値をいつ保存するかは Swift の Repository と StorageManager が決める
  */
 class AndroidStorage(context: Context) : RegzaAndroidStorage {
     private val preferences = context.getSharedPreferences("regza", Context.MODE_PRIVATE)

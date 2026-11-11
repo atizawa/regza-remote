@@ -11,15 +11,17 @@ import RegzaLiveActivity
 public final class RegzaAppContainer {
     public static let shared = RegzaAppContainer()
 
-    /// 接続情報の保存先 (キーチェーン)
-    public let store: KeychainConnectionStore
+    /// Repository に渡す、OS の保存先を包んだ Manager。
+    public let secureStorage: SecureStorageManager
+    public let preferences: PreferencesManager
     public let app: AppViewModel
     /// ロック画面と Dynamic Island の表示。リモコンの state を見て更新する
     public let liveActivity: LiveActivityModel
 
     private init() {
-        store = KeychainConnectionStore()
-        var app = AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), guide: Self.makeGuide(store)))
+        secureStorage = SecureStorageManager(storage: KeychainStorage())
+        preferences = PreferencesManager(storage: UserDefaultsStorage())
+        var app = AppViewModel(secureStorage: secureStorage, preferences: preferences)
         #if DEBUG
         // 開発用: 起動引数 -SampleData YES で、テレビにつながない見本の Repository で組み立てる
         if SampleData.isEnabled { app = SampleData.makeApp() }
@@ -28,10 +30,6 @@ public final class RegzaAppContainer {
         liveActivity = LiveActivityModel(remote: app.remote)
     }
 
-    /// 視聴状況を 2 秒ごとに取るので、番組表が応答しないときに待たされないよう短めにする
-    private static func makeGuide(_ store: KeychainConnectionStore) -> MirakurunAPIClient? {
-        store.guideHost.isEmpty ? nil : MirakurunAPIClient(host: store.guideHost, timeout: 3)
-    }
 }
 
 #if DEBUG

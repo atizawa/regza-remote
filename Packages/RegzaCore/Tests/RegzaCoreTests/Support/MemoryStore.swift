@@ -3,65 +3,35 @@ import Foundation
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
 
-final class MemoryStore: RegzaConnectionStore, @unchecked Sendable {
-    private let lock = NSLock()
-    private var connection: ConnectionData
-    private var values: (guideHost: String, streamHost: String, ownStreamIDs: [Int]) = ("", "", [])
+/// テストの組み立てで使う Manager のセット。
+final class MemoryStore: Sendable {
+    let secureStorage: SecureStorageManager
+    let preferences: PreferencesManager
 
     init(connection: ConnectionData) {
-        self.connection = connection
+        secureStorage = SecureStorageManager(
+            storage: MemorySecureStorage(values: [
+                .password: connection.password, .pairingUserID: "00:00:5e:00:53:00",
+            ]))
+        preferences = PreferencesManager(storage: MemoryPreferencesStorage(values: [.host: connection.host, .user: connection.user]))
     }
 
     func load() -> ConnectionData {
-        lock.lock()
-        defer { lock.unlock() }
-        return connection
+        RegzaTVRepository.loadConnection(secureStorage: secureStorage, preferences: preferences)
     }
-
-    func save(_ connection: ConnectionData) {
-        lock.lock()
-        self.connection = connection
-        lock.unlock()
-    }
-
-    func pairingUserID() -> String { "00:00:5e:00:53:00" }
 
     var guideHost: String {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return values.guideHost
-        }
-        set {
-            lock.lock()
-            values.guideHost = newValue.trimmingCharacters(in: .whitespaces)
-            lock.unlock()
-        }
+        get { preferences.value(forKey: .guideHost) ?? "" }
+        set { preferences.setValue(newValue.trimmingCharacters(in: .whitespaces), forKey: .guideHost) }
     }
 
     var streamHost: String {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return values.streamHost
-        }
-        set {
-            lock.lock()
-            values.streamHost = newValue
-            lock.unlock()
-        }
+        get { preferences.value(forKey: .streamHost) ?? "" }
+        set { preferences.setValue(newValue, forKey: .streamHost) }
     }
 
     var ownStreamIDs: [Int] {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return values.ownStreamIDs
-        }
-        set {
-            lock.lock()
-            values.ownStreamIDs = newValue
-            lock.unlock()
-        }
+        get { preferences.integers(forKey: .ownStreamIDs) }
+        set { preferences.setIntegers(newValue, forKey: .ownStreamIDs) }
     }
 }

@@ -37,12 +37,13 @@ public struct RootView: View {
         AppScreen(app: app, liveActivity: liveActivity, debugPlayer: debugPlayer)
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
                 // 終了するときも、ライブ視聴の配信を止めてみる (届かなければ次に開いたときに止める)
-                let store = RegzaAppContainer.shared.store
-                guard !store.streamHost.isEmpty, !store.ownStreamIDs.isEmpty else { return }
-                let server = EPGStationAPIClient(host: store.streamHost)
+                let preferences = RegzaAppContainer.shared.preferences
+                let host = preferences.value(forKey: .streamHost) ?? ""
+                guard !host.isEmpty, !preferences.integers(forKey: .ownStreamIDs).isEmpty else { return }
+                let server = EPGStationAPIClient(host: host)
                 let semaphore = DispatchSemaphore(value: 0)
                 Task.detached {
-                    await EPGStationStreamRepository.cleanUp(server, store: store)
+                    await EPGStationStreamRepository.cleanUp(server, preferences: preferences)
                     semaphore.signal()
                 }
                 _ = semaphore.wait(timeout: .now() + 2)

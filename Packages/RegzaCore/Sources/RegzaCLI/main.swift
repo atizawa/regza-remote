@@ -19,13 +19,17 @@ import RegzaSample
 func main() async {
     let options = Options(CommandLine.arguments.dropFirst(), environment: ProcessInfo.processInfo.environment)
     // 見本では、テレビと番組表 (Mirakurun)・録画サーバー (EPGStation) も見本の返事を使う (Android の見本と同じ登録)
-    let store = MemoryConnectionStore(
-        connection: options.sample && options.host.isEmpty
-            ? SampleTransport.connection : ConnectionData(host: options.host, user: options.user, password: options.password)
-    )
+    let connection =
+        options.sample && options.host.isEmpty
+        ? SampleTransport.connection : ConnectionData(host: options.host, user: options.user, password: options.password)
+    let secureStorage = SecureStorageManager(
+        storage: MemorySecureStorage(values: [
+            .password: connection.password, .pairingUserID: "00:00:5e:00:53:01",
+        ]))
+    let preferences = PreferencesManager(storage: MemoryPreferencesStorage(values: [.host: connection.host, .user: connection.user]))
     if options.sample {
-        store.guideHost = SampleTransport.guideHost
-        store.streamHost = SampleTransport.streamHost
+        preferences.setValue(SampleTransport.guideHost, forKey: .guideHost)
+        preferences.setValue(SampleTransport.streamHost, forKey: .streamHost)
     }
     let transport: any HTTPTransport
     if options.sample {
@@ -42,7 +46,8 @@ func main() async {
     }
     // 番組表 (Mirakurun) や録画サーバーへの通信も同じ方法で送る
     RegzaHTTP.transport = transport
-    let app = AppViewModel(store: store, remote: RegzaRemote(connection: store.load(), transport: transport))
+    let app = AppViewModel(
+        secureStorage: secureStorage, preferences: preferences, remote: RegzaRemote(connection: connection, transport: transport))
     let session = IntrospectionSession(root: app)
     if !options.host.isEmpty, !options.sample {
         // チャンネル一覧などを使う操作のため、先に読んでおく

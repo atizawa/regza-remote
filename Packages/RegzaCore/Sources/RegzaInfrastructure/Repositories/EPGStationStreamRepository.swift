@@ -7,13 +7,13 @@ import RegzaDomain
 @MainActor
 @Observable
 public final class EPGStationStreamRepository: StreamRepositoryProtocol {
-    @ObservationIgnored private let store: any RegzaConnectionStore
+    @ObservationIgnored private let preferences: PreferencesManager
     @ObservationIgnored private var client: EPGStationAPIClient
 
     public private(set) var streamHost: String
 
-    public init(store: any RegzaConnectionStore, client: EPGStationAPIClient) {
-        self.store = store
+    public init(preferences: PreferencesManager, client: EPGStationAPIClient) {
+        self.preferences = preferences
         self.client = client
         streamHost = client.host
     }
@@ -23,7 +23,7 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
 
     public func saveStreamHost(_ host: String) {
         let host = host.trimmingCharacters(in: .whitespacesAndNewlines)
-        store.streamHost = host
+        preferences.setValue(host, forKey: .streamHost)
         streamHost = host
         client = client.replacingHost(host)
     }
@@ -51,7 +51,7 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
             try? await server.request(EPGStationStopStreamRequest(streamID: streamID))
             throw .notConfigured
         }
-        if !store.ownStreamIDs.contains(streamID) { store.ownStreamIDs.append(streamID) }
+        preferences.updateIntegers(forKey: .ownStreamIDs) { if !$0.contains(streamID) { $0.append(streamID) } }
         return streamID
     }
 
@@ -76,29 +76,29 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
             return
         }
         guard server === client else { return }
-        store.ownStreamIDs.removeAll { $0 == streamID }
+        preferences.updateIntegers(forKey: .ownStreamIDs) { $0.removeAll { $0 == streamID } }
     }
 
     public func cleanUp() async {
         guard let server = streamServer() else { return }
-        for id in store.ownStreamIDs {
+        for id in preferences.integers(forKey: .ownStreamIDs) {
             do { try await server.request(EPGStationStopStreamRequest(streamID: id)) } catch RegzaError.httpStatus(404) {} catch {
                 continue
             }
             guard server === client else { return }
-            store.ownStreamIDs.removeAll { $0 == id }
+            preferences.updateIntegers(forKey: .ownStreamIDs) { $0.removeAll { $0 == id } }
         }
     }
 
     /// cleanUp をメインスレッドを使わずに行う (アプリの終了時に、メインスレッドで待ちながら呼ぶ)
-    public nonisolated static func cleanUp(_ server: EPGStationAPIClient, store: any RegzaConnectionStore) async {
-        for id in store.ownStreamIDs {
+    public nonisolated static func cleanUp(_ server: EPGStationAPIClient, preferences: PreferencesManager) async {
+        for id in preferences.integers(forKey: .ownStreamIDs) {
             // 止める指示が届いたか、もう無い (404) ときだけ忘れる
             do {
                 try await server.request(EPGStationStopStreamRequest(streamID: id))
-                store.ownStreamIDs.removeAll { $0 == id }
+                preferences.updateIntegers(forKey: .ownStreamIDs) { $0.removeAll { $0 == id } }
             } catch RegzaError.httpStatus(404) {
-                store.ownStreamIDs.removeAll { $0 == id }
+                preferences.updateIntegers(forKey: .ownStreamIDs) { $0.removeAll { $0 == id } }
             } catch {}
         }
     }
@@ -109,7 +109,7 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
         for stream in streams where !stream.isEnabled {
             try? await server.request(EPGStationStopStreamRequest(streamID: stream.id))
             guard server === client else { return }
-            store.ownStreamIDs.removeAll { $0 == stream.id }
+            preferences.updateIntegers(forKey: .ownStreamIDs) { $0.removeAll { $0 == stream.id } }
         }
     }
 }

@@ -6,7 +6,7 @@ import RegzaDomain
 @MainActor
 @Observable
 public final class MirakurunGuideRepository: GuideRepositoryProtocol {
-    @ObservationIgnored private let store: any RegzaConnectionStore
+    @ObservationIgnored private let preferences: PreferencesManager
     @ObservationIgnored private var client: MirakurunAPIClient
     /// 1 チャンネルの番組表で読んだ番組 (番組の id から引くため)
     @ObservationIgnored private var channelPrograms: [String: [ProgramData]] = [:]
@@ -16,10 +16,10 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     public private(set) var guideProgramsLoadedAt: Date?
 
     public init(
-        store: any RegzaConnectionStore,
+        preferences: PreferencesManager,
         client: MirakurunAPIClient
     ) {
-        self.store = store
+        self.preferences = preferences
         self.client = client
         guideHost = client.host
     }
@@ -27,7 +27,7 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     public func saveGuideHost(_ host: String) async {
         let host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         guard host != guideHost else { return }
-        store.guideHost = host
+        preferences.setValue(host, forKey: .guideHost)
         guideHost = host
         client = client.replacingHost(host)
         channelPrograms = [:]

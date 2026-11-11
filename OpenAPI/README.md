@@ -117,6 +117,12 @@ Network/
   HTTPTransport.swift
   SocketTransport.swift
 Repositories/
+Storage/
+  SecureStorageManager.swift
+  PreferencesManager.swift
+  SecureStorage.swift
+  PreferencesStorage.swift
+  MemoryStorage.swift
 Mappers/
   MirakurunProgramMapper.swift
   RegzaDataMapper.swift

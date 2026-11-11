@@ -20,8 +20,8 @@ let package = Package(
         .package(path: "../../Packages/RegzaCore")
     ],
     targets: [
-        // Apple: キーチェーンへの接続情報保存 (Domain の保存先の protocol を実装するので、組み立て (RegzaApp) に依存する)
-        .target(name: "RegzaAppleStorage", dependencies: [.product(name: "RegzaApp", package: "RegzaCore")]),
+        // Apple: Infrastructure の保存プロトコルを Keychain と UserDefaults で実装する
+        .target(name: "RegzaAppleStorage", dependencies: [.product(name: "RegzaInfrastructure", package: "RegzaCore")]),
         // iOS: アプリとウィジェットで共通の色
         .target(name: "RegzaDesign"),
         // iOS: Live Activity (ロック画面と Dynamic Island) の表示と、閉じている間の更新の予約。
