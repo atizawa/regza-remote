@@ -1,0 +1,578 @@
+openapi: 3.1.0
+info:
+  title: REGZA HTTP リモコン API
+  version: 0.1.0
+  summary: テレビの REGZA が LAN に開いている HTTP の API
+  description: |
+    公式の資料はないので、実機での振る舞いから書き起こしたもの。確かめた範囲の操作だけを載せている。
+
+    ## API の種類
+    - **旧 API** (`/remote/*.htm`): 古い機種から使える。返事は JSON ではなく文字列
+    - **v2 API** (`/v2/*`、レグザAppsコネクト v2): 返事は JSON。対応していない機種は 404 か、JSON でない返事を返す
+
+    ## 返事の status
+    v2 API の返事の JSON は `status` を持つ。`0` が成功で、それ以外はテレビに断られた
+    (HTTP のステータスは 200 のまま)。
+
+    ## 認証
+    `/public/*` と `/v2/public/*` 以外は Digest 認証 (MD5、qop=auth) が要る。
+    ユーザーとパスワードは、PIN での登録 (`requestConnection` → `confirmConnection`) で決まる。
+    nonce の期限が切れると 401 で新しいチャレンジが来るので、その nonce でやり直す。
+
+    ## 録画予約の追加
+    `addReservation` だけは、HTTPS (ポート 4430) でしか受け付けない。HTTP で送ると、内容によらず status 2 になる。
+    この HTTPS の証明書は自己署名なので、確かめずに接続する。
+
+    ## 例の値
+    アドレスは RFC 5737 の例示用のもの、局の名前と ID は見本のもの。実在の機器の情報は書かない。
+servers:
+  - url: http://{host}
+    description: テレビ (HTTP)
+    variables:
+      host:
+        default: 192.0.2.10
+        description: テレビのアドレス
+security:
+  - digest: []
+
+tags:
+  - name: discovery
+    description: テレビを探す
+  - name: pairing
+    description: PIN でアプリを登録する
+  - name: remote
+    description: リモコンのキーと再生の操作
+  - name: status
+    description: いま見ているもの
+  - name: settings
+    description: テレビの設定
+  - name: reservation
+    description: 録画予約
+
+paths:
+  /public/feature:
+    get:
+      operationId: getFeature
+      tags: [discovery]
+      summary: 機器の種類と対応している機能
+      description: |
+        同じネットワークのアドレスに順に問い合わせて、テレビを探すのに使う (SSDP は使わない)。
+        `device_type` が `DTV` ならテレビ。認証は要らない。
+      security: []
+      responses:
+        "200":
+          description: 機器の情報
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Feature" }
+
+  /v2/public/request_connection:
+    post:
+      operationId: requestConnection
+      tags: [pairing]
+      summary: テレビに PIN を出させる
+      description: |
+        テレビの画面に PIN が出て、暗号化されたパスワードと salt が返る。
+        パスワードは、鍵を PBKDF2-HMAC-SHA1 (PIN, salt, 1331 回) の先頭 16 バイトとし、
+        AES-128-CBC (IV はゼロ) で復号する。認証は要らない。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/PairingUser" }
+      responses:
+        "200":
+          description: PIN を出した
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConnectionChallenge" }
+
+  /v2/public/cancel_connection:
+    post:
+      operationId: cancelConnection
+      tags: [pairing]
+      summary: テレビの PIN の表示を取り消す
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/PairingUser" }
+      responses:
+        "200":
+          description: 取り消した
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Result" }
+
+  /v2/remote/confirm_connection:
+    post:
+      operationId: confirmConnection
+      tags: [pairing]
+      summary: 登録を確定する
+      description: |
+        `requestConnection` の `user_id` と、PIN で復号したパスワードの Digest 認証で送る。
+        PIN が違うと、パスワードも違うので 401 になる。本文は空。
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: 登録した
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Result" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /remote/remote.htm:
+    get:
+      operationId: sendKey
+      tags: [remote]
+      summary: リモコンのキーを送る (旧 API)
+      parameters:
+        - name: key
+          in: query
+          required: true
+          description: キーのコード (6 桁の 16 進)
+          schema:
+            type: string
+            pattern: "^[0-9A-F]{6}$"
+            examples: ["40BF1A"]
+      responses:
+        "200":
+          description: |
+            `0` なら受け付けた。`1` と `2` は断られた。数字でない返事をする機種もあり、そのときは受け付けたとみなす
+          content:
+            text/plain:
+              schema:
+                type: string
+                examples: ["0"]
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /remote/status.htm:
+    get:
+      operationId: getLegacyStatus
+      tags: [status]
+      summary: 録画の再生の状況 (旧 API)
+      description: |
+        `キー=値` を 1 行ずつ返す。録画を再生していないときは、どの値も 0 か空 (`null` という文字のこともある)。
+        文字コードは機種で違うことがあるので、UTF-8・Shift_JIS・EUC-JP の順に試して読む。
+        v2 API がない機種で、登録した資格情報が通るかを確かめるのにも使う。
+      responses:
+        "200":
+          description: 再生の状況
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: |
+                  使っているキー: `action`・`title_no`・`title_name`・`total_time` (秒)・`ch_code`・`ch_name`・
+                  `rec_day`・`genre`・`title_time` (秒)・`chapter_no`・`chapter_time` (秒)・`chapter_name`
+                examples:
+                  - "action=0\ntitle_no=1\ntitle_name=見本の番組\ntotal_time=3600\nch_code=JP-G00000001\nch_name=テスト局１\n"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /remote/ts.htm:
+    get:
+      operationId: seek
+      tags: [remote]
+      summary: 録画の再生中に、指定の秒の位置へ移る (旧 API)
+      description: |
+        クエリは `キー=値` ではなく、秒数だけを書く (`/remote/ts.htm?120`)。
+        OpenAPI ではこの形のクエリを書けないので、パラメーターとしては書いていない。返事の中身は使わない。
+      responses:
+        "200":
+          description: 移った
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v2/remote/play/status:
+    get:
+      operationId: getPlayStatus
+      tags: [status]
+      summary: いま見ているもの (放送・録画・外部入力) と、その番組
+      description: 登録した資格情報が通るかを確かめるのにも使う。
+      responses:
+        "200":
+          description: 視聴の状態
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlayStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/Unsupported" }
+
+  /v2/remote/status/channel:
+    post:
+      operationId: tune
+      tags: [remote]
+      summary: 選局する
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [channel]
+              properties:
+                channel:
+                  description: チャンネル一覧の `channel`
+                  type: string
+                  examples: ["JP-G00000001"]
+      responses:
+        "200":
+          description: 結果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Result" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v2/remote/settings/channel_list:
+    get:
+      operationId: getChannels
+      tags: [settings]
+      summary: テレビに登録されているチャンネル
+      responses:
+        "200":
+          description: チャンネルの一覧
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChannelList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/Unsupported" }
+
+  /v2/remote/settings/timeshift:
+    get:
+      operationId: getTimeshiftSettings
+      tags: [settings]
+      summary: タイムシフトマシンの設定 (録画している局と時間帯)
+      responses:
+        "200":
+          description: 設定
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TimeshiftSettings" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/Unsupported" }
+
+  /v2/remote/pvr/reserves/list:
+    get:
+      operationId: getReservations
+      tags: [reservation]
+      summary: 録画予約の一覧
+      responses:
+        "200":
+          description: 録画予約
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReservationList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/Unsupported" }
+
+  /v2/remote/pvr/reserves/list/{rsv_id}:
+    delete:
+      operationId: cancelReservation
+      tags: [reservation]
+      summary: 録画予約を取り消す
+      parameters:
+        - name: rsv_id
+          in: path
+          required: true
+          description: 一覧の `rsv_id`
+          schema: { type: string }
+      responses:
+        "200":
+          description: 結果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Result" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v2/remote/pvr/reserves/new:
+    post:
+      operationId: addReservation
+      tags: [reservation]
+      summary: 番組を録画予約する
+      description: |
+        HTTPS (ポート 4430) でしか受け付けない。保存先などはテレビの設定どおりになる。
+        連ドラ予約は `series_rec=true` だけを送る。繰り返し (毎週・月〜金など) とキーワードはテレビが番組から決め、
+        `repeat_series` などを自分で入れると status 2 になる。
+      servers:
+        - url: https://{host}:4430
+          description: テレビ (HTTPS。証明書は自己署名)
+          variables:
+            host:
+              default: 192.0.2.10
+              description: テレビのアドレス
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [channel, epg_content_id, start_time, duration]
+              properties:
+                channel:
+                  description: チャンネル一覧の `channel`
+                  type: string
+                epg_content_id:
+                  $ref: "#/components/schemas/EpgContentID"
+                start_time:
+                  description: 番組の始まり (Unix 秒)
+                  type: integer
+                duration:
+                  description: 番組の長さ (秒)
+                  type: integer
+                series_rec:
+                  description: 連ドラ予約にするなら `true`
+                  type: string
+                  enum: ["true"]
+      responses:
+        "200":
+          description: 結果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Result" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    digest:
+      type: http
+      scheme: digest
+      description: MD5、qop=auth。ユーザーとパスワードは PIN での登録で決まる
+
+  responses:
+    Unauthorized:
+      description: 認証が要る、または資格情報が違う (`WWW-Authenticate` で Digest のチャレンジが来る)
+      headers:
+        WWW-Authenticate:
+          schema: { type: string }
+    Unsupported:
+      description: この機種には、この API がない
+
+  schemas:
+    Status:
+      description: "`0` が成功。それ以外はテレビに断られた (`2` は内容が受け付けられなかった)"
+      type: integer
+      examples: [0]
+
+    Result:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/Status" }
+
+    Feature:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/Status" }
+        device_type:
+          description: テレビなら `DTV`
+          type: string
+          examples: ["DTV"]
+        model:
+          description: 機種名
+          type: string
+        size:
+          description: 画面の大きさ
+          type: string
+        ipc_feature:
+          description: 対応している機能。PIN での登録ができるなら `PIN_Auth` を含む
+          type: array
+          items: { type: string }
+          examples: [["PIN_Auth"]]
+
+    PairingUser:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          description: テレビに登録するユーザー ID。MAC アドレスの形 (アプリが作る)
+          type: string
+          pattern: "^([0-9A-F]{2}-){5}[0-9A-F]{2}$"
+          examples: ["02-00-00-00-00-01"]
+
+    ConnectionChallenge:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/Status" }
+        password:
+          description: 暗号化されたパスワード (16 進の文字列)
+          type: string
+        salt:
+          description: 鍵を作るときの salt
+          type: string
+
+    EpgContentID:
+      description: 番組の ID。`JP-0000` に、network_id・service_id・event_id を 16 進で続けたもの。大文字・小文字は揃っていない
+      type: string
+
+    Program:
+      type: object
+      properties:
+        channel:
+          description: チャンネル一覧の `channel`
+          type: string
+        channel_name: { type: string }
+        channel_number:
+          description: 3 桁のチャンネル番号 (地デジの 011、BS の 181 など)
+          type: integer
+        rcu_channel_number:
+          description: リモコンの番号ボタンの番号
+          type: integer
+        epg_content_id: { $ref: "#/components/schemas/EpgContentID" }
+        title:
+          description: 番組名。機種によっては、放送中の番組でも空
+          type: string
+        description: { type: string }
+        start_time:
+          description: Unix 秒
+          type: integer
+        duration:
+          description: 秒
+          type: integer
+        genre:
+          description: ARIB のジャンル (`00a8` のような 4 桁の 16 進。3 桁目が大分類)
+          type: array
+          items: { type: string }
+
+    PlayingAction:
+      type: object
+      properties:
+        position:
+          description: 再生している位置 (秒)
+          type: integer
+        total_time:
+          description: 秒
+          type: integer
+        play_state:
+          description: "`play`・`pause` など"
+          type: string
+        chapter_name: { type: string }
+
+    PlayStatus:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/Status" }
+        content_type:
+          description: "`broadcast` (放送)・`recorded` (録画)・`external` (HDMI などの外部入力)・`other` (待機など)"
+          type: string
+          examples: ["broadcast"]
+        epg_info_current: { $ref: "#/components/schemas/Program" }
+        epg_info_next: { $ref: "#/components/schemas/Program" }
+        recorded_prg_info: { $ref: "#/components/schemas/Program" }
+        playing_action_info: { $ref: "#/components/schemas/PlayingAction" }
+
+    Channel:
+      type: object
+      required: [channel]
+      properties:
+        channel:
+          description: 選局に使う ID
+          type: string
+          examples: ["JP-G00000001"]
+        channel_number:
+          description: 3 桁のチャンネル番号
+          type: integer
+          examples: [11]
+        rcu_channel_number:
+          description: リモコンのワンタッチ選局ボタンの番号。割り当てがなければ 0 か、ない
+          type: integer
+          examples: [1]
+        name:
+          type: string
+          examples: ["テスト局１"]
+        ex_channel_number:
+          description: 放送の種類と番号。`DUV_` は地デジ、`DBS_` は BS、`DCS_` は CS
+          type: string
+          examples: ["DUV_011-1"]
+        show_setting:
+          description: |
+            `SHOW_REPRESENT` は、同じ局のサブチャンネルのうちの代表。CS には代表の印が来ない
+          type: string
+          examples: ["SHOW_REPRESENT", "SHOW"]
+
+    ChannelList:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/Status" }
+        channel_list:
+          type: array
+          items: { $ref: "#/components/schemas/Channel" }
+
+    TimeshiftSettings:
+      type: object
+      properties:
+        timeshift_enabled:
+          description: 文字列の `true`・`false`
+          type: string
+          enum: ["true", "false"]
+        target_channel:
+          description: 録画している局 (チャンネル一覧の `channel`)
+          type: array
+          items: { type: string }
+        active_time_list:
+          description: 曜日ごとの、録画する時間帯
+          type: array
+          items:
+            type: object
+            required: [active_time, day_of_week]
+            properties:
+              active_time:
+                description: |
+                  8 桁の 16 進。下位 24 ビットが 0〜23 時を表す。日をまたぐ時間帯の翌日の 0 時台は、翌日の値に入る
+                  (「19 時〜翌 1 時」なら、その日は 19〜23 時と 0 時台で `00f80001`)
+                type: string
+                pattern: "^[0-9a-fA-F]{8}$"
+                examples: ["00f80001"]
+              day_of_week:
+                type: string
+                enum: [sun, mon, tue, wed, thu, fri, sat]
+
+    Reservation:
+      type: object
+      required: [rsv_id]
+      properties:
+        rsv_id:
+          description: 予約の ID (取り消しに使う)
+          type: string
+        title:
+          description: |
+            番組名。連ドラ予約は、次の回が番組表に載ると、その回の名前と時刻に変わる
+            (それまでは、最後に録画した回のまま)
+          type: string
+        channel:
+          description: チャンネル一覧の `channel`
+          type: string
+        epg_content_id:
+          allOf:
+            - $ref: "#/components/schemas/EpgContentID"
+          description: 連ドラ予約で次の回がまだ決まっていないときは、event_id が `ffff`
+        start_time:
+          description: Unix 秒
+          type: integer
+        duration:
+          description: 秒
+          type: integer
+        repeat:
+          description: "`none`・`daily`・`weekly`・`mtof` (月〜金)・`mtos` (月〜土) など"
+          type: string
+        series_rec:
+          description: 連ドラ予約なら、文字列の `true`
+          type: string
+          enum: ["true", "false"]
+
+    ReservationList:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/Status" }
+        rsv_list:
+          type: array
+          items: { $ref: "#/components/schemas/Reservation" }
