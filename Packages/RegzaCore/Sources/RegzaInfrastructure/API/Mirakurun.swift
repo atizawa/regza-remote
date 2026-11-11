@@ -52,7 +52,8 @@ public final class Mirakurun: Sendable {
         }
         let response = try await transport.send(HTTPRequest(url: url, timeout: timeout))
         guard (200..<300).contains(response.statusCode) else { throw RegzaError.httpStatus(response.statusCode) }
-        return response.body
+        // 番組の説明に入っていた制御文字を、そのまま返すことがある (LenientJSON)
+        return LenientJSON.escapingControlCharactersInStrings(response.body)
     }
 
     // MARK: - 探す
