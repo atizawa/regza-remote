@@ -125,7 +125,7 @@ private final class LocalTrustDelegate: NSObject, URLSessionDelegate, Sendable {
     ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
         #if canImport(Security)
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
-            challenge.protectionSpace.port == RegzaClient.securePort,
+            challenge.protectionSpace.port == RegzaAPIClient.securePort,
             let trust = challenge.protectionSpace.serverTrust
         {
             return (.useCredential, URLCredential(trust: trust))

@@ -29,8 +29,8 @@ public final class RegzaAppContainer {
     }
 
     /// 視聴状況を 2 秒ごとに取るので、番組表が応答しないときに待たされないよう短めにする
-    private static func makeGuide(_ store: KeychainConnectionStore) -> Mirakurun? {
-        store.guideHost.isEmpty ? nil : Mirakurun(host: store.guideHost, timeout: 3)
+    private static func makeGuide(_ store: KeychainConnectionStore) -> MirakurunAPIClient? {
+        store.guideHost.isEmpty ? nil : MirakurunAPIClient(host: store.guideHost, timeout: 3)
     }
 }
 

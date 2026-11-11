@@ -8,7 +8,7 @@ import RegzaDomain
 /// 3. 見ている間は `PUT /api/streams/:id/keep` で知らせ、終わったら `DELETE /api/streams/:id` で止めてチューナーを空ける
 ///
 /// 同時に変換できる数に上限がある構成では、上限に達していると配信が始まらない (準備できないまま残る)
-public final class EPGStation: Sendable {
+public final class EPGStationAPIClient: Sendable {
     public static let defaultPort = ServerPort.epgStation
 
     /// `192.168.0.2` か `192.168.0.2:8888`
@@ -20,6 +20,11 @@ public final class EPGStation: Sendable {
         self.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         self.timeout = timeout
         self.transport = transport
+    }
+
+    /// 注入された通信方式とタイムアウトを保ったまま接続先を差し替える。
+    public func replacingHost(_ host: String) -> EPGStationAPIClient {
+        EPGStationAPIClient(host: host, timeout: timeout, transport: transport)
     }
 
     /// EPGStation のチャンネル ID (Mirakurun のサービス ID と同じ)。テレビのチャンネルの ID から求める
@@ -101,12 +106,12 @@ public final class EPGStation: Sendable {
             var iterator = hosts.makeIterator()
             for _ in 0..<RegzaDiscovery.concurrency {
                 guard let host = iterator.next() else { break }
-                group.addTask { await EPGStation(host: host, timeout: timeout).isAvailable() ? host : nil }
+                group.addTask { await EPGStationAPIClient(host: host, timeout: timeout).isAvailable() ? host : nil }
             }
             for await host in group {
                 if let host { found.append(host) }
                 if let next = iterator.next() {
-                    group.addTask { await EPGStation(host: next, timeout: timeout).isAvailable() ? next : nil }
+                    group.addTask { await EPGStationAPIClient(host: next, timeout: timeout).isAvailable() ? next : nil }
                 }
             }
         }

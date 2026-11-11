@@ -7,10 +7,7 @@ import RegzaDomain
 @Observable
 public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     @ObservationIgnored private let store: any RegzaConnectionStore
-    @ObservationIgnored private let transport: any HTTPTransport
-    /// アドレスが変わったとき (テレビの Repository に、番組名を補う番組表を差し替えてもらう)
-    @ObservationIgnored private let onHostChange: @MainActor (String) async -> Void
-    @ObservationIgnored private var client: Mirakurun?
+    @ObservationIgnored private var client: MirakurunAPIClient
     /// 1 チャンネルの番組表で読んだ番組 (番組の id から引くため)
     @ObservationIgnored private var channelPrograms: [String: [MirakurunProgram]] = [:]
 
@@ -20,13 +17,11 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
 
     public init(
         store: any RegzaConnectionStore,
-        transport: any HTTPTransport = RegzaHTTP.transport,
-        onHostChange: @escaping @MainActor (String) async -> Void = { _ in }
+        client: MirakurunAPIClient
     ) {
         self.store = store
-        self.transport = transport
-        self.onHostChange = onHostChange
-        guideHost = store.guideHost
+        self.client = client
+        guideHost = client.host
     }
 
     public func saveGuideHost(_ host: String) async {
@@ -34,19 +29,14 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
         guard host != guideHost else { return }
         store.guideHost = host
         guideHost = host
-        client = nil
+        client = client.replacingHost(host)
         channelPrograms = [:]
         guidePrograms = [:]
         guideProgramsLoadedAt = nil
-        await onHostChange(host)
     }
 
-    private func guideClient() -> Mirakurun? {
-        guard hasGuide else { return nil }
-        if let client, client.host == guideHost { return client }
-        let client = Mirakurun(host: guideHost, transport: transport)
-        self.client = client
-        return client
+    private func guideClient() -> MirakurunAPIClient? {
+        hasGuide ? client : nil
     }
 
     /// 全チャンネルの番組を読む。数 MB あるので 30 分に 1 回まで
@@ -54,6 +44,7 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
         guard let guide = guideClient() else { return }
         if let guideProgramsLoadedAt, Date().timeIntervalSince(guideProgramsLoadedAt) < 30 * 60 { return }
         guard let programs = try? await guide.allPrograms() else { return }
+        guard guide === client else { return }
         guidePrograms = Self.byChannel(programs)
         guideProgramsLoadedAt = Date()
     }
@@ -67,6 +58,7 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
         do {
             let now = Date()
             let programs = try await guide.programs(channelCode: channel.code).filter { $0.end > now }
+            guard guide === client else { throw RegzaError.notConfigured }
             channelPrograms[channel.code] = programs
             return programs
         } catch {

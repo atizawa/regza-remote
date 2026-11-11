@@ -76,7 +76,7 @@ public enum RegzaDiscovery {
     }
 
     private static func authenticates(_ connection: RegzaConnection) async -> Bool {
-        let client = RegzaClient(connection: connection)
+        let client = RegzaAPIClient(connection: connection)
         do {
             _ = try await client.playStatus()
             return true
@@ -92,12 +92,12 @@ public enum RegzaDiscovery {
     }
 
     /// 1 台に問い合わせる。REGZA でなければ nil
-    public static func probe(host: String, timeout: TimeInterval = 1.5) async -> RegzaDevice? {
-        guard let url = URL(string: "http://\(host)/public/feature"),
-            let response = try? await RegzaHTTP.transport.send(HTTPRequest(url: url, timeout: timeout)),
-            (200..<300).contains(response.statusCode)
-        else { return nil }
-        return device(host: host, featureJSON: response.body)
+    public static func probe(
+        host: String, timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport
+    ) async -> RegzaDevice? {
+        let client = RegzaAPIClient(connection: RegzaConnection(host: host), timeout: timeout, transport: transport)
+        guard let data = try? await client.featureData() else { return nil }
+        return device(host: host, featureJSON: data)
     }
 
     static func device(host: String, featureJSON data: Data) -> RegzaDevice? {

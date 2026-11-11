@@ -30,7 +30,7 @@ import Testing
                 #"[{"id":1,"eventId":1,"serviceId":1024,"networkId":32736,"startAt":1793664000000,"duration":1800000,"name":"ニュース","description":"一行目"#
                     .utf8) + Data([0x1F]) + Data(#"二行目"}]"#.utf8)
         let transport = FakeTransport { _ in HTTPResponse(statusCode: 200, headers: [:], body: body) }
-        let programs = try await Mirakurun(host: "192.0.2.20", transport: transport).allPrograms()
+        let programs = try await MirakurunAPIClient(host: "192.0.2.20", transport: transport).allPrograms()
         #expect(programs.map(\.name) == ["ニュース"])
     }
 }

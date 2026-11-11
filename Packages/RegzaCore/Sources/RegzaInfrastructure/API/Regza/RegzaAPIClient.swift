@@ -1,5 +1,7 @@
 import Foundation
+import OpenAPIRuntime
 import RegzaDomain
+import RegzaTVAPI
 
 /// REGZA の HTTP リモコン API クライアント。
 ///
@@ -8,31 +10,38 @@ import RegzaDomain
 /// - `GET /remote/ts.htm?SEC` シーク
 ///
 /// いずれも Digest 認証が必要。PIN 登録は `RegzaPairing` を使う。
-public actor RegzaClient {
+public actor RegzaAPIClient {
     public private(set) var connection: RegzaConnection
     private let transport: any HTTPTransport
     private let timeout: TimeInterval
-    private var challenge: DigestChallenge?
-    private var nonceCount = 0
+    private var digest: RegzaDigestMiddleware
 
     public init(connection: RegzaConnection, timeout: TimeInterval = 3, transport: any HTTPTransport = RegzaHTTP.transport) {
         self.connection = connection
         self.timeout = timeout
         self.transport = transport
+        self.digest = RegzaDigestMiddleware(connection: connection)
     }
 
     /// テレビの HTTPS のポート。録画予約の追加はこちらでしか受け付けない
     public static let securePort = 4430
 
+    /// 接続確認などの独立した通信でも、注入された通信方式・タイムアウトを使う。
+    public func replacingConnection(_ connection: RegzaConnection) -> RegzaAPIClient {
+        RegzaAPIClient(connection: connection, timeout: timeout, transport: transport)
+    }
+
     public func update(connection: RegzaConnection) {
         guard connection != self.connection else { return }
         self.connection = connection
-        challenge = nil
-        nonceCount = 0
+        digest = RegzaDigestMiddleware(connection: connection)
     }
 
     public func send(_ key: RegzaKey) async throws {
-        let body = try await get(path: "/remote/remote.htm", query: "key=\(key.code)")
+        let body = try await generated {
+            let response = try await openAPI().sendKey(query: .init(key: key.code))
+            return Self.decode(try await Data(collecting: response.ok.body.plainText, upTo: 1024 * 1024))
+        }
         let result = body.trimmingCharacters(in: .whitespacesAndNewlines)
         // 0 以外 (1, 2) はエラー。数値以外が返る機種は成功扱いにする
         if let code = Int(result), code != 0 {
@@ -41,13 +50,16 @@ public actor RegzaClient {
     }
 
     public func status() async throws -> RegzaStatus {
-        RegzaStatus(text: try await get(path: "/remote/status.htm", query: nil))
+        return try await generated {
+            let response = try await openAPI().getLegacyStatus()
+            return RegzaStatus(text: Self.decode(try await Data(collecting: response.ok.body.plainText, upTo: 1024 * 1024)))
+        }
     }
 
     /// v2 API の視聴状態。放送中のチャンネルや番組の時刻も取れる。
     /// 未対応の機種では `RegzaError.httpStatus(404)` か `RegzaError.unsupported` になる
     public func playStatus() async throws -> RegzaPlayStatus {
-        let data = try await getData(path: "/v2/remote/play/status", query: nil)
+        let data = try await generated { try await JSONEncoder().encode(openAPI().getPlayStatus().ok.body.json) }
         guard let status = try? JSONDecoder().decode(RegzaPlayStatus.self, from: data) else {
             throw RegzaError.unsupported
         }
@@ -57,7 +69,7 @@ public actor RegzaClient {
 
     /// テレビに登録されているチャンネル。未対応の機種では `RegzaError.httpStatus(404)` か `RegzaError.unsupported` になる
     public func channels() async throws -> [RegzaChannel] {
-        let data = try await getData(path: "/v2/remote/settings/channel_list", query: nil)
+        let data = try await generated { try await JSONEncoder().encode(openAPI().getChannels().ok.body.json) }
         guard let list = try? JSONDecoder().decode(RegzaChannelList.self, from: data) else {
             throw RegzaError.unsupported
         }
@@ -67,7 +79,7 @@ public actor RegzaClient {
 
     /// タイムシフトマシンの設定 (録画している局と時間帯)
     public func timeshiftSettings() async throws -> RegzaTimeshiftSettings {
-        let data = try await getData(path: "/v2/remote/settings/timeshift", query: nil)
+        let data = try await generated { try await JSONEncoder().encode(openAPI().getTimeshiftSettings().ok.body.json) }
         guard let settings = try? JSONDecoder().decode(RegzaTimeshiftSettings.self, from: data) else {
             throw RegzaError.unsupported
         }
@@ -76,7 +88,7 @@ public actor RegzaClient {
 
     /// 録画予約の一覧
     public func reservations() async throws -> [RegzaReservation] {
-        let data = try await getData(path: "/v2/remote/pvr/reserves/list", query: nil)
+        let data = try await generated { try await JSONEncoder().encode(openAPI().getReservations().ok.body.json) }
         guard let list = try? JSONDecoder().decode(RegzaReservationList.self, from: data) else {
             throw RegzaError.unsupported
         }
@@ -88,24 +100,25 @@ public actor RegzaClient {
     /// `series` なら連ドラ予約にする。繰り返し (毎週・月〜金など) とキーワードはテレビが番組から決める
     /// (`series_rec=true` だけを送ると受け付けられ、`repeat_series` などを自分で入れると status 2 になった)
     public func reserve(channel: String, epgContentID: String, start: Date, duration: Int, series: Bool = false) async throws {
-        var form = [
-            "channel": channel,
-            "epg_content_id": epgContentID,
-            "start_time": String(Int(start.timeIntervalSince1970)),
-            "duration": String(duration),
-        ]
-        if series { form["series_rec"] = "true" }
-        // HTTP (80 番) では内容によらず status 2 になる
-        let data = try await post(path: "/v2/remote/pvr/reserves/new", secure: true, form: form)
+        let data = try await generated {
+            try await JSONEncoder().encode(
+                openAPI(secure: true).addReservation(
+                    body: .urlEncodedForm(
+                        .init(
+                            channel: channel, epg_content_id: epgContentID, start_time: Int(start.timeIntervalSince1970),
+                            duration: duration, series_rec: series ? ._true : nil
+                        ))
+                ).ok.body.json)
+        }
         try Self.checkResult(data)
     }
 
     /// 録画予約を取り消す (`DELETE /v2/remote/pvr/reserves/list/:rsv_id`)
     public func cancelReservation(id: String) async throws {
-        var allowed = CharacterSet.alphanumerics
-        allowed.insert(charactersIn: "-._~")
-        let path = "/v2/remote/pvr/reserves/list/" + (id.addingPercentEncoding(withAllowedCharacters: allowed) ?? id)
-        try Self.checkResult(try await request(method: "DELETE", path: path, query: nil, body: nil))
+        let data = try await generated {
+            try await JSONEncoder().encode(openAPI().cancelReservation(path: .init(rsv_id: id)).ok.body.json)
+        }
+        try Self.checkResult(data)
     }
 
     /// `{"status":0}` 以外はテレビに断られた
@@ -118,92 +131,37 @@ public actor RegzaClient {
 
     /// チャンネル一覧の `code` で選局する (`POST /v2/remote/status/channel`)
     public func tune(to code: String) async throws {
-        try Self.checkResult(try await post(path: "/v2/remote/status/channel", form: ["channel": code]))
+        let data = try await generated {
+            try await JSONEncoder().encode(openAPI().tune(body: .urlEncodedForm(.init(channel: code))).ok.body.json)
+        }
+        try Self.checkResult(data)
     }
 
     /// 録画再生中に指定秒数の位置へ移動する
     public func seek(to seconds: Int) async throws {
-        _ = try await get(path: "/remote/ts.htm", query: String(max(0, seconds)))
+        _ = try await generated { try await openAPI(queryOverride: String(max(0, seconds))).seek() }
     }
 
-    // MARK: - HTTP
-
-    private func get(path: String, query: String?) async throws -> String {
-        Self.decode(try await getData(path: path, query: query))
-    }
-
-    /// フォームを POST する。資格情報があれば Digest 認証を付ける
-    func post(path: String, secure: Bool = false, form: [String: String]) async throws -> Data {
-        var allowed = CharacterSet.alphanumerics
-        allowed.insert(charactersIn: "-._~")
-        let body = form.sorted { $0.key < $1.key }
-            .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")" }
-            .joined(separator: "&")
-        return try await request(method: "POST", path: path, query: nil, body: Data(body.utf8), secure: secure)
-    }
-
-    private func getData(path: String, query: String?) async throws -> Data {
-        try await request(method: "GET", path: path, query: query, body: nil)
-    }
-
-    private func request(method: String, path: String, query: String?, body: Data?, secure: Bool = false) async throws -> Data {
+    func openAPI(secure: Bool = false, queryOverride: String? = nil) throws -> Client {
         guard connection.isConfigured else { throw RegzaError.notConfigured }
-        guard let url = makeURL(path: path, query: query, secure: secure) else { throw RegzaError.invalidHost }
-        let uri = query.map { "\(path)?\($0)" } ?? path
-
-        var (data, response) = try await perform(method: method, url: url, uri: uri, body: body)
-        if response.statusCode == 401 {
-            // nonce の期限切れなどで再チャレンジされたら、新しいチャレンジで 1 回だけやり直す
-            guard let header = response.value(forHTTPHeaderField: "WWW-Authenticate"),
-                let newChallenge = DigestChallenge(header: header)
-            else { throw RegzaError.unauthorized }
-            let retry = challenge == nil || challenge != newChallenge
-            challenge = newChallenge
-            nonceCount = 0
-            guard retry else { throw RegzaError.unauthorized }
-            (data, response) = try await perform(method: method, url: url, uri: uri, body: body)
-        }
-
-        switch response.statusCode {
-        case 200..<300: return data
-        case 401: throw RegzaError.unauthorized
-        default: throw RegzaError.httpStatus(response.statusCode)
-        }
-    }
-
-    private func perform(method: String, url: URL, uri: String, body: Data?) async throws -> (Data, HTTPResponse) {
-        var request = HTTPRequest(method: method, url: url, body: body, timeout: timeout)
-        if body != nil {
-            request.headers["Content-Type"] = "application/x-www-form-urlencoded"
-        }
-        if let challenge {
-            nonceCount += 1
-            request.headers["Authorization"] = challenge.authorization(
-                method: method, uri: uri,
-                user: connection.user, password: connection.password,
-                nonceCount: nonceCount, clientNonce: Self.makeClientNonce()
-            )
-        }
-        let response = try await transport.send(request)
-        return (response.body, response)
-    }
-
-    private func makeURL(path: String, query: String?, secure: Bool = false) -> URL? {
         var host = connection.trimmedHost
         if !host.contains("://") { host = "http://" + host }
         while host.hasSuffix("/") { host.removeLast() }
+        guard var components = URLComponents(string: host), components.host != nil else { throw RegzaError.invalidHost }
         if secure {
-            // http://192.168.0.10 → https://192.168.0.10:4430
-            guard var components = URLComponents(string: host) else { return nil }
             components.scheme = "https"
             components.port = Self.securePort
-            host = components.string ?? host
         }
-        return URL(string: host + path + (query.map { "?\($0)" } ?? ""))
-    }
-
-    private static func makeClientNonce() -> String {
-        (0..<16).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
+        guard let url = components.url else { throw RegzaError.invalidHost }
+        return Client(
+            serverURL: url,
+            transport: OpenAPIHTTPTransport(transport: transport, timeout: timeout),
+            middlewares: [
+                RegzaResponseMiddleware(),
+                RegzaCompatibilityMiddleware(queryOverride: queryOverride),
+                digest,
+            ]
+        )
     }
 
     /// status.htm の文字コードは機種により異なる可能性があるため、UTF-8 → Shift_JIS → EUC-JP の順に試す

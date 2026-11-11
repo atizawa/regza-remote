@@ -55,6 +55,6 @@ import Testing
 
     @Test func decodesShiftJIS() throws {
         let data = try #require("ch_name=ＮＨＫ総合".data(using: .shiftJIS))
-        #expect(RegzaClient.decode(data) == "ch_name=ＮＨＫ総合")
+        #expect(RegzaAPIClient.decode(data) == "ch_name=ＮＨＫ総合")
     }
 }

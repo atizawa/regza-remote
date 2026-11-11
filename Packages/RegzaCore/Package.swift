@@ -1,7 +1,8 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// iOS と Android で共有するもの。Foundation のみに依存し、Swift SDK for Android でもビルドできるようにする。
+// iOS と Android で共有するもの。Domain・Presentation は Foundation を中心に構成する。
+// Infrastructure の生成 API クライアントと通信アダプターも、すべてのプラットフォームで共有する。
 // Clean Architecture の層ごとにモジュールを分け、依存の向き (Presentation → Domain ← Infrastructure) をコンパイラに守らせる。
 // iOS だけのものは iOS/RegzaKit、Android だけのものは Android/RegzaAndroid に置く。
 // regza は Mac で ViewModel を動かす CLI (CLI や AI のエージェントが、画面を通さずに状態を読んで操作する)
@@ -18,13 +19,38 @@ let package = Package(
         .library(name: "RegzaSample", targets: ["RegzaSample"]),
         .executable(name: "regza", targets: ["RegzaCLI"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.14.4"),
+        .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.13.4"),
+        .package(url: "https://github.com/apple/swift-http-types", from: "1.8.0"),
+    ],
     targets: [
+        .plugin(
+            name: "GenerateRegzaAPI", capability: .buildTool(),
+            dependencies: [.product(name: "swift-openapi-generator", package: "swift-openapi-generator")]
+        ),
+        .target(
+            name: "RegzaTVAPI",
+            dependencies: [
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+            ],
+            exclude: ["openapi-generator-config.yaml"],
+            plugins: [.plugin(name: "GenerateRegzaAPI")]
+        ),
         // Domain: アプリの中心になる型 (Data)、保存先などの protocol (Repositories)、決まりごと (UseCases)。SharedModels だけに依存する
         // SharedModels: UI で使う型。Domain の UseCase がエンティティから作る。Android からも使うので、Java のクラスにできる形にする
         .target(name: "RegzaSharedModels", exclude: ["README.md"]),
         .target(name: "RegzaDomain", dependencies: ["RegzaSharedModels"]),
         // Infrastructure: テレビ・Mirakurun・EPGStation との通信、HTTP、暗号、通信の形から Domain の型への変換 (Mappers)
-        .target(name: "RegzaInfrastructure", dependencies: ["RegzaDomain"]),
+        .target(
+            name: "RegzaInfrastructure",
+            dependencies: [
+                "RegzaDomain",
+                "RegzaTVAPI",
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+            ]),
         // Presentation: iOS と Android で共有する ViewModel。Domain の UseCase だけを使う (Repository や通信は知らない)
         // 画面 (iOS・Android) には UI の型 (SharedModels) だけを見せる。Domain は internal で読み込み、公開する部分に
         // Domain の型を出せないようにする (Domain を使う初期化などは、同じパッケージの組み立てだけが使える package にする)

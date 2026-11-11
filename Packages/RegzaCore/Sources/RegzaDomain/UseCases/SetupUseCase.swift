@@ -37,11 +37,16 @@ public final class SetupUseCase: SetupUseCaseProtocol {
     private let devices: any DeviceRepositoryProtocol
     private let guide: any GuideRepositoryProtocol
     private let stream: any StreamRepositoryProtocol
+    private let onGuideHostChange: @MainActor (String) async -> Void
 
-    public init(devices: any DeviceRepositoryProtocol, guide: any GuideRepositoryProtocol, stream: any StreamRepositoryProtocol) {
+    public init(
+        devices: any DeviceRepositoryProtocol, guide: any GuideRepositoryProtocol, stream: any StreamRepositoryProtocol,
+        onGuideHostChange: @escaping @MainActor (String) async -> Void = { _ in }
+    ) {
         self.devices = devices
         self.guide = guide
         self.stream = stream
+        self.onGuideHostChange = onGuideHostChange
     }
 
     /// 同じネットワークのテレビを、見つかった順に返す (UI の型)
@@ -83,14 +88,15 @@ public final class SetupUseCase: SetupUseCaseProtocol {
 
     /// 録画サーバーのアドレスを保存する
     public func saveServers(guideHost: String, streamHost: String) async {
+        let previousHost = guide.guideHost
         await guide.saveGuideHost(guideHost)
+        if guide.guideHost != previousHost { await onGuideHostChange(guide.guideHost) }
         stream.saveStreamHost(streamHost)
     }
 
     /// 番組表 (Mirakurun) との連携をやめる。EPGStation は Mirakurun から放送を受け取るので、ライブ視聴の連携も一緒にやめる
     public func unlinkGuide() async {
-        await guide.saveGuideHost("")
-        stream.saveStreamHost("")
+        await saveServers(guideHost: "", streamHost: "")
     }
 
     /// ライブ視聴 (EPGStation) との連携をやめる

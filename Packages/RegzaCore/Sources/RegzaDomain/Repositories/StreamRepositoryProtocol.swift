@@ -6,7 +6,7 @@ import Foundation
 public protocol StreamRepositoryProtocol: AnyObject {
     /// EPGStation のアドレス。未設定なら空
     var streamHost: String { get }
-    /// 配信を頼める。EPGStation は Mirakurun から放送を受け取るので、番組表も設定しているときだけ
+    /// 配信先が設定され、この Repository で配信できる。番組表との組み合わせは UseCase が判断する
     var canStream: Bool { get }
 
     func saveStreamHost(_ host: String)

@@ -14,19 +14,19 @@ public struct NetworkDeviceRepository: DeviceRepositoryProtocol {
     }
 
     public func pairing(host: String, user: String) -> any PairingSession {
-        RegzaPairing(host: host, user: user)
+        RegzaPairing(host: host, user: user, transport: transport)
     }
 
     public func findGuideServers() async -> [String] {
-        await Mirakurun.find()
+        await MirakurunAPIClient.find()
     }
 
     public func findStreamServers() async -> [String] {
-        await EPGStation.find()
+        await EPGStationAPIClient.find()
     }
 
     public func isStreamServer(host: String) async -> Bool {
-        await EPGStation(host: host, timeout: 3, transport: transport).isAvailable()
+        await EPGStationAPIClient(host: host, timeout: 3, transport: transport).isAvailable()
     }
 }
 

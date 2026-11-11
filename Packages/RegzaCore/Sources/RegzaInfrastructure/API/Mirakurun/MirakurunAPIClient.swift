@@ -5,7 +5,7 @@ import RegzaDomain
 ///
 /// テレビの v2 API は番組名を返さないので、放送中の番組名と番組表はこちらから取る。
 /// テレビと Mirakurun は同じ放送波の ID (network_id / service_id / event_id) を使っているので、変換して照らし合わせられる。
-public final class Mirakurun: Sendable {
+public final class MirakurunAPIClient: Sendable {
     public static let defaultPort = ServerPort.mirakurun
 
     /// `192.168.0.2` か `192.168.0.2:40772`
@@ -17,6 +17,11 @@ public final class Mirakurun: Sendable {
         self.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         self.timeout = timeout
         self.transport = transport
+    }
+
+    /// 注入された通信方式とタイムアウトを保ったまま接続先を差し替える。
+    public func replacingHost(_ host: String) -> MirakurunAPIClient {
+        MirakurunAPIClient(host: host, timeout: timeout, transport: transport)
     }
 
     /// 1 番組。テレビの `epg_content_id` から `programID(epgContentID:)` で求めた ID を渡す
@@ -66,12 +71,12 @@ public final class Mirakurun: Sendable {
             var iterator = hosts.makeIterator()
             for _ in 0..<RegzaDiscovery.concurrency {
                 guard let host = iterator.next() else { break }
-                group.addTask { await Mirakurun(host: host, timeout: timeout).isAvailable() ? host : nil }
+                group.addTask { await MirakurunAPIClient(host: host, timeout: timeout).isAvailable() ? host : nil }
             }
             for await host in group {
                 if let host { found.append(host) }
                 if let next = iterator.next() {
-                    group.addTask { await Mirakurun(host: next, timeout: timeout).isAvailable() ? next : nil }
+                    group.addTask { await MirakurunAPIClient(host: next, timeout: timeout).isAvailable() ? next : nil }
                 }
             }
         }

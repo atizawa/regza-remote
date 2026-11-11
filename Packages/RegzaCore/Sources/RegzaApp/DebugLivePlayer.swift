@@ -9,8 +9,9 @@ extension AppViewModel {
         guard let channel = (try? JSONDecoder().decode([RegzaChannel].self, from: Data(json.utf8)))?.first else { return nil }
         // EPGStation は番組表を設定しているときだけ使うので、番組表も設定済みにしておく (番組名は出ない)
         let store = DebugStore(streamHost: streamHost)
-        let guide = MirakurunGuideRepository(store: store)
-        let stream = StreamUseCase(stream: EPGStationStreamRepository(store: store, guide: guide))
+        let guide = MirakurunGuideRepository(store: store, client: MirakurunAPIClient(host: store.guideHost))
+        let repository = EPGStationStreamRepository(store: store, client: EPGStationAPIClient(host: streamHost))
+        let stream = StreamUseCase(stream: repository, guide: guide)
         return LivePlayerViewModel(remote: remote, channels: channels, guide: self.guide, stream: stream, channel: channel)
     }
 }

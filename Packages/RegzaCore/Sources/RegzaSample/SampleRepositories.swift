@@ -26,7 +26,7 @@ extension AppViewModel {
             channels: ChannelUseCase(tv: tv, guide: guide),
             guide: GuideUseCase(guide: guide, recording: recording),
             recording: RecordingUseCase(recording: recording),
-            stream: StreamUseCase(stream: stream),
+            stream: StreamUseCase(stream: stream, guide: guide),
             setup: SetupUseCase(devices: SampleDeviceRepository(), guide: guide, stream: stream)
         )
     }

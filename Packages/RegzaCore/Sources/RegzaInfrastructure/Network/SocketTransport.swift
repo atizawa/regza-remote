@@ -11,7 +11,7 @@ import Android
 
 /// ソケットで HTTP/1.1 を送る。Android の URLSession は返事を待つ間 CPU を使い続けるので、Android はこちらを使う。
 /// 1 回ごとに接続し、送り終えたら閉じる。待つ間は自分のスレッドで止まって待ち、CPU を使わない。
-/// HTTPS は `tls` を渡したときに使える。証明書は確かめるが、テレビの HTTPS のポート (`RegzaClient.securePort`) だけは
+/// HTTPS は `tls` を渡したときに使える。証明書は確かめるが、テレビの HTTPS のポート (`RegzaAPIClient.securePort`) だけは
 /// 自己署名の証明書なので確かめない (iOS 版の URLSessionTransport と同じ)
 public final class SocketTransport: HTTPTransport {
     private let tls: (any TLSProvider)?
@@ -49,7 +49,7 @@ public final class SocketTransport: HTTPTransport {
         defer { stream.close() }
         if secure {
             guard let tls else { throw RegzaError.network("HTTPS を使えません") }
-            stream = try tls.wrap(socket, host: host, verifiesCertificate: port != RegzaClient.securePort)
+            stream = try tls.wrap(socket, host: host, verifiesCertificate: port != RegzaAPIClient.securePort)
         }
 
         try stream.write(HTTP1.encode(request))

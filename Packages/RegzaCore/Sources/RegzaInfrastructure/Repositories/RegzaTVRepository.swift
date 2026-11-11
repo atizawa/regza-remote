@@ -9,34 +9,37 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     @ObservationIgnored public let store: any RegzaConnectionStore
     /// テレビのリモコン
     @ObservationIgnored public let remote: RegzaRemote
+    @ObservationIgnored private let client: RegzaAPIClient
+    @ObservationIgnored private let connectionState: RegzaConnectionState
 
-    public private(set) var connection: RegzaConnection
+    public var connection: RegzaConnection { connectionState.connection }
     public private(set) var channels: [RegzaChannel] = []
     /// 読み込んだ設定と、そのときの接続。接続が変わったら使わない
-    private var loadedTimeshift: (settings: RegzaTimeshiftSettings, connection: RegzaConnection)?
+    private var loadedTimeshift: (settings: RegzaTimeshiftSettings, revision: Int)?
     public var isSample: Bool { false }
 
-    /// - Parameter remote: 渡さなければ、保存されている接続と番組表のアドレスで作る
-    public init(store: any RegzaConnectionStore, remote: RegzaRemote? = nil) {
+    public init(
+        store: any RegzaConnectionStore, client: RegzaAPIClient, connectionState: RegzaConnectionState,
+        remote: RegzaRemote? = nil
+    ) {
+        if let remote { precondition(remote.client === client, "remote と Repository は同じ APIClient を共有してください") }
         self.store = store
-        let connection = store.load()
-        self.connection = connection
-        self.remote = remote ?? RegzaRemote(connection: connection, guide: Self.makeGuide(host: store.guideHost))
-    }
-
-    /// 番組名を補う番組表 (Mirakurun)。視聴状況を 2 秒ごとに取るので、応答しないときに待たされないよう短めにする
-    public static func makeGuide(host: String) -> Mirakurun? {
-        host.isEmpty ? nil : Mirakurun(host: host, timeout: 3)
+        self.client = client
+        self.connectionState = connectionState
+        self.remote = remote ?? RegzaRemote(client: client)
     }
 
     public var timeshiftSettings: RegzaTimeshiftSettings? {
-        loadedTimeshift.flatMap { $0.connection == connection ? $0.settings : nil }
+        loadedTimeshift.flatMap { $0.revision == connectionState.revision ? $0.settings : nil }
     }
 
     public func loadChannels(force: Bool) async throws(RegzaError) {
         guard force || channels.isEmpty else { return }
+        let revision = connectionState.revision
         do {
-            channels = try await remote.client.channels()
+            let channels = try await client.channels()
+            guard revision == connectionState.revision else { return }
+            self.channels = channels
         } catch {
             throw RegzaError(error)
         }
@@ -44,9 +47,9 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
 
     public func loadTimeshiftSettings() async {
         guard timeshiftSettings == nil else { return }
-        let connection = connection
-        guard let settings = try? await remote.client.timeshiftSettings() else { return }
-        loadedTimeshift = (settings, connection)
+        let revision = connectionState.revision
+        guard let settings = try? await client.timeshiftSettings(), revision == connectionState.revision else { return }
+        loadedTimeshift = (settings, revision)
     }
 
     public func send(_ key: RegzaKey) async throws(RegzaError) {
@@ -95,21 +98,23 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         var moved = original
         moved.host = host
         store.save(moved)
-        connection = moved
+        connectionState.update(moved)
+        channels = []
         await remote.update(connection: store.load())
         return moved
     }
 
     public func save(_ connection: RegzaConnection) async {
         store.save(connection)
-        self.connection = connection
+        connectionState.update(connection)
         channels = []
         await remote.update(connection: store.load())
     }
 
     public func testConnection(_ connection: RegzaConnection) async -> Result<RegzaNowPlaying, RegzaError> {
         do {
-            return .success(try await RegzaRemote(connection: connection).refresh())
+            let testClient = await client.replacingConnection(connection)
+            return .success(try await RegzaRemote(client: testClient).refresh())
         } catch {
             return .failure(RegzaError(error))
         }
@@ -119,8 +124,8 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         store.pairingUserID()
     }
 
-    /// 番組名を補う番組表のアドレスが変わった (番組表の Repository から呼ぶ)
-    public func updateGuide(host: String) async {
-        await remote.update(guide: Self.makeGuide(host: host))
+    /// 組み立て側から、注入された通信設定を保った番組表クライアントへ差し替える。
+    public func updateGuide(client: MirakurunAPIClient?) async {
+        await remote.update(guide: client)
     }
 }

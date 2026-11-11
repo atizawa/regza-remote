@@ -8,44 +8,47 @@ import RegzaDomain
 @Observable
 public final class EPGStationStreamRepository: StreamRepositoryProtocol {
     @ObservationIgnored private let store: any RegzaConnectionStore
-    @ObservationIgnored private let guide: any GuideRepositoryProtocol
-    @ObservationIgnored private let transport: any HTTPTransport
+    @ObservationIgnored private var client: EPGStationAPIClient
 
     public private(set) var streamHost: String
 
-    public init(store: any RegzaConnectionStore, guide: any GuideRepositoryProtocol, transport: any HTTPTransport = RegzaHTTP.transport) {
+    public init(store: any RegzaConnectionStore, client: EPGStationAPIClient) {
         self.store = store
-        self.guide = guide
-        self.transport = transport
-        streamHost = store.streamHost
+        self.client = client
+        streamHost = client.host
     }
 
-    /// EPGStation だけでは番組名も出ず、見られない局も一覧に混ざるので、Mirakurun も設定しているときだけ使う
-    public var canStream: Bool { !streamHost.isEmpty && guide.hasGuide }
+    /// この Repository の配信先が設定されている。番組表との組み合わせは UseCase が判断する。
+    public var canStream: Bool { !streamHost.isEmpty }
 
     public func saveStreamHost(_ host: String) {
         let host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         store.streamHost = host
         streamHost = host
+        client = client.replacingHost(host)
     }
 
     /// 配信を頼む EPGStation。配信できないなら nil
-    public func streamServer() -> EPGStation? {
-        canStream ? EPGStation(host: streamHost, transport: transport) : nil
+    public func streamServer() -> EPGStationAPIClient? {
+        canStream ? client : nil
     }
 
     public func isPlayable(channelCode: String) -> Bool {
-        EPGStation.channelID(channelCode: channelCode) != nil
+        EPGStationAPIClient.channelID(channelCode: channelCode) != nil
     }
 
     public func startLiveStream(channelCode: String) async throws(RegzaError) -> Int {
         guard let server = streamServer() else { throw .notConfigured }
-        guard let channelID = EPGStation.channelID(channelCode: channelCode) else { throw .unsupported }
+        guard let channelID = EPGStationAPIClient.channelID(channelCode: channelCode) else { throw .unsupported }
         let streamID: Int
         do {
             streamID = try await server.startLiveStream(channelID: channelID)
         } catch {
             throw RegzaError(error)
+        }
+        guard server === client else {
+            try? await server.stop(streamID: streamID)
+            throw .notConfigured
         }
         if !store.ownStreamIDs.contains(streamID) { store.ownStreamIDs.append(streamID) }
         return streamID
@@ -58,6 +61,7 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
         } catch {
             throw RegzaError(error)
         }
+        guard server === client else { throw .notConfigured }
         guard let url = server.playlistURL(streamID: streamID) else { throw .invalidHost }
         return url
     }
@@ -68,16 +72,21 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
 
     public func stop(streamID: Int) async {
         guard let server = streamServer(), (try? await server.stop(streamID: streamID)) != nil else { return }
+        guard server === client else { return }
         store.ownStreamIDs.removeAll { $0 == streamID }
     }
 
     public func cleanUp() async {
         guard let server = streamServer() else { return }
-        await Self.cleanUp(server, store: store)
+        for id in store.ownStreamIDs {
+            do { try await server.stop(streamID: id) } catch RegzaError.httpStatus(404) {} catch { continue }
+            guard server === client else { return }
+            store.ownStreamIDs.removeAll { $0 == id }
+        }
     }
 
     /// cleanUp をメインスレッドを使わずに行う (アプリの終了時に、メインスレッドで待ちながら呼ぶ)
-    public nonisolated static func cleanUp(_ server: EPGStation, store: any RegzaConnectionStore) async {
+    public nonisolated static func cleanUp(_ server: EPGStationAPIClient, store: any RegzaConnectionStore) async {
         for id in store.ownStreamIDs {
             // 止める指示が届いたか、もう無い (404) ときだけ忘れる
             do {
@@ -91,8 +100,10 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
 
     public func stopStalled() async {
         guard let server = streamServer(), let streams = try? await server.streams() else { return }
+        guard server === client else { return }
         for stream in streams where !stream.isEnabled {
             try? await server.stop(streamID: stream.id)
+            guard server === client else { return }
             store.ownStreamIDs.removeAll { $0 == stream.id }
         }
     }

@@ -15,22 +15,29 @@ extension AppViewModel {
         remote: RegzaRemote? = nil,
         transport: any HTTPTransport = RegzaHTTP.transport
     ) {
-        let tv = RegzaTVRepository(store: store, remote: remote)
+        let connectionState = RegzaConnectionState(connection: store.load())
+        let client = remote?.client ?? RegzaAPIClient(connection: connectionState.connection, transport: transport)
+        let guideClient = MirakurunAPIClient(host: store.guideHost, transport: transport)
+        // 状態の定期確認を待たせないよう、番組名を補う通信だけ待ち時間を短くする。
+        let remoteGuide = MirakurunAPIClient(host: store.guideHost, timeout: 3, transport: transport)
+        let remote = remote ?? RegzaRemote(client: client, guide: store.guideHost.isEmpty ? nil : remoteGuide)
+        let tv = RegzaTVRepository(store: store, client: client, connectionState: connectionState, remote: remote)
         let model = RemoteViewModel(tv: TVUseCase(tv: tv))
-        // 番組表のアドレスが変わったら、番組名を補う番組表も差し替えて、いま映っているものを取り直す
-        let guide = MirakurunGuideRepository(store: store, transport: transport) { [weak tv, weak model] host in
-            await tv?.updateGuide(host: host)
-            model?.send(.refresh)
-        }
-        let stream = EPGStationStreamRepository(store: store, guide: guide, transport: transport)
-        let recording = RegzaRecordingRepository(tv: tv)
+        let guide = MirakurunGuideRepository(store: store, client: guideClient)
+        let stream = EPGStationStreamRepository(store: store, client: EPGStationAPIClient(host: store.streamHost, transport: transport))
+        let recording = RegzaRecordingRepository(client: client, connectionState: connectionState)
         self.init(
             remote: model,
             channels: ChannelUseCase(tv: tv, guide: guide),
             guide: GuideUseCase(guide: guide, recording: recording),
             recording: RecordingUseCase(recording: recording),
-            stream: StreamUseCase(stream: stream),
-            setup: SetupUseCase(devices: NetworkDeviceRepository(transport: transport), guide: guide, stream: stream)
+            stream: StreamUseCase(stream: stream, guide: guide),
+            setup: SetupUseCase(devices: NetworkDeviceRepository(transport: transport), guide: guide, stream: stream) {
+                [weak tv, weak model] host in
+                // Repository の変更後の連携は UseCase を起点に行う。
+                await tv?.updateGuide(client: host.isEmpty ? nil : remoteGuide.replacingHost(host))
+                model?.send(.refresh)
+            }
         )
     }
 }

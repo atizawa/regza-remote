@@ -5,13 +5,13 @@ import RegzaDomain
 /// UI フレームワークに依存しないので、iOS は SwiftUI / App Intents から、
 /// Android は JNI 経由で同じものを使う。
 public actor RegzaRemote {
-    public let client: RegzaClient
+    public nonisolated let client: RegzaAPIClient
     public private(set) var nowPlaying: RegzaNowPlaying?
     public private(set) var lastCommand: RegzaKey?
     /// v2 API (`play/status`) に対応しているか。未確認なら nil
     private var supportsPlayStatus: Bool?
     /// 放送中の番組名を補う番組表。未設定なら nil
-    public private(set) var guide: Mirakurun?
+    public private(set) var guide: MirakurunAPIClient?
     /// この時刻までは視聴状況を問い合わせない。
     /// 録画の再生を始めるときなど、テレビの映像が切り替わっている最中に `play/status` を問い合わせると、
     /// テレビが再起動する機種がある (決定キーの 0.4 秒後の問い合わせで再起動することを実機で確認)
@@ -49,12 +49,17 @@ public actor RegzaRemote {
     /// 番組名を毎回問い合わせないよう、調べた番組を覚えておく (取れなかったときは 1 分後に調べ直す)
     private var programCache: [Int: (program: MirakurunProgram?, checkedAt: Date)] = [:]
 
-    public init(connection: RegzaConnection, guide: Mirakurun? = nil, transport: any HTTPTransport = RegzaHTTP.transport) {
-        client = RegzaClient(connection: connection, transport: transport)
+    public init(connection: RegzaConnection, guide: MirakurunAPIClient? = nil, transport: any HTTPTransport = RegzaHTTP.transport) {
+        client = RegzaAPIClient(connection: connection, transport: transport)
         self.guide = guide
     }
 
-    public func update(guide: Mirakurun?) {
+    public init(client: RegzaAPIClient, guide: MirakurunAPIClient? = nil) {
+        self.client = client
+        self.guide = guide
+    }
+
+    public func update(guide: MirakurunAPIClient?) {
         self.guide = guide
         programCache = [:]
     }

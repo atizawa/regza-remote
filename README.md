@@ -12,7 +12,7 @@ REGZA だけでもリモコン・Live Activity・Siri・チャンネル一覧と
 ## 構成
 
 ```
-Packages/RegzaCore/           iOS と Android で共有する Swift Package（Foundation のみ）
+Packages/RegzaCore/           iOS と Android で共有する Swift Package（REGZA の OpenAPI 生成クライアントも共有）
   RegzaSharedModels           画面に出す UI の型とリモコンのキー（RegzaKey）
   RegzaDomain                 データの型・Repository の約束・UseCase
   RegzaInfrastructure         テレビ・Mirakurun・EPGStation の通信（キーコード / Digest 認証 / HTTP クライアント / status.htm 解析）
@@ -53,6 +53,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   - 画面と Live Activity が Domain・通信・組み立てを import していないことは `RegzaKitTests` の `LayerTests` が確かめる
 - 接続情報の保存は `RegzaConnectionStore` を OS ごとに実装する。iOS はキーチェーン（`RegzaAppleStorage`）、Android は Kotlin の `AndroidStorage`（SharedPreferences。パスワードは Android Keystore の鍵で暗号化する）を、Swift の保存先 `RegzaAndroidStorage` として差し込む
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）
+- REGZA の API は `OpenAPI/regza-tv.yaml` から Swift OpenAPI Generator で生成する。生成クライアント、Digest 認証・LenientJSON のミドルウェア、既存の `HTTPTransport` を包む `ClientTransport` はすべて共有する。構成と生成方法は [OpenAPI/README.md](OpenAPI/README.md)。
 
 ## 開発
 
