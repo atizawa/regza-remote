@@ -105,6 +105,11 @@ description = "Android のアプリを debug と release でビルドする (rel
 dir = "{{ config_root }}/Android"
 run = "mise exec -- ./gradlew :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest"
 
+[tasks.test-android-runtime]
+description = "接続済みの arm64 端末で AndroidRuntimeSmokeTest を実行する (Android API 28 以上)"
+dir = "{{ config_root }}/Android"
+run = "mise exec -- ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.regzaremote.AndroidRuntimeSmokeTest"
+
 [tasks.test-behavior]
 description = "振る舞いのテストを流す (iOS 側の regza と Android 側の regza-android の両方)"
 dir = "{{ config_root }}/BehaviorTests"

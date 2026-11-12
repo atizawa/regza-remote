@@ -86,11 +86,39 @@ mise install                              # Swift のツールチェーン・JDK
 mise run setup-android-sdk                # 初回だけ。Android SDK のライセンスを確かめて同意する（Android Studio で SDK を入れていれば要らない）
 mise run install-android-swift-sdk        # 初回だけ。Swift SDK for Android（platform・build-tools・NDK は Gradle が入れる）
 ./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (buildSwift が mise run build-swift を呼ぶ)
-./gradlew :app:connectedDebugAndroidTest  # arm64 のエミュレーター/実機で .so・JNI・Looper・Bionic・BoringSSL を確かめる
+mise run test-android-runtime             # arm64 のエミュレーター/実機で .so・JNI・Looper・Bionic・BoringSSL を確かめる
 ./gradlew :app:assembleRelease            # 配るアプリ。作ったあと、APK に手元のフォルダの場所が入っていないことも確かめる (checkReleaseApk)
 
 cd BehaviorTests && mise run test         # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
 ```
+
+### Android 実行環境のスモークテスト
+
+`mise run test-android-runtime` は、既存の `AndroidRuntimeSmokeTest` だけを実機・エミュレーター上で実行する。APK のビルド・インストールも Gradle が行う。上記の Android 開発環境に加え、Android API 28 以上で `arm64-v8a` に対応した端末が必要。エミュレーターは Android Studio の Device Manager で arm64 の AVD を起動する。実機は USB デバッグを有効にし、接続時の認証を許可する。
+
+リポジトリのルートから実行する:
+
+```sh
+(cd Android && mise exec -- adb devices -l)  # 対象が device と表示されることを確認する
+mise run test-android-runtime
+# 複数の端末を接続している場合は、一覧に出たシリアル番号で対象を選ぶ
+ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
+```
+
+次の 3 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
+
+- `swiftLibrariesJniLooperAndFlowCancellation`: APK の .so の読み込み、JNI・Looper を通る state 更新と、Flow を繰り返し終了したあとの待機の解消。
+- `bionicSocketConnectsFromSwift`: Swift の SocketTransport から、端末内の HTTP サーバーへの送受信。
+- `boringSSLReadsAndroidTrustStore`: BoringSSL の初期化と Android の信頼ストアの参照。HTTPS のハンドシェイクや証明書検証全体は対象外。
+
+Swift／Java の接続コード、state の待機・キャンセル、Looper、SocketTransport、BoringSSL、.so の梱包、Swift・swift-java・NDK の版を変更したときに実行する。Mac JVM の振る舞いテストと併せて確認する。接続済み端末が必要なため、`mise run check` には含めていない。現在の CI の Android ジョブもテスト APK のビルドまでで、端末上での実行は別途行う。
+
+| 失敗した場所 | 確認先 |
+| --- | --- |
+| 端末が見つからない・インストールできない | `adb devices -l` の状態、USB デバッグの認証、対象の API と ABI。複数台の場合は `ANDROID_SERIAL` を指定する |
+| 生成・native ビルド・梱包 | ビルドログの `[build-swift]`。下記「Swift／Java 接続の生成と調査」を参照 |
+| テストの失敗・タイムアウト | `Android/app/build/reports/androidTests/connected/debug/index.html` と `Android/app/build/outputs/androidTest-results/connected/debug/` の端末別結果 |
+| アプリのクラッシュ・native ライブラリの読み込み失敗 | 対象端末の `adb logcat -d -b crash`。複数台の場合は `adb -s <シリアル番号> logcat -d -b crash` |
 
 ### 振る舞いのテスト
 
@@ -203,11 +231,12 @@ mise run test-swift                        # Swift のパッケージのテス�
 mise run test-swift-shared                 #   Apple の環境がなくても流せるもの (RegzaCore・RegzaAndroidBridge・ScreenGlue。Linux でも流せる)
 mise run test-swift-apple                  #   Xcode が要るもの (RegzaKit)
 mise run build-ios                         # iOS のアプリとウィジェットのビルド
-mise run build-android                     # Android のアプリのビルド (debug・release・端末のテスト。release は APK の中身も確かめる)
+mise run build-android                     # Android のアプリとテスト APK のビルド (debug・release。release は APK の中身も確かめる)
+mise run test-android-runtime              # 接続済み arm64 端末で AndroidRuntimeSmokeTest を実行 (check には含まない)
 mise run test-behavior                     # 振る舞いのテスト (iOS 側と Android 側)
 ```
 
-エミュレーターや実機が要るもの（`cd Android && ./gradlew :app:connectedDebugAndroidTest`）は、`check` には入れていない。
+エミュレーターや実機が要る `test-android-runtime` は、`check` には入れていない。
 
 GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が同じタスクを流す。Apple の環境がなくても流せるもの（書き方と `test-swift-shared`）は Linux の機械（Swift の公式のコンテナ）で、Xcode や Mac 向けのライブラリが要るもの（`test-swift-apple`・`build-ios`・`build-android`・`test-behavior`）だけを macOS の機械で、ジョブに分けて同時に流す。ただし `build-android` と `test-behavior` のジョブ（android）は、毎回 Swift を最初からビルドして 30 分ほどかかるので、いったん GitHub の Actions の画面から手で動かしたとき（Run workflow）だけ流す。Linux で共有の部分のテストを流すと、Android に近い Foundation（swift-corelibs-foundation）でも確かめられる
 
