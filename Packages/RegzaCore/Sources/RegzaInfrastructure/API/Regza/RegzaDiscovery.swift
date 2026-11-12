@@ -17,14 +17,14 @@ public enum RegzaDiscovery {
     static let concurrency = 96
 
     /// 見つかったテレビを IP アドレス順に返す
-    public static func scan(timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport) async -> [DeviceData] {
+    public static func scan(timeout: TimeInterval = 1.5, transport: any HTTPTransport) async -> [DeviceData] {
         var found: [DeviceData] = []
         for await device in devices(timeout: timeout, transport: transport) { found.append(device) }
         return found.sorted { IPv4Network.parse($0.host) ?? 0 < IPv4Network.parse($1.host) ?? 0 }
     }
 
     /// 見つかった順にテレビを流す。全アドレスを調べ終えると終わる
-    public static func devices(timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport) -> AsyncStream<DeviceData> {
+    public static func devices(timeout: TimeInterval = 1.5, transport: any HTTPTransport) -> AsyncStream<DeviceData> {
         AsyncStream { continuation in
             let task = Task {
                 let hosts = localNetworks().flatMap(\.hosts)
@@ -49,7 +49,7 @@ public enum RegzaDiscovery {
 
     /// IP アドレスが変わったテレビを探し、新しいアドレスを返す。
     /// 登録はテレビごとなので、保存済みの資格情報で認証が通ったものを同じテレビとみなす
-    public static func locate(_ connection: ConnectionData, timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport)
+    public static func locate(_ connection: ConnectionData, timeout: TimeInterval = 1.5, transport: any HTTPTransport)
         async -> String?
     {
         for await device in devices(timeout: timeout, transport: transport) where device.host != connection.trimmedHost {
@@ -78,7 +78,7 @@ public enum RegzaDiscovery {
 
     /// 1 台に問い合わせる。REGZA でなければ nil
     public static func probe(
-        host: String, timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport
+        host: String, timeout: TimeInterval = 1.5, transport: any HTTPTransport
     ) async -> DeviceData? {
         let regzaAPIClient = RegzaAPIClient(connection: ConnectionData(host: host), timeout: timeout, transport: transport)
         guard let feature = try? await regzaAPIClient.request(RegzaFeatureRequest()) else { return nil }

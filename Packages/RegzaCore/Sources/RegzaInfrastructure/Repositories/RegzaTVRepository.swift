@@ -25,7 +25,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         secureStorageManager: SecureStorageManager, preferencesManager: PreferencesManager, regzaAPIClient: RegzaAPIClient,
         connectionState: RegzaConnectionState,
         regzaRemote: RegzaRemote? = nil,
-        locateTV: @escaping @Sendable (ConnectionData) async -> String? = { await RegzaDiscovery.locate($0) }
+        locateTV: @escaping @Sendable (ConnectionData) async -> String?
     ) {
         if let regzaRemote { precondition(regzaRemote.regzaAPIClient === regzaAPIClient, "remote と Repository は同じ APIClient を共有してください") }
         self.locateTV = locateTV

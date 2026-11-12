@@ -5,7 +5,7 @@ import RegzaDomain
 public struct NetworkDeviceRepository: DeviceRepositoryProtocol {
     private let transport: any HTTPTransport
 
-    public init(transport: any HTTPTransport = RegzaHTTP.transport) {
+    public init(transport: any HTTPTransport) {
         self.transport = transport
     }
 

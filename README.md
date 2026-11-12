@@ -41,7 +41,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 ```
 
 - Swift のコードの書き方は swift-format（Swift のツールチェーンに入っている Apple の道具）でそろえる。設定は `.swift-format`（行の長さ 140・インデントは空白 4 つ・`#if` の中は下げない、ほかは既定の決まり）。Kotlin は ktlint でそろえる。設定は `.editorconfig`（Android Studio の書き方・行の長さ 140・`@Composable` の関数は大文字で始めてよい）で、Android Studio もこの設定で整形する。複数行に並べたものは、Kotlin では宣言でも呼び出しでも末尾にコンマを付け、Swift では配列や辞書に付ける（関数の引数は書いたとおりに残す。swift-format の「必ず付ける」は閉じかっこの前に `, )` を残す不具合があるため使わない）。`mise run lint` で両方を確かめ、`mise run format` で両方を直す。道具が作るファイル（`Generated/`・`.build/`）は対象にしない。ルートの `mise.toml` には共通タスクと ktlint の設定を置き、Swift の版は `toolchains.toml` を参照する。ルートでは Swift のコンパイラを切り替えない（初めてのときは `mise trust` と `mise install` が要る）
-- Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装している（Android の FoundationNetworking でも同じコードで動かすため）
+- Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装し、URLSession と SocketTransport で共有する。
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
 - 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
@@ -58,6 +58,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - iOS の `AppContainer` は組み立てた `AppViewModel` と Manager を受け取れる。Android は `RegzaAndroid.regzaAppFactory()` が SocketTransport＋BoringSSL を保持する Factory を返し、`makeApp(AndroidStorage(...))` で保存先を渡す。通信実装をグローバルに書き換えず、探索処理にも同じ transport を渡す。
 - iOS は `AppServices/Storage` の `KeychainStorage`・`UserDefaultsStorage`、Android は `RegzaAndroidStorage` を共通の保存プロトコルにつなぐアダプターを使う。Android のパスワードは従来どおり Keystore の鍵で暗号化する。既存の保存キー・値の形式と、iOS の旧登録 ID の移行を維持する。
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）
+- APIClient・探索処理には `HTTPTransport` を明示して渡す。URLSessionTransport は Android ではビルドせず、APK に FoundationNetworking を同梱しない。`build-swift.sh` は梱包対象に FoundationNetworking が残っていれば失敗する。Android の HTTPS に使う BoringSSL は引き続き必要。
 - Repository と UseCase は Domain/Data の `ChannelData`・`ProgramData` などを受け渡す。UseCase は Domain に置き、画面側には `RegzaSharedModels` の型を返す。ViewModel は Data を保持せず、番組検索の索引も Domain 内で管理する。
 - `Infrastructure/Mappers` は API の型から Data への変換、`Domain/Mappers` は Data から SharedModel への変換を担当する。
 - REGZA・Mirakurun・EPGStation の API は `OpenAPI/` の仕様から Swift OpenAPI Generator で生成する。生成クライアント、Digest 認証・LenientJSON のミドルウェア、既存の `HTTPTransport` を包む `ClientTransport` はすべて共有する。構成と生成方法は [OpenAPI/README.md](OpenAPI/README.md)。

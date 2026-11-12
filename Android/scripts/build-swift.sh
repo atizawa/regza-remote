@@ -205,7 +205,7 @@ jq -n --arg name "$java_package.$callback_protocol" --arg wrapper "Java$callback
   --single-swift-file-output JavaCallbacks.swift \
   --depends-on SwiftJava="$PWD/.build/swift-tool/checkouts/swift-java/Sources/SwiftJava/swift-java.config"
 
-# Swift のライブラリは埋め込まずに共有ライブラリとして入れる (埋め込むと FoundationNetworking が OpenSSL とリンクできない)。
+# Swift のランタイムは共有ライブラリとして入れ、NEEDED をたどって使うものだけを梱包する。
 # HTTPS に使う BoringSSL は、SDK の静的ライブラリ (libssl.a・libcrypto.a) を RegzaAndroid に埋め込む
 begin_stage "Android native ライブラリのビルド" "RegzaAndroid" "RegzaAndroid/Sources/RegzaAndroid/swift-java.config"
 static_libs=$("$SWIFT_COMMAND" sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftStaticResourcesPath: //p')/android
@@ -237,4 +237,8 @@ while :; do
   done
   [ "$added" = 1 ] || break
 done
+if [ -f "$out/libFoundationNetworking.so" ]; then
+  echo "Android の通信は SocketTransport + BoringSSL を使います。FoundationNetworking への依存が残っています。" >&2
+  false
+fi
 echo "$(ls "$out" | wc -l | tr -d ' ') 個の .so を $out に入れました。"

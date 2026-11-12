@@ -50,7 +50,7 @@ public actor RegzaRemote {
     private var programCache: [Int: (program: ProgramData?, checkedAt: Date)] = [:]
 
     public init(
-        connection: ConnectionData, mirakurunAPIClient: MirakurunAPIClient? = nil, transport: any HTTPTransport = RegzaHTTP.transport
+        connection: ConnectionData, mirakurunAPIClient: MirakurunAPIClient? = nil, transport: any HTTPTransport
     ) {
         regzaAPIClient = RegzaAPIClient(connection: connection, transport: transport)
         self.mirakurunAPIClient = mirakurunAPIClient

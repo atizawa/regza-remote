@@ -14,7 +14,7 @@ public actor RegzaPairing {
     private var challenge: RegzaPairingChallengeResponse?
 
     /// - Parameter user: テレビに登録するユーザー ID。MAC アドレス形式 (`AA-BB-CC-DD-EE-FF`)
-    public init(host: String, user: String = PairingUserID.make(), transport: any HTTPTransport = RegzaHTTP.transport) {
+    public init(host: String, user: String = PairingUserID.make(), transport: any HTTPTransport) {
         self.host = host
         self.user = user
         regzaAPIClient = RegzaAPIClient(connection: ConnectionData(host: host, user: user), transport: transport)

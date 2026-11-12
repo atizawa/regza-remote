@@ -2,7 +2,7 @@ import Foundation
 
 enum MirakurunDiscovery {
     /// 同じネットワークで Mirakurun が動いているアドレスを探す
-    static func find(timeout: TimeInterval = 1.5, transport: any HTTPTransport = RegzaHTTP.transport) async -> [String] {
+    static func find(timeout: TimeInterval = 1.5, transport: any HTTPTransport) async -> [String] {
         let hosts = RegzaDiscovery.localNetworks().flatMap(\.hosts)
         var found: [String] = []
         await withTaskGroup(of: String?.self) { group in

@@ -17,7 +17,7 @@ public final class EPGStationAPIClient: Sendable {
     private let timeout: TimeInterval
     private let transport: any HTTPTransport
 
-    public init(host: String, timeout: TimeInterval = 10, transport: any HTTPTransport = RegzaHTTP.transport) {
+    public init(host: String, timeout: TimeInterval = 10, transport: any HTTPTransport) {
         self.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         self.timeout = timeout
         self.transport = transport

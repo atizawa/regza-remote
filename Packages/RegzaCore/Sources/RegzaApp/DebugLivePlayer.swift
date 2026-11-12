@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG && !os(Android)
 import Foundation
 
 extension AppViewModel {
@@ -12,10 +12,11 @@ extension AppViewModel {
             storage: MemoryPreferencesStorage(values: [
                 .guideHost: "192.0.2.2", .streamHost: streamHost,
             ]))
+        let transport = URLSessionTransport()
         let guideRepository = MirakurunGuideRepository(
-            preferencesManager: preferencesManager, mirakurunAPIClient: MirakurunAPIClient(host: "192.0.2.2"))
+            preferencesManager: preferencesManager, mirakurunAPIClient: MirakurunAPIClient(host: "192.0.2.2", transport: transport))
         let repository = EPGStationStreamRepository(
-            preferencesManager: preferencesManager, epgStationAPIClient: EPGStationAPIClient(host: streamHost))
+            preferencesManager: preferencesManager, epgStationAPIClient: EPGStationAPIClient(host: streamHost, transport: transport))
         let streamUseCase = StreamUseCase(streamRepository: repository, guideRepository: guideRepository)
         return LivePlayerViewModel(
             remoteViewModel: remoteViewModel, channelUseCase: channelUseCase, guideUseCase: self.guideUseCase, streamUseCase: streamUseCase,

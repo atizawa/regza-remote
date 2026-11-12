@@ -15,7 +15,7 @@ public actor RegzaAPIClient {
     private let timeout: TimeInterval
     private var digest: RegzaDigestMiddleware
 
-    public init(connection: ConnectionData, timeout: TimeInterval = 3, transport: any HTTPTransport = RegzaHTTP.transport) {
+    public init(connection: ConnectionData, timeout: TimeInterval = 3, transport: any HTTPTransport) {
         self.connection = connection
         self.timeout = timeout
         self.transport = transport
