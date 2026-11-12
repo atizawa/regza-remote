@@ -213,6 +213,23 @@ GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が
 
 画面を足したら、`BehaviorTests/tests/` にもその画面の振る舞いのテストを足す（操作を送り、state が期待どおりになるまで待つ）。
 
+### Swift／Java 接続の生成と調査
+
+入口は `Android/` の `./gradlew :app:assembleDebug`（内部で `scripts/build-swift.sh` を実行）。NDK の版は Gradle、Swift と SDK の版は `toolchains.toml`、Java のパッケージなどは `RegzaAndroid/swift-java.common.config` を参照する。以下のパスは `Android/` からの相対パス。
+
+| 段階 | 入力・設定 | 出力 |
+| --- | --- | --- |
+| 共有モデルの Java 生成 | `../Packages/RegzaCore/Sources/RegzaSharedModels`、swift-java の共通設定 | `.build/swift/regzashared-java/`、`RegzaAndroid/Sources/RegzaSharedJava/Generated/` |
+| 画面の型の Java 生成 | `RegzaPresentation` の State/・Action/、`RegzaAndroid/RegzaPresentation.swift-java.config` | `.build/swift/regzapresentation-java/`、`RegzaAndroid/Sources/RegzaPresentationJava/Generated/` |
+| 画面の接続コード生成 | `ScreenGlue` が共有の State/・Action/・ViewModel を読む | `Generated/ScreenActions.swift`、`.build/swift/screen-glue-kotlin/`、設定内の型一覧 |
+| アプリ窓口の Java 生成 | `RegzaAndroidBridge/Sources/RegzaAndroidBridge`、`RegzaAndroid/RegzaAndroidBridge.swift-java.config` | `.build/swift/regzabridge-java/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/` |
+| Kotlin へのコールバック生成 | 生成した `RegzaAndroidStorage.java` | `.build/swift/bridge-callbacks/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/JavaCallbacks.swift` |
+| native ビルド・梱包 | 接続コード、Swift SDK、NDK | `app/src/main/jniLibs/arm64-v8a/` |
+
+Kotlin が実装するコールバックは、`build-swift.sh` の `callback_protocol=RegzaAndroidStorage` で明示する。public protocol を追加しても自動で公開対象にはしない。追加するときは、Kotlin 側の実装と生成対象を合わせて検討する。
+
+ビルドログの `[build-swift]` に処理段階・モジュール・設定が表示され、Java 生成時には入力と出力も表示される。失敗時は、元のエラーに続いて段階・モジュール・設定・スクリプトの行番号・終了コードが出る。設定は共通設定とモジュール設定を合成した `.build/swift/configs/` を確認する。Foundation の重複除去とコールバック生成は「swift-java 互換対応」と表示し、通常の生成と区別する。
+
 ### swift-java の制約と回避策
 
 swift-java（301e3da）には次の制約がある。どれも、守れなければビルドかテストで止まるようにしている。
