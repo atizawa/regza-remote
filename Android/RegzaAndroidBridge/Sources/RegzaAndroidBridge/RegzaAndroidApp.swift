@@ -1,5 +1,4 @@
 import Foundation
-import Observation
 import RegzaApp
 
 // Android アプリに見せる窓口。swift-java がここの public な型と関数から Java のクラスを作る
@@ -20,18 +19,17 @@ import RegzaApp
 public final class RegzaAndroidApp {
     let appViewModel: AppViewModel
 
-    /// Kotlin の Flow が待っている state。Java の Future を取り消しても swift-java が Swift の Task を取り消さないので、
-    /// Flow ごとの番号で待機を終わらせる。終了と待機の開始が前後しても取りこぼさないよう、終了済みも一時的に覚える。
-    @MainActor private var stateWaits: [Int64: StateWait] = [:]
+    private let stateWaitRegistry: StateWaitRegistry
 
     /// 組み立てた ViewModel から作る (テストでは、テレビにつながない見本の ViewModel を渡す)
     init(appViewModel: AppViewModel) {
         self.appViewModel = appViewModel
-        onMainActor {
+        self.stateWaitRegistry = onMainActor {
             // 未登録なら、テレビの登録の画面から始める
             if !appViewModel.remoteViewModel.state.isConfigured { appViewModel.send(.showSettings) }
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
             Task { await appViewModel.cleanUpStreams() }
+            return StateWaitRegistry()
         }
     }
 
@@ -51,55 +49,20 @@ public final class RegzaAndroidApp {
     @MainActor func nextState<State: Equatable>(
         route: AppRoute?, after last: State?, waitID: Int64, _ state: @MainActor (AnyObject) -> State?
     ) async -> State? {
-        let changes = Changes()
-        switch stateWaits[waitID] {
-        case .cancelled?:
-            // Flow の終了が、swift-java がこの Task を MainActor で始めるより先だった
-            stateWaits[waitID] = nil
-            return nil
-        case nil:
-            stateWaits[waitID] = .waiting(changes)
-        case .waiting?, .completed?:
-            preconditionFailure("同じ state の待機番号が重なっています: \(waitID)")
-        }
-        while true {
-            if case .cancelled? = stateWaits[waitID] {
-                stateWaits[waitID] = nil
-                return nil
-            }
-            let current = changes.track { self.state(route: route, state) }
-            if current != last {
-                // Kotlin が Future の結果を受け取って endStateWait を呼ぶまで、完了したことを覚えておく。
-                // 結果を返す直前に Flow が終了しても、後から来た endStateWait を開始前の終了と取り違えないため。
-                stateWaits[waitID] = .completed
-                return current
-            }
-            await changes.wait()
+        await stateWaitRegistry.next(after: last, waitID: waitID) {
+            self.state(route: route, state)
         }
     }
 
     /// Kotlin の Flow が 1 回の nextState の待機を使い終えたことを知らせる。
     /// Flow が取り消されたときは待っている continuation を起こし、swift-java の Task と JNI の参照を解放させる。
     public func endStateWait(_ id: Int64) async {
-        await MainActor.run {
-            switch self.stateWaits[id] {
-            case .waiting(let changes):
-                self.stateWaits[id] = .cancelled
-                changes.changed()
-            case .completed?:
-                self.stateWaits[id] = nil
-            case .cancelled?:
-                break
-            case nil:
-                // swift-java が nextState の Task を始める前に、Flow の終了が届いた
-                self.stateWaits[id] = .cancelled
-            }
-        }
+        await stateWaitRegistry.end(id)
     }
 
     /// 残っている state の待機の数 (テスト用)。Flow を止めたあとに、Swift の待機が残っていないことを確かめる。
     /// Mac のテストは MainActor から直接読み、Android の端末のテストは Java から pendingStateWaitCount() で読む
-    @MainActor var stateWaitCount: Int { stateWaits.count }
+    @MainActor var stateWaitCount: Int { stateWaitRegistry.count }
 
     /// stateWaitCount を Java から読む (テスト用。Android の端末のテスト AndroidRuntimeSmokeTest が使う)
     public func pendingStateWaitCount() async -> Int64 {
@@ -114,14 +77,6 @@ public final class RegzaAndroidApp {
             if deliver(viewModel) { return }
         }
     }
-}
-
-/// Kotlin の Flow から始めた state の待機
-@MainActor
-private enum StateWait {
-    case waiting(Changes)
-    case completed
-    case cancelled
 }
 
 /// MainActor で動かして結果を返す。アプリはメインスレッドから呼ぶのでそのまま動かし、
@@ -143,31 +98,3 @@ private let mainQueueKey: DispatchSpecificKey<Bool> = {
 /// URL を文字列にする (ライブ視聴の LivePlayerPhase.ready の URL を ExoPlayer に渡す)。
 /// swift-java は enum の値にしか使っていない型の Java のクラスを作らないので、ここで URL を使って作らせる役目もある
 public func regzaURLString(_ url: URL) -> String { url.absoluteString }
-
-/// 読んだ値の変わり目を知らせる。読んだ値を見張り、変わったら待っている側を起こす
-/// (待ち始める前に変わっていても逃さない)
-@MainActor
-private final class Changes {
-    private var hasChanged = false
-    private var waiter: CheckedContinuation<Void, Never>?
-
-    /// 値を作り、その中で読んだものを見張る
-    func track<Value>(_ make: () -> Value) -> Value {
-        hasChanged = false
-        return withObservationTracking(make) { [weak self] in
-            // 変わる直前に呼ばれるので、変わり終わってから知らせる
-            Task { @MainActor in self?.changed() }
-        }
-    }
-
-    func wait() async {
-        if hasChanged { return }
-        await withCheckedContinuation { waiter = $0 }
-    }
-
-    fileprivate func changed() {
-        hasChanged = true
-        waiter?.resume()
-        waiter = nil
-    }
-}

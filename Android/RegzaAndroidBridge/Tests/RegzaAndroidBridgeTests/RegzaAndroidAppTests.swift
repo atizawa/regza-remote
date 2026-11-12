@@ -179,9 +179,10 @@ struct RegzaAndroidAppTests {
     @Test func nextStateWaitsForChange() async throws {
         let fixture = try await make()
         let before = try #require(await fixture.bridge.appState(route: nil))
-        async let next = fixture.bridge.nextAppState(route: nil, after: before, waitID: 1)
+        let next = Task { await fixture.bridge.nextAppState(route: nil, after: before, waitID: 1) }
+        try await waitUntil { fixture.bridge.stateWaitCount == 1 }
         fixture.bridge.perform(AppAction.selectTab(.guide))
-        #expect(await next?.tab == .guide)
+        #expect(await next.value?.tab == .guide)
         await fixture.bridge.endStateWait(1)
         // 古い state を渡せば、待たずにいまの state を返す
         #expect(await fixture.bridge.nextAppState(route: nil, after: before, waitID: 2)?.tab == .guide)
@@ -210,6 +211,24 @@ struct RegzaAndroidAppTests {
         await fixture.bridge.endStateWait(4)
 
         #expect(await fixture.bridge.nextAppState(route: nil, after: before, waitID: 4) == nil)
+        #expect(fixture.bridge.stateWaitCount == 0)
+    }
+
+    /// 片方の Flow の終了が、同じ state を購読する別の Flow の待機に影響しない。
+    @Test func endingOneStateWaitKeepsOtherWaitsActive() async throws {
+        let fixture = try await make()
+        let before = try #require(await fixture.bridge.appState(route: nil))
+        let cancelled = Task { await fixture.bridge.nextAppState(route: nil, after: before, waitID: 5) }
+        let active = Task { await fixture.bridge.nextAppState(route: nil, after: before, waitID: 6) }
+        try await waitUntil { fixture.bridge.stateWaitCount == 2 }
+
+        await fixture.bridge.endStateWait(5)
+
+        #expect(await cancelled.value == nil)
+        #expect(fixture.bridge.stateWaitCount == 1)
+        fixture.bridge.perform(AppAction.selectTab(.guide))
+        #expect(await active.value?.tab == .guide)
+        await fixture.bridge.endStateWait(6)
         #expect(fixture.bridge.stateWaitCount == 0)
     }
 
