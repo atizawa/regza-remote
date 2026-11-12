@@ -54,6 +54,8 @@ let package = Package(
             name: "UI",
             dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity"],
             swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
-        .testTarget(name: "RegzaKitTests"),
+        .testTarget(
+            name: "RegzaKitTests",
+            dependencies: ["AppServices", .product(name: "RegzaInfrastructure", package: "RegzaCore")]),
     ]
 )

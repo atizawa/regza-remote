@@ -16,32 +16,42 @@ public final class AppContainer {
     public let appViewModel: AppViewModel
     /// ロック画面と Dynamic Island の表示。リモコンの state を見て更新する
     public let liveActivity: LiveActivityModel
+    private let appLifecycleService: AppLifecycleService
 
     public init(
         appViewModel: AppViewModel,
         secureStorageManager: SecureStorageManager,
-        preferencesManager: PreferencesManager
+        preferencesManager: PreferencesManager,
+        httpTransport: any HTTPTransport = URLSessionTransport()
     ) {
         self.secureStorageManager = secureStorageManager
         self.preferencesManager = preferencesManager
         self.appViewModel = appViewModel
         liveActivity = LiveActivityModel(remoteViewModel: appViewModel.remoteViewModel)
+        appLifecycleService = AppLifecycleService(preferencesManager: preferencesManager, httpTransport: httpTransport)
     }
 
     private convenience init() {
         let secureStorageManager = SecureStorageManager(storage: KeychainStorage())
         let preferencesManager = PreferencesManager(storage: UserDefaultsStorage())
+        let httpTransport = URLSessionTransport()
         #if DEBUG
         if SampleData.isEnabled {
             self.init(
                 appViewModel: SampleData.makeApp(),
-                secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
+                secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, httpTransport: httpTransport)
             return
         }
         #endif
         let appViewModel = AppFactory.makeLiveAppViewModel(
-            secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, transport: URLSessionTransport())
-        self.init(appViewModel: appViewModel, secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
+            secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, transport: httpTransport)
+        self.init(
+            appViewModel: appViewModel, secureStorageManager: secureStorageManager,
+            preferencesManager: preferencesManager, httpTransport: httpTransport)
+    }
+
+    public func applicationWillTerminate() {
+        appLifecycleService.applicationWillTerminate()
     }
 
 }

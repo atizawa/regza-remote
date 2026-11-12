@@ -22,14 +22,14 @@ Packages/RegzaCore/           iOS と Android で共有する Swift Package（RE
   RegzaSample                 テレビにつながない見本の Repository（開発・テスト用）
   RegzaCLI                    ViewModel を動かして確かめる CLI（regza）
 iOS/RegzaKit/                 iOS だけで使う Swift Package（7 モジュール）
-  AppServices/                iOS の DI・依存の保持（Storage/ に保存実装、Preview/ に見本の組み立て）
+  AppServices/                iOS の DI・依存の保持・終了時の配信停止（Storage/ に保存実装、Preview/ に見本の組み立て）
   UI/                         画面（Screens/）・補助 View（Components/）・画面遷移（Navigation/）
   Design/                     アプリとウィジェットで共通の色
   LiveActivity/               Live Activity の状態・更新・バックグラウンド更新の予約
   SystemActions/              Live Activity・ウィジェット・コントロールセンターのボタンからの操作
   Shortcuts/                  Siri・ショートカット（アプリにだけ登録する）
   Widgets/                    Live Activity・ホーム画面・コントロールセンターの表示
-iOS/RegzaRemote/              アプリの起動・RootView（依存を画面へ渡す、終了時の後処理）
+iOS/RegzaRemote/              アプリの起動・RootView（依存を画面へ渡す、終了通知を AppServices へ渡す）
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
 Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）
   RegzaAndroidBridge/         Android に見せる Swift の窓口（RegzaAndroidApp）。Mac の swift test で確かめる
@@ -54,6 +54,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - 依存オブジェクトの引数・プロパティ・組み立て時の変数は、`remoteViewModel`・`guideUseCase`・`guideRepository`・`regzaAPIClient`・`preferencesManager` のように役割を名前に含める。取得した値は `programs`・`channels` など、内容を表す名前にする。
 - 保存処理は `Infrastructure/Storage` の `SecureStorageManager`・`PreferencesManager` に分け、APIClient と並列に Repository へ注入する。Manager には OS ごとの保存実装を注入し、保存キーの選択と Data の組み立ては Repository が担当する。
 - DI は `RegzaApp/AppFactory+Repositories.swift`（APIClient・Manager → Repository）、`AppFactory+UseCases.swift`（Repository → UseCase）、`AppFactory+ViewModels.swift`（UseCase → ViewModel）にまとめる。iOS・Android・CLI は共通の Factory を使い、通信と保存先は起動時に渡す。Repository または UseCase の protocol を直接渡せるため、テストでも同じ入口から差し替えられる。
+- iOS の終了通知は `RootView` から `AppContainer.applicationWillTerminate()` に渡す。`AppServices/AppLifecycleService` が保存済みの配信先と配信 ID を使い、注入された HTTPTransport で停止を試みる。待機上限は従来どおり 2 秒で、停止できなかった ID は次回起動時の回収用に残す。UI モジュールはこの処理や Infrastructure に依存しない。
 - iOS の `AppContainer` は組み立てた `AppViewModel` と Manager を受け取れる。Android は `RegzaAndroid.regzaAppFactory()` が SocketTransport＋BoringSSL を保持する Factory を返し、`makeApp(AndroidStorage(...))` で保存先を渡す。通信実装をグローバルに書き換えず、探索処理にも同じ transport を渡す。
 - iOS は `AppServices/Storage` の `KeychainStorage`・`UserDefaultsStorage`、Android は `RegzaAndroidStorage` を共通の保存プロトコルにつなぐアダプターを使う。Android のパスワードは従来どおり Keystore の鍵で暗号化する。既存の保存キー・値の形式と、iOS の旧登録 ID の移行を維持する。
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）
