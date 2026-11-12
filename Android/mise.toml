@@ -18,6 +18,9 @@
 # 共通設定を参照する。コンパイラと Android SDK の版を別々に指定しない。
 swift = "{{ read_toml(path='../toolchains.toml')['swift']['version'] }}"
 swift_android_sdk_checksum = "{{ read_toml(path='../toolchains.toml')['swift']['android_sdk_checksum'] }}"
+# Android Studio の標準の場所。既存の環境変数があればそちらを優先する。
+android_sdk_default = "{% if os() == 'macos' %}{{ env.HOME }}/Library/Android/sdk{% else %}{{ env.HOME }}/Android/Sdk{% endif %}"
+android_sdk = "{{ get_env(name='ANDROID_HOME', default=get_env(name='ANDROID_SDK_ROOT', default=vars.android_sdk_default)) }}"
 
 [tools]
 swift = "{{ vars.swift }}"
@@ -31,10 +34,10 @@ gradle = "9.8.2"
 [env]
 # Android SDK の場所。設定されていなければ Android Studio と同じ標準の場所にする
 # (android-sdk のツールは自分の置き場を設定するので、ここで上書きする)
-ANDROID_HOME = "{{ get_env(name='ANDROID_HOME', default=env.HOME ~ '/Library/Android/sdk') }}"
-ANDROID_SDK_ROOT = "{{ get_env(name='ANDROID_HOME', default=env.HOME ~ '/Library/Android/sdk') }}"
+ANDROID_HOME = "{{ vars.android_sdk }}"
+ANDROID_SDK_ROOT = "{{ vars.android_sdk }}"
 # adb を使えるようにする
-_.path = ["{{ get_env(name='ANDROID_HOME', default=env.HOME ~ '/Library/Android/sdk') }}/platform-tools"]
+_.path = ["{{ vars.android_sdk }}/platform-tools"]
 
 [tasks.setup-android-sdk]
 description = "ANDROID_HOME に Android SDK を用意し、ライセンスに同意する (Android Studio がなくてもビルドできるようにする)"
@@ -71,13 +74,13 @@ fi
 '''
 
 [tasks.build-jvm-host]
-description = "窓口とつなぎを、Mac の JVM から読み込む .dylib にする (振る舞いのテストの Android 側の相手と、エディタの横のプレビューが使う)。Android 向けと同じ Swift でビルドする"
+description = "窓口とつなぎを、ホストの JVM から読み込む共有ライブラリにする (macOS・Linux)。Android 向けと同じ Swift でビルドする"
 shell = "bash -c"
 run = '''
 set -euo pipefail
 . scripts/swift-toolchain.sh
 resolve_swift_toolchain "{{ vars.swift }}"
-"$SWIFT_COMMAND" build --package-path RegzaAndroid --scratch-path .build/jvm-host --product RegzaJVMHost
+"$SWIFT_COMMAND" build --jobs "${SWIFT_BUILD_JOBS:-2}" --package-path RegzaAndroid --scratch-path .build/jvm-host --product RegzaJVMHost
 '''
 
 [tasks.build-swift]

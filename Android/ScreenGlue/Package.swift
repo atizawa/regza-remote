@@ -3,7 +3,7 @@ import PackageDescription
 
 // 画面ごとのフォルダの State/ と Action/ に置いた型から、Android の窓口のつなぎを作る道具 (screen-glue)。
 // Swift のソースは swift-syntax で読む (文字の並びで探さないので、書き方が変わっても読み違えない)。
-// Mac で動かす道具なので、アプリには入らない。mise run build-swift が毎回動かし、テストは作ったものが古くないかも確かめる
+// ホストで動かす道具なので、アプリには入らない。mise run build-swift が毎回動かし、テストは作ったものが古くないかも確かめる
 let package = Package(
     name: "ScreenGlue",
     platforms: [.macOS(.v14)],

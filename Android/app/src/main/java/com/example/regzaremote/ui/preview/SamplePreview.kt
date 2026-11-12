@@ -23,8 +23,8 @@ import com.example.regzaremote.design.AppTheme
  *
  * state は Swift の値なので、Swift のライブラリがないと作れない。
  * - 「Run Preview」(エミュレーター): アプリと同じ Android 向けの .so を使う
- * - エディタの横のプレビュー (Android Studio が Mac の JVM で描く): 振る舞いのテストと同じ Mac 向けのライブラリ
- *   (behavior-tests の buildJvmHost が作る) を読み込む (MacSwiftLibraries)。読み込めなければ、その理由を出す
+ * - エディタの横のプレビュー (ホストの JVM で描く): mise run prepare-android-preview で作った
+ *   ホスト向けのライブラリを PreviewAppFactory が読み込む。読み込めなければ、その理由を出す
  *
  * Swift の型 (画面の道や操作) は、ライブラリを読み込んだあとでないと作れないので、setUp と content の中で作る
  *

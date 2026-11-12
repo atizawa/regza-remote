@@ -21,9 +21,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Swift の .so は arm64 だけ作っている (buildSwift)
         ndk { abiFilters += "arm64-v8a" }
-        // エディタの横のプレビュー (Mac の JVM) が読み込む、Mac 向けの Swift のライブラリの場所 (SamplePreview)。
+        // エディタの横のプレビュー (ホストの JVM) が読み込む Swift のライブラリの場所 (SamplePreview)。
         // 手元のフォルダの場所なので、配るアプリ (release) には入れず、debug のビルドでだけ入れる
-        buildConfigField("String", "MAC_SWIFT_LIBRARIES", "\"\"")
+        buildConfigField("String", "HOST_SWIFT_LIBRARIES", "\"\"")
     }
 
     buildFeatures {
@@ -34,7 +34,7 @@ android {
     buildTypes {
         debug {
             // 振る舞いのテストと同じもの (behavior-tests の buildJvmHost が作る)。エディタの中でしか使わない
-            buildConfigField("String", "MAC_SWIFT_LIBRARIES", "\"${rootDir.resolve(".build/jvm-host/libs").path}\"")
+            buildConfigField("String", "HOST_SWIFT_LIBRARIES", "\"${rootDir.resolve(".build/jvm-host/libs").path}\"")
         }
         release {
             // Java のコードを縮める (Compose などのライブラリのうち、使っていない部分を外す)
@@ -124,6 +124,8 @@ val checkReleaseApk = tasks.register("checkReleaseApk") {
     description = "release の APK に、手元のフォルダの場所が入っていないことを確かめる"
     val apks = layout.buildDirectory.dir("outputs/apk/release")
     val home = System.getProperty("user.home")
+    // /root.res のような ICU のリソース名を、/root のホームパスと誤認しない。
+    val homePath = Regex("${Regex.escape(home)}(?![\\p{L}\\p{N}_.-])")
     inputs.dir(apks)
     doLast {
         val files = apks.get().asFile.listFiles { file -> file.extension == "apk" }.orEmpty()
@@ -132,7 +134,9 @@ val checkReleaseApk = tasks.register("checkReleaseApk") {
             ZipFile(apk).use { zip ->
                 // バイト列のまま探すため、1 バイトを 1 文字にする ISO-8859-1 で読む (ホームのフォルダの名前は ASCII)
                 val found = zip.entries().asSequence()
-                    .filter { entry -> String(zip.getInputStream(entry).use { it.readBytes() }, Charsets.ISO_8859_1).contains(home) }
+                    .filter { entry ->
+                        homePath.containsMatchIn(String(zip.getInputStream(entry).use { it.readBytes() }, Charsets.ISO_8859_1))
+                    }
                     .map { it.name }
                     .toList()
                 check(found.isEmpty()) { "${apk.name} に手元のフォルダの場所 ($home) が入っています: $found" }
@@ -141,8 +145,7 @@ val checkReleaseApk = tasks.register("checkReleaseApk") {
     }
 }
 tasks.matching { it.name == "assembleRelease" }.configureEach { finalizedBy(checkReleaseApk) }
-// エディタの横のプレビューのために、debug のビルドでは Mac 向けの Swift のライブラリも作る (SamplePreview)
-tasks.matching { it.name == "preDebugBuild" }.configureEach { dependsOn(":behavior-tests:buildJvmHost") }
+// ホスト向けライブラリは mise run prepare-android-preview で別途作る。APK のビルドには不要。
 
 dependencies {
     // swift-java が作ったクラスが使う Java 側

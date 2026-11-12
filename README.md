@@ -32,9 +32,9 @@ iOS/RegzaKit/                 iOS だけで使う Swift Package（7 モジュー
 iOS/RegzaRemote/              アプリの起動・RootView（依存を画面へ渡す、終了通知を AppServices へ渡す）
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
 Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）
-  RegzaAndroidBridge/         Android に見せる Swift の窓口（RegzaAndroidApp）。Mac の swift test で確かめる
+  RegzaAndroidBridge/         Android に見せる Swift の窓口（RegzaAndroidApp）。macOS・Linux の swift test で確かめる
   RegzaAndroid/               Android 向けにビルドする Swift のパッケージ（Looper・BoringSSL と、swift-java が作る Java のつなぎ）
-  ScreenGlue/                 窓口のつなぎを作る道具（screen-glue。State/・Action/ の型を swift-syntax で読む。Mac で動かし、アプリには入らない）
+  ScreenGlue/                 窓口のつなぎを作る道具（screen-glue。State/・Action/ の型を swift-syntax で読む。ホストで動かし、アプリには入らない）
   scripts/                    build-swift.sh（Swift の .so と Java のクラスを作る）・swift-toolchain.sh（mise の Swift を選ぶ）
   app/                        Kotlin・Compose のアプリ
   mise.toml                   共通設定の Swift ツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
@@ -45,7 +45,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
 - 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
-- Android の画面のプレビューは、それぞれの画面のファイルの末尾に置く（準備は `SamplePreview.kt`）。見本の返事（`RegzaSample`）で組み立てた共有の ViewModel の state を渡す。state は Swift の値なので、エディタの横のプレビュー（Android Studio が Mac の JVM で描く）では、振る舞いのテストと同じ Mac 向けの Swift のライブラリ（`:behavior-tests:buildJvmHost`。debug のビルドで一緒に作る）を読み込む。「Run Preview」ではエミュレーターでアプリと同じ Android 向けのライブラリを使う。Swift の型は、ライブラリを読み込んだあと（`SamplePreview` の `setUp` と中身）で作る
+- Android の画面のプレビューは、それぞれの画面のファイルの末尾に置く（準備は `SamplePreview.kt`）。見本の返事（`RegzaSample`）で組み立てた共有の ViewModel の state を渡す。エディタの横のプレビューはホストの JVM で描くため、先に `mise run prepare-android-preview` でホスト向けライブラリを作る（macOS は .dylib、Linux は .so）。APK のビルドではホスト向けライブラリを作らない。「Run Preview」ではエミュレーターでアプリと同じ Android 向けのライブラリを使う。Swift の型は、ライブラリを読み込んだあと（`SamplePreview` の `setUp` と中身）で作る
 - OS だけの機能（iOS の Live Activity・ウィジェット・Siri）も、画面と同じく共有の ViewModel の state を読み、Action を送る。共有の部分は「何を出すか」を state に入れるだけで、OS ごとの口（protocol）は持たない
   - iOS は、アプリのプロセスに `AppViewModel` を 1 つだけ置き（`AppContainer`）、画面・Live Activity・ボタン・Siri・閉じている間の更新が同じものを使う。画面のない入口は、操作を送って終わるまで待ち（`sendAndWait`）、state を見て結果を返す
   - Live Activity は `RemoteViewModel.state` の変わり目を見て表示を更新し、番組の終了時刻が変われば起こしてもらう時刻を予約し直す
@@ -64,6 +64,16 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 
 ## 開発
 
+Android の APK ビルド・ホストの JVM テストは macOS と Linux を対象にする。Linux の APK ビルドは Android NDK のホストツールに合わせて x86_64 を使う。iOS のビルド・RegzaKit のテストは Xcode が必要なため macOS で行う。Windows ネイティブの開発環境は対象外で、WSL2 は Linux の手順を使う（Windows 側の Android Studio とのプレビュー連携は別途検証が必要）。
+
+Android SDK の場所は `ANDROID_HOME`、次に `ANDROID_SDK_ROOT` を優先し、未指定なら macOS は `~/Library/Android/sdk`、Linux は `~/Android/Sdk` を使う。SDK・NDK は開発ホスト用、APK に入れる Swift の .so は従来どおり Android の arm64-v8a 用で、この 2 つの CPU アーキテクチャは別に扱う。
+
+`mise run check` は iOS のビルドも含むため macOS 用。Linux では `lint`・`test-swift-shared`・`build-android`・`test-behavior` を個別に実行する。
+
+Swift の Android ビルド・ホスト向けビルド・振る舞いテスト用 CLI のビルドは、SwiftSyntax などの初回コンパイルでメモリを多く使うため、並列数を既定で 2 にする。`SWIFT_BUILD_JOBS=1 mise run build-android` のように変更できる。Gradle の JVM メモリは `Android/gradle.properties` で管理する。
+
+Linux のホスト JVM では、`HostSwiftRuntime` が専用スレッドで Swift のライブラリを読み込み、そのスレッドの終了まで待つ。これにより MainActor のキューを JVM の入力待ちや Future の待機から切り離す。振る舞いテストとエディタのプレビューで共通に使い、Android 端末では既存の Looper への接続を使う。
+
 Swift と Xcode の版はルートの `toolchains.toml` で管理する。`swift.version` は Android・Linux の swift.org 版と Android SDK の共通バージョン、`swift.android_sdk_checksum` はその SDK のチェックサム、`xcode.version` は iOS に使う Xcode のバージョン。`Android/mise.toml` とルートの mise タスクはこの設定を参照する。
 
 iOS は Xcode 付属の Apple Swift を使い、`swift.version` と major.minor が同じことを検査する（例: Apple Swift 6.4 と swift.org 6.4.2）。Apple 版と swift.org 版のビルド識別子の一致は要求しない。Android・Linux はリリースタグまで一致させる。Xcode の `SWIFT_VERSION = 6.0` は言語モードであり、このコンパイラの版とは別の設定。
@@ -77,7 +87,7 @@ Repository・UseCase の単体テストは [Mockolo](https://github.com/uber/moc
 ```sh
 mise run generate-mocks                  # Domain の protocol を変更したときにモックを再生成
 cd Packages/RegzaCore && swift test       # 共有部分のテスト
-cd Android/RegzaAndroidBridge && swift test  # Android の窓口のテスト (Mac で動く)
+cd Android/RegzaAndroidBridge && swift test  # Android の窓口のテスト (macOS・Linux)
 cd Android/ScreenGlue && swift test       # 窓口のつなぎを作る道具のテストと、Git に入れたつなぎが古くないかの確認
 open iOS/RegzaRemote.xcodeproj            # 実機へ入れるときは下の Local.xcconfig を作る
 
@@ -86,6 +96,7 @@ mise install                              # Swift のツールチェーン・JDK
 mise run setup-android-sdk                # 初回だけ。Android SDK のライセンスを確かめて同意する（Android Studio で SDK を入れていれば要らない）
 mise run install-android-swift-sdk        # 初回だけ。Swift SDK for Android（platform・build-tools・NDK は Gradle が入れる）
 ./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (buildSwift が mise run build-swift を呼ぶ)
+mise run prepare-android-preview          # エディタの横にプレビューを出すとき。ホスト向けライブラリを別途作る
 mise run test-android-runtime             # arm64 のエミュレーター/実機で .so・JNI・Looper・Bionic・BoringSSL を確かめる
 ./gradlew :app:assembleRelease            # 配るアプリ。作ったあと、APK に手元のフォルダの場所が入っていないことも確かめる (checkReleaseApk)
 
@@ -111,7 +122,7 @@ ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
 - `bionicSocketConnectsFromSwift`: Swift の SocketTransport から、端末内の HTTP サーバーへの送受信。
 - `boringSSLReadsAndroidTrustStore`: BoringSSL の初期化と Android の信頼ストアの参照。HTTPS のハンドシェイクや証明書検証全体は対象外。
 
-Swift／Java の接続コード、state の待機・キャンセル、Looper、SocketTransport、BoringSSL、.so の梱包、Swift・swift-java・NDK の版を変更したときに実行する。Mac JVM の振る舞いテストと併せて確認する。接続済み端末が必要なため、`mise run check` には含めていない。現在の CI の Android ジョブもテスト APK のビルドまでで、端末上での実行は別途行う。
+Swift／Java の接続コード、state の待機・キャンセル、Looper、SocketTransport、BoringSSL、.so の梱包、Swift・swift-java・NDK の版を変更したときに実行する。ホストの JVM の振る舞いテストと併せて確認する。接続済み端末が必要なため、`mise run check` には含めていない。現在の CI の Android ジョブもテスト APK のビルドまでで、端末上での実行は別途行う。
 
 | 失敗した場所 | 確認先 |
 | --- | --- |
@@ -124,8 +135,8 @@ Swift／Java の接続コード、state の待機・キャンセル、Looper、S
 
 Shopify の [Reflex](https://shopify.engineering/reflex) と同じ作りで、画面を描かずに ViewModel の state と操作を確かめる。テストは `BehaviorTests/`（Bun・TypeScript）に 1 回だけ書き、iOS 側と Android 側の 2 つの相手に同じテストを流す。片方だけ通る状態は失敗になる。テストは相手がどちらかを知らず、CLI と同じ約束事（`tree`・`ls`・`do`・`wait` の 1 行ずつの命令と JSON）だけを使う。
 
-- iOS 側の相手は `regza`（iOS と同じ共有の組み立てを Mac で動かす）
-- Android 側の相手は `regza-android`（`Android/behavior-tests`。Mac の JVM）。命令の読み方と返す JSON は `regza` と同じもの（`IntrospectionSession`）を使い、操作を送るところと state を受け取るところだけを、アプリと同じ道（Kotlin の `send` と `xxxStates` → swift-java のつなぎ → 窓口）で行う。窓口とつなぎは macOS 向けの .dylib（`RegzaJVMHost`）にして読み込む。エミュレーターは使わない
+- iOS 側の相手は `regza`（iOS と同じ共有の組み立てを macOS・Linux 上の CLI で動かす。iOS アプリそのものは起動しない）
+- Android 側の相手は `regza-android`（`Android/behavior-tests`。ホストの JVM）。命令の読み方と返す JSON は `regza` と同じもの（`IntrospectionSession`）を使い、操作を送るところと state を受け取るところだけを、アプリと同じ道（Kotlin の `send` と `xxxStates` → swift-java のつなぎ → 窓口）で行う。窓口とつなぎはホスト向けの共有ライブラリ（`RegzaJVMHost`）にして読み込む。Linux の swiftCore は使用中の Swift ツールチェーンから参照し、`/usr/lib/swift` に固定しない。エミュレーターは使わない
 - 外からの入力は見本の返事（`RegzaSample` の `SampleTransport`）で渡すので、テレビにも録画サーバーにもつながない
 - テストは `sdk/app.ts` の `describeOnBothPlatforms` で書き、`do`（操作を送り、state が期待どおりになるまで待つ）と `precondition`（state が期待どおりになるまで待つ）で確かめる
 - 「テレビにつながらない」「チャンネル一覧が空」のような場面は、`describeOnBothPlatforms` に fixture（`SampleFixture`。宛先ごとの返事の差し替えと、つながらないアドレス）を渡して作る。両方の相手に、起動するときに `--fixture <JSON のファイル>` で渡る
@@ -232,13 +243,14 @@ mise run test-swift-shared                 #   Apple の環境がなくても流
 mise run test-swift-apple                  #   Xcode が要るもの (RegzaKit)
 mise run build-ios                         # iOS のアプリとウィジェットのビルド
 mise run build-android                     # Android のアプリとテスト APK のビルド (debug・release。release は APK の中身も確かめる)
+mise run prepare-android-preview           # Android Studio のエディタ用にホスト向けライブラリを準備 (macOS・Linux)
 mise run test-android-runtime              # 接続済み arm64 端末で AndroidRuntimeSmokeTest を実行 (check には含まない)
 mise run test-behavior                     # 振る舞いのテスト (iOS 側と Android 側)
 ```
 
 エミュレーターや実機が要る `test-android-runtime` は、`check` には入れていない。
 
-GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が同じタスクを流す。Apple の環境がなくても流せるもの（書き方と `test-swift-shared`）は Linux の機械（Swift の公式のコンテナ）で、Xcode や Mac 向けのライブラリが要るもの（`test-swift-apple`・`build-ios`・`build-android`・`test-behavior`）だけを macOS の機械で、ジョブに分けて同時に流す。ただし `build-android` と `test-behavior` のジョブ（android）は、毎回 Swift を最初からビルドして 30 分ほどかかるので、いったん GitHub の Actions の画面から手で動かしたとき（Run workflow）だけ流す。Linux で共有の部分のテストを流すと、Android に近い Foundation（swift-corelibs-foundation）でも確かめられる
+GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が同じタスクを流す。書き方と `test-swift-shared` は Linux、Xcode が必要な `test-swift-apple`・`build-ios` は macOS で、ジョブに分けて流す。`build-android` と `test-behavior` のジョブ（android）も Linux x86_64 で実行する。初回の Swift ビルドに時間がかかるため、このジョブは GitHub Actions の画面から手で動かしたとき（Run workflow）だけ流す。
 
 画面を足したら、`BehaviorTests/tests/` にもその画面の振る舞いのテストを足す（操作を送り、state が期待どおりになるまで待つ）。
 
@@ -268,6 +280,7 @@ swift-java（301e3da）には次の制約がある。どれも、守れなけれ
 - Foundation の型の Java のクラスを、使うモジュールごとに作る。3 つのモジュール（`RegzaSharedModels`・`RegzaPresentation`・`RegzaAndroidBridge`）は同じ Java のパッケージに出しているので、そのままでは同じ名前の JNI の関数がぶつかってリンクできない。`mise run build-swift` が、前のモジュールにもある型のつなぎを消す（消せない混ざり方なら止まる）。モジュールごとにパッケージを分けると、ぶつからない代わりに `Date` がモジュールごとに別の型になり、モジュールをまたいで渡せなくなる
 - 同じ名前で引数の型だけ違う関数を並べられない。窓口の送る関数を `sendChannelListAction` のように型ごとの名前にしているのはこのため（Kotlin からは `Send` を通してどれも `send` で送れる）
 - swift-java が何か宣言を Java にできなかったときは、`mise run build-swift` が止まる（`Failed to import`）
+- jextract の入力は絶対 file URL に統一する。相対パスを URL として渡すと Linux で同じ extension が重複収集され、Java のメソッド名や定義が重複するため、`build-swift.sh` がパスの解決と URL エンコードを行う。
 
 ## テレビ側の準備
 

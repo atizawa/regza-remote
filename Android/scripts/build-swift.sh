@@ -29,6 +29,7 @@ if [ $# -eq 0 ]; then
   false
 fi
 swift_version=$1
+swift_build_jobs=${SWIFT_BUILD_JOBS:-2}
 # NDK の版は Gradle の buildSwift が app/build.gradle.kts の ndkVersion を渡す
 if [ -z "${NDK_VERSION:-}" ]; then
   echo "このタスクは ./gradlew から実行してください (NDK の版は Gradle が渡します)" >&2
@@ -37,6 +38,7 @@ fi
 . scripts/swift-toolchain.sh
 resolve_swift_toolchain "$swift_version"
 export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
+printf '[build-swift] Android SDK: %s\n[build-swift] Android NDK: %s\n' "$ANDROID_HOME" "$ANDROID_NDK_HOME"
 if [ ! -d "$ANDROID_NDK_HOME" ]; then
   # Android CLI は入れるとライセンスに同意したことになるので、同意済みのときだけ入れる
   [ -s "$ANDROID_HOME/licenses/android-sdk-license" ] || {
@@ -67,7 +69,7 @@ rm -rf .build/swift/plugins/outputs/regzaandroid
 # 警告を出すだけで黙って飛ばすので、飛ばしたものがあればビルドを止める
 jextract() {
   local log
-  log=$(.build/swift-tool/out/Products/Release/swift-java jextract --log-level warning "$@" 2>&1) || { echo "$log" >&2; return 1; }
+  log=$("$swift_java" jextract --log-level warning "$@" 2>&1) || { echo "$log" >&2; return 1; }
   if grep -q "Failed to import" <<< "$log"; then
     echo "swift-java が Java にできなかった宣言があります:" >&2
     grep -o "Failed to import: [^;]*;[^(]*" <<< "$log" | sort -u >&2
@@ -111,6 +113,10 @@ extract_module() {
   local module=$1 input=$2 swift_out=$3 java_out=$4 config
   shift 4
   begin_stage "Java・Swift の接続コードの生成" "$module" "$configs/$module.swift-java.config"
+  # swift-java は入力を URL として扱う。相対 URL では Linux で同じ extension を重複収集するため、
+  # 絶対 file URL に統一する。空白や # を含む開発ディレクトリも URL としてエンコードする。
+  input=$(cd "$input" && pwd)
+  input=$(jq -nr --arg path "$input" '"file://" + ($path | split("/") | map(@uri) | join("/"))')
   printf '[build-swift] 入力: %s\n[build-swift] 出力: %s, %s\n' "$input" "$swift_out" "$java_out"
   rm -rf "$swift_out" "$java_out" && mkdir -p "$swift_out" "$java_out"
   config=$(swift_java_config "RegzaAndroid/$module.swift-java.config" "$configs/$module.swift-java.config")
@@ -144,7 +150,9 @@ swift_java_config "RegzaAndroid/RegzaAndroid.swift-java.config" RegzaAndroid/Sou
 # iOS と共有のパッケージや窓口のパッケージにはプラグインをかけられないので、Mac で動く swift-java のツールで、ソースを直接読む。
 # Android 向けのビルドとはビルドの設定が違い、同じ置き場だと互いのキャッシュを捨て合うので、置き場を分ける
 begin_stage "生成ツールのビルド" "swift-java"
-"$SWIFT_COMMAND" build --package-path RegzaAndroid --scratch-path .build/swift-tool -c release --product swift-java
+swift_java_build=("$SWIFT_COMMAND" build --jobs "$swift_build_jobs" --package-path RegzaAndroid --scratch-path .build/swift-tool -c release --product swift-java)
+"${swift_java_build[@]}"
+swift_java=$("${swift_java_build[@]}" --show-bin-path)/swift-java
 
 shared_java=.build/swift/regzashared-java
 presentation_java=.build/swift/regzapresentation-java
@@ -165,7 +173,7 @@ extract_module RegzaPresentation "$(cd ../Packages/RegzaCore/Sources/RegzaPresen
 # (Android/ScreenGlue の screen-glue。Swift のソースを swift-syntax で読む)。
 # ScreenGlue/.build は swift test (Xcode の Swift) が使うので、置き場を分ける (同じ置き場だと、Swift が変わるたびに作り直す)
 begin_stage "画面の接続コードと型一覧の生成" "ScreenGlue"
-"$SWIFT_COMMAND" run --package-path ScreenGlue --scratch-path .build/screen-glue -c release screen-glue
+"$SWIFT_COMMAND" run --jobs "$swift_build_jobs" --package-path ScreenGlue --scratch-path .build/screen-glue -c release screen-glue
 
 # 窓口 (RegzaAndroidBridge の RegzaAndroidApp と、その状態・操作の型)。Mac の swift test で確かめられるよう別のパッケージにしてある
 extract_module RegzaAndroidBridge RegzaAndroidBridge/Sources/RegzaAndroidBridge \
@@ -192,7 +200,7 @@ javac @"$callbacks/sources.txt" -d "$callbacks/classes" -parameters \
 jq -n --arg name "$java_package.$callback_protocol" --arg wrapper "Java$callback_protocol" \
   '{classes: {($name): $wrapper}}' > "$callbacks/swift-java.config"
 # Optional などの Java の標準の型は、swift-java の SwiftJava モジュールにある包みを使う
-.build/swift-tool/out/Products/Release/swift-java wrap-java --swift-module RegzaAndroidBridgeJava \
+"$swift_java" wrap-java --swift-module RegzaAndroidBridgeJava \
   --output-directory "$bridge_generated" --config "$callbacks/swift-java.config" --cp "$callbacks/classes" \
   --single-swift-file-output JavaCallbacks.swift \
   --depends-on SwiftJava="$PWD/.build/swift-tool/checkouts/swift-java/Sources/SwiftJava/swift-java.config"
@@ -201,15 +209,17 @@ jq -n --arg name "$java_package.$callback_protocol" --arg wrapper "Java$callback
 # HTTPS に使う BoringSSL は、SDK の静的ライブラリ (libssl.a・libcrypto.a) を RegzaAndroid に埋め込む
 begin_stage "Android native ライブラリのビルド" "RegzaAndroid" "RegzaAndroid/Sources/RegzaAndroid/swift-java.config"
 static_libs=$("$SWIFT_COMMAND" sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftStaticResourcesPath: //p')/android
-"$SWIFT_COMMAND" build --package-path RegzaAndroid --scratch-path .build/swift --product RegzaAndroid -c release \
-  --swift-sdk "$sdk" --triple "$triple" -Xlinker -L"$static_libs"
+android_build=("$SWIFT_COMMAND" build --jobs "$swift_build_jobs" --package-path RegzaAndroid --scratch-path .build/swift --product RegzaAndroid -c release
+  --swift-sdk "$sdk" --triple "$triple" -Xlinker -L"$static_libs")
+"${android_build[@]}"
+android_products=$("${android_build[@]}" --show-bin-path)
 
 # 入れる候補: libRegzaAndroid.so と swift-java の libSwiftJava.so、SDK の Swift の .so、NDK の libc++_shared.so
 begin_stage "APK 用の共有ライブラリの収集と依存解決" "RegzaAndroid"
 printf '[build-swift] 出力: %s\n' "$out"
 candidates=.build/swift/android-libs
 rm -rf "$candidates" && mkdir -p "$candidates"
-cp .build/swift/out/Products/Release-android-aarch64/*.so "$runtime"/*.so "$libcxx" "$candidates/"
+cp "$android_products"/*.so "$runtime"/*.so "$libcxx" "$candidates/"
 
 # 候補のうち、実際に使われるものだけを入れる (FoundationXML やテスト用のものなど、使っていないものはアプリを大きくするだけ)。
 # Java から名前で読み込むもの (RegzaAndroid・SwiftJava・swiftCore) から始めて、各 .so が使う (NEEDED) ものをたどる

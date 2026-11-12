@@ -41,10 +41,13 @@ export interface Node {
 
 const repository = new URL("../../", import.meta.url).pathname;
 const commands: Record<Platform, string[]> = {
-  // iOS と同じ共有の組み立てを Mac で動かす
+  // iOS と同じ共有の組み立てをホストで動かす
   ios: [`${repository}Packages/RegzaCore/.build/debug/regza`, "--sample"],
-  // Android と同じ道 (Kotlin → swift-java のつなぎ → 窓口) を Mac の JVM で動かす
-  android: [`${repository}Android/behavior-tests/build/install/regza-android/bin/regza-android`, "--sample"],
+  // Android と同じ道 (Kotlin → swift-java のつなぎ → 窓口) をホストの JVM で動かす
+  android: [
+    "mise", "-C", `${repository}Android`, "exec", "--",
+    `${repository}Android/behavior-tests/build/install/regza-android/bin/regza-android`, "--sample",
+  ],
 };
 
 /**

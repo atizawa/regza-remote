@@ -110,6 +110,11 @@ description = "接続済みの arm64 端末で AndroidRuntimeSmokeTest を実行
 dir = "{{ config_root }}/Android"
 run = "mise exec -- ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.regzaremote.AndroidRuntimeSmokeTest"
 
+[tasks.prepare-android-preview]
+description = "Android Studio のプレビュー用に、ホストの Swift ライブラリを作る (macOS・Linux)"
+dir = "{{ config_root }}/Android"
+run = "mise exec -- ./gradlew :behavior-tests:buildJvmHost"
+
 [tasks.test-behavior]
 description = "振る舞いのテストを流す (iOS 側の regza と Android 側の regza-android の両方)"
 dir = "{{ config_root }}/BehaviorTests"

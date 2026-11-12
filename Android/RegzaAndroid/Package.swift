@@ -14,7 +14,7 @@ let package = Package(
     products: [
         // Android アプリが System.loadLibrary("RegzaAndroid") で読み込む共有ライブラリ
         .library(name: "RegzaAndroid", type: .dynamic, targets: ["RegzaAndroid"]),
-        // 窓口とつなぎを、Mac の JVM で動かす振る舞いのテスト (behavior-tests) から読み込むライブラリ。
+        // 窓口とつなぎを、ホストの JVM で動かす振る舞いのテスト (behavior-tests) から読み込むライブラリ。
         // Android 専用の部品 (Looper・BoringSSL) は含めない
         .library(name: "RegzaJVMHost", type: .dynamic, targets: ["RegzaAndroidBridgeJava"]),
     ],

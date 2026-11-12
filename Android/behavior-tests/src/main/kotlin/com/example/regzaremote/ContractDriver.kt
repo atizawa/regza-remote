@@ -1,5 +1,6 @@
 package com.example.regzaremote
 
+import com.example.regzaremote.bridge.HostSwiftRuntime
 import com.example.regzaremote.bridge.contractSend
 import com.example.regzaremote.bridge.contractStateJSON
 import com.example.regzaremote.core.RegzaAndroidApp
@@ -8,6 +9,7 @@ import java.io.File
 import kotlin.system.exitProcess
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.runBlocking
+import org.swift.swiftkit.core.SwiftLibraries
 
 /**
  * 振る舞いのテスト (BehaviorTests) の Android 側の相手。regza と同じ約束事 (1 行ずつの命令と、返す JSON) を話す。
@@ -16,6 +18,7 @@ import kotlinx.coroutines.runBlocking
  * 見本の返事 (--sample) で組み立てるので、テレビにも録画サーバーにもつながない
  */
 fun main(args: Array<String>): Unit = runBlocking {
+    HostSwiftRuntime.loadLibraries { SwiftLibraries.loadLibraryWithFallbacks("RegzaAndroid") }
     if ("--sample" !in args) {
         System.err.println("--sample だけに対応しています")
         exitProcess(2)
