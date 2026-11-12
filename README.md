@@ -12,6 +12,7 @@ REGZA だけでもリモコン・Live Activity・Siri・チャンネル一覧と
 ## 構成
 
 ```
+toolchains.toml              Swift・Android SDK・Xcode の共通バージョン設定
 Packages/RegzaCore/           iOS と Android で共有する Swift Package（REGZA の OpenAPI 生成クライアントも共有）
   RegzaSharedModels           画面に出す UI の型とリモコンのキー（RegzaKey）
   RegzaDomain                 Data・Repository の約束・UseCase・SharedModel への変換
@@ -36,10 +37,10 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   ScreenGlue/                 窓口のつなぎを作る道具（screen-glue。State/・Action/ の型を swift-syntax で読む。Mac で動かし、アプリには入らない）
   scripts/                    build-swift.sh（Swift の .so と Java のクラスを作る）・swift-toolchain.sh（mise の Swift を選ぶ）
   app/                        Kotlin・Compose のアプリ
-  mise.toml                   Swift 6.4.2 のツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
+  mise.toml                   共通設定の Swift ツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
 ```
 
-- Swift のコードの書き方は swift-format（Swift のツールチェーンに入っている Apple の道具）でそろえる。設定は `.swift-format`（行の長さ 140・インデントは空白 4 つ・`#if` の中は下げない、ほかは既定の決まり）。Kotlin は ktlint でそろえる。設定は `.editorconfig`（Android Studio の書き方・行の長さ 140・`@Composable` の関数は大文字で始めてよい）で、Android Studio もこの設定で整形する。複数行に並べたものは、Kotlin では宣言でも呼び出しでも末尾にコンマを付け、Swift では配列や辞書に付ける（関数の引数は書いたとおりに残す。swift-format の「必ず付ける」は閉じかっこの前に `, )` を残す不具合があるため使わない）。`mise run lint` で両方を確かめ、`mise run format` で両方を直す。道具が作るファイル（`Generated/`・`.build/`）は対象にしない。ルートの `mise.toml` には、このタスクと ktlint の版だけを置き、Swift の版は決めない（初めてのときは `mise trust` と `mise install` が要る）
+- Swift のコードの書き方は swift-format（Swift のツールチェーンに入っている Apple の道具）でそろえる。設定は `.swift-format`（行の長さ 140・インデントは空白 4 つ・`#if` の中は下げない、ほかは既定の決まり）。Kotlin は ktlint でそろえる。設定は `.editorconfig`（Android Studio の書き方・行の長さ 140・`@Composable` の関数は大文字で始めてよい）で、Android Studio もこの設定で整形する。複数行に並べたものは、Kotlin では宣言でも呼び出しでも末尾にコンマを付け、Swift では配列や辞書に付ける（関数の引数は書いたとおりに残す。swift-format の「必ず付ける」は閉じかっこの前に `, )` を残す不具合があるため使わない）。`mise run lint` で両方を確かめ、`mise run format` で両方を直す。道具が作るファイル（`Generated/`・`.build/`）は対象にしない。ルートの `mise.toml` には共通タスクと ktlint の設定を置き、Swift の版は `toolchains.toml` を参照する。ルートでは Swift のコンパイラを切り替えない（初めてのときは `mise trust` と `mise install` が要る）
 - Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装している（Android の FoundationNetworking でも同じコードで動かすため）
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
@@ -61,6 +62,12 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - REGZA・Mirakurun・EPGStation の API は `OpenAPI/` の仕様から Swift OpenAPI Generator で生成する。生成クライアント、Digest 認証・LenientJSON のミドルウェア、既存の `HTTPTransport` を包む `ClientTransport` はすべて共有する。構成と生成方法は [OpenAPI/README.md](OpenAPI/README.md)。
 
 ## 開発
+
+Swift と Xcode の版はルートの `toolchains.toml` で管理する。`swift.version` は Android・Linux の swift.org 版と Android SDK の共通バージョン、`swift.android_sdk_checksum` はその SDK のチェックサム、`xcode.version` は iOS に使う Xcode のバージョン。`Android/mise.toml` とルートの mise タスクはこの設定を参照する。
+
+iOS は Xcode 付属の Apple Swift を使い、`swift.version` と major.minor が同じことを検査する（例: Apple Swift 6.4 と swift.org 6.4.2）。Apple 版と swift.org 版のビルド識別子の一致は要求しない。Android・Linux はリリースタグまで一致させる。Xcode の `SWIFT_VERSION = 6.0` は言語モードであり、このコンパイラの版とは別の設定。
+
+`mise run check-apple-toolchain` で選択中の Xcode と Apple Swift を確認できる。iOS のテスト・ビルドでも先に実行され、不一致なら停止する。ローカルでは使用する Xcode を `DEVELOPER_DIR` または Xcode の選択で指定する。Linux CI は `mise run check-swift-toolchain`、Android は既存の `resolve_swift_toolchain` で版を確認する。Linux CI は `MISE_ENV=linux` で `mise.linux.toml` を読み込み、共通設定の Swift を導入する。CI の Xcode 選択は `mise run select-ci-xcode`、Android SDK の準備は `mise run install-android-swift-sdk` が担当する。SDK は指定版が既にある場合は再インストールせず、CI のキャッシュも共通設定を参照する。版を上げるときは、このファイルで Xcode・Swift・SDK チェックサムの組み合わせを更新し、両環境のテストとビルドを確認する。
 
 Repository・UseCase の単体テストは [Mockolo](https://github.com/uber/mockolo) で生成するモックを使用する。対象は Domain の `@mockable` を付けた protocol。生成結果は `Tests/RegzaCoreTests/Generated/DomainMocks.swift` に置き、protocol を変更したらリポジトリのルートで `mise run generate-mocks` を実行する。Mockolo は `Tools/GenerateMocks/Package.swift` で版を固定し、アプリの依存から分離しているため、通常のアプリビルドやテストで生成ツールをビルドする必要はない。
 

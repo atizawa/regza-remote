@@ -24,38 +24,41 @@ jobs:
   # Swift と Kotlin の書き方 (swift-format と ktlint)
   lint:
     runs-on: ubuntu-24.04
-    # Swift は Android/mise.toml の vars.swift と同じ版
-    container: swift:6.4.2-noble
     timeout-minutes: 15
+    env:
+      MISE_ENV: linux
     steps:
-      - name: ktlint を動かす Java と、mise を入れるための curl を入れる
-        run: apt-get update -qq && apt-get install -y -qq curl openjdk-21-jre-headless
       - uses: actions/checkout@v7
-      # コンテナの中ではリポジトリの持ち主が違うので、Git に読んでよいと伝える (git ls-files で対象のファイルを選ぶため)
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # コンテナの DNS に依存せず、ホストに Swift を入れる。Java・curl は runner のものを使う。
+      # mise.linux.toml が toolchains.toml の Swift を指定する。
       - uses: jdx/mise-action@v5
+        with:
+          cache_key_prefix: mise-${{ hashFiles('toolchains.toml') }}
+      - run: mise run check-swift-toolchain
       - run: mise run lint
 
   # Apple の環境がなくても流せる Swift のパッケージのテスト (Android に近い Linux の Foundation で確かめる)
   swift-linux:
     runs-on: ubuntu-24.04
-    container: swift:6.4.2-noble
     timeout-minutes: 30
+    env:
+      MISE_ENV: linux
     steps:
-      - run: apt-get update -qq && apt-get install -y -qq curl
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v5
+        with:
+          cache_key_prefix: mise-${{ hashFiles('toolchains.toml') }}
+      - run: mise run check-swift-toolchain
       - run: mise run test-swift-shared
 
   # Xcode が要るもの: iOS の部品のテストと、iOS のアプリのビルド
   apple:
     runs-on: xcode-27
     timeout-minutes: 45
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v5
+      - run: mise run select-ci-xcode
       - run: mise run test-swift-apple
       - run: mise run build-ios
 
@@ -65,19 +68,20 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: xcode-27
     timeout-minutes: 75
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
       # Android/mise.toml の道具 (swift.org の Swift・JDK・Android CLI) と、ルートの道具を入れる
       - uses: jdx/mise-action@v5
         with:
           working_directory: Android
+          cache_key_prefix: mise-${{ hashFiles('toolchains.toml') }}
+      - run: mise run select-ci-xcode
+      - run: mise run check-apple-toolchain
       # Swift SDK for Android は大きいので、版ごとに取っておく
       - uses: actions/cache@v6
         with:
           path: ~/Library/org.swift.swiftpm/swift-sdks
-          key: swift-sdk-android-${{ hashFiles('Android/mise.toml') }}
+          key: swift-sdk-android-${{ hashFiles('toolchains.toml') }}
       - uses: actions/cache@v6
         with:
           path: |
@@ -86,7 +90,7 @@ jobs:
           key: gradle-${{ hashFiles('Android/**/*.gradle.kts', 'Android/gradle/**') }}
       - name: Swift SDK for Android を入れる (取っておいたものがあれば使う)
         working-directory: Android
-        run: mise exec -- swift sdk list | grep -q android || mise run install-android-swift-sdk
+        run: mise run install-android-swift-sdk
       - run: mise run build-android
       - name: 振る舞いのテストの道具 (bun) を入れる
         working-directory: BehaviorTests

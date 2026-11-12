@@ -8,17 +8,16 @@
 #   ./gradlew :app:assembleDebug        # 残りの部品 (platform・build-tools・NDK) は Gradle が入れる
 #
 # 版を決めている場所:
-# - Swift と Swift SDK for Android: 下の [vars]
+# - Swift・Swift SDK for Android・iOS の Xcode: ../toolchains.toml
 # - JDK: gradle/gradle-daemon-jvm.properties (mise もここから読む)
 # - Android NDK: app/build.gradle.kts の ndkVersion (Swift SDK for Android は版 27 以上が要る)
 #
 # 複数行のタスクは bash で動かす (mise の既定の sh は、Linux では dash で、set -o pipefail を知らない)
 
 [vars]
-# Swift のツールチェーンと Swift SDK for Android は、同じ版でないと使えない。
-# 版を上げるときは、https://www.swift.org/install の Android の SDK のチェックサムも一緒に変える
-swift = "6.4.2"
-swift_android_sdk_checksum = "4d6ad63ea74becd58e123ff58b1b48c3be5ec0db0dff0ea5abe37ac007dd3233"
+# 共通設定を参照する。コンパイラと Android SDK の版を別々に指定しない。
+swift = "{{ read_toml(path='../toolchains.toml')['swift']['version'] }}"
+swift_android_sdk_checksum = "{{ read_toml(path='../toolchains.toml')['swift']['android_sdk_checksum'] }}"
 
 [tools]
 swift = "{{ vars.swift }}"
@@ -64,7 +63,11 @@ run = '''
 set -euo pipefail
 . scripts/swift-toolchain.sh
 resolve_swift_toolchain "{{ vars.swift }}"
-"$SWIFT_COMMAND" sdk install https://download.swift.org/swift-{{ vars.swift }}-release/android-sdk/swift-{{ vars.swift }}-RELEASE/swift-{{ vars.swift }}-RELEASE_android.artifactbundle.tar.gz --checksum {{ vars.swift_android_sdk_checksum }}
+if "$SWIFT_COMMAND" sdk list | grep -Fxq "swift-{{ vars.swift }}-RELEASE_android"; then
+  echo "Swift SDK for Android {{ vars.swift }} はインストール済みです。"
+else
+  "$SWIFT_COMMAND" sdk install https://download.swift.org/swift-{{ vars.swift }}-release/android-sdk/swift-{{ vars.swift }}-RELEASE/swift-{{ vars.swift }}-RELEASE_android.artifactbundle.tar.gz --checksum {{ vars.swift_android_sdk_checksum }}
+fi
 '''
 
 [tasks.build-jvm-host]

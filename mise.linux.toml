@@ -1,0 +1,4 @@
+# Linux CI は MISE_ENV=linux でこの設定を読み込む。
+# 通常の macOS 開発では Xcode 付属 Swift を使う。
+[tools]
+swift = "{{ vars.swift }}"

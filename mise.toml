@@ -1,5 +1,5 @@
 # リポジトリ全体で使うタスクと、その道具 (ktlint) を置く。
-# Swift の版はここでは決めない (iOS は Xcode の Swift、Android は Android/mise.toml の Swift を使う。どちらにも swift-format が入っている)
+# Swift・Xcode の版は toolchains.toml で管理する。iOS は Xcode、Android・Linux は swift.org のコンパイラを使う。
 #
 #   mise run lint     # Swift と Kotlin のコードの書き方を確かめる (Swift は swift-format・設定は .swift-format、Kotlin は ktlint・設定は .editorconfig)
 #   mise run format   # Swift と Kotlin のコードの書き方を直す
@@ -10,6 +10,25 @@
 [tools]
 # Kotlin のコードの書き方を確かめて直す (設定は .editorconfig)。Swift の swift-format は Swift のツールチェーンに入っているので入れない
 ktlint = "1.8.0"
+
+[vars]
+swift = "{{ read_toml(path='toolchains.toml')['swift']['version'] }}"
+xcode = "{{ read_toml(path='toolchains.toml')['xcode']['version'] }}"
+
+[tasks.select-ci-xcode]
+description = "GitHub Actions の後続ステップで、共通設定の Xcode を使う"
+dir = "{{ config_root }}"
+run = 'echo "DEVELOPER_DIR=/Applications/Xcode_{{ vars.xcode }}.app/Contents/Developer" >> "${GITHUB_ENV:?GitHub Actions の GITHUB_ENV が必要です}"'
+
+[tasks.check-apple-toolchain]
+description = "Xcode の版と、Apple Swift が Android・Linux と同じ系列であることを確認する"
+dir = "{{ config_root }}"
+run = "bash scripts/check-toolchain.sh apple {{ vars.swift }} {{ vars.xcode }}"
+
+[tasks.check-swift-toolchain]
+description = "swift.org のコンパイラが toolchains.toml の指定版と一致することを確認する"
+dir = "{{ config_root }}"
+run = "bash scripts/check-toolchain.sh swift {{ vars.swift }}"
 
 [tasks.lint]
 description = "Swift と Kotlin のコードの書き方を確かめる (直すべきところがあれば止まる)"
@@ -57,11 +76,13 @@ done
 [tasks.test-swift-apple]
 description = "Apple の環境 (Xcode) が要る Swift のパッケージのテスト (iOS の部品)"
 dir = "{{ config_root }}/iOS/RegzaKit"
+depends = ["check-apple-toolchain"]
 run = "swift test"
 
 [tasks.build-ios]
 description = "iOS のアプリとウィジェットをシミュレーター向けにビルドする (署名はしない)"
 dir = "{{ config_root }}"
+depends = ["check-apple-toolchain"]
 shell = "bash -c"
 run = '''
 set -euo pipefail

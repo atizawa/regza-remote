@@ -96,6 +96,7 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     )
     inputs.files(fileTree(androidDir.resolve("RegzaAndroidBridge")) { include("Package.swift", "Sources/**") })
     inputs.file(androidDir.resolve("mise.toml"))
+    inputs.file(androidDir.resolve("../toolchains.toml"))
     inputs.dir(androidDir.resolve("scripts"))
     // 窓口のつなぎを作る道具
     inputs.files(fileTree(androidDir.resolve("ScreenGlue")) { include("Package.swift", "Package.resolved", "Sources/**") })

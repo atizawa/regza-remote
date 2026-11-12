@@ -1,0 +1,10 @@
+# iOS・Android・Linux で使用するツールチェーンの組み合わせ。
+# iOS は Xcode 付属の Apple Swift を使い、下記 Swift と major.minor を揃える。
+# Android・Linux は swift.org のリリース版を完全一致で使う。
+[swift]
+version = "6.4.2"
+# Swift SDK for Android はコンパイラと同じ版。版を上げるときはチェックサムも更新する。
+android_sdk_checksum = "4d6ad63ea74becd58e123ff58b1b48c3be5ec0db0dff0ea5abe37ac007dd3233"
+
+[xcode]
+version = "27.2"
