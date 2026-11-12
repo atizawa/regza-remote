@@ -176,6 +176,15 @@ UI は `ui/screens`（画面）・`ui/components`（共通 UI・state の購読�
 
 Swift の接続コードは、生成する Kotlin の `com.example.regzaremote.bridge`（`Send`・`AppSend`・state の Flow）と、Java の `com.example.regzaremote.core` に分ける。生成結果は `.build/` に置く。変更するときは `ScreenGlue` や swift-java の設定を更新し、生成結果を直接編集しない。
 
+Android の Kotlin の依存方向は、`Tools/KtlintRules` の ktlint カスタムルール `regza:dependency-imports` で検査する。`mise run lint` と `mise run format` はルールのテスト・JAR のビルド後に読み込むため、push・PR の Linux CI でも実行される。既存の Gradle wrapper を使い、Android SDK・Swift の生成済みコードは不要。ktlint の版はルートの `mise.toml` からビルドに渡す。
+
+- `ui` から appservices、保存インターフェース、native の生成・変換ユーティリティ、AppSend、BuildConfig、Swift 実行環境、SharedPreferences・DataStore・暗号化保存への import を禁止する。表示用の core の型・Send・state の購読は利用できる。
+- appservices・bridge から UI への import、design から UI・appservices・bridge・core への import を禁止する。
+- プレビューの生成・保存先・ライブラリ読み込みは `appservices/preview/PreviewAppFactory.kt` に置く。`ui/preview` からはこの Factory のみ利用でき、通常の画面からは参照できない。`SamplePreview.kt` は準備済み App の表示とエラー表示を担当する。
+- 配信 URL の変換は `bridge/StreamURL.kt` が担当し、画面から native のユーティリティクラスを直接呼ばない。
+
+ktlint の構文解析を使って package と import を確認する。別名 import・禁止先のワイルドカード import も検出し、コメントや文字列は対象外。違反時はファイル・行番号・依存先を表示する。自動修正はしない。完全修飾名での直接参照・同一 package 内の参照・型解決・package と配置の一致は検査しない。厳密な依存境界が必要になれば Gradle モジュールによる制約を検討する。
+
 ```kotlin
 rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it, back, send) }
 ```

@@ -9,9 +9,10 @@
 
 [tools]
 # Kotlin のコードの書き方を確かめて直す (設定は .editorconfig)。Swift の swift-format は Swift のツールチェーンに入っているので入れない
-ktlint = "1.8.0"
+ktlint = "{{ vars.ktlint }}"
 
 [vars]
+ktlint = "1.8.0"
 swift = "{{ read_toml(path='toolchains.toml')['swift']['version'] }}"
 xcode = "{{ read_toml(path='toolchains.toml')['xcode']['version'] }}"
 
@@ -31,24 +32,33 @@ dir = "{{ config_root }}"
 run = "bash scripts/check-toolchain.sh swift {{ vars.swift }}"
 
 [tasks.lint]
-description = "Swift と Kotlin のコードの書き方を確かめる (直すべきところがあれば止まる)"
+description = "Swift・Kotlin の書き方と Android の依存方向を確かめる"
+depends = ["build-ktlint-rules"]
 dir = "{{ config_root }}"
 shell = "bash -c"
 run = '''
 set -euo pipefail
 # 道具が作るファイル (Generated/) は対象にしない。.build/ などの Git に入れないものは、Git の一覧に出ないので外れる
 git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format lint --strict --parallel
-git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint --relative
+git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint --relative --ruleset=Tools/KtlintRules/build/libs/regza-ktlint-rules.jar
 '''
+
+[tasks.build-ktlint-rules]
+description = "ktlint の依存方向ルールをビルドし、回帰テストを実行する (Android SDK は不要)"
+dir = "{{ config_root }}"
+run = [
+    "./Android/gradlew -p Tools/KtlintRules -PktlintVersion={{ vars.ktlint }} test jar --console=plain",
+]
 
 [tasks.format]
 description = "Swift と Kotlin のコードの書き方を直す"
+depends = ["build-ktlint-rules"]
 dir = "{{ config_root }}"
 shell = "bash -c"
 run = '''
 set -euo pipefail
 git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format --in-place --parallel
-git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint --format --relative
+git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint --format --relative --ruleset=Tools/KtlintRules/build/libs/regza-ktlint-rules.jar
 '''
 
 [tasks.test-swift]

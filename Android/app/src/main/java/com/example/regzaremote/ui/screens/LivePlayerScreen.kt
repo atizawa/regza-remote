@@ -60,13 +60,13 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.regzaremote.bridge.Send
 import com.example.regzaremote.bridge.livePlayerStates
+import com.example.regzaremote.bridge.streamURLString
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.ChannelItem
 import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.LivePlayerAction
 import com.example.regzaremote.core.LivePlayerPhase
 import com.example.regzaremote.core.LivePlayerState
-import com.example.regzaremote.core.RegzaAndroidBridge
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.Design
 import com.example.regzaremote.ui.components.HeaderIconButton
@@ -141,7 +141,7 @@ private fun Video(player: LivePlayerState, send: Send, modifier: Modifier) {
     Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
         val phase = player.phase
         when (phase.discriminator) {
-            LivePlayerPhase.Discriminator.READY -> HlsPlayer(RegzaAndroidBridge.regzaURLString(phase.asReady.get().url))
+            LivePlayerPhase.Discriminator.READY -> HlsPlayer(streamURLString(phase.asReady.get().url))
 
             LivePlayerPhase.Discriminator.FAILED -> Column(
                 Modifier.padding(Design.outer).verticalScroll(rememberScrollState()),

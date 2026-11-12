@@ -12,17 +12,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.BuildConfig
-import com.example.regzaremote.bridge.AppSend
+import com.example.regzaremote.appservices.preview.PreviewAppFactory
 import com.example.regzaremote.bridge.Send
 import com.example.regzaremote.core.RegzaAndroidApp
-import com.example.regzaremote.core.RegzaAndroidStorage
 import com.example.regzaremote.design.AppTheme
-import java.io.File
-import java.nio.file.Files
-import java.util.Optional
-import java.util.concurrent.ConcurrentHashMap
-import org.swift.swiftkit.core.SwiftLibraries
 
 /**
  * 画面のプレビューの準備。プレビューそのものは、それぞれの画面のファイルの末尾に置く。iOS の開発用の見本・振る舞いのテストと同じ見本の返事 (RegzaSample の SampleTransport) で、
@@ -44,13 +37,7 @@ fun SamplePreview(setUp: (Send) -> Unit = {}, content: @Composable (RegzaAndroid
             val inEditor = LocalInspectionMode.current
             val sample = remember {
                 runCatching {
-                    if (inEditor) MacSwiftLibraries.load()
-                    val app = RegzaAndroidApp.sample(PreviewStorage(), "").get()
-                    val send = AppSend(app)
-                    setUp(send)
-                    // エディタの横のプレビューは、描き直しを待たずに 1 回だけ描くので、送った操作が終わってから描く
-                    if (inEditor) app.contractWaitUntilIdle().get()
-                    app to send
+                    PreviewAppFactory.makeApp(inEditor, setUp)
                 }
             }
             sample.fold(
@@ -70,41 +57,3 @@ const val SAMPLE_CHANNEL = "JP-G00000001"
 
 /** 見本の番組 (SampleTransport の番組表の、1 局目の番組) */
 const val SAMPLE_PROGRAM = 1001L
-
-/** メモリに置くだけの保存先 (プレビューで、アプリの接続情報を書き換えないように) */
-private class PreviewStorage : RegzaAndroidStorage {
-    private val values = mutableMapOf<String, String>()
-    override fun value(key: String): Optional<String> = Optional.ofNullable(values[key])
-    override fun setValue(value: String, key: String) {
-        values[key] = value
-    }
-}
-
-/**
- * エディタの横のプレビューで、Mac 向けにビルドした Swift のライブラリを読み込む。
- *
- * swift-java の Java のクラスは、使われるときにライブラリを名前で探す (java.library.path か、jar の中)。
- * Android Studio のプレビューではどちらにもないので、先に場所を指定して読み込み、swift-java には読み込み済みとして登録する。
- * Android Studio はコードを直すとプレビューのクラスを読み込み直し、同じファイルのライブラリは別の読み込みから使えないので、
- * 読み込むたびに一時フォルダへ写してから読み込む
- */
-private object MacSwiftLibraries {
-    fun load() {
-        check(BuildConfig.MAC_SWIFT_LIBRARIES.isNotEmpty()) { "エディタの横のプレビューは debug のビルドでだけ使えます" }
-        val built = File(BuildConfig.MAC_SWIFT_LIBRARIES)
-        check(built.isDirectory) { "$built がありません。./gradlew :behavior-tests:buildJvmHost で作ってください" }
-        // libRegzaAndroid は同じフォルダの libSwiftJava を使う (@loader_path) ので、両方を同じ一時フォルダに写す
-        val copied = Files.createTempDirectory("regza-preview").toFile().apply { deleteOnExit() }
-        val names = mapOf(SwiftLibraries.LIB_NAME_SWIFT_JAVA to "libSwiftJava.dylib", "RegzaAndroid" to "libRegzaAndroid.dylib")
-
-        @Suppress("UNCHECKED_CAST")
-        val loaded = SwiftLibraries::class.java.getDeclaredField("loadedLibraries")
-            .apply { isAccessible = true }.get(null) as ConcurrentHashMap<String, File>
-        for ((name, file) in names) {
-            val copy = File(copied, file).apply { deleteOnExit() }
-            File(built, file).canonicalFile.copyTo(copy)
-            System.load(copy.path)
-            loaded[name] = copy
-        }
-    }
-}
