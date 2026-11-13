@@ -13,7 +13,7 @@ struct RemoteScreen: View {
             // 実物のリモコンと同じく、電源 → 放送の種類と数字 → 十字キー・色ボタン → 再生 の順に並べる。
             // リモコンは手の感覚で押すので、再生中かどうかでボタンの位置を変えない
             // (再生が始まって並びが変わり、押そうとした場所に別のボタンが来て電源が切れたことがある)
-            VStack(spacing: Design.group) {
+            VStack(spacing: DesignDimensions.spacingGroup) {
                 powerRow
                 numberPanel
                 navigationBand
@@ -22,33 +22,33 @@ struct RemoteScreen: View {
                 }
                 moreSection
             }
-            .padding(Design.outer)
+            .padding(DesignDimensions.spacingOuter)
         }
         .background(RemoteBody.background.ignoresSafeArea())
     }
 
     /// 十字キー・戻るなど・色ボタン。実物のリモコンと同じく、ここだけ端から端まで黒い帯にする
     private var navigationBand: some View {
-        VStack(spacing: Design.item) {
+        VStack(spacing: DesignDimensions.spacingItem) {
             primaryControls
             navigationRow
-            HStack(spacing: Design.item) {
-                ColorKeyButton(key: .blue, color: .blue)
-                ColorKeyButton(key: .red, color: .red)
-                ColorKeyButton(key: .green, color: .green)
-                ColorKeyButton(key: .yellow, color: .yellow)
+            HStack(spacing: DesignDimensions.spacingItem) {
+                ColorKeyButton(key: .blue, color: DesignColors.remoteKeyBlue)
+                ColorKeyButton(key: .red, color: DesignColors.remoteKeyRed)
+                ColorKeyButton(key: .green, color: DesignColors.remoteKeyGreen)
+                ColorKeyButton(key: .yellow, color: DesignColors.remoteKeyYellow)
             }
         }
-        .padding(.vertical, Design.group)
-        .padding(.horizontal, Design.outer)
+        .padding(.vertical, DesignDimensions.spacingGroup)
+        .padding(.horizontal, DesignDimensions.spacingOuter)
         .environment(\.remoteKeyTone, .black)
         .background(RemoteBody.panel)
-        .padding(.horizontal, -Design.outer)
+        .padding(.horizontal, -DesignDimensions.spacingOuter)
     }
 
     /// 電源は誤って押さないよう左端に離し、入力切替・消音と並べる
     private var powerRow: some View {
-        HStack(spacing: Design.item) {
+        HStack(spacing: DesignDimensions.spacingItem) {
             KeyButton(key: .power, isFilled: true)
                 .frame(width: 88)
             Spacer(minLength: 0)
@@ -61,7 +61,7 @@ struct RemoteScreen: View {
 
     /// 音量・十字キー・チャンネル
     private var primaryControls: some View {
-        HStack(alignment: .center, spacing: Design.item) {
+        HStack(alignment: .center, spacing: DesignDimensions.spacingItem) {
             RockerControl(title: "音量", up: .volumeUp, down: .volumeDown)
                 .frame(width: 64)
             DirectionPad(diameter: 196)
@@ -75,7 +75,7 @@ struct RemoteScreen: View {
     }
 
     private var navigationRow: some View {
-        HStack(spacing: Design.item) {
+        HStack(spacing: DesignDimensions.spacingItem) {
             KeyButton(key: .back, showsCaption: true)
             KeyButton(key: .guide, title: "テレビ番組表", showsCaption: true)
             KeyButton(key: .programInfo, title: "番組説明", showsCaption: true)
@@ -85,15 +85,15 @@ struct RemoteScreen: View {
 
     /// 地デジ・BS・CS と 1〜12。テレビのリモコンと同じ 3 列
     private var numberPanel: some View {
-        VStack(spacing: Design.item) {
-            HStack(spacing: Design.item) {
+        VStack(spacing: DesignDimensions.spacingItem) {
+            HStack(spacing: DesignDimensions.spacingItem) {
                 ForEach([RegzaKey.terrestrial, .bs, .cs]) { key in
                     KeyButton(key: key, size: .compact, isSelected: remoteViewModel.state.nowPlayingBand == key.band)
                 }
             }
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: Design.item), count: 3),
-                spacing: Design.item
+                columns: Array(repeating: GridItem(.flexible(), spacing: DesignDimensions.spacingItem), count: 3),
+                spacing: DesignDimensions.spacingItem
             ) {
                 ForEach(RegzaKey.numbers) { key in
                     KeyButton(key: key)
@@ -103,21 +103,21 @@ struct RemoteScreen: View {
     }
 
     private var playbackPanel: some View {
-        VStack(spacing: Design.item) {
-            HStack(spacing: Design.item) {
+        VStack(spacing: DesignDimensions.spacingItem) {
+            HStack(spacing: DesignDimensions.spacingItem) {
                 KeyButton(key: .previousChapter, size: .primary)
                 KeyButton(key: .skipBackward, size: .primary)
                 KeyButton(key: remoteViewModel.state.nowPlaying?.isAdvancing == true ? .pause : .play, size: .primary)
                 KeyButton(key: .skipForward, size: .primary)
                 KeyButton(key: .nextChapter, size: .primary)
             }
-            HStack(spacing: Design.item) {
+            HStack(spacing: DesignDimensions.spacingItem) {
                 KeyButton(key: .rewind)
                 KeyButton(key: .stop)
                 KeyButton(key: .fastForward)
                 KeyButton(key: .record, isDestructive: true)
             }
-            HStack(spacing: Design.item) {
+            HStack(spacing: DesignDimensions.spacingItem) {
                 KeyButton(key: .recordedList, size: .compact, showsIcon: false)
                 KeyButton(key: .timeShift, size: .compact, showsIcon: false)
                 KeyButton(key: .jumpToStart, size: .compact, showsIcon: false)
@@ -126,7 +126,7 @@ struct RemoteScreen: View {
     }
 
     private var moreSection: some View {
-        VStack(spacing: Design.item) {
+        VStack(spacing: DesignDimensions.spacingItem) {
             Button {
                 withAnimation(.snappy) { isShowingMore.toggle() }
             } label: {
@@ -144,8 +144,8 @@ struct RemoteScreen: View {
             .buttonStyle(.plain)
             if isShowingMore {
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: Design.item), count: 3),
-                    spacing: Design.item
+                    columns: Array(repeating: GridItem(.flexible(), spacing: DesignDimensions.spacingItem), count: 3),
+                    spacing: DesignDimensions.spacingItem
                 ) {
                     ForEach(Self.otherKeys) { key in
                         KeyButton(key: key, size: .compact, showsIcon: false)

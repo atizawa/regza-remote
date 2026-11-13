@@ -39,7 +39,7 @@ import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.ProgramListAction
 import com.example.regzaremote.core.ProgramListState
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
@@ -67,11 +67,11 @@ fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Send)
 
             days != null -> LazyColumn(
                 contentPadding = PaddingValues(
-                    start = Design.outer,
-                    top = Design.outer,
-                    end = Design.outer,
+                    start = DesignDimensions.spacingOuter,
+                    top = DesignDimensions.spacingOuter,
+                    end = DesignDimensions.spacingOuter,
                     bottom =
-                        Design.outer + LocalMiniPlayerInset.current,
+                        DesignDimensions.spacingOuter + LocalMiniPlayerInset.current,
                 ),
             ) {
                 days.forEach { day ->
@@ -83,7 +83,7 @@ fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Send)
                             if (index < programs.size - 1) RowDivider()
                         }
                     }
-                    item(key = "space-${day.label}") { Box(Modifier.padding(bottom = Design.item)) }
+                    item(key = "space-${day.label}") { Box(Modifier.padding(bottom = DesignDimensions.spacingItem)) }
                 }
             }
 
@@ -102,7 +102,7 @@ private fun ProgramRow(program: ProgramItem, send: Send) {
         Modifier
             .fillMaxWidth()
             .clickable { send(AppAction.push(AppRoute.programDetail(program.id, program.channelCode))) }
-            .padding(start = Design.outer, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            .padding(start = DesignDimensions.spacingOuter, end = 8.dp, top = 10.dp, bottom = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

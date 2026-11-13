@@ -13,7 +13,7 @@ struct NowPlayingScreen: View {
         let state = viewModel.state
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Design.group) {
+                VStack(alignment: .leading, spacing: DesignDimensions.spacingGroup) {
                     NowPlayingCard()
                     if let description = state.description {
                         Text(description)
@@ -31,10 +31,11 @@ struct NowPlayingScreen: View {
                         actionButton("この番組を最初から見る", systemImage: "backward.end.alt") { viewModel.send(.startOver) }
                     }
                     LiveActivityToggle()
-                        .padding(Design.outer)
-                        .background(Surface.button, in: RoundedRectangle(cornerRadius: Design.cornerRadius, style: .continuous))
+                        .padding(DesignDimensions.spacingOuter)
+                        .background(
+                            Surface.button, in: RoundedRectangle(cornerRadius: DesignDimensions.shapeCornerRadius, style: .continuous))
                 }
-                .padding(Design.outer)
+                .padding(DesignDimensions.spacingOuter)
             }
             .background(Surface.background)
             .navigationTitle(state.title)
@@ -64,7 +65,7 @@ struct NowPlayingScreen: View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
                 .font(.body.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
+                .frame(maxWidth: .infinity, minHeight: DesignDimensions.buttonRegularHeight)
         }
         .buttonStyle(RemoteButtonStyle())
     }

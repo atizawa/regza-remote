@@ -45,7 +45,7 @@ import com.example.regzaremote.core.ReservationItem
 import com.example.regzaremote.core.ReservationListAction
 import com.example.regzaremote.core.ReservationListState
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
@@ -105,11 +105,11 @@ fun ReservationListScreen(list: ReservationListState, send: Send) {
                     LazyColumn(
                         Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = Design.outer,
-                            top = Design.outer,
-                            end = Design.outer,
+                            start = DesignDimensions.spacingOuter,
+                            top = DesignDimensions.spacingOuter,
+                            end = DesignDimensions.spacingOuter,
                             bottom =
-                                Design.outer + LocalMiniPlayerInset.current,
+                                DesignDimensions.spacingOuter + LocalMiniPlayerInset.current,
                         ),
                     ) {
                         list.cancelError.orElse(null)?.let { error ->
@@ -161,8 +161,8 @@ private fun LazyListScope.section(header: String, footer: String?, items: List<R
             if (index < items.size - 1) Box(Modifier.background(AppTheme.surface)) { RowDivider() }
         }
     }
-    footer?.let { item(key = "footer-$header") { Note(it, Modifier.padding(horizontal = Design.outer, vertical = 6.dp)) } }
-    item(key = "space-$header") { Box(Modifier.padding(bottom = Design.group)) }
+    footer?.let { item(key = "footer-$header") { Note(it, Modifier.padding(horizontal = DesignDimensions.spacingOuter, vertical = 6.dp)) } }
+    item(key = "space-$header") { Box(Modifier.padding(bottom = DesignDimensions.spacingGroup)) }
 }
 
 /** 左へスワイプすると、取り消すか確かめる */
@@ -181,7 +181,7 @@ private fun SwipeToCancel(item: ReservationItem, onCancel: (ReservationItem) -> 
         enableDismissFromStartToEnd = false,
         backgroundContent = {
             Box(
-                Modifier.fillMaxSize().background(AppTheme.red).padding(horizontal = Design.outer),
+                Modifier.fillMaxSize().background(AppTheme.red).padding(horizontal = DesignDimensions.spacingOuter),
                 contentAlignment = Alignment.CenterEnd,
             ) {
                 Text("取り消す", color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -195,7 +195,7 @@ private fun SwipeToCancel(item: ReservationItem, onCancel: (ReservationItem) -> 
 @Composable
 private fun ReservationRow(item: ReservationItem) {
     Column(
-        Modifier.fillMaxWidth().background(AppTheme.surface).padding(horizontal = Design.outer, vertical = 10.dp),
+        Modifier.fillMaxWidth().background(AppTheme.surface).padding(horizontal = DesignDimensions.spacingOuter, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(

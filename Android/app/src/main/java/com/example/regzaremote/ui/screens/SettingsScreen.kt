@@ -58,7 +58,7 @@ import com.example.regzaremote.core.SettingsPage
 import com.example.regzaremote.core.SettingsState
 import com.example.regzaremote.core.TVSetupAction
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.ui.components.FormSection
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.Note
@@ -339,8 +339,10 @@ private fun SettingsFrame(header: @Composable () -> Unit, content: @Composable C
     Column(Modifier.fillMaxSize().safeDrawingPadding()) {
         header()
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Design.outer).padding(bottom = Design.group),
-            verticalArrangement = Arrangement.spacedBy(Design.group),
+            Modifier.verticalScroll(
+                rememberScrollState(),
+            ).padding(horizontal = DesignDimensions.spacingOuter).padding(bottom = DesignDimensions.spacingGroup),
+            verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingGroup),
             content = content,
         )
     }
@@ -354,7 +356,7 @@ private fun FormRow(onClick: (() -> Unit)? = null, content: @Composable RowScope
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = Design.outer, vertical = 10.dp),
+            .padding(horizontal = DesignDimensions.spacingOuter, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
@@ -396,7 +398,7 @@ private fun MessageRow(text: String, color: Color? = null) {
         text,
         style = MaterialTheme.typography.bodySmall,
         color = color ?: MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = Design.outer, vertical = 10.dp),
+        modifier = Modifier.padding(horizontal = DesignDimensions.spacingOuter, vertical = 10.dp),
     )
 }
 

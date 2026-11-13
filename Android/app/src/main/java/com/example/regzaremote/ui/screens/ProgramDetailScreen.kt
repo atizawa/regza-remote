@@ -48,7 +48,7 @@ import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.ProgramDetailAction
 import com.example.regzaremote.core.ProgramDetailState
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RecordIcon
@@ -66,8 +66,10 @@ fun ProgramDetailScreen(detail: ProgramDetailState, onBack: (() -> Unit)?, send:
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("番組の詳細", onBack)
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(Design.outer).padding(bottom = LocalMiniPlayerInset.current),
-            verticalArrangement = Arrangement.spacedBy(Design.group),
+            Modifier.verticalScroll(
+                rememberScrollState(),
+            ).padding(DesignDimensions.spacingOuter).padding(bottom = LocalMiniPlayerInset.current),
+            verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingGroup),
         ) {
             DetailHeader(detail)
             DetailActions(detail, send)
@@ -139,8 +141,8 @@ private fun DetailHeader(detail: ProgramDetailState) {
 /** 主な操作。見る・切り替えは緑、録画は赤で塗る */
 @Composable
 private fun DetailActions(detail: ProgramDetailState, send: Send) {
-    Column(verticalArrangement = Arrangement.spacedBy(Design.item)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(Design.item)) {
+    Column(verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
             if (detail.isCanTune) {
                 ActionButton(
                     "切り替えて見る",
@@ -237,8 +239,8 @@ private fun RowScope.ActionButton(
     Row(
         Modifier
             .weight(1f)
-            .heightIn(min = Design.regularHeight)
-            .background(color, RoundedCornerShape(Design.cornerRadius))
+            .heightIn(min = DesignDimensions.buttonRegularHeight)
+            .background(color, RoundedCornerShape(DesignDimensions.shapeCornerRadius))
             .clickable(enabled = enabled, onClick = onClick),
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,

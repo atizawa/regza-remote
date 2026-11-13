@@ -37,7 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 
 /**
  * タブの画面の下に重ねて浮かせているミニプレーヤーの高さ。一覧の最後がミニプレーヤーに隠れないよう、
@@ -124,8 +124,11 @@ fun FormSection(
 ) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         header?.let { SectionHeader(it) }
-        Column(Modifier.fillMaxWidth().background(AppTheme.surface, RoundedCornerShape(Design.cornerRadius)), content = content)
-        footer?.let { Note(it, Modifier.padding(horizontal = Design.outer)) }
+        Column(
+            Modifier.fillMaxWidth().background(AppTheme.surface, RoundedCornerShape(DesignDimensions.shapeCornerRadius)),
+            content = content,
+        )
+        footer?.let { Note(it, Modifier.padding(horizontal = DesignDimensions.spacingOuter)) }
     }
 }
 
@@ -137,21 +140,21 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(horizontal = Design.outer),
+        modifier = modifier.padding(horizontal = DesignDimensions.spacingOuter),
     )
 }
 
 /** まとまりの中の行の間の線。左端は行の文字にそろえる */
 @Composable
 fun RowDivider() {
-    HorizontalDivider(Modifier.padding(start = Design.outer), thickness = 0.5.dp, color = AppTheme.separator)
+    HorizontalDivider(Modifier.padding(start = DesignDimensions.spacingOuter), thickness = 0.5.dp, color = AppTheme.separator)
 }
 
 /**
  * 長い一覧 (LazyColumn) で、行ごとにまとまりの形を作る。最初と最後の行だけ角を丸める
  */
 fun sectionRowShape(index: Int, count: Int): Shape {
-    val radius = Design.cornerRadius
+    val radius = DesignDimensions.shapeCornerRadius
     val top = if (index == 0) radius else 0.dp
     val bottom = if (index == count - 1) radius else 0.dp
     return RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)

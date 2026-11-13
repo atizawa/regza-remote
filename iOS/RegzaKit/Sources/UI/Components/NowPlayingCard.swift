@@ -27,12 +27,12 @@ struct NowPlayingCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Design.outer)
+        .padding(DesignDimensions.spacingOuter)
         .background {
-            RoundedRectangle(cornerRadius: Design.cornerRadius + 4, style: .continuous)
+            RoundedRectangle(cornerRadius: DesignDimensions.shapeCornerRadius + 4, style: .continuous)
                 .fill(Surface.button)
                 .overlay {
-                    RoundedRectangle(cornerRadius: Design.cornerRadius + 4, style: .continuous)
+                    RoundedRectangle(cornerRadius: DesignDimensions.shapeCornerRadius + 4, style: .continuous)
                         .stroke(Color(.separator).opacity(0.5), lineWidth: 0.5)
                 }
         }

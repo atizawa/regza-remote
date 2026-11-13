@@ -48,7 +48,7 @@ import com.example.regzaremote.core.GuideSearchConditionChip
 import com.example.regzaremote.core.GuideSearchState
 import com.example.regzaremote.core.SearchResultItem
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
@@ -74,7 +74,7 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
             onValueChange = { send(GuideSearchAction.setText(it)) },
             label = "番組名・出演者・「明日の夜のドラマ」",
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Design.outer).focusRequester(focus),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DesignDimensions.spacingOuter).focusRequester(focus),
         )
         if (search.conditions.isNotEmpty()) {
             Column(Modifier.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -86,7 +86,7 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
                     color = AppTheme.accent,
                     modifier = Modifier.clickable {
                         send(GuideSearchAction.searchLiterally())
-                    }.padding(horizontal = Design.outer, vertical = 4.dp),
+                    }.padding(horizontal = DesignDimensions.spacingOuter, vertical = 4.dp),
                 )
             }
         }
@@ -109,7 +109,11 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
             else -> LazyColumn(contentPadding = PaddingValues(bottom = LocalMiniPlayerInset.current)) {
                 items(results.toList(), key = { it.program.id }) { row ->
                     SearchResultRow(row, send)
-                    HorizontalDivider(Modifier.padding(start = Design.outer), thickness = 0.5.dp, color = AppTheme.separator)
+                    HorizontalDivider(
+                        Modifier.padding(start = DesignDimensions.spacingOuter),
+                        thickness = 0.5.dp,
+                        color = AppTheme.separator,
+                    )
                 }
             }
         }
@@ -120,7 +124,7 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
 @Composable
 private fun ConditionChips(conditions: Array<GuideSearchConditionChip>, send: Send) {
     Row(
-        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Design.outer),
+        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = DesignDimensions.spacingOuter),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -155,7 +159,7 @@ private fun SearchResultRow(row: SearchResultItem, send: Send) {
             .fillMaxWidth()
             .testTag("search.result.${program.id}")
             .clickable { send(AppAction.push(AppRoute.programDetail(program.id, program.channelCode))) }
-            .padding(horizontal = Design.outer, vertical = 10.dp),
+            .padding(horizontal = DesignDimensions.spacingOuter, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {

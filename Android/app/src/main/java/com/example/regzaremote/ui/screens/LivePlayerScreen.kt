@@ -68,7 +68,7 @@ import com.example.regzaremote.core.LivePlayerAction
 import com.example.regzaremote.core.LivePlayerPhase
 import com.example.regzaremote.core.LivePlayerState
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.ProminentButton
@@ -110,8 +110,8 @@ fun LivePlayerScreen(player: LivePlayerState, send: Send) {
                 )
                 Video(player, send, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
                 Column(
-                    Modifier.verticalScroll(rememberScrollState()).padding(vertical = Design.outer),
-                    verticalArrangement = Arrangement.spacedBy(Design.group),
+                    Modifier.verticalScroll(rememberScrollState()).padding(vertical = DesignDimensions.spacingOuter),
+                    verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingGroup),
                 ) {
                     ProgramInfo(player)
                     ChannelPicker(player, send)
@@ -144,7 +144,7 @@ private fun Video(player: LivePlayerState, send: Send, modifier: Modifier) {
             LivePlayerPhase.Discriminator.READY -> HlsPlayer(streamURLString(phase.asReady.get().url))
 
             LivePlayerPhase.Discriminator.FAILED -> Column(
-                Modifier.padding(Design.outer).verticalScroll(rememberScrollState()),
+                Modifier.padding(DesignDimensions.spacingOuter).verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -170,7 +170,7 @@ private fun Video(player: LivePlayerState, send: Send, modifier: Modifier) {
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = Design.outer),
+                    modifier = Modifier.padding(horizontal = DesignDimensions.spacingOuter),
                 )
             }
         }
@@ -274,7 +274,7 @@ private fun PlayPauseButton(isPlaying: Boolean, modifier: Modifier, onClick: () 
 @Composable
 private fun ProgramInfo(player: LivePlayerState) {
     val program = player.program.orElse(null)
-    Column(Modifier.padding(horizontal = Design.outer), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.padding(horizontal = DesignDimensions.spacingOuter), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             player.channelName + if (program == null) "" else " · 放送中",
             style = MaterialTheme.typography.titleSmall,
@@ -322,7 +322,7 @@ private fun ChannelPicker(player: LivePlayerState, send: Send) {
 @Composable
 private fun ChannelRow(row: ChannelItem, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = Design.outer, vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = DesignDimensions.spacingOuter, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

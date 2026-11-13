@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 
 /** アプリの色 (iOS 版の AppTheme と同じ)。ダークに固定し、ボタンや選択中の印は明るめの緑にする */
 object AppTheme {
-    val accent = Color(0xFF1D866F)
+    val accent = DesignColors.brandAccent
 
     /** iOS の systemGroupedBackground・secondarySystemGroupedBackground (ダーク) に合わせた面の色 */
     val background = Color.Black

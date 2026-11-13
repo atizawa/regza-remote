@@ -72,7 +72,7 @@ dir = "{{ config_root }}"
 run = "swift run --package-path Tools/GenerateMocks -c release GenerateMocks"
 
 [tasks.generate-design-tokens]
-description = "共通 JSON から iOS・Android の余白・サイズを生成する"
+description = "共通 JSON から iOS・Android の余白・サイズ・配色を生成する"
 dir = "{{ config_root }}/Design"
 run = "mise run generate"
 

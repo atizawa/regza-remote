@@ -47,7 +47,7 @@ import com.example.regzaremote.core.NowPlayingState
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.ui.components.Note
 import java.time.Instant
 import java.time.ZoneId
@@ -74,14 +74,14 @@ fun NowPlayingBar(state: RemoteState, send: Send, modifier: Modifier = Modifier)
     Row(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = Design.outer, vertical = 8.dp)
+            .padding(horizontal = DesignDimensions.spacingOuter, vertical = 8.dp)
             .height(miniPlayerHeight - 16.dp)
             // 下の画面から浮いて見えるよう、影を付ける
             .shadow(8.dp, RoundedCornerShape(50))
             .background(AppTheme.surface, RoundedCornerShape(50))
             .border(0.5.dp, AppTheme.separator, RoundedCornerShape(50))
             .clickable { send(AppAction.showNowPlaying()) }
-            .padding(horizontal = Design.outer),
+            .padding(horizontal = DesignDimensions.spacingOuter),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -148,8 +148,10 @@ fun NowPlayingScreen(state: RemoteState, detail: NowPlayingState, send: Send) {
     LaunchedEffect(Unit) { send(NowPlayingAction.appear()) }
     ModalBottomSheet(onDismissRequest = { send(AppAction.closeNowPlaying()) }, containerColor = AppTheme.background) {
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Design.outer).padding(bottom = Design.group),
-            verticalArrangement = Arrangement.spacedBy(Design.group),
+            Modifier.verticalScroll(
+                rememberScrollState(),
+            ).padding(horizontal = DesignDimensions.spacingOuter).padding(bottom = DesignDimensions.spacingGroup),
+            verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingGroup),
         ) {
             Text(
                 detail.title,
@@ -184,8 +186,8 @@ private fun SheetButton(title: String, onClick: () -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = Design.regularHeight)
-            .background(AppTheme.surface, RoundedCornerShape(Design.cornerRadius))
+            .heightIn(min = DesignDimensions.buttonRegularHeight)
+            .background(AppTheme.surface, RoundedCornerShape(DesignDimensions.shapeCornerRadius))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -201,8 +203,8 @@ private fun NowPlayingCard(state: RemoteState, send: Send) {
     Column(
         Modifier
             .fillMaxWidth()
-            .background(AppTheme.surface, RoundedCornerShape(Design.cornerRadius + 4.dp))
-            .padding(Design.outer),
+            .background(AppTheme.surface, RoundedCornerShape(DesignDimensions.shapeCornerRadius + 4.dp))
+            .padding(DesignDimensions.spacingOuter),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         when {

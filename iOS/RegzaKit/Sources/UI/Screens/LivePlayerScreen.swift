@@ -33,11 +33,11 @@ struct LivePlayerScreen: View {
                         video
                             .aspectRatio(16 / 9, contentMode: .fit)
                         ScrollView {
-                            VStack(alignment: .leading, spacing: Design.group) {
+                            VStack(alignment: .leading, spacing: DesignDimensions.spacingGroup) {
                                 ProgramInfo(viewModel: viewModel)
                                 ChannelPicker(viewModel: viewModel)
                             }
-                            .padding(.vertical, Design.outer)
+                            .padding(.vertical, DesignDimensions.spacingOuter)
                         }
                     }
                     .background(Surface.background.ignoresSafeArea())
@@ -150,7 +150,7 @@ private struct ProgramInfo: View {
                     }
                 }
             }
-            .padding(.horizontal, Design.outer)
+            .padding(.horizontal, DesignDimensions.spacingOuter)
         }
     }
 }
@@ -190,12 +190,12 @@ private struct ChannelPicker: View {
                                 .accessibilityLabel("再生中")
                         }
                     }
-                    .padding(.horizontal, Design.outer)
+                    .padding(.horizontal, DesignDimensions.spacingOuter)
                     .padding(.vertical, 10)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                Divider().padding(.leading, Design.outer)
+                Divider().padding(.leading, DesignDimensions.spacingOuter)
             }
         }
     }

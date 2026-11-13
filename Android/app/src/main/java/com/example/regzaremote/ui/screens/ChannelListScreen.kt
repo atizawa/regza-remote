@@ -49,7 +49,7 @@ import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.ChannelListState
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.Loading
@@ -87,11 +87,11 @@ fun ChannelListScreen(state: ChannelListState, send: Send) {
                 val rows = state.rows.toList()
                 LazyColumn(
                     contentPadding = PaddingValues(
-                        start = Design.outer,
-                        top = Design.outer,
-                        end = Design.outer,
+                        start = DesignDimensions.spacingOuter,
+                        top = DesignDimensions.spacingOuter,
+                        end = DesignDimensions.spacingOuter,
                         bottom =
-                            Design.outer + LocalMiniPlayerInset.current,
+                            DesignDimensions.spacingOuter + LocalMiniPlayerInset.current,
                     ),
                 ) {
                     state.tuneError.orElse(null)?.let { error ->
@@ -130,7 +130,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
                     onClick = { send(ChannelListAction.tune(row.code)) },
                     onLongClick = { isShowingMenu = true },
                 )
-                .padding(start = Design.outer, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                .padding(start = DesignDimensions.spacingOuter, end = 4.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -206,7 +206,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
 @Composable
 fun BandPicker(bands: Array<BroadcastBand>, band: BroadcastBand?, send: Send) {
     if (bands.size <= 1) return
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = Design.outer, vertical = 8.dp)) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = DesignDimensions.spacingOuter, vertical = 8.dp)) {
         bands.forEachIndexed { index, item ->
             SegmentedButton(
                 // Swift の値なので、同じ種類かは rawValue で比べる

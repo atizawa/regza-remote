@@ -380,7 +380,7 @@ private struct DayPicker: View {
             HStack(spacing: 8) {
                 ForEach(days) { chip($0) }
             }
-            .padding(.horizontal, Design.outer)
+            .padding(.horizontal, DesignDimensions.spacingOuter)
             .padding(.bottom, 8)
         }
     }

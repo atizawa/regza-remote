@@ -46,7 +46,7 @@ import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.GuideGridState
 import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.Loading
@@ -98,7 +98,7 @@ fun GuideGridScreen(guide: GuideGridState, send: Send) {
 @Composable
 private fun DayPicker(guide: GuideGridState, send: Send) {
     Row(
-        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Design.outer).padding(bottom = 8.dp),
+        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = DesignDimensions.spacingOuter).padding(bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         guide.days.forEachIndexed { index, day ->

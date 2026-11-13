@@ -66,7 +66,9 @@ import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.Design
+import com.example.regzaremote.design.DesignColors
+import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.design.RemoteBody
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.ScreenHeader
@@ -97,11 +99,13 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
             }
         }
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(Design.outer).padding(bottom = LocalMiniPlayerInset.current),
-            verticalArrangement = Arrangement.spacedBy(Design.group),
+            Modifier.verticalScroll(
+                rememberScrollState(),
+            ).padding(DesignDimensions.spacingOuter).padding(bottom = LocalMiniPlayerInset.current),
+            verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingGroup),
         ) {
             // 電源は誤って押さないよう左端に離し、入力切替・消音と並べる
-            Row(horizontalArrangement = Arrangement.spacedBy(Design.item), modifier = Modifier.fillMaxWidth()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem), modifier = Modifier.fillMaxWidth()) {
                 KeyButton(Keys.power, press, Modifier.width(88.dp), isFilled = true)
                 Spacer(Modifier.weight(1f))
                 KeyButton(Keys.input, press, Modifier.width(88.dp))
@@ -109,7 +113,7 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
             }
 
             // 地デジ・BS・CS と 1〜12。テレビのリモコンと同じ 3 列。いま見ている放送の種類は緑にする
-            Column(verticalArrangement = Arrangement.spacedBy(Design.item)) {
+            Column(verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
                 KeyRow {
                     listOf(Keys.terrestrial to "terrestrial", Keys.bs to "bs", Keys.cs to "cs").forEach { (key, name) ->
                         KeyButton(key, press, Modifier.weight(1f), size = ButtonSize.Compact, isSelected = band == name)
@@ -155,7 +159,7 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
             }
 
             // まれに使うキーは畳んでおく
-            Column(verticalArrangement = Arrangement.spacedBy(Design.item)) {
+            Column(verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
                 Row(
                     Modifier.fillMaxWidth().clickable { isShowingMore = !isShowingMore }.padding(horizontal = 4.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -175,7 +179,7 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
                     )
                 }
                 AnimatedVisibility(isShowingMore) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Design.item)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
                         Keys.others.chunked(3).forEach { row ->
                             KeyRow { row.forEach { KeyButton(it, press, Modifier.weight(1f), size = ButtonSize.Compact) } }
                         }
@@ -192,13 +196,13 @@ private fun NavigationBand(press: (RegzaKey) -> Unit) {
     Column(
         Modifier
             // 外側の余白を打ち消して、画面の端まで帯を伸ばす
-            .layoutFullWidth(Design.outer)
+            .layoutFullWidth(DesignDimensions.spacingOuter)
             .background(RemoteBody.panel)
-            .padding(vertical = Design.group, horizontal = Design.outer),
-        verticalArrangement = Arrangement.spacedBy(Design.item),
+            .padding(vertical = DesignDimensions.spacingGroup, horizontal = DesignDimensions.spacingOuter),
+        verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem),
     ) {
         // 音量・十字キー・チャンネル
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Design.item)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
             Rocker("音量", Keys.volumeUp, "+", Keys.volumeDown, "−", press, Modifier.width(64.dp))
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { DirectionPad(press, 196.dp) }
             Rocker("CH", Keys.channelUp, null, Keys.channelDown, null, press, Modifier.width(64.dp))
@@ -209,10 +213,10 @@ private fun NavigationBand(press: (RegzaKey) -> Unit) {
             }
         }
         KeyRow {
-            ColorKey(Keys.blue, Color(0xFF0A84FF), press)
-            ColorKey(Keys.red, Color(0xFFFF3B30), press)
-            ColorKey(Keys.green, Color(0xFF34C759), press)
-            ColorKey(Keys.yellow, Color(0xFFFFCC00), press)
+            ColorKey(Keys.blue, DesignColors.remoteKeyBlue, press)
+            ColorKey(Keys.red, DesignColors.remoteKeyRed, press)
+            ColorKey(Keys.green, DesignColors.remoteKeyGreen, press)
+            ColorKey(Keys.yellow, DesignColors.remoteKeyYellow, press)
         }
     }
 }
@@ -227,7 +231,7 @@ private fun Modifier.layoutFullWidth(outer: Dp): Modifier = layout { measurable,
 /** 見出し付きのまとまり */
 @Composable
 private fun RemoteSection(title: String, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(Design.item)) {
+    Column(verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
         Text(
             title,
             style = MaterialTheme.typography.labelLarge,
@@ -241,15 +245,15 @@ private fun RemoteSection(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun KeyRow(content: @Composable RowScope.() -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Design.item), modifier = Modifier.fillMaxWidth(), content = content)
+    Row(horizontalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem), modifier = Modifier.fillMaxWidth(), content = content)
 }
 
 private enum class ButtonSize(val height: Dp) {
     Primary(
-        Design.primaryHeight,
+        DesignDimensions.buttonPrimaryHeight,
     ),
-    Regular(Design.regularHeight),
-    Compact(Design.compactHeight),
+    Regular(DesignDimensions.buttonRegularHeight),
+    Compact(DesignDimensions.buttonCompactHeight),
 }
 
 /** ボタンが置かれている場所。グレーの部分はグレーのボタンに黒い文字、黒い帯の部分は黒いボタンに白い文字 */
@@ -281,8 +285,8 @@ private fun KeyButton(
     }
     val foreground = when {
         isFilled || isSelected -> Color.White
-        tone == KeyTone.Gray -> if (isDestructive) Color(0xFFBF1419) else Color.Black
-        else -> if (isDestructive) Color(0xFFFF4545) else Color.White
+        tone == KeyTone.Gray -> if (isDestructive) DesignColors.remoteDestructiveOnGray else Color.Black
+        else -> if (isDestructive) DesignColors.remoteDestructiveOnBlack else Color.White
     }
     val style = when {
         isNumber -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black)
@@ -296,7 +300,7 @@ private fun KeyButton(
     }
     PressableKey(
         onClick = { press(key) },
-        shape = RoundedCornerShape(Design.cornerRadius),
+        shape = RoundedCornerShape(DesignDimensions.shapeCornerRadius),
         color = background,
         modifier = modifier.heightIn(min = size.height),
     ) {
@@ -306,7 +310,7 @@ private fun KeyButton(
             style = style.copy(color = foreground, textAlign = TextAlign.Center),
             maxLines = 1,
             autoSize = TextAutoSize.StepBased(minFontSize = style.fontSize * 0.6f, maxFontSize = style.fontSize),
-            modifier = Modifier.padding(horizontal = 6.dp),
+            modifier = Modifier.padding(horizontal = DesignDimensions.remoteControlKeyInset),
         )
     }
 }
@@ -324,8 +328,8 @@ private fun PressableKey(onClick: () -> Unit, shape: Shape, color: Color, modifi
             .background(color, shape)
             .background(if (isPressed) Color.White.copy(alpha = 0.08f) else Color.Transparent, shape)
             // ボタンの上側のごく薄い光沢と縁
-            .background(verticalGradient(Color.White.copy(alpha = 0.12f), Color.Transparent), shape)
-            .border(BorderStroke(0.5.dp, RemoteBody.edge), shape)
+            .background(verticalGradient(DesignColors.remoteHighlight, Color.Transparent), shape)
+            .border(BorderStroke(DesignDimensions.remoteControlBorderWidth, RemoteBody.edge), shape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { content() }
@@ -336,11 +340,15 @@ private fun PressableKey(onClick: () -> Unit, shape: Shape, color: Color, modifi
 private fun RowScope.ColorKey(key: RegzaKey, color: Color, press: (RegzaKey) -> Unit) {
     PressableKey(
         onClick = { press(key) },
-        shape = RoundedCornerShape(Design.cornerRadius),
+        shape = RoundedCornerShape(DesignDimensions.shapeCornerRadius),
         color = RemoteBody.key,
-        modifier = Modifier.weight(1f).height(Design.compactHeight),
+        modifier = Modifier.weight(1f).height(DesignDimensions.buttonCompactHeight),
     ) {
-        Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(8.dp).background(color, CircleShape))
+        Box(
+            Modifier.fillMaxWidth().padding(
+                horizontal = DesignDimensions.remoteControlColorKeyInset,
+            ).height(DesignDimensions.remoteControlColorKeyHeight).background(color, CircleShape),
+        )
     }
 }
 
@@ -359,8 +367,8 @@ private fun Rocker(
     Column(
         modifier
             .background(RemoteBody.key, shape)
-            .background(verticalGradient(Color.White.copy(alpha = 0.12f), Color.Transparent), shape)
-            .border(0.5.dp, RemoteBody.edge, shape),
+            .background(verticalGradient(DesignColors.remoteHighlight, Color.Transparent), shape)
+            .border(DesignDimensions.remoteControlBorderWidth, RemoteBody.edge, shape),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         RockerHalf(up, upText, Icons.Filled.KeyboardArrowUp, press)
@@ -372,7 +380,7 @@ private fun Rocker(
 @Composable
 private fun RockerHalf(key: RegzaKey, text: String?, icon: ImageVector, press: (RegzaKey) -> Unit) {
     Box(
-        Modifier.fillMaxWidth().height(72.dp).clickable { press(key) },
+        Modifier.fillMaxWidth().height(DesignDimensions.remoteControlRockerHeight).clickable { press(key) },
         contentAlignment = Alignment.Center,
     ) {
         if (text != null) {
@@ -392,7 +400,9 @@ private fun RockerHalf(key: RegzaKey, text: String?, icon: ImageVector, press: (
 @Composable
 private fun DirectionPad(press: (RegzaKey) -> Unit, diameter: Dp) {
     Box(
-        Modifier.size(diameter).background(RemoteBody.ring, CircleShape).border(0.5.dp, RemoteBody.edge, CircleShape),
+        Modifier.size(
+            diameter,
+        ).background(RemoteBody.ring, CircleShape).border(DesignDimensions.remoteControlBorderWidth, RemoteBody.edge, CircleShape),
     ) {
         val arrow = diameter * 0.3f
         Arrow(Keys.up, Icons.Filled.KeyboardArrowUp, press, Modifier.align(Alignment.TopCenter).size(arrow))
@@ -404,8 +414,8 @@ private fun DirectionPad(press: (RegzaKey) -> Unit, diameter: Dp) {
                 .align(Alignment.Center)
                 .size(diameter * 0.38f)
                 .shadow(3.dp, CircleShape)
-                .background(verticalGradient(Color(0xFF9E9EA3), Color(0xFF85858A)), CircleShape)
-                .border(0.5.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                .background(RemoteBody.center, CircleShape)
+                .border(DesignDimensions.remoteControlBorderWidth, Color.White.copy(alpha = 0.25f), CircleShape)
                 .clickable { press(Keys.enter) },
             contentAlignment = Alignment.Center,
         ) {
@@ -424,32 +434,6 @@ private fun Arrow(key: RegzaKey, icon: ImageVector, press: (RegzaKey) -> Unit, m
     Box(modifier.clickable { press(key) }, contentAlignment = Alignment.Center) {
         Icon(icon, contentDescription = key.label, tint = Color.White, modifier = Modifier.size(32.dp))
     }
-}
-
-/**
- * リモコンのタブの配色 (iOS 版の RemoteBody と同じ)。テレビ付属のリモコンに合わせる。
- * 本体はグレーで、十字キーのあたりだけ黒い帯になっている
- */
-private object RemoteBody {
-    /** 本体のグレー (#ADACB2 付近) */
-    val background = verticalGradient(Color(0xFFB0AFB4), Color(0xFFA2A1A6))
-
-    /** グレーの部分のボタン (本体より少し明るいグレー) */
-    val grayKey = Color(0xFFCCCBCF)
-
-    /** 十字キーのあたりの黒い帯 (#33323A 付近) */
-    val panel = Color(0xFF33323A)
-
-    /** 黒い帯の部分のボタン */
-    val key = Color(0xFF1C1C20)
-    val edge = Color.Black.copy(alpha = 0.3f)
-
-    /** 十字キーの輪 (#212224 付近) */
-    val ring = Color(0xFF212224)
-    val power = Color(0xFFC71F24)
-
-    /** まとまりの見出しの文字 */
-    val sectionText = Color.Black.copy(alpha = 0.6f)
 }
 
 /** 画面で使うキー。RegzaKey は Swift の値なので、描き直すたびに作らず、ここで 1 度だけ作る */

@@ -1,0 +1,239 @@
+{
+  "brand": {
+    "$type": "color",
+    "accent": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.11372549,
+          0.5254902,
+          0.43529412
+        ],
+        "alpha": 1
+      },
+      "$description": "暗い背景で使うブランドの緑"
+    },
+    "activityBackground": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.01176471,
+          0.07058824,
+          0.05098039
+        ],
+        "alpha": 1
+      },
+      "$description": "Live Activityの背景"
+    }
+  },
+  "remote": {
+    "$type": "color",
+    "backgroundStart": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.69019608,
+          0.68627451,
+          0.70588235
+        ],
+        "alpha": 1
+      },
+      "$description": "本体グラデーションの上端"
+    },
+    "backgroundEnd": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.63529412,
+          0.63137255,
+          0.65098039
+        ],
+        "alpha": 1
+      },
+      "$description": "本体グラデーションの下端"
+    },
+    "grayKey": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8,
+          0.79607843,
+          0.81176471
+        ],
+        "alpha": 1
+      },
+      "$description": "グレー部分のボタン"
+    },
+    "panel": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.2,
+          0.19607843,
+          0.22745098
+        ],
+        "alpha": 1
+      },
+      "$description": "十字キー部分の黒い帯"
+    },
+    "key": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.10980392,
+          0.10980392,
+          0.1254902
+        ],
+        "alpha": 1
+      },
+      "$description": "黒い帯のボタン"
+    },
+    "ring": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.12941176,
+          0.13333333,
+          0.14117647
+        ],
+        "alpha": 1
+      },
+      "$description": "十字キーの輪"
+    },
+    "centerStart": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.61960784,
+          0.61960784,
+          0.63921569
+        ],
+        "alpha": 1
+      },
+      "$description": "決定ボタンの銀色の上端"
+    },
+    "centerEnd": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.52156863,
+          0.52156863,
+          0.54117647
+        ],
+        "alpha": 1
+      },
+      "$description": "決定ボタンの銀色の下端"
+    },
+    "power": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.78039216,
+          0.12156863,
+          0.14117647
+        ],
+        "alpha": 1
+      },
+      "$description": "電源ボタン"
+    },
+    "destructiveOnGray": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.74901961,
+          0.07843137,
+          0.09803922
+        ],
+        "alpha": 1
+      },
+      "$description": "グレー部分の危険な操作の文字"
+    },
+    "destructiveOnBlack": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.27058824,
+          0.27058824
+        ],
+        "alpha": 1
+      },
+      "$description": "黒い帯の危険な操作の文字"
+    },
+    "edge": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alpha": 0.3
+      },
+      "$description": "ボタンの縁"
+    },
+    "highlight": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 0.12
+      },
+      "$description": "キー表面の光沢"
+    }
+  },
+  "remoteKey": {
+    "$type": "color",
+    "blue": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.03921569,
+          0.51764706,
+          1.0
+        ],
+        "alpha": 1
+      },
+      "$description": "リモコンの青ボタン"
+    },
+    "red": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.23137255,
+          0.18823529
+        ],
+        "alpha": 1
+      },
+      "$description": "リモコンの赤ボタン"
+    },
+    "green": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.20392157,
+          0.78039216,
+          0.34901961
+        ],
+        "alpha": 1
+      },
+      "$description": "リモコンの緑ボタン"
+    },
+    "yellow": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.8,
+          0.0
+        ],
+        "alpha": 1
+      },
+      "$description": "リモコンの黄ボタン"
+    }
+  }
+}

@@ -16,7 +16,7 @@ struct ProgramDetailScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Design.group) {
+            VStack(alignment: .leading, spacing: DesignDimensions.spacingGroup) {
                 header
                 actions
                 if let message = state.message {
@@ -26,7 +26,7 @@ struct ProgramDetailScreen: View {
                 }
                 details
             }
-            .padding(Design.outer)
+            .padding(DesignDimensions.spacingOuter)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Surface.background)
@@ -82,8 +82,8 @@ struct ProgramDetailScreen: View {
 
     /// 主な操作。見る・切り替えは緑、録画は赤で塗る
     private var actions: some View {
-        VStack(spacing: Design.item) {
-            HStack(spacing: Design.item) {
+        VStack(spacing: DesignDimensions.spacingItem) {
+            HStack(spacing: DesignDimensions.spacingItem) {
                 if state.canTune {
                     Button {
                         viewModel.send(.tune(startOver: false))
@@ -162,7 +162,7 @@ struct ProgramDetailScreen: View {
             Text(title)
         }
         .font(.body.weight(.semibold))
-        .frame(maxWidth: .infinity, minHeight: Design.regularHeight)
+        .frame(maxWidth: .infinity, minHeight: DesignDimensions.buttonRegularHeight)
     }
 
     /// 説明と、番組内容・出演者などを見出し付きの文章で続ける
@@ -193,7 +193,7 @@ private struct FilledActionStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(foreground)
-            .background(color, in: RoundedRectangle(cornerRadius: Design.cornerRadius, style: .continuous))
+            .background(color, in: RoundedRectangle(cornerRadius: DesignDimensions.shapeCornerRadius, style: .continuous))
             .opacity(configuration.isPressed ? 0.75 : 1)
     }
 }

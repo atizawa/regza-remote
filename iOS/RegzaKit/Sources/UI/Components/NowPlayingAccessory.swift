@@ -39,7 +39,7 @@ struct NowPlayingAccessory: View {
                 .accessibilityLabel(key == .power ? "電源を入れる" : key.label)
             }
         }
-        .padding(.horizontal, Design.outer)
+        .padding(.horizontal, DesignDimensions.spacingOuter)
         .contentShape(Rectangle())
         .onTapGesture { appViewModel.send(.showNowPlaying) }
         .accessibilityAddTraits(.isButton)
