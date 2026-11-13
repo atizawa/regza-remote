@@ -156,18 +156,6 @@ struct GuideGridScreen: View {
     private func load() async {
         viewModel.send(.load)
         await waitWhileBusy(viewModel)
-        #if DEBUG
-        // 開発用: 起動引数 -SampleDetail YES で、放送中の番組の詳細を開いておく
-        if UserDefaults.standard.bool(forKey: "SampleData"), UserDefaults.standard.bool(forKey: "SampleDetail"),
-            let column = viewModel.state.columns.first, let program = column.programs.first(where: \.isOnAir)
-        {
-            appViewModel.send(.setPath(.guide, [.programDetail(programID: program.id, channelCode: column.channelCode)]))
-        }
-        if UserDefaults.standard.bool(forKey: "SampleData"), let text = UserDefaults.standard.string(forKey: "SampleSearch") {
-            appViewModel.send(.setPath(.guide, [.search]))
-            viewModel.guideSearchViewModel.send(.setText(text))
-        }
-        #endif
     }
 }
 

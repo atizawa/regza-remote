@@ -40,10 +40,12 @@ public final class AppContainer {
         let httpTransport = URLSessionTransport()
         #if DEBUG
         if SampleData.isEnabled {
+            let appViewModel = SampleData.makeApp()
             self.init(
-                appViewModel: SampleData.makeApp(),
+                appViewModel: appViewModel,
                 secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, httpTransport: httpTransport,
                 restoresUIState: false)
+            Task { await SampleData.prepareScreens(appViewModel) }
             return
         }
         #endif

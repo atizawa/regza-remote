@@ -26,6 +26,25 @@ enum SampleData {
         )
     }
 
+    @MainActor
+    static func prepareScreens(_ appViewModel: AppViewModel) async {
+        guard UserDefaults.standard.bool(forKey: "SampleDetail") || UserDefaults.standard.string(forKey: "SampleSearch") != nil else {
+            return
+        }
+        appViewModel.guideGridViewModel.send(.load)
+        _ = await Introspector(root: appViewModel).waitUntilIdle()
+        if UserDefaults.standard.bool(forKey: "SampleDetail"),
+            let column = appViewModel.guideGridViewModel.state.columns.first,
+            let program = column.programs.first(where: \.isOnAir)
+        {
+            appViewModel.send(.setPath(.guide, [.programDetail(programID: program.id, channelCode: column.channelCode)]))
+        }
+        if let text = UserDefaults.standard.string(forKey: "SampleSearch") {
+            appViewModel.send(.setPath(.guide, [.search]))
+            appViewModel.guideGridViewModel.guideSearchViewModel.send(.setText(text))
+        }
+    }
+
     static var initialTab: AppViewModel.Tab? {
         switch UserDefaults.standard.string(forKey: "InitialTab") {
         case "guide": .guide
