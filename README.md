@@ -106,7 +106,7 @@ cd BehaviorTests && mise run test         # 振る舞いのテスト (両方の�
 
 ### Android 実行環境のスモークテスト
 
-`mise run test-android-runtime` は、既存の `AndroidRuntimeSmokeTest` だけを実機・エミュレーター上で実行する。APK のビルド・インストールも Gradle が行う。上記の Android 開発環境に加え、Android API 28 以上で `arm64-v8a` に対応した端末が必要。エミュレーターは Android Studio の Device Manager で arm64 の AVD を起動する。実機は USB デバッグを有効にし、接続時の認証を許可する。
+`mise run test-android-runtime` は、`AndroidRuntimeSmokeTest`・`StateLifecycleTest`・`TLSTransportTest` を実機・エミュレーター上で実行する。APK のビルド・インストールも Gradle が行う。上記の Android 開発環境に加え、Android API 28 以上で `arm64-v8a` に対応した端末が必要。エミュレーターは Android Studio の Device Manager で arm64 の AVD を起動する。実機は USB デバッグを有効にし、接続時の認証を許可する。
 
 リポジトリのルートから実行する:
 
@@ -117,13 +117,14 @@ mise run test-android-runtime
 ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
 ```
 
-AndroidRuntimeSmokeTest と StateLifecycleTest の計 6 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
+AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest の計 9 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
 
 - `swiftLibrariesJniLooperAndFlowCancellation`: APK の .so の読み込み、JNI・Looper を通る state 更新と、Flow を繰り返し終了したあとの待機の解消。
 - `earlyCancellationAndStateChangesReleaseWaits`: 初回受信直後の状態変更とキャンセルが重なっても、Swift の待機が残らない。
 - `cancellingOneCollectorKeepsOtherCollectorActive`: 同じ state を購読する一方の Flow を止めても、もう一方には変更通知が届く。
 - `bionicSocketConnectsFromSwift`: Swift の SocketTransport から、端末内の HTTP サーバーへの送受信。
-- `boringSSLReadsAndroidTrustStore`: BoringSSL の初期化と Android の信頼ストアの参照。HTTPS のハンドシェイクや証明書検証全体は対象外。
+- `boringSSLReadsAndroidTrustStore`: BoringSSL の初期化と Android の信頼ストアの参照。
+- `TLSTransportTest`: 端末内の TLS サーバーとのハンドシェイクと HTTP 送受信、システム CA で信頼されない自己署名証明書の拒否、信頼済み証明書のホスト名不一致による拒否。外部通信は行わず、テスト専用の信頼先を接続ごとに渡す。
 - `stoppedScreenReleasesWaitAndReceivesLatestStateOnRestart`: 実際の rememberState を Compose で動かし、Lifecycle が CREATED に下がると待機が終了し、STARTED に戻ると最新の state を受け取る。
 
 Swift／Java の接続コード、state の待機・キャンセル、Looper、SocketTransport、BoringSSL、.so の梱包、Swift・swift-java・NDK の版を変更したときに実行する。ホストの JVM の振る舞いテストと併せて確認する。接続済み端末が必要なため、`mise run check` には含めていない。現在の CI の Android ジョブもテスト APK のビルドまでで、端末上での実行は別途行う。

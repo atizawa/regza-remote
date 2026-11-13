@@ -12,9 +12,18 @@ public func regzaAppFactory() -> RegzaAndroidAppFactory {
 /// Android の実行環境のテストから、アプリと同じ SocketTransport で Bionic のソケットを通して HTTP を送る。
 /// 外のサーバーには頼らず、テストが端末内に立てたサーバーへ送るための小さな診断口。
 public func regzaAndroidNetworkProbe(_ address: String) async -> String {
+    await networkProbe(address, tls: BoringSSLProvider())
+}
+
+/// 端末内の TLS テスト用。指定した証明書だけをこの接続の信頼先とし、アプリの信頼設定は変更しない。
+public func regzaAndroidTLSProbe(_ address: String, _ certificatePath: String) async -> String {
+    await networkProbe(address, tls: BoringSSLProvider(certificatePaths: [certificatePath]))
+}
+
+private func networkProbe(_ address: String, tls: BoringSSLProvider) async -> String {
     guard let url = URL(string: address) else { return "error: URL が正しくありません" }
     do {
-        let response = try await SocketTransport(tls: BoringSSLProvider()).send(HTTPRequest(url: url, timeout: 5))
+        let response = try await SocketTransport(tls: tls).send(HTTPRequest(url: url, timeout: 5))
         return "\(response.statusCode)\n\(String(decoding: response.body, as: UTF8.self))"
     } catch {
         return "error: \(error)"
@@ -34,8 +43,10 @@ final class BoringSSLProvider: TLSProvider, @unchecked Sendable {
     private let lock = NSLock()
     /// 認証局の証明書を読み込んだもの。読み込みに時間がかかるので、初めて使うときに作る
     private var verifying: OpaquePointer?
+    private let certificatePaths: [String]?
 
-    init() {
+    init(certificatePaths: [String]? = nil) {
+        self.certificatePaths = certificatePaths
         unverified = Self.makeContext(verifies: false)
     }
 
@@ -51,7 +62,7 @@ final class BoringSSLProvider: TLSProvider, @unchecked Sendable {
 
     func wrap(_ socket: SocketStream, host: String, verifiesCertificate: Bool) throws -> any ByteStream {
         let context = verifiesCertificate ? verifyingContext() : unverified
-        guard let ssl = SSL_new(context) else { throw RegzaError.network("暗号化の準備ができません") }
+        guard let context, let ssl = SSL_new(context) else { throw RegzaError.network("暗号化の準備ができません") }
         let stream = TLSStream(ssl: ssl, socket: socket)
         do {
             guard SSL_set_fd(ssl, socket.descriptor) == 1 else { throw RegzaError.network("暗号化の準備ができません") }
@@ -89,17 +100,19 @@ final class BoringSSLProvider: TLSProvider, @unchecked Sendable {
     private func verifyingContext() -> OpaquePointer? {
         lock.lock()
         defer { lock.unlock() }
-        if verifying == nil { verifying = Self.makeContext(verifies: true) }
+        if verifying == nil {
+            verifying = Self.makeContext(verifies: true, certificatePaths: certificatePaths ?? Self.trustedCertificatePaths())
+        }
         return verifying
     }
 
-    private static func makeContext(verifies: Bool) -> OpaquePointer? {
+    private static func makeContext(verifies: Bool, certificatePaths: [String] = []) -> OpaquePointer? {
         guard let context = SSL_CTX_new(TLS_client_method()) else { return nil }
         _ = SSL_CTX_set_min_proto_version(context, UInt16(TLS1_2_VERSION))
         SSL_CTX_set_verify(context, verifies ? SSL_VERIFY_PEER : SSL_VERIFY_NONE, nil)
         if verifies {
             var loaded = false
-            for path in trustedCertificatePaths() {
+            for path in certificatePaths {
                 if SSL_CTX_load_verify_locations(context, path, nil) == 1 { loaded = true }
             }
             guard loaded else {

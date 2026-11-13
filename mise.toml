@@ -108,7 +108,7 @@ run = "mise exec -- ./gradlew :app:assembleDebug :app:assembleRelease :app:assem
 [tasks.test-android-runtime]
 description = "接続済みの arm64 端末で JNI・通信・画面の購読ライフサイクルをテストする (Android API 28 以上)"
 dir = "{{ config_root }}/Android"
-run = "mise exec -- ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.regzaremote.AndroidRuntimeSmokeTest,com.example.regzaremote.StateLifecycleTest"
+run = "mise exec -- ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.regzaremote.AndroidRuntimeSmokeTest,com.example.regzaremote.StateLifecycleTest,com.example.regzaremote.TLSTransportTest"
 
 [tasks.prepare-android-preview]
 description = "Android Studio のプレビュー用に、ホストの Swift ライブラリを作る (macOS・Linux)"
