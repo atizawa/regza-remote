@@ -93,4 +93,62 @@ import Glibc
         var parser = HTTP1.ResponseParser()
         #expect(throws: RegzaError.self) { try parser.append(Array("hello\r\n\r\n".utf8)) }
     }
+
+    @Test(arguments: ["-1", "-0", "+1", "", "abc", "1.5", "1 0", "999999999999999999999999999999"])
+    func rejectsInvalidContentLength(length: String) {
+        var parser = HTTP1.ResponseParser()
+        #expect(throws: RegzaError.network("不正なレスポンスです")) {
+            try parser.append(Array("HTTP/1.1 200 OK\r\nContent-Length: \(length)\r\n\r\n".utf8))
+        }
+    }
+
+    @Test(arguments: ["-1", "-0", "+1", "", ";ext=1", "xyz", "1 0", "FFFFFFFFFFFFFFFFFFFFFFFF"])
+    func rejectsInvalidChunkSize(size: String) {
+        var parser = HTTP1.ResponseParser()
+        #expect(throws: RegzaError.network("不正なレスポンスです")) {
+            try parser.append(Array("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n\(size)\r\n".utf8))
+        }
+    }
+
+    @Test func rejectsChunkEndpointOverflow() {
+        // サイズ自体は Int に収まるが、サイズ行や末尾の CRLF を足すと溢れる。
+        let lineLength = String(Int.max, radix: 16).utf8.count + 2
+        for size in [Int.max, Int.max - lineLength] {
+            var parser = HTTP1.ResponseParser()
+            #expect(throws: RegzaError.network("不正なレスポンスです")) {
+                try parser.append(
+                    Array("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n\(String(size, radix: 16))\r\n".utf8))
+            }
+        }
+    }
+
+    @Test func rejectsMissingChunkDelimiter() {
+        var parser = HTTP1.ResponseParser()
+        #expect(throws: RegzaError.network("不正なレスポンスです")) {
+            try parser.append(Array("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n1\r\naXX0\r\n\r\n".utf8))
+        }
+    }
+
+    @Test func chunkedArrivingByteByByteWithTrailer() throws {
+        let raw = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n000A;ext=1\r\n0123456789\r\n0\r\nX-Trailer: value\r\n\r\n"
+        var parser = HTTP1.ResponseParser()
+        for byte in raw.utf8 {
+            #expect(parser.response == nil)
+            try parser.append([byte])
+        }
+        #expect(String(decoding: try #require(parser.response).body, as: UTF8.self) == "0123456789")
+    }
+
+    @Test func maximumContentLengthRemainsIncomplete() throws {
+        var parser = HTTP1.ResponseParser()
+        try parser.append(Array("HTTP/1.1 200 OK\r\nContent-Length: \(Int.max)\r\n\r\na".utf8))
+        #expect(parser.response == nil)
+        #expect(throws: RegzaError.network("返事が途中で切れました")) { try parser.finish() }
+    }
+
+    @Test func contentLengthWithLeadingZeros() throws {
+        var parser = HTTP1.ResponseParser()
+        try parser.append(Array("HTTP/1.1 200 OK\r\nContent-Length: 0003\r\n\r\nabc".utf8))
+        #expect(String(decoding: try #require(parser.response).body, as: UTF8.self) == "abc")
+    }
 }

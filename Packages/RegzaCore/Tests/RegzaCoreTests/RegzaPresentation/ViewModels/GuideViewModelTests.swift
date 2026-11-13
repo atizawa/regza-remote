@@ -60,17 +60,17 @@ import Testing
     }
 
     @Test func gridDescribesDays() throws {
-        let today = BroadcastDay.start(of: Date())
+        let now = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 6, hour: 12, minute: 30)))
+        let today = BroadcastDay.start(of: now)
         let tomorrow = try #require(Calendar.current.date(byAdding: .day, value: 1, to: today))
-        #expect(GuideUseCase.label(of: nil) == "今日")
-        #expect(GuideUseCase.label(of: tomorrow) == "明日")
+        #expect(GuideUseCase.label(of: nil, now: now) == "今日")
+        #expect(GuideUseCase.label(of: tomorrow, now: now) == "明日")
         // 2026-11-07 は土曜、11-08 は日曜
         let saturday = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 4)))
         #expect(GuideUseCase.kind(of: saturday) == .saturday)
         #expect(GuideUseCase.kind(of: saturday.addingTimeInterval(86_400)) == .sunday)
-        #expect(GuideUseCase.label(of: saturday.addingTimeInterval(7 * 86_400)).hasSuffix("(土)"))
+        #expect(GuideUseCase.label(of: saturday.addingTimeInterval(7 * 86_400), now: now) == "14(土)")
         // 今日は今の時刻の正時から 24 時間、ほかの日はその日の朝 4 時から
-        let now = Date()
         let window = GuideGridViewModel.window(now: now)
         #expect(window.lowerBound <= now && now < window.lowerBound.addingTimeInterval(3600))
         #expect(window.upperBound.timeIntervalSince(window.lowerBound) == 24 * 3600)

@@ -120,8 +120,8 @@ public enum HTTP1 {
                         framing = .length(0)
                     } else if parsed.headers["transfer-encoding"]?.lowercased().contains("chunked") == true {
                         framing = .chunked
-                    } else if let length = parsed.headers["content-length"].flatMap({ Int($0.trimmingCharacters(in: .whitespaces)) }) {
-                        framing = .length(length)
+                    } else if let length = parsed.headers["content-length"] {
+                        framing = .length(try Self.parseLength(length, radix: 10))
                     } else {
                         framing = .close
                     }
@@ -147,10 +147,8 @@ public enum HTTP1 {
             while true {
                 guard let lineEnd = Self.find([13, 10], in: buffer) else { return false }
                 let line = String(decoding: buffer[..<lineEnd], as: UTF8.self)
-                let sizeText = line.split(separator: ";", maxSplits: 1).first.map(String.init) ?? ""
-                guard let size = Int(sizeText.trimmingCharacters(in: .whitespaces), radix: 16) else {
-                    throw RegzaError.network("不正なレスポンスです")
-                }
+                let sizeText = line.split(separator: ";", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? ""
+                let size = try Self.parseLength(sizeText, radix: 16)
                 if size == 0 {
                     // 最後の塊のあとのトレーラーは使わない。空行まで揃うのを待つ
                     let rest = buffer[(lineEnd + 2)...]
@@ -163,14 +161,30 @@ public enum HTTP1 {
                     return true
                 }
                 let start = lineEnd + 2
-                guard buffer.count >= start + size + 2 else { return false }
-                body.append(contentsOf: buffer[start..<(start + size)])
-                buffer.removeSubrange(..<(start + size + 2))
+                let (end, endOverflow) = start.addingReportingOverflow(size)
+                let (next, nextOverflow) = end.addingReportingOverflow(2)
+                guard !endOverflow, !nextOverflow else { throw RegzaError.network("不正なレスポンスです") }
+                guard buffer.count >= next else { return false }
+                guard buffer[end] == 13, buffer[end + 1] == 10 else { throw RegzaError.network("不正なレスポンスです") }
+                body.append(contentsOf: buffer[start..<end])
+                buffer.removeSubrange(..<next)
             }
         }
 
         private mutating func complete(_ head: (statusCode: Int, headers: [String: String])) {
             response = HTTPResponse(statusCode: head.statusCode, headers: head.headers, body: Data(body))
+        }
+
+        private static func parseLength(_ text: String, radix: Int) throws -> Int {
+            let digits = text.trimmingCharacters(in: .whitespaces)
+            guard !digits.isEmpty,
+                digits.utf8.allSatisfy({ byte in
+                    (48...57).contains(byte)
+                        || (radix == 16 && ((65...70).contains(byte) || (97...102).contains(byte)))
+                }),
+                let length = Int(digits, radix: radix)
+            else { throw RegzaError.network("不正なレスポンスです") }
+            return length
         }
 
         private static func parseHead(_ bytes: ArraySlice<UInt8>) throws -> (statusCode: Int, headers: [String: String]) {
