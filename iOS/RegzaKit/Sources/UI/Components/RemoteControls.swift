@@ -3,23 +3,6 @@ import RegzaPresentation
 import Design
 import SwiftUI
 
-/// 画面全体で使う余白・大きさ。値はこの 3 段階だけにそろえる
-enum Design {
-    /// 画面の端
-    static let outer: CGFloat = 16
-    /// 同じまとまりのボタンの間
-    static let item: CGFloat = 12
-    /// まとまりの間
-    static let group: CGFloat = 24
-
-    /// ボタンの高さ: よく使う操作 / ふつう / まれな操作
-    static let primaryHeight: CGFloat = 56
-    static let regularHeight: CGFloat = 48
-    static let compactHeight: CGFloat = 40
-
-    static let cornerRadius: CGFloat = 16
-}
-
 enum ButtonSize {
     case primary, regular, compact
 

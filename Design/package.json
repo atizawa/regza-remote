@@ -1,0 +1,8 @@
+{
+  "name": "regza-design-tokens",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "style-dictionary": "5.8.0"
+  }
+}

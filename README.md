@@ -1,5 +1,7 @@
 # REGZA リモコン
 
+両 OS 共通の余白・サイズは [デザイントークン](Design/README.md) の JSON から Swift・Kotlin へ生成する。
+
 REGZA の HTTP リモコン API（[参考](https://misomayo.info/on/2012/04/10)）を使う iOS アプリ。
 録画番組の再生中は、番組名・再生位置を Dynamic Island / ロック画面の Live Activity に表示し、そこから音量・チャンネル・再生操作もできる。
 

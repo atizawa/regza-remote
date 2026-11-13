@@ -33,14 +33,14 @@ run = "bash scripts/check-toolchain.sh swift {{ vars.swift }}"
 
 [tasks.lint]
 description = "Swift・Kotlin の書き方と Android の依存方向を確かめる"
-depends = ["build-ktlint-rules"]
+depends = ["build-ktlint-rules", "check-design-tokens"]
 dir = "{{ config_root }}"
 shell = "bash -c"
 run = '''
 set -euo pipefail
 # 道具が作るファイル (Generated/) は対象にしない。.build/ などの Git に入れないものは、Git の一覧に出ないので外れる
 git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format lint --strict --parallel
-git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint --relative --ruleset=Tools/KtlintRules/build/libs/regza-ktlint-rules.jar
+git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | grep -v '/Generated/' | xargs ktlint --relative --ruleset=Tools/KtlintRules/build/libs/regza-ktlint-rules.jar
 '''
 
 [tasks.build-ktlint-rules]
@@ -58,7 +58,7 @@ shell = "bash -c"
 run = '''
 set -euo pipefail
 git ls-files --cached --others --exclude-standard '*.swift' | grep -v '/Generated/' | xargs swift format --in-place --parallel
-git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | xargs ktlint --format --relative --ruleset=Tools/KtlintRules/build/libs/regza-ktlint-rules.jar
+git ls-files --cached --others --exclude-standard '*.kt' '*.kts' | grep -v '/Generated/' | xargs ktlint --format --relative --ruleset=Tools/KtlintRules/build/libs/regza-ktlint-rules.jar
 '''
 
 [tasks.test-swift]
@@ -70,6 +70,16 @@ run = "mise run test-swift-shared && mise run test-swift-apple"
 description = "Mockolo で Repository・UseCase のテスト用モックを再生成する"
 dir = "{{ config_root }}"
 run = "swift run --package-path Tools/GenerateMocks -c release GenerateMocks"
+
+[tasks.generate-design-tokens]
+description = "共通 JSON から iOS・Android の余白・サイズを生成する"
+dir = "{{ config_root }}/Design"
+run = "mise run generate"
+
+[tasks.check-design-tokens]
+description = "デザイントークンの JSON と両 OS の生成結果が一致することを確認する"
+dir = "{{ config_root }}/Design"
+run = "mise run check"
 
 [tasks.test-swift-shared]
 description = "Apple の環境がなくても流せる Swift のパッケージのテスト (共有の部分・Android の窓口・つなぎを作る道具)。Linux でも流す"
