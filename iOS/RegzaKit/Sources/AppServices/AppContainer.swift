@@ -17,18 +17,21 @@ public final class AppContainer {
     /// ロック画面と Dynamic Island の表示。リモコンの state を見て更新する
     public let liveActivity: LiveActivityModel
     private let appLifecycleService: AppLifecycleService
+    private let appStateRestoration: AppStateRestoration?
 
     public init(
         appViewModel: AppViewModel,
         secureStorageManager: SecureStorageManager,
         preferencesManager: PreferencesManager,
-        httpTransport: any HTTPTransport = URLSessionTransport()
+        httpTransport: any HTTPTransport = URLSessionTransport(),
+        restoresUIState: Bool = true
     ) {
         self.secureStorageManager = secureStorageManager
         self.preferencesManager = preferencesManager
         self.appViewModel = appViewModel
         liveActivity = LiveActivityModel(remoteViewModel: appViewModel.remoteViewModel)
         appLifecycleService = AppLifecycleService(preferencesManager: preferencesManager, httpTransport: httpTransport)
+        appStateRestoration = restoresUIState ? AppStateRestoration(appViewModel: appViewModel) : nil
     }
 
     private convenience init() {
@@ -39,7 +42,8 @@ public final class AppContainer {
         if SampleData.isEnabled {
             self.init(
                 appViewModel: SampleData.makeApp(),
-                secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, httpTransport: httpTransport)
+                secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, httpTransport: httpTransport,
+                restoresUIState: false)
             return
         }
         #endif
@@ -52,6 +56,14 @@ public final class AppContainer {
 
     public func applicationWillTerminate() {
         appLifecycleService.applicationWillTerminate()
+    }
+
+    public func restoreUIState(_ json: String) {
+        appStateRestoration?.restore(json)
+    }
+
+    public func saveUIState() -> String? {
+        appStateRestoration?.save()
     }
 
 }

@@ -10,6 +10,8 @@ import SwiftUI
 struct RootView: View {
     @State private var appViewModel: AppViewModel
     @State private var liveActivity: LiveActivityModel
+    @SceneStorage("regza.ui") private var savedStateJSON = ""
+    @Environment(\.scenePhase) private var scenePhase
     private let debugPlayerViewModel: LivePlayerViewModel?
     private let appContainer: AppContainer
 
@@ -36,6 +38,14 @@ struct RootView: View {
 
     var body: some View {
         AppScreen(appViewModel: appViewModel, liveActivity: liveActivity, debugPlayerViewModel: debugPlayerViewModel)
+            .onAppear {
+                appContainer.restoreUIState(savedStateJSON)
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active, let json = appContainer.saveUIState() {
+                    savedStateJSON = json
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
                 appContainer.applicationWillTerminate()
             }

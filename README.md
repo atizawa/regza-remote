@@ -104,7 +104,7 @@ mise run test-android-runtime             # arm64 のエミュレーター/実�
 cd BehaviorTests && mise run test         # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
 ```
 
-Android の画面復元は `RegzaViewModel` の `SavedStateHandle` と Swift の `AppViewModel` が担当する。OS の保存時に入力・検索条件・選択中タブ・設定画面・戻る道・番組表の日付と放送種別を小さな JSON にまとめ、新しい ViewModel へ戻す。番組やチャンネルは再取得し、存在しない画面は戻る道から除く。未保存のパスワード・PIN・通信中フラグ・ライブ視聴の実行状態は含めない。保存済み認証情報は従来どおり StorageManager から読む。復元データは Swift で定義しているが、iOS の状態保存への接続は行っていない。
+画面の復元対象は iOS・Android で共通の `AppViewModel` が定義する。Android は `RegzaViewModel` の `SavedStateHandle`、iOS は `RootView` の `SceneStorage` と AppServices の `AppStateRestoration` へ接続する。OS の保存時に入力・検索条件・選択中タブ・設定画面・戻る道・番組表の日付と放送種別を小さな JSON にまとめ、新しい ViewModel へ戻す。番組やチャンネルは再取得し、存在しない画面は戻る道から除く。未保存のパスワード・PIN・通信中フラグ・ライブ視聴の実行状態は含めない。保存済み認証情報は従来どおり StorageManager から読む。iOS はシーンが非アクティブ・バックグラウンドへ移る際に退避し、画面の初回表示時だけ読み戻す。Siri や Live Activity による画面のない起動では復元せず、開発用の SampleData では既存の保存状態を上書きしない。
 
 手動では、設定の IP アドレスを保存せずに入力し、「アクティビティを保存しない」をオンにしてホームへ移動したあと、履歴から戻って入力が残ることを確認する。プロセス終了も確認するときは、このオプションを戻してアプリをバックグラウンドに置き、`adb shell am kill com.example.regzaremote` で終了させる。`adb shell pidof com.example.regzaremote` で終了を確認し、履歴から戻ったときに新しい PID で入力が復元されることを確かめる。
 

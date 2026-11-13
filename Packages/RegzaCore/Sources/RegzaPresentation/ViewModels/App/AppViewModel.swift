@@ -61,13 +61,15 @@ public final class AppViewModel {
     }
 
     public func send(_ action: Action) {
-        // 復元用の読み込み中に利用者が操作したら、その操作を優先する。
-        restoringPaths = nil
         // 変わったときだけ state を入れ替える (SwiftUI は戻る道などの Binding に同じ値を書き戻すことがあり、
         // そのたびに入れ替えると、変わっていないのに画面を描き直すことになる)
         var next = navigation
         defer {
-            if next != navigation { navigation = next }
+            if next != navigation {
+                // 表示位置が変わる操作を優先する。同じ値の Binding の書き戻しでは復元を取り消さない。
+                restoringPaths = nil
+                navigation = next
+            }
             forgetClosedScreens()
         }
         switch action {
@@ -76,6 +78,7 @@ public final class AppViewModel {
         case .push(let route):
             next.paths[next.tab, default: []].append(route)
         case .setPath(let tab, let path):
+            guard next.path(of: tab) != path else { return }
             next.paths[tab] = path
         case .pop:
             if next.paths[next.tab]?.isEmpty == false { next.paths[next.tab]?.removeLast() }

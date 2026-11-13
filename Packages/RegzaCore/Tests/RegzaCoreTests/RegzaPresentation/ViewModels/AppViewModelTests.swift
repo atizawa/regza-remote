@@ -148,6 +148,20 @@ import Testing
         #expect(restored.state.path(of: .remote).isEmpty)
     }
 
+    @Test func unchangedBindingsDoNotCancelRestoration() async throws {
+        let original = try makeApp()
+        let code = try #require(original.remoteViewModel.channels.first?.code)
+        original.send(.selectTab(.channels))
+        original.send(.push(.channelPrograms(channelCode: code)))
+        let restored = try makeApp()
+        restored.restore(original.restorationJSON)
+        restored.send(.selectTab(.channels))
+        restored.send(.setPath(.channels, []))
+        restored.send(.setPath(.guide, []))
+        _ = await Introspector(root: restored).waitUntilIdle()
+        #expect(restored.state.path(of: .channels) == [.channelPrograms(channelCode: code)])
+    }
+
     @Test func ignoresInvalidOrUnknownRestorationData() throws {
         let appViewModel = try makeApp()
         appViewModel.send(.selectTab(.channels))
