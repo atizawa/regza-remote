@@ -262,6 +262,8 @@ GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が
 
 入口は `Android/` の `./gradlew :app:assembleDebug`（内部で `scripts/build-swift.sh` を実行）。NDK の版は Gradle、Swift と SDK の版は `toolchains.toml`、Java のパッケージなどは `RegzaAndroid/swift-java.common.config` を参照する。以下のパスは `Android/` からの相対パス。
 
+`mise run build-swift` と `mise run build-jvm-host` は、`scripts/with-build-lock.swift` で同じ OS のファイルロックを取得する。別の Gradle プロセスから起動しても、接続コードの生成・互換対応・native ビルド・梱包を同時実行しない。待機中はログに表示し、終了時には OS がロックを解放する。`.build/swift-build.lock` は使用中に削除しない。生成ファイルを共有するため、ビルドはこれらの mise タスクを通して実行する。
+
 | 段階 | 入力・設定 | 出力 |
 | --- | --- | --- |
 | 共有モデルの Java 生成 | `../Packages/RegzaCore/Sources/RegzaSharedModels`、swift-java の共通設定 | `.build/swift/regzashared-java/`、`RegzaAndroid/Sources/RegzaSharedJava/Generated/` |

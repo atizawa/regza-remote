@@ -80,11 +80,19 @@ run = '''
 set -euo pipefail
 . scripts/swift-toolchain.sh
 resolve_swift_toolchain "{{ vars.swift }}"
-"$SWIFT_COMMAND" build --jobs "${SWIFT_BUILD_JOBS:-2}" --package-path RegzaAndroid --scratch-path .build/jvm-host --product RegzaJVMHost
+mkdir -p .build
+exec "$SWIFT_COMMAND" scripts/with-build-lock.swift "$SWIFT_COMMAND" build --jobs "${SWIFT_BUILD_JOBS:-2}" --package-path RegzaAndroid --scratch-path .build/jvm-host --product RegzaJVMHost
 '''
 
 [tasks.build-swift]
 description = "RegzaAndroid を arm64 向けにビルドし (swift-java が Java のクラスも作る)、Swift の実行に要る .so と一緒に app の jniLibs に入れる"
 # 中身は scripts/build-swift.sh (シェルとして書き、確かめられるように分けてある)
-run = "scripts/build-swift.sh {{ vars.swift }}"
+shell = "bash -c"
+run = '''
+set -euo pipefail
+. scripts/swift-toolchain.sh
+resolve_swift_toolchain "{{ vars.swift }}"
+mkdir -p .build
+exec "$SWIFT_COMMAND" scripts/with-build-lock.swift bash scripts/build-swift.sh "{{ vars.swift }}"
+'''
 
