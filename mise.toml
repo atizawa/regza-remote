@@ -131,3 +131,13 @@ for task in lint test-swift build-ios build-android test-behavior; do
   mise run "$task"
 done
 '''
+
+[tasks.test-ui-android]
+description = "指定した Android 端末に debug APK を入れ、Maestro の UI テストを実行する"
+dir = "{{ config_root }}/UITests"
+run = "mise run android"
+
+[tasks.test-ui-ios]
+description = "指定した iOS シミュレーターにアプリを入れ、Maestro の UI テストを実行する"
+dir = "{{ config_root }}/UITests"
+run = "mise run ios"

@@ -400,3 +400,7 @@ App Intents で次の操作を出している（`RemoteIntents.swift`。言い�
   - 放送中は番組の終了時刻を staleDate にしているので、アプリが起こされなくても、その時刻に次の番組（`epg_info_next` の開始時刻・長さと、Mirakurun があれば番組名）の表示へ切り替わる。同じチャンネルを見続けている前提の予想なので、テレビ本体のリモコンでチャンネルを変えていたら、次にアプリが状態を取るまで違う番組が出る
 - テレビ本体のリモコンでチャンネルを変えたことは、アプリを開くか iOS がアプリを起こすまで反映されない
 - 確実に更新するには、家のサーバーからテレビの状態を見て ActivityKit のプッシュ通知を送る仕組みが必要（未実装）
+
+### Maestro による UI テスト
+
+設定入力・画面遷移・入力復元の 3 フローを iOS / Android で実行する。通常の APIClient・通信をローカル HTTP スタブへ接続し、SampleData を注入しない。導入と実行方法は [UITests/README.md](UITests/README.md)。`mise run test-ui-ios` / `mise run test-ui-android` は対象端末 ID を指定して明示的に実行する。

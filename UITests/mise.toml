@@ -1,0 +1,31 @@
+# UI テストだけで必要な道具を固定する。通常のビルド・lint の導入対象に含めない。
+[env]
+MAESTRO_CLI_NO_ANALYTICS = "1"
+MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED = "true"
+
+[tools]
+maestro = "cli-2.12.1"
+bun = "{{ read_toml(path='../BehaviorTests/mise.toml')['tools']['bun'] }}"
+java = "temurin-{{ exec(command='sed -n s/^toolchainVersion=//p ../Android/gradle/gradle-daemon-jvm.properties') }}"
+
+[tasks.prepare-android]
+run = "mise -C ../Android exec -- ./gradlew :app:installDebug"
+
+[tasks.prepare-ios]
+shell = "bash -c"
+run = '''
+set -euo pipefail
+mise -C .. run check-apple-toolchain
+xcodebuild -project ../iOS/RegzaRemote.xcodeproj -scheme RegzaRemote \
+  -destination "id=${IOS_SIMULATOR_UDID:?iOS シミュレーターの UDID を指定してください}" \
+  -derivedDataPath .build/ios -quiet CODE_SIGNING_ALLOWED=NO build
+xcrun simctl install "$IOS_SIMULATOR_UDID" .build/ios/Build/Products/Debug-iphonesimulator/RegzaRemote.app
+'''
+
+[tasks.android]
+depends = ["prepare-android"]
+run = "bash run.sh android"
+
+[tasks.ios]
+depends = ["prepare-ios"]
+run = "bash run.sh ios"

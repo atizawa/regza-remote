@@ -1,0 +1,32 @@
+appId: ${APP_ID}
+name: 番組表から検索と詳細を開く
+---
+- runFlow: ../shared/launch.yaml
+- tapOn:
+    id: tab.guide
+- tapOn:
+    id: guide.search
+- inputText: Maestro
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
+- tapOn:
+    id: search.result.*
+    index: 0
+- assertVisible:
+    id: program.title
+- assertVisible: Maestro.*
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - back
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: 番組を探す
+- assertVisible:
+    id: search.result.*

@@ -1,0 +1,21 @@
+appId: ${APP_ID}
+name: 設定の入力とキャンセル
+---
+- runFlow: ../shared/launch.yaml
+- runFlow: ../shared/open-tv-settings.yaml
+- tapOn:
+    id: settings.tv.host
+- eraseText
+- inputText: 192.0.2.77
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
+- assertVisible: 192.0.2.77
+- runFlow: ../shared/settings-back.yaml
+- tapOn:
+    id: settings.close
+- runFlow: ../shared/open-tv-settings.yaml
+- assertVisible: ${TEST_SERVER}
+- assertNotVisible: 192.0.2.77

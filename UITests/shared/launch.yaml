@@ -1,0 +1,10 @@
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    arguments:
+      UITestServer: ${TEST_SERVER}
+- assertVisible:
+    id: settings.open
+- assertVisible: ".*Maestro News.*"
+- waitForAnimationToEnd
