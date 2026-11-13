@@ -66,14 +66,14 @@ val buildJvmHost = tasks.register<Exec>("buildJvmHost") {
     commandLine(mise, "run", "build-jvm-host")
     environment("MISE_EXECUTABLE", mise)
     // ホスト向けライブラリに入る Swift や、依存の版・設定が変わったときだけ動く。
-    // RegzaAndroid は、ホスト向けには入らない Android だけの部品 (Looper・BoringSSL) を外し、それ以外をすべて見る
+    // RegzaAndroid は、ホスト向けには入らない Android だけの部品 (Looper) を外し、それ以外をすべて見る
     // (つなぎのフォルダが増えても、ここを直さずに見るように)。依存の版は RegzaAndroid/Package.resolved にだけ書かれる
     inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**", "Plugins/**", "Tools/**") })
     inputs.files(fileTree(androidDir.resolve("../OpenAPI")) { include("regza-tv.yaml", "mirakurun.json", "epgstation.json") })
     inputs.files(
         fileTree(androidDir.resolve("RegzaAndroid")) {
             include("Package.swift", "Package.resolved", "Sources/**")
-            exclude("Sources/RegzaAndroid/**", "Sources/CBoringSSL/**", "Sources/CAndroidMainLoop/**")
+            exclude("Sources/RegzaAndroid/**", "Sources/CAndroidMainLoop/**")
         },
     )
     inputs.files(fileTree(androidDir.resolve("RegzaAndroidBridge")) { include("Package.swift", "Sources/**") })

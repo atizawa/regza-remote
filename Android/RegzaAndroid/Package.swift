@@ -2,7 +2,7 @@
 import PackageDescription
 
 // Android アプリから RegzaCore (iOS と共有) を使うための Swift のライブラリ。窓口 (状態と操作) は ../RegzaAndroidBridge にあり、
-// ここには Android 専用の部品 (MainActor を Looper で動かす・BoringSSL・ユーザー ID) と、Java のつなぎを置く。
+// ここには Android 専用の部品 (MainActor を Looper で動かす・ユーザー ID) と、Java のつなぎを置く。
 // swift-java の JExtractSwiftPlugin が RegzaAndroid の public な関数から Java のクラスを作る
 // (設定は Sources/RegzaAndroid/swift-java.config。mise run build-swift が共通の設定 swift-java.common.config から書き出す)。
 // ビルドは Android/ で mise run build-swift (中身は scripts/build-swift.sh)。
@@ -15,7 +15,7 @@ let package = Package(
         // Android アプリが System.loadLibrary("RegzaAndroid") で読み込む共有ライブラリ
         .library(name: "RegzaAndroid", type: .dynamic, targets: ["RegzaAndroid"]),
         // 窓口とつなぎを、ホストの JVM で動かす振る舞いのテスト (behavior-tests) から読み込むライブラリ。
-        // Android 専用の部品 (Looper・BoringSSL) は含めない
+        // Android 専用の部品 (Looper) は含めない
         .library(name: "RegzaJVMHost", type: .dynamic, targets: ["RegzaAndroidBridgeJava"]),
     ],
     dependencies: [
@@ -61,11 +61,6 @@ let package = Package(
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        // SDK に入っている BoringSSL の関数の宣言 (HTTPS で使う)。ライブラリの場所は build-swift がリンカーに渡す
-        .target(
-            name: "CBoringSSL",
-            linkerSettings: [.linkedLibrary("ssl"), .linkedLibrary("crypto")]
-        ),
         // Android のメインスレッドの Looper で MainActor を動かすための宣言 (NDK の Looper と libdispatch)
         .target(
             name: "CAndroidMainLoop",
@@ -76,11 +71,8 @@ let package = Package(
             dependencies: [
                 .product(name: "RegzaAndroidBridge", package: "RegzaAndroidBridge"),
                 "CAndroidMainLoop",
-                "CBoringSSL",
                 "RegzaSharedJava",
                 "RegzaAndroidBridgeJava",
-                // 通信の差し替えとユーザー ID に使う
-                .product(name: "RegzaApp", package: "RegzaCore"),
                 .product(name: "SwiftJava", package: "swift-java"),
             ],
             exclude: ["swift-java.config"],

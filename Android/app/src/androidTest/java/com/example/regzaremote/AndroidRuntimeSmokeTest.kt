@@ -7,16 +7,9 @@ import com.example.regzaremote.bridge.appStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppState
 import com.example.regzaremote.core.AppTab
-import com.example.regzaremote.core.RegzaAndroid
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RegzaAndroidStorage
-import java.net.InetAddress
-import java.net.ServerSocket
 import java.util.Optional
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.concurrent.thread
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
@@ -33,12 +26,11 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Mac の JVM では通らない Android の境界 (.so・JNI・Looper・Bionic・BoringSSL) のスモークテスト。 */
+/** Mac の JVM では通らない Android の境界 (.so・JNI・Looper・OkHttp・Android TLS) のスモークテスト。 */
 @RunWith(AndroidJUnit4::class)
 class AndroidRuntimeSmokeTest {
     /**
@@ -119,48 +111,6 @@ class AndroidRuntimeSmokeTest {
             }
         }
         waitForPendingStateWaits(app, 0)
-    }
-
-    /** Swift の SocketTransport が Android/Bionic のソケットで端末内のサーバーと送受信できる。 */
-    @Test
-    fun bionicSocketConnectsFromSwift() = runBlocking {
-        ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { server ->
-            val finished = CountDownLatch(1)
-            val failure = AtomicReference<Throwable?>()
-            val responder = thread(name = "runtime-smoke-http", isDaemon = true) {
-                try {
-                    server.accept().use { socket ->
-                        socket.soTimeout = TIMEOUT.toInt()
-                        val input = socket.getInputStream().bufferedReader()
-                        while (input.readLine()?.isNotEmpty() == true) {
-                            // 空行まで HTTP のリクエストヘッダーを読む
-                        }
-                        socket.getOutputStream().apply {
-                            write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok".toByteArray())
-                            flush()
-                        }
-                    }
-                } catch (error: Throwable) {
-                    failure.set(error)
-                } finally {
-                    finished.countDown()
-                }
-            }
-
-            val result = withTimeout(TIMEOUT) {
-                RegzaAndroid.regzaAndroidNetworkProbe("http://127.0.0.1:${server.localPort}/smoke").await()
-            }
-            assertEquals("200\nok", result)
-            assertTrue(finished.await(TIMEOUT, TimeUnit.MILLISECONDS))
-            responder.join(1_000)
-            assertNull(failure.get())
-        }
-    }
-
-    /** APK に入れた BoringSSL が使え、Android のシステム CA を見つけられる。 */
-    @Test
-    fun boringSSLReadsAndroidTrustStore() {
-        assertTrue(RegzaAndroid.regzaAndroidTLSIsReady())
     }
 
     private suspend fun waitForPendingStateWaits(app: RegzaAndroidApp, expected: Long) {

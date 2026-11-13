@@ -182,23 +182,24 @@ extract_module RegzaAndroidBridge RegzaAndroidBridge/Sources/RegzaAndroidBridge 
 # swift-java はこれを SwiftPM のプラグインでしか作らないので (enableJavaCallbacks)、同じ手順を手で行う:
 # jextract が作ったインターフェースを javac でコンパイルし (ほかのモジュールの Java のクラスも参照する)、wrap-java で包む
 callbacks=.build/swift/bridge-callbacks
-begin_stage "swift-java 互換対応: Kotlin の保存先へのコールバック生成" "RegzaAndroidBridgeJava" "$callbacks/swift-java.config"
+begin_stage "swift-java 互換対応: Kotlin の保存先・通信へのコールバック生成" "RegzaAndroidBridgeJava" "$callbacks/swift-java.config"
 rm -rf "$callbacks" && mkdir -p "$callbacks/classes"
-# Kotlin が実装する窓口は保存用 protocol だけ。public protocol を追加しても、自動で JNI の公開対象を増やさない。
-callback_protocol=RegzaAndroidStorage
+# Kotlin が実装する protocol と、引数に使う Swift の型を明示する。
+callback_types=(RegzaAndroidStorage RegzaAndroidHTTPClient RegzaAndroidHTTPRequest RegzaAndroidHTTPCompletion)
 java_package=$(jq -er '.javaPackage' RegzaAndroid/swift-java.common.config)
-callback_interface="$bridge_java/${java_package//.//}/$callback_protocol.java"
-if [ ! -f "$callback_interface" ]; then
-  echo "コールバックのインターフェースが生成されていません: $callback_interface" >&2
-  echo "RegzaAndroidBridge の protocol と、直前の Java 生成設定を確認してください。" >&2
-  false
-fi
-printf '[build-swift] 入力: %s\n[build-swift] 出力: %s/JavaCallbacks.swift\n' "$callback_interface" "$bridge_generated"
+for callback_type in "${callback_types[@]}"; do
+  callback_interface="$bridge_java/${java_package//.//}/$callback_type.java"
+  if [ ! -f "$callback_interface" ]; then
+    echo "コールバックの型が生成されていません: $callback_interface" >&2
+    false
+  fi
+done
+printf '[build-swift] 出力: %s/JavaCallbacks.swift\n' "$bridge_generated"
 find "$bridge_java" -name '*.java' > "$callbacks/sources.txt"
 javac @"$callbacks/sources.txt" -d "$callbacks/classes" -parameters \
   -sourcepath "$shared_java:$presentation_java:".build/swift-tool/checkouts/swift-java/SwiftKitCore/src/main/java
-jq -n --arg name "$java_package.$callback_protocol" --arg wrapper "Java$callback_protocol" \
-  '{classes: {($name): $wrapper}}' > "$callbacks/swift-java.config"
+jq -n --arg package "$java_package" --args '{classes: ($ARGS.positional | map({key: ($package + "." + .), value: ("Java" + .)}) | from_entries)}' \
+  "${callback_types[@]}" > "$callbacks/swift-java.config"
 # Optional などの Java の標準の型は、swift-java の SwiftJava モジュールにある包みを使う
 "$swift_java" wrap-java --swift-module RegzaAndroidBridgeJava \
   --output-directory "$bridge_generated" --config "$callbacks/swift-java.config" --cp "$callbacks/classes" \
@@ -206,11 +207,9 @@ jq -n --arg name "$java_package.$callback_protocol" --arg wrapper "Java$callback
   --depends-on SwiftJava="$PWD/.build/swift-tool/checkouts/swift-java/Sources/SwiftJava/swift-java.config"
 
 # Swift のランタイムは共有ライブラリとして入れ、NEEDED をたどって使うものだけを梱包する。
-# HTTPS に使う BoringSSL は、SDK の静的ライブラリ (libssl.a・libcrypto.a) を RegzaAndroid に埋め込む
 begin_stage "Android native ライブラリのビルド" "RegzaAndroid" "RegzaAndroid/Sources/RegzaAndroid/swift-java.config"
-static_libs=$("$SWIFT_COMMAND" sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftStaticResourcesPath: //p')/android
 android_build=("$SWIFT_COMMAND" build --jobs "$swift_build_jobs" --package-path RegzaAndroid --scratch-path .build/swift --product RegzaAndroid -c release
-  --swift-sdk "$sdk" --triple "$triple" -Xlinker -L"$static_libs")
+  --swift-sdk "$sdk" --triple "$triple")
 "${android_build[@]}"
 android_products=$("${android_build[@]}" --show-bin-path)
 
@@ -238,7 +237,7 @@ while :; do
   [ "$added" = 1 ] || break
 done
 if [ -f "$out/libFoundationNetworking.so" ]; then
-  echo "Android の通信は SocketTransport + BoringSSL を使います。FoundationNetworking への依存が残っています。" >&2
+  echo "Android の通信は OkHttp を使います。FoundationNetworking への依存が残っています。" >&2
   false
 fi
 echo "$(ls "$out" | wc -l | tr -d ' ') 個の .so を $out に入れました。"

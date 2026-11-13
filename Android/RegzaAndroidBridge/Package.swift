@@ -2,7 +2,7 @@
 import PackageDescription
 
 // Android アプリに見せる窓口 (RegzaAndroidApp と、その状態・操作の型)。共有の ViewModel の state を Android 向けに詰め直し、
-// Android からの操作を ViewModel の操作に置き換える。Android 専用の部品 (Looper・BoringSSL・swift-java) は
+// Android からの操作を ViewModel の操作に置き換える。Android 専用の部品 (Looper・swift-java) は
 // ../RegzaAndroid に置き、ここは Mac でもビルドできるようにして、swift test で窓口を確かめる。
 // Java のクラスは mise run build-swift が swift-java のツールで作る (設定は ../RegzaAndroid/RegzaAndroidBridge.swift-java.config)
 let package = Package(

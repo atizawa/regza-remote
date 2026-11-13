@@ -3,7 +3,7 @@ import RegzaApp
 
 // Android アプリに見せる窓口。swift-java がここの public な型と関数から Java のクラスを作る
 // (Java のパッケージは com.example.regzaremote.core。mise run build-swift が作り、設定は
-// ../RegzaAndroid/RegzaAndroidBridge.swift-java.config)。Android 専用の部品 (Looper・BoringSSL・swift-java) に頼らないので、
+// ../RegzaAndroid/RegzaAndroidBridge.swift-java.config)。Android 専用の部品 (Looper・swift-java) に頼らないので、
 // Mac の swift test で確かめられる。
 //
 // 画面の状態と操作は iOS と同じ共有の ViewModel (AppViewModel とその下の画面の ViewModel) が持ち、

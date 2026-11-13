@@ -19,7 +19,7 @@ public struct SampleTransport: HTTPTransport {
     public static let streamHost = "192.0.2.30"
 
     public func send(_ request: HTTPRequest) async throws -> HTTPResponse {
-        // 本物の通信 (SocketTransport) と同じ失敗にする
+        // 本物の HTTPTransport と同じ種類の失敗にする
         if let host = request.url.host, fixture.unreachable.contains(host) {
             throw RegzaError.network("\(host) に接続できません")
         }

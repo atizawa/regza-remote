@@ -148,6 +148,8 @@ tasks.matching { it.name == "assembleRelease" }.configureEach { finalizedBy(chec
 // ホスト向けライブラリは mise run prepare-android-preview で別途作る。APK のビルドには不要。
 
 dependencies {
+    implementation(libs.okhttp)
+    androidTestImplementation(libs.okhttp.mockwebserver)
     // swift-java が作ったクラスが使う Java 側
     implementation(project(":swiftkit-core"))
     implementation(platform(libs.androidx.compose.bom))

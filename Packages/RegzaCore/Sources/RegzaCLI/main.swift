@@ -43,7 +43,7 @@ func main() async {
             return
         }
     } else {
-        transport = SocketTransport()
+        transport = URLSessionTransport()
     }
     // 番組表 (Mirakurun) や録画サーバーへの通信も同じ方法で送る
     let appViewModel = AppFactory.makeLiveAppViewModel(

@@ -33,7 +33,7 @@ iOS/RegzaRemote/              アプリの起動・RootView（依存を画面へ
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
 Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）
   RegzaAndroidBridge/         Android に見せる Swift の窓口（RegzaAndroidApp）。macOS・Linux の swift test で確かめる
-  RegzaAndroid/               Android 向けにビルドする Swift のパッケージ（Looper・BoringSSL と、swift-java が作る Java のつなぎ）
+  RegzaAndroid/               Android 向けにビルドする Swift のパッケージ（Looper と、swift-java が作る Java のつなぎ）
   ScreenGlue/                 窓口のつなぎを作る道具（screen-glue。State/・Action/ の型を swift-syntax で読む。ホストで動かし、アプリには入らない）
   scripts/                    build-swift.sh（Swift の .so と Java のクラスを作る）・swift-toolchain.sh（mise の Swift を選ぶ）
   app/                        Kotlin・Compose のアプリ
@@ -41,7 +41,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 ```
 
 - Swift のコードの書き方は swift-format（Swift のツールチェーンに入っている Apple の道具）でそろえる。設定は `.swift-format`（行の長さ 140・インデントは空白 4 つ・`#if` の中は下げない、ほかは既定の決まり）。Kotlin は ktlint でそろえる。設定は `.editorconfig`（Android Studio の書き方・行の長さ 140・`@Composable` の関数は大文字で始めてよい）で、Android Studio もこの設定で整形する。複数行に並べたものは、Kotlin では宣言でも呼び出しでも末尾にコンマを付け、Swift では配列や辞書に付ける（関数の引数は書いたとおりに残す。swift-format の「必ず付ける」は閉じかっこの前に `, )` を残す不具合があるため使わない）。`mise run lint` で両方を確かめ、`mise run format` で両方を直す。道具が作るファイル（`Generated/`・`.build/`）は対象にしない。ルートの `mise.toml` には共通タスクと ktlint の設定を置き、Swift の版は `toolchains.toml` を参照する。ルートでは Swift のコンパイラを切り替えない（初めてのときは `mise trust` と `mise install` が要る）
-- Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装し、URLSession と SocketTransport で共有する。
+- Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装し、URLSession と OkHttp で共有する。
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
 - 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
@@ -55,10 +55,10 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - 保存処理は `Infrastructure/Storage` の `SecureStorageManager`・`PreferencesManager` に分け、APIClient と並列に Repository へ注入する。Manager には OS ごとの保存実装を注入し、保存キーの選択と Data の組み立ては Repository が担当する。
 - DI は `RegzaApp/AppFactory+Repositories.swift`（APIClient・Manager → Repository）、`AppFactory+UseCases.swift`（Repository → UseCase）、`AppFactory+ViewModels.swift`（UseCase → ViewModel）にまとめる。iOS・Android・CLI は共通の Factory を使い、通信と保存先は起動時に渡す。Repository または UseCase の protocol を直接渡せるため、テストでも同じ入口から差し替えられる。
 - iOS の終了通知は `RootView` から `AppContainer.applicationWillTerminate()` に渡す。`AppServices/AppLifecycleService` が保存済みの配信先と配信 ID を使い、注入された HTTPTransport で停止を試みる。待機上限は従来どおり 2 秒で、停止できなかった ID は次回起動時の回収用に残す。UI モジュールはこの処理や Infrastructure に依存しない。
-- iOS の `AppContainer` は組み立てた `AppViewModel` と Manager を受け取れる。Android は `RegzaAndroid.regzaAppFactory()` が SocketTransport＋BoringSSL を保持する Factory を返し、`makeApp(AndroidStorage(...))` で保存先を渡す。通信実装をグローバルに書き換えず、探索処理にも同じ transport を渡す。
+- iOS の `AppContainer` は組み立てた `AppViewModel` と Manager を受け取れる。Android は `RegzaAndroidAppFactory.init(OkHttpTransport())` に通信実装を注入し、`makeApp(AndroidStorage(...))` で保存先を渡す。通信実装をグローバルに書き換えず、探索処理にも同じ transport を渡す。
 - iOS は `AppServices/Storage` の `KeychainStorage`・`UserDefaultsStorage`、Android は `RegzaAndroidStorage` を共通の保存プロトコルにつなぐアダプターを使う。Android のパスワードは従来どおり Keystore の鍵で暗号化する。既存の保存キー・値の形式と、iOS の旧登録 ID の移行を維持する。
-- `RegzaCore` の通信は `HTTPTransport` を通す。iOS は URLSession、Android は `SocketTransport`（自前の HTTP/1.1。Android の URLSession は返事を待つ間 CPU を使い続けるため）。Android の HTTPS は Swift SDK for Android に入っている BoringSSL で暗号化し、証明書は Android が信頼している認証局で確かめる（テレビの 4430 番は自己署名なので、iOS と同じく確かめない）
-- APIClient・探索処理には `HTTPTransport` を明示して渡す。URLSessionTransport は Android ではビルドせず、APK に FoundationNetworking を同梱しない。`build-swift.sh` は梱包対象に FoundationNetworking が残っていれば失敗する。Android の HTTPS に使う BoringSSL は引き続き必要。
+- `RegzaCore` の通信は `HTTPTransport` を通す。iOS と CLI は URLSession、Android は Kotlin の `OkHttpTransport` を使う。Swift 側はリクエストと応答の値を JNI 越しに渡し、HTTP の読み取り・圧縮・DNS・プロキシ・接続管理・TLS は各プラットフォームの通信実装に任せる。通常の HTTPS は Android の信頼ストアとホスト名検証を使う。テレビの 4430 番だけは自己署名を受け入れる既存の例外を維持し、その接続ではリダイレクトを追わない。
+- APIClient・探索処理には `HTTPTransport` を明示して渡す。URLSessionTransport は Android ではビルドせず、APK に FoundationNetworking を同梱しない。`build-swift.sh` は梱包対象に FoundationNetworking が残っていれば失敗する。独自の HTTP パーサ・SocketTransport と BoringSSL の静的リンクは使用しない。
 - Repository と UseCase は Domain/Data の `ChannelData`・`ProgramData` などを受け渡す。UseCase は Domain に置き、画面側には `RegzaSharedModels` の型を返す。ViewModel は Data を保持せず、番組検索の索引も Domain 内で管理する。
 - `Infrastructure/Mappers` は API の型から Data への変換、`Domain/Mappers` は Data から SharedModel への変換を担当する。
 - REGZA・Mirakurun・EPGStation の API は `OpenAPI/` の仕様から Swift OpenAPI Generator で生成する。生成クライアント、Digest 認証・LenientJSON のミドルウェア、既存の `HTTPTransport` を包む `ClientTransport` はすべて共有する。構成と生成方法は [OpenAPI/README.md](OpenAPI/README.md)。
@@ -98,7 +98,7 @@ mise run setup-android-sdk                # 初回だけ。Android SDK のライ
 mise run install-android-swift-sdk        # 初回だけ。Swift SDK for Android（platform・build-tools・NDK は Gradle が入れる）
 ./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (buildSwift が mise run build-swift を呼ぶ)
 mise run prepare-android-preview          # エディタの横にプレビューを出すとき。ホスト向けライブラリを別途作る
-mise run test-android-runtime             # arm64 のエミュレーター/実機で .so・JNI・Looper・Bionic・BoringSSL を確かめる
+mise run test-android-runtime             # arm64 のエミュレーター/実機で .so・JNI・Looper・OkHttp・Android TLS を確かめる
 ./gradlew :app:assembleRelease            # 配るアプリ。作ったあと、APK に手元のフォルダの場所が入っていないことも確かめる (checkReleaseApk)
 
 cd BehaviorTests && mise run test         # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
@@ -110,7 +110,7 @@ cd BehaviorTests && mise run test         # 振る舞いのテスト (両方の�
 
 ### Android 実行環境のスモークテスト
 
-`mise run test-android-runtime` は、`AndroidRuntimeSmokeTest`・`StateLifecycleTest`・`TLSTransportTest`・`StateRestorationTest` を実機・エミュレーター上で実行する。APK のビルド・インストールも Gradle が行う。上記の Android 開発環境に加え、Android API 28 以上で `arm64-v8a` に対応した端末が必要。エミュレーターは Android Studio の Device Manager で arm64 の AVD を起動する。実機は USB デバッグを有効にし、接続時の認証を許可する。
+`mise run test-android-runtime` は、`AndroidRuntimeSmokeTest`・`StateLifecycleTest`・`TLSTransportTest`・`StateRestorationTest`・`OkHttpTransportTest` を実機・エミュレーター上で実行する。APK のビルド・インストールも Gradle が行う。上記の Android 開発環境に加え、Android API 28 以上で `arm64-v8a` に対応した端末が必要。エミュレーターは Android Studio の Device Manager で arm64 の AVD を起動する。実機は USB デバッグを有効にし、接続時の認証を許可する。
 
 リポジトリのルートから実行する:
 
@@ -121,18 +121,17 @@ mise run test-android-runtime
 ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
 ```
 
-AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest の計 11 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
+AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest・OkHttpTransportTest の計 16 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
 
 - `swiftLibrariesJniLooperAndFlowCancellation`: APK の .so の読み込み、JNI・Looper を通る state 更新と、Flow を繰り返し終了したあとの待機の解消。
 - `earlyCancellationAndStateChangesReleaseWaits`: 初回受信直後の状態変更とキャンセルが重なっても、Swift の待機が残らない。
 - `cancellingOneCollectorKeepsOtherCollectorActive`: 同じ state を購読する一方の Flow を止めても、もう一方には変更通知が届く。
-- `bionicSocketConnectsFromSwift`: Swift の SocketTransport から、端末内の HTTP サーバーへの送受信。
-- `boringSSLReadsAndroidTrustStore`: BoringSSL の初期化と Android の信頼ストアの参照。
 - `StateRestorationTest`: Activity 再生成による入力の維持と、Bundle を Parcel に退避して元の ViewModel を破棄したあとの復元。
-- `TLSTransportTest`: 端末内の TLS サーバーとのハンドシェイクと HTTP 送受信、システム CA で信頼されない自己署名証明書の拒否、信頼済み証明書のホスト名不一致による拒否。外部通信は行わず、テスト専用の信頼先を接続ごとに渡す。
+- `OkHttpTransportTest`: 実際の Swift → JNI → OkHttp でチャンク応答・gzip・URL のクエリ・通常のリダイレクト・タイムアウト・Call の取消を確認する。MockWebServer はテスト APK だけに使用する。
+- `TLSTransportTest`: 端末内の TLS サーバーとのハンドシェイクと HTTP 送受信、システム CA で信頼されない自己署名証明書の拒否、信頼済み証明書のホスト名不一致による拒否、テレビの自己署名例外とリダイレクトの抑止。外部通信は行わず、テスト用の信頼先を OkHttp の DI で渡す。
 - `stoppedScreenReleasesWaitAndReceivesLatestStateOnRestart`: 実際の rememberState を Compose で動かし、Lifecycle が CREATED に下がると待機が終了し、STARTED に戻ると最新の state を受け取る。
 
-Swift／Java の接続コード、state の待機・キャンセル、Looper、SocketTransport、BoringSSL、.so の梱包、Swift・swift-java・NDK の版を変更したときに実行する。ホストの JVM の振る舞いテストと併せて確認する。接続済み端末が必要なため、`mise run check` には含めていない。現在の CI の Android ジョブもテスト APK のビルドまでで、端末上での実行は別途行う。
+Swift／Java の接続コード、state の待機・キャンセル、Looper、OkHttpTransport、.so の梱包、Swift・swift-java・NDK の版を変更したときに実行する。ホストの JVM の振る舞いテストと併せて確認する。接続済み端末が必要なため、`mise run check` には含めていない。現在の CI の Android ジョブもテスト APK のビルドまでで、端末上での実行は別途行う。
 
 | 失敗した場所 | 確認先 |
 | --- | --- |
@@ -276,10 +275,10 @@ GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が
 | 画面の型の Java 生成 | `RegzaPresentation` の State/・Action/、`RegzaAndroid/RegzaPresentation.swift-java.config` | `.build/swift/regzapresentation-java/`、`RegzaAndroid/Sources/RegzaPresentationJava/Generated/` |
 | 画面の接続コード生成 | `ScreenGlue` が共有の State/・Action/・ViewModel を読む | `Generated/ScreenActions.swift`、`.build/swift/screen-glue-kotlin/`、設定内の型一覧 |
 | アプリ窓口の Java 生成 | `RegzaAndroidBridge/Sources/RegzaAndroidBridge`、`RegzaAndroid/RegzaAndroidBridge.swift-java.config` | `.build/swift/regzabridge-java/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/` |
-| Kotlin へのコールバック生成 | 生成した `RegzaAndroidStorage.java` | `.build/swift/bridge-callbacks/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/JavaCallbacks.swift` |
+| Kotlin へのコールバック生成 | 生成した `RegzaAndroidStorage.java`・`RegzaAndroidHTTPClient.java` と通信の引数の型 | `.build/swift/bridge-callbacks/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/JavaCallbacks.swift` |
 | native ビルド・梱包 | 接続コード、Swift SDK、NDK | `app/src/main/jniLibs/arm64-v8a/` |
 
-Kotlin が実装するコールバックは、`build-swift.sh` の `callback_protocol=RegzaAndroidStorage` で明示する。public protocol を追加しても自動で公開対象にはしない。追加するときは、Kotlin 側の実装と生成対象を合わせて検討する。
+Kotlin が実装する保存先・HTTP のコールバックと通信の引数の型は、`build-swift.sh` の `callback_types` で明示する。public protocol を追加しても自動で公開対象にはしない。追加するときは、Kotlin 側の実装と生成対象を合わせて検討する。
 
 ビルドログの `[build-swift]` に処理段階・モジュール・設定が表示され、Java 生成時には入力と出力も表示される。失敗時は、元のエラーに続いて段階・モジュール・設定・スクリプトの行番号・終了コードが出る。設定は共通設定とモジュール設定を合成した `.build/swift/configs/` を確認する。Foundation の重複除去とコールバック生成は「swift-java 互換対応」と表示し、通常の生成と区別する。
 

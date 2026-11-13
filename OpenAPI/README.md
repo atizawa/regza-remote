@@ -60,7 +60,7 @@ Mirakurun・EPGStation の接続先変更は、注入された通信方式とタ
 テレビの状態確認のタイミングを制御する `RegzaRemote` は、既存どおり Repository と RegzaAPIClient の間に置く。
 
 `Network/OpenAPIHTTPTransport` は生成クライアントと既存の HTTPTransport の型を変換する。
-iOS は URLSessionTransport、Android は SocketTransport + BoringSSL、テストは見本・偽物の通信をそのまま渡す。
+iOS は URLSessionTransport、Android は Kotlin から注入する OkHttpTransport、テストは見本・偽物の通信をそのまま渡す。
 HTTP のステータスとヘッダーは書き換えずに受け渡す。
 
 Digest の再認証と nonce の管理は `RegzaDigestMiddleware` が担う。
@@ -115,7 +115,7 @@ Network/
   OpenAPIHTTPTransport.swift
   OpenAPIMiddleware.swift
   HTTPTransport.swift
-  SocketTransport.swift
+  URLSessionTransport.swift
 Repositories/
 Storage/
   SecureStorageManager.swift
