@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -98,7 +99,9 @@ private fun SettingsTopPage(setup: SettingsState, send: Send) {
                 leading = if (setup.isCanClose) {
                     (
                         {
-                            HeaderIconButton(Icons.Filled.Close, "閉じる") { send(SettingsAction.close()) }
+                            HeaderIconButton(Icons.Filled.Close, "閉じる", modifier = Modifier.testTag("settings.close")) {
+                                send(SettingsAction.close())
+                            }
                         }
                         )
                 } else {
@@ -152,6 +155,7 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
                 state.host,
                 { send(tv(TVSetupAction.setHost(it))) },
                 "IPアドレス (例: 192.168.0.10)",
+                modifier = Modifier.testTag("settings.tv.host"),
                 enabled = !state.isWaitingForPIN,
                 keyboardType = KeyboardType.Uri,
             )

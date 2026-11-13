@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,7 +65,11 @@ fun GuideGridScreen(guide: GuideGridState, send: Send) {
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("番組表") {
             // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く (iOS 版と同じ)
-            if (guide.isCanSearch) HeaderIconButton(Icons.Filled.Search, "番組を探す") { send(AppAction.push(AppRoute.search())) }
+            if (guide.isCanSearch) {
+                HeaderIconButton(Icons.Filled.Search, "番組を探す", modifier = Modifier.testTag("guide.search")) {
+                    send(AppAction.push(AppRoute.search()))
+                }
+            }
         }
         when {
             // Mirakurun がなくてもタブは消さず、何ができるかと設定のしかたを案内する

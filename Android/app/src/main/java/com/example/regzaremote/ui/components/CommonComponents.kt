@@ -197,8 +197,15 @@ fun Loading() {
 
 /** 見出しに置くアイコンのボタン。保存などの確定のボタンは強調色にする */
 @Composable
-fun HeaderIconButton(icon: ImageVector, description: String, enabled: Boolean = true, tint: Color? = null, onClick: () -> Unit) {
-    IconButton(onClick = onClick, enabled = enabled) {
+fun HeaderIconButton(
+    icon: ImageVector,
+    description: String,
+    enabled: Boolean = true,
+    tint: Color? = null,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick, enabled = enabled, modifier = modifier) {
         if (tint != null &&
             enabled
         ) {

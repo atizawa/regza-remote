@@ -8,6 +8,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.regzaremote.appservices.AppFactory
 import com.example.regzaremote.appservices.RegzaViewModel
@@ -25,13 +27,14 @@ import com.example.regzaremote.ui.screens.SettingsScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val testServer = if (BuildConfig.DEBUG) intent.getStringExtra("UITestServer") else null
         setContent {
             // iOS 版と同じくダークに固定し、強調色を緑にする
             MaterialTheme(colorScheme = AppTheme.colorScheme) {
-                Surface(modifier = Modifier.fillMaxSize(), color = AppTheme.background) {
+                Surface(modifier = Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }, color = AppTheme.background) {
                     // テレビは同じ LAN にあるので、ローカルネットワークへのアクセスを許可されてから画面を出す
                     LocalNetworkGate {
-                        val appViewModelFactory = remember { AppFactory.makeViewModelFactory(applicationContext) }
+                        val appViewModelFactory = remember { AppFactory.makeViewModelFactory(applicationContext, testServer) }
                         val regzaViewModel: RegzaViewModel = viewModel(factory = appViewModelFactory)
                         val app = regzaViewModel.app
                         val state = rememberState(app) { app.appStates() } ?: return@LocalNetworkGate

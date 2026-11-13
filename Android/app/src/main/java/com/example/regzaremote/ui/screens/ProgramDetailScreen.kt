@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -99,7 +100,12 @@ private fun DetailHeader(detail: ProgramDetailState) {
             fontWeight = FontWeight.SemiBold,
             color = AppTheme.accent,
         )
-        Text(program.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            program.name,
+            modifier = Modifier.testTag("program.title"),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
         Text(
             program.timeText + (program.genreName.orElse(null)?.let { " · $it" } ?: ""),
             style = MaterialTheme.typography.bodyMedium,

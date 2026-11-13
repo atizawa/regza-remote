@@ -31,6 +31,7 @@ struct GuideGridScreen: View {
                     if viewModel.state.canSearch {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("番組を探す", systemImage: "magnifyingglass") { appViewModel.send(.push(.search)) }
+                                .accessibilityIdentifier("guide.search")
                         }
                     }
                 }

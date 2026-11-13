@@ -35,6 +35,23 @@ public final class AppContainer {
     }
 
     private convenience init() {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        let argumentServer = arguments.firstIndex(of: "-UITestServer").flatMap { index in
+            arguments.indices.contains(index + 1) ? arguments[index + 1] : nil
+        }
+        if let server = ProcessInfo.processInfo.environment["UITEST_SERVER"] ?? argumentServer, !server.isEmpty {
+            let secureStorageManager = SecureStorageManager(storage: MemorySecureStorage())
+            let preferencesManager = PreferencesManager(
+                storage: MemoryPreferencesStorage(values: [.host: server, .guideHost: server, .streamHost: server]))
+            let transport = URLSessionTransport()
+            self.init(
+                appViewModel: AppFactory.makeLiveAppViewModel(
+                    secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, transport: transport),
+                secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, httpTransport: transport)
+            return
+        }
+        #endif
         let secureStorageManager = SecureStorageManager(storage: KeychainStorage())
         let preferencesManager = PreferencesManager(storage: UserDefaultsStorage())
         let httpTransport = URLSessionTransport()

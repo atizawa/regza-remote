@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -152,6 +153,7 @@ private fun SearchResultRow(row: SearchResultItem, send: Send) {
     Column(
         Modifier
             .fillMaxWidth()
+            .testTag("search.result.${program.id}")
             .clickable { send(AppAction.push(AppRoute.programDetail(program.id, program.channelCode))) }
             .padding(horizontal = Design.outer, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp),

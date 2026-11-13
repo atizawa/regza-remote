@@ -76,6 +76,7 @@ struct SettingsScreen: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .cancel) { settingsViewModel.send(.close) }
+                        .accessibilityIdentifier("settings.close")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     // 保存できたら SettingsViewModel が設定を閉じる
@@ -101,6 +102,7 @@ struct SettingsScreen: View {
         return Form {
             Section {
                 TextField("IPアドレス (例: 192.168.0.10)", text: binding(state.host) { .setHost($0) })
+                    .accessibilityIdentifier("settings.tv.host")
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()

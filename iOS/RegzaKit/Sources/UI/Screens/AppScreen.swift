@@ -36,19 +36,19 @@ public struct AppScreen: View {
                     }
                     // 本体が明るいグレーなので、右上のボタンなども明るい背景用の色にする
                     .environment(\.colorScheme, .light)
-                    .tabItem { Label("リモコン", systemImage: "appletvremote.gen4.fill") }
+                    .tabItem { Label("リモコン", systemImage: "appletvremote.gen4.fill").accessibilityIdentifier("tab.remote") }
                     .tag(AppViewModel.Tab.remote)
 
                     GuideGridScreen(viewModel: appViewModel.guideGridViewModel)
-                        .tabItem { Label("番組表", systemImage: "calendar") }
+                        .tabItem { Label("番組表", systemImage: "calendar").accessibilityIdentifier("tab.guide") }
                         .tag(AppViewModel.Tab.guide)
 
                     ChannelListScreen(viewModel: appViewModel.channelListViewModel)
-                        .tabItem { Label("チャンネル", systemImage: "list.bullet") }
+                        .tabItem { Label("チャンネル", systemImage: "list.bullet").accessibilityIdentifier("tab.channels") }
                         .tag(AppViewModel.Tab.channels)
 
                     ReservationListScreen(viewModel: appViewModel.reservationListViewModel)
-                        .tabItem { Label("録画予約", systemImage: "record.circle") }
+                        .tabItem { Label("録画予約", systemImage: "record.circle").accessibilityIdentifier("tab.reservations") }
                         .tag(AppViewModel.Tab.reservations)
                 }
                 // どのタブでも、テレビで映っているものをミニプレーヤーで出す
@@ -124,6 +124,7 @@ public struct AppScreen: View {
                 Image(systemName: "gearshape")
             }
             .accessibilityLabel("設定")
+            .accessibilityIdentifier("settings.open")
         }
     }
 }

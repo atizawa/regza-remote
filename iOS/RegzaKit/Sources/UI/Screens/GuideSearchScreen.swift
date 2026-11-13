@@ -71,6 +71,7 @@ struct GuideSearchResults: View {
                         SearchResultRow(row: row)
                     }
                     .tint(.primary)
+                    .accessibilityIdentifier("search.result.\(row.program.id)")
                 }
             }
         }

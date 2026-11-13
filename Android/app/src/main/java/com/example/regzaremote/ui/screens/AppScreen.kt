@@ -21,6 +21,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.example.regzaremote.bridge.Send
@@ -75,6 +76,7 @@ fun AppScreen(app: RegzaAndroidApp, state: AppState, send: Send) {
 @Composable
 private fun RowScope.TabItem(tab: AppTab, label: String, icon: @Composable () -> Unit, selected: AppTab, send: Send) {
     NavigationBarItem(
+        modifier = Modifier.testTag("tab.${tab.rawValue}"),
         // Swift の値なので、同じタブかは rawValue で比べる
         selected = selected.rawValue == tab.rawValue,
         onClick = { send(AppAction.selectTab(tab)) },

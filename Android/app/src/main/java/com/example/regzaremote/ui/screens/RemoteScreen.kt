@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -90,7 +91,9 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
         // 本体が明るいグレーなので、見出しと設定のボタンは黒にする
         CompositionLocalProvider(LocalContentColor provides Color.Black) {
             ScreenHeader("リモコン") {
-                HeaderIconButton(Icons.Filled.Settings, "設定") { sendAction(AppAction.showSettings()) }
+                HeaderIconButton(Icons.Filled.Settings, "設定", modifier = Modifier.testTag("settings.open")) {
+                    sendAction(AppAction.showSettings())
+                }
             }
         }
         Column(

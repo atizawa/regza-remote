@@ -50,6 +50,7 @@ struct ProgramDetailScreen: View {
             .foregroundStyle(AppTheme.accent)
 
             Text(program.name)
+                .accessibilityIdentifier("program.title")
                 .font(.title2.weight(.bold))
                 .fixedSize(horizontal: false, vertical: true)
 
