@@ -117,11 +117,14 @@ mise run test-android-runtime
 ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
 ```
 
-次の 3 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
+AndroidRuntimeSmokeTest と StateLifecycleTest の計 6 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
 
 - `swiftLibrariesJniLooperAndFlowCancellation`: APK の .so の読み込み、JNI・Looper を通る state 更新と、Flow を繰り返し終了したあとの待機の解消。
+- `earlyCancellationAndStateChangesReleaseWaits`: 初回受信直後の状態変更とキャンセルが重なっても、Swift の待機が残らない。
+- `cancellingOneCollectorKeepsOtherCollectorActive`: 同じ state を購読する一方の Flow を止めても、もう一方には変更通知が届く。
 - `bionicSocketConnectsFromSwift`: Swift の SocketTransport から、端末内の HTTP サーバーへの送受信。
 - `boringSSLReadsAndroidTrustStore`: BoringSSL の初期化と Android の信頼ストアの参照。HTTPS のハンドシェイクや証明書検証全体は対象外。
+- `stoppedScreenReleasesWaitAndReceivesLatestStateOnRestart`: 実際の rememberState を Compose で動かし、Lifecycle が CREATED に下がると待機が終了し、STARTED に戻ると最新の state を受け取る。
 
 Swift／Java の接続コード、state の待機・キャンセル、Looper、SocketTransport、BoringSSL、.so の梱包、Swift・swift-java・NDK の版を変更したときに実行する。ホストの JVM の振る舞いテストと併せて確認する。接続済み端末が必要なため、`mise run check` には含めていない。現在の CI の Android ジョブもテスト APK のビルドまでで、端末上での実行は別途行う。
 
@@ -282,6 +285,8 @@ swift-java（301e3da）には次の制約がある。どれも、守れなけれ
 - 同じ名前で引数の型だけ違う関数を並べられない。窓口の送る関数を `sendChannelListAction` のように型ごとの名前にしているのはこのため（Kotlin からは `Send` を通してどれも `send` で送れる）
 - swift-java が何か宣言を Java にできなかったときは、`mise run build-swift` が止まる（`Failed to import`）
 - jextract の入力は絶対 file URL に統一する。相対パスを URL として渡すと Linux で同じ extension が重複収集され、Java のメソッド名や定義が重複するため、`build-swift.sh` がパスの解決と URL エンコードを行う。
+- Future のキャンセルが Swift Task に伝わらない制約（[swift-java #947](https://github.com/swiftlang/swift-java/issues/947)）に対し、Flow の finally から endStateWait を呼ぶ。StateWaitRegistry は Swift Task のキャンセルでも continuation を起こすが、遅れて届く終了通知を扱うため、waitID と完了記録は維持する。対応版へ更新するときも、開始前・待機中・状態変更との競合を端末テストで確認してから回避策を簡略化する。
+- rememberState は collectAsStateWithLifecycle で購読する。画面の Lifecycle が STARTED 未満になると Flow の終了通知で Swift の待機を解放し、再開時は最新値から受け取り直す。エディタのプレビューでは従来どおり初期値を先に取得する。
 
 ## テレビ側の準備
 

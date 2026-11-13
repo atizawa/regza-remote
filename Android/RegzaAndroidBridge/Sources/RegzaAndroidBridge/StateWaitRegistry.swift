@@ -2,6 +2,7 @@ import Observation
 
 /// Kotlin の Flow ごとに state の変更を待つ。
 /// Java の Future のキャンセルは Swift の Task に伝わらないため、終了は end(_:) で明示的に受け取る。
+/// Swift Task 自体のキャンセルでも待機を終え、end(_:) で待機番号を解放する。
 /// 開始前の終了と、結果を返してからの終了も扱い、待機番号は 1 回の next にだけ使う。
 @MainActor
 final class StateWaitRegistry {
@@ -21,19 +22,29 @@ final class StateWaitRegistry {
         case .waiting?, .completed?:
             preconditionFailure("同じ state の待機番号が重なっています: \(waitID)")
         }
-        while true {
-            if case .cancelled? = waits[waitID] {
-                waits[waitID] = nil
-                return nil
+        return await withTaskCancellationHandler {
+            while true {
+                if case .cancelled? = waits[waitID] {
+                    waits[waitID] = nil
+                    return nil
+                }
+                if Task.isCancelled {
+                    // 後から来る end を開始前の終了と取り違えないよう、正常終了と同じく記録を残す。
+                    waits[waitID] = .completed
+                    return nil
+                }
+                let current = changes.track(read)
+                if current != last {
+                    // Kotlin が Future の結果を受け取って end を呼ぶまで、完了したことを覚えておく。
+                    // 結果を返す直前に Flow が終了しても、後から来た end を開始前の終了と取り違えないため。
+                    waits[waitID] = .completed
+                    return current
+                }
+                await changes.wait()
             }
-            let current = changes.track(read)
-            if current != last {
-                // Kotlin が Future の結果を受け取って end を呼ぶまで、完了したことを覚えておく。
-                // 結果を返す直前に Flow が終了しても、後から来た end を開始前の終了と取り違えないため。
-                waits[waitID] = .completed
-                return current
-            }
-            await changes.wait()
+        } onCancel: {
+            // ハンドラーは別スレッドでも呼ばれる。変更通知・end と同じ MainActor 上で待機を起こす。
+            Task { @MainActor in changes.changed() }
         }
     }
 

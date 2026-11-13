@@ -17,6 +17,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
@@ -73,6 +74,51 @@ class AndroidRuntimeSmokeTest {
             waiting.cancelAndJoin()
             waitForPendingStateWaits(app, 0)
         }
+    }
+
+    /** 初回受信の直後に状態変更とキャンセルを重ねても、JNI 越しの Swift 待機を残さない。 */
+    @Test
+    fun earlyCancellationAndStateChangesReleaseWaits() = runBlocking {
+        val app = RegzaAndroidApp.sample(MemoryStorage(), "").get()
+        val send = AppSend(app)
+        repeat(20) { index ->
+            val received = CompletableDeferred<Unit>()
+            val collector = launch(Dispatchers.Default) {
+                app.appStates().collect { received.complete(Unit) }
+            }
+            try {
+                withTimeout(TIMEOUT) { received.await() }
+                send(AppAction.selectTab(if (index % 2 == 0) AppTab.guide() else AppTab.channels()))
+            } finally {
+                withTimeout(TIMEOUT) { collector.cancelAndJoin() }
+            }
+            waitForPendingStateWaits(app, 0)
+        }
+    }
+
+    /** 片方の購読を止めても、もう片方には Swift の変更通知が届く。 */
+    @Test
+    fun cancellingOneCollectorKeepsOtherCollectorActive() = runBlocking {
+        val app = RegzaAndroidApp.sample(MemoryStorage(), "").get()
+        val states = Channel<AppState>(Channel.UNLIMITED)
+        val cancelled = launch(Dispatchers.Default) { app.appStates().collect {} }
+        val active = launch(Dispatchers.Default) { app.appStates().filterNotNull().collect(states::send) }
+        try {
+            withTimeout(TIMEOUT) { states.receive() }
+            waitForPendingStateWaits(app, 2)
+            withTimeout(TIMEOUT) { cancelled.cancelAndJoin() }
+            waitForPendingStateWaits(app, 1)
+
+            AppSend(app)(AppAction.selectTab(AppTab.guide()))
+
+            assertEquals(AppTab.guide().rawValue, withTimeout(TIMEOUT) { states.receive() }.tab.rawValue)
+        } finally {
+            withTimeout(TIMEOUT) {
+                cancelled.cancelAndJoin()
+                active.cancelAndJoin()
+            }
+        }
+        waitForPendingStateWaits(app, 0)
     }
 
     /** Swift の SocketTransport が Android/Bionic のソケットで端末内のサーバーと送受信できる。 */
