@@ -1,5 +1,7 @@
 package com.example.regzaremote.appservices
 
+import android.os.Bundle
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.example.regzaremote.bridge.AppSend
 import com.example.regzaremote.bridge.Send
@@ -11,13 +13,26 @@ import com.example.regzaremote.core.RegzaAndroidApp
  * 画面はそれぞれ自分の ViewModel の state を窓口から受け取り (<State の型 (先頭は小文字)>s)、操作を send で送る。
  * 画面の回転などで Activity が作り直されても残るので、Swift の ViewModel もここで 1 つだけ作る
  */
-class RegzaViewModel(val app: RegzaAndroidApp) : ViewModel() {
+class RegzaViewModel(val app: RegzaAndroidApp, savedStateHandle: SavedStateHandle) : ViewModel() {
     /** 画面から操作を送る先 (Swift の窓口に送る) */
     val send: Send = AppSend(app)
+
+    init {
+        savedStateHandle.get<Bundle>(STATE_KEY)?.getString(SNAPSHOT_KEY)?.let(app::restoreState)
+        // OS が保存するときに同期で取得する。Flow の受信待ちにより入力が古くならないようにする。
+        savedStateHandle.setSavedStateProvider(STATE_KEY) {
+            Bundle().apply { putString(SNAPSHOT_KEY, app.saveState()) }
+        }
+    }
 
     override fun onCleared() {
         // アプリを閉じたら、テレビの PIN 表示も取り消し、ライブ視聴の配信も止める (待たずに送るだけ)
         send(AppAction.closeSettings())
         send(AppAction.closePlayer())
+    }
+
+    private companion object {
+        const val STATE_KEY = "regza.ui"
+        const val SNAPSHOT_KEY = "snapshot"
     }
 }

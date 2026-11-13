@@ -71,6 +71,16 @@ public final class RegzaAndroidApp {
 
     // MARK: 操作
 
+    /// Android の保存状態のコールバックは同期なので、メインスレッド上で最新の入力を取り出す。
+    public func saveState() -> String {
+        onMainActor { appViewModel.restorationJSON }
+    }
+
+    /// 画面の購読を始める前に、新しい Swift ViewModel へ保存状態を戻す。
+    public func restoreState(_ json: String) {
+        onMainActor { appViewModel.restore(json) }
+    }
+
     /// 操作を、AppViewModel と開いている画面の ViewModel に手前から渡してみて、受け取ったところで止める
     @MainActor func route(_ deliver: (AnyObject) -> Bool) {
         for viewModel in viewModels {

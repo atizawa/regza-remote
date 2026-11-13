@@ -104,9 +104,13 @@ mise run test-android-runtime             # arm64 のエミュレーター/実�
 cd BehaviorTests && mise run test         # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
 ```
 
+Android の画面復元は `RegzaViewModel` の `SavedStateHandle` と Swift の `AppViewModel` が担当する。OS の保存時に入力・検索条件・選択中タブ・設定画面・戻る道・番組表の日付と放送種別を小さな JSON にまとめ、新しい ViewModel へ戻す。番組やチャンネルは再取得し、存在しない画面は戻る道から除く。未保存のパスワード・PIN・通信中フラグ・ライブ視聴の実行状態は含めない。保存済み認証情報は従来どおり StorageManager から読む。復元データは Swift で定義しているが、iOS の状態保存への接続は行っていない。
+
+手動では、設定の IP アドレスを保存せずに入力し、「アクティビティを保存しない」をオンにしてホームへ移動したあと、履歴から戻って入力が残ることを確認する。プロセス終了も確認するときは、このオプションを戻してアプリをバックグラウンドに置き、`adb shell am kill com.example.regzaremote` で終了させる。`adb shell pidof com.example.regzaremote` で終了を確認し、履歴から戻ったときに新しい PID で入力が復元されることを確かめる。
+
 ### Android 実行環境のスモークテスト
 
-`mise run test-android-runtime` は、`AndroidRuntimeSmokeTest`・`StateLifecycleTest`・`TLSTransportTest` を実機・エミュレーター上で実行する。APK のビルド・インストールも Gradle が行う。上記の Android 開発環境に加え、Android API 28 以上で `arm64-v8a` に対応した端末が必要。エミュレーターは Android Studio の Device Manager で arm64 の AVD を起動する。実機は USB デバッグを有効にし、接続時の認証を許可する。
+`mise run test-android-runtime` は、`AndroidRuntimeSmokeTest`・`StateLifecycleTest`・`TLSTransportTest`・`StateRestorationTest` を実機・エミュレーター上で実行する。APK のビルド・インストールも Gradle が行う。上記の Android 開発環境に加え、Android API 28 以上で `arm64-v8a` に対応した端末が必要。エミュレーターは Android Studio の Device Manager で arm64 の AVD を起動する。実機は USB デバッグを有効にし、接続時の認証を許可する。
 
 リポジトリのルートから実行する:
 
@@ -117,13 +121,14 @@ mise run test-android-runtime
 ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
 ```
 
-AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest の計 9 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
+AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest の計 11 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
 
 - `swiftLibrariesJniLooperAndFlowCancellation`: APK の .so の読み込み、JNI・Looper を通る state 更新と、Flow を繰り返し終了したあとの待機の解消。
 - `earlyCancellationAndStateChangesReleaseWaits`: 初回受信直後の状態変更とキャンセルが重なっても、Swift の待機が残らない。
 - `cancellingOneCollectorKeepsOtherCollectorActive`: 同じ state を購読する一方の Flow を止めても、もう一方には変更通知が届く。
 - `bionicSocketConnectsFromSwift`: Swift の SocketTransport から、端末内の HTTP サーバーへの送受信。
 - `boringSSLReadsAndroidTrustStore`: BoringSSL の初期化と Android の信頼ストアの参照。
+- `StateRestorationTest`: Activity 再生成による入力の維持と、Bundle を Parcel に退避して元の ViewModel を破棄したあとの復元。
 - `TLSTransportTest`: 端末内の TLS サーバーとのハンドシェイクと HTTP 送受信、システム CA で信頼されない自己署名証明書の拒否、信頼済み証明書のホスト名不一致による拒否。外部通信は行わず、テスト専用の信頼先を接続ごとに渡す。
 - `stoppedScreenReleasesWaitAndReceivesLatestStateOnRestart`: 実際の rememberState を Compose で動かし、Lifecycle が CREATED に下がると待機が終了し、STARTED に戻ると最新の state を受け取る。
 

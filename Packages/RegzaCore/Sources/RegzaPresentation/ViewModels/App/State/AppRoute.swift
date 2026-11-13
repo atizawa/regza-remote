@@ -1,7 +1,7 @@
 public import Foundation
 
 /// タブの中で開く画面 (path に積む)
-public enum AppRoute: Hashable, Sendable, Identifiable {
+public enum AppRoute: Hashable, Codable, Sendable, Identifiable {
     /// 1 チャンネルの番組表
     case channelPrograms(channelCode: String)
     /// 番組の詳細 (番組の id とチャンネルのコード)。番組とチャンネルは UseCase から引く

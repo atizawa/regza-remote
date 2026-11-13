@@ -75,6 +75,23 @@ public final class SettingsViewModel {
         path = newPath
     }
 
+    var restorationState: SettingsRestorationState {
+        let state = state
+        return SettingsRestorationState(
+            path: path, host: state.tv.host, user: state.tv.user, isShowingManualEntry: state.tv.isShowingManualEntry,
+            guideHost: state.servers.guide.host, streamHost: state.servers.stream.host)
+    }
+
+    func restore(_ saved: SettingsRestorationState) {
+        // 保存済みパスワードは初期値を使い、PIN 登録や探索などの処理は再開しない。
+        tvSetupViewModel.send(.setHost(saved.host))
+        tvSetupViewModel.send(.setUser(saved.user))
+        tvSetupViewModel.send(.setShowingManualEntry(saved.isShowingManualEntry))
+        serverSetupViewModel.send(.setHost(.guide, saved.guideHost))
+        serverSetupViewModel.send(.setHost(.stream, saved.streamHost))
+        path = saved.path
+    }
+
     /// 画面を閉じた。PIN を入れずに閉じたら、テレビの PIN 表示を消しておく (AppViewModel が呼ぶ)
     func dismiss() {
         tvSetupViewModel.send(.close)

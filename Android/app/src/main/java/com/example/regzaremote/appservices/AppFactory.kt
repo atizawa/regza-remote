@@ -2,6 +2,7 @@ package com.example.regzaremote.appservices
 
 import android.content.Context
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.regzaremote.appservices.storage.AndroidStorage
@@ -15,7 +16,7 @@ object AppFactory {
     fun makeViewModelFactory(context: Context): ViewModelProvider.Factory {
         val applicationContext = context.applicationContext
         return viewModelFactory {
-            initializer { RegzaViewModel(makeApp(applicationContext)) }
+            initializer { RegzaViewModel(makeApp(applicationContext), createSavedStateHandle()) }
         }
     }
 }

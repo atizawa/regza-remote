@@ -65,6 +65,100 @@ import Testing
         #expect(appViewModel.livePlayerViewModel == nil)
     }
 
+    @Test func restoresSettingsDraftWithoutCredentialsOrRunningWork() throws {
+        let original = try makeApp()
+        original.send(.selectTab(.channels))
+        original.send(.showSettings)
+        let settings = try #require(original.settingsViewModel)
+        settings.send(.setPath([.tv, .guide]))
+        settings.send(.tv(.setHost("192.0.2.77")))
+        settings.send(.tv(.setUser("draft-user")))
+        settings.send(.tv(.setPassword("unsaved-secret")))
+        settings.send(.tv(.setPIN("123456")))
+        settings.send(.tv(.setShowingManualEntry(true)))
+        settings.send(.server(.setHost(.guide, "guide.example:40772")))
+        settings.send(.server(.setHost(.stream, "stream.example:8888")))
+        let json = original.restorationJSON
+        #expect(!json.contains("unsaved-secret"))
+        #expect(!json.contains("123456"))
+
+        let restored = try makeApp()
+        restored.restore(json)
+        let state = try #require(restored.settingsViewModel?.state)
+        #expect(restored.state.tab == .channels)
+        #expect(restored.state.isShowingSettings)
+        #expect(state.path == [.tv, .guide])
+        #expect(state.tv.host == "192.0.2.77")
+        #expect(state.tv.user == "draft-user")
+        #expect(state.tv.isShowingManualEntry)
+        #expect(state.tv.password.isEmpty)
+        #expect(state.tv.pin.isEmpty)
+        #expect(!state.tv.isWaitingForPIN && !state.tv.isPairing && !state.tv.isScanning && !state.tv.isTesting)
+        #expect(state.servers.guide.host == "guide.example:40772")
+        #expect(state.servers.stream.host == "stream.example:8888")
+        #expect(restored.livePlayerViewModel == nil)
+    }
+
+    @Test(arguments: [false, true]) func restoresSearchAndSelection(isLiteral: Bool) async throws {
+        let original = try makeApp()
+        original.send(.selectTab(.guide))
+        original.send(.push(.search))
+        let search = original.guideGridViewModel.guideSearchViewModel
+        search.send(.setText("明日の夜のサッカー"))
+        search.send(.removeCondition(.hours))
+        if isLiteral { search.send(.searchLiterally) }
+        let day = Date(timeIntervalSince1970: 1_900_000_000)
+        original.guideGridViewModel.send(.selectDay(day))
+        original.remoteViewModel.send(.selectBand(.bs))
+
+        let restored = try makeApp()
+        restored.restore(original.restorationJSON)
+        _ = await Introspector(root: restored).waitUntilIdle()
+        let state = restored.guideGridViewModel.guideSearchViewModel.state
+        #expect(state.text == search.state.text)
+        #expect(state.isLiteral == isLiteral)
+        #expect(state.conditions == search.state.conditions)
+        #expect(restored.state.path(of: .guide) == [.search])
+        #expect(restored.guideGridViewModel.state.selectedDay == day)
+        #expect(restored.remoteViewModel.state.selectedBand == .bs)
+    }
+
+    @Test func restoresExistingRoutesAndDropsUnavailableDetail() async throws {
+        let original = try makeApp()
+        let code = try #require(original.remoteViewModel.channels.first?.code)
+        original.send(.selectTab(.channels))
+        original.send(.push(.channelPrograms(channelCode: code)))
+        original.send(.push(.programDetail(programID: -1, channelCode: code)))
+        original.send(.push(.search))
+        let restored = try makeApp()
+        restored.restore(original.restorationJSON)
+        _ = await Introspector(root: restored).waitUntilIdle()
+        #expect(restored.state.path(of: .channels) == [.channelPrograms(channelCode: code)])
+    }
+
+    @Test func navigationDuringRestorationTakesPrecedence() async throws {
+        let original = try makeApp()
+        original.send(.push(.search))
+        let restored = try makeApp()
+        restored.restore(original.restorationJSON)
+        restored.send(.pop)
+        restored.send(.selectTab(.reservations))
+        _ = await Introspector(root: restored).waitUntilIdle()
+        #expect(restored.state.tab == .reservations)
+        #expect(restored.state.path(of: .remote).isEmpty)
+    }
+
+    @Test func ignoresInvalidOrUnknownRestorationData() throws {
+        let appViewModel = try makeApp()
+        appViewModel.send(.selectTab(.channels))
+        let original = appViewModel.restorationJSON
+        for json in ["invalid", "{}", original.replacingOccurrences(of: "\"version\":1", with: "\"version\":2")] {
+            appViewModel.restore(json)
+            #expect(appViewModel.state.tab == .channels)
+            #expect(appViewModel.settingsViewModel == nil)
+        }
+    }
+
     @Test func introspectionShowsStateAndActions() throws {
         let appViewModel = try makeApp()
         let introspector = Introspector(root: appViewModel)

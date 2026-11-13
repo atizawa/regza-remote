@@ -73,7 +73,7 @@ public final class GuideGridViewModel {
         }
     }
 
-    private func load() async {
+    func load() async {
         defer { hasLoaded = true }
         try? await remoteViewModel.loadChannels()
         await guideUseCase.loadGuidePrograms()

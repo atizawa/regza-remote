@@ -31,6 +31,7 @@ public final class AppViewModel {
     @ObservationIgnored private let work = Work()
     /// 画面の移り変わり (playingChannelCode はライブ視聴の ViewModel から求めるので、ここでは使わない)
     private var navigation = State()
+    @ObservationIgnored private var restoringPaths: [Tab: [Route]]?
 
     public var state: State {
         var state = navigation
@@ -60,6 +61,8 @@ public final class AppViewModel {
     }
 
     public func send(_ action: Action) {
+        // 復元用の読み込み中に利用者が操作したら、その操作を優先する。
+        restoringPaths = nil
         // 変わったときだけ state を入れ替える (SwiftUI は戻る道などの Binding に同じ値を書き戻すことがあり、
         // そのたびに入れ替えると、変わっていないのに画面を描き直すことになる)
         var next = navigation
@@ -174,6 +177,48 @@ public final class AppViewModel {
     /// 前回、強制終了などで止められずに残ったライブ視聴の配信を止める (アプリを開いたときに呼ぶ)
     public func cleanUpStreams() async {
         await streamUseCase.cleanUp()
+    }
+
+    /// OS の保存状態へ渡す小さな復元データ。パスワード・PIN・通信中の処理は保存しない。
+    public var restorationJSON: String {
+        let saved = AppRestorationState(
+            tab: navigation.tab, paths: restoringPaths ?? navigation.paths,
+            isShowingNowPlaying: navigation.isShowingNowPlaying,
+            settings: settingsViewModel?.restorationState,
+            search: guideGridViewModel.guideSearchViewModel.restorationState,
+            selectedDay: guideGridViewModel.state.selectedDay,
+            selectedBand: remoteViewModel.state.selectedBand?.rawValue)
+        guard let data = try? JSONEncoder().encode(saved) else { return "" }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    /// 新しい ViewModel に入力と表示位置を戻す。壊れたデータや未知の版では初期表示を保つ。
+    public func restore(_ json: String) {
+        guard let saved = try? JSONDecoder().decode(AppRestorationState.self, from: Data(json.utf8)), saved.version == 1 else { return }
+        restoringPaths = nil
+        navigation.tab = saved.tab
+        navigation.isShowingNowPlaying = saved.isShowingNowPlaying
+        if let settings = saved.settings {
+            if settingsViewModel == nil { send(.showSettings) }
+            settingsViewModel?.restore(settings)
+        }
+        guideGridViewModel.guideSearchViewModel.restore(saved.search)
+        guideGridViewModel.send(.selectDay(saved.selectedDay))
+        if let band = saved.selectedBand.flatMap(BroadcastBand.init(rawValue:)) { remoteViewModel.send(.selectBand(band)) }
+
+        // 検索画面はすぐ戻せる。番組・チャンネルの画面はデータを読み直してから存在を確かめる。
+        navigation.paths = saved.paths.mapValues { Array($0.prefix { $0 == .search }) }
+        guard saved.paths.values.contains(where: { !$0.isEmpty }) else { return }
+        restoringPaths = saved.paths
+        work.run {
+            await self.guideGridViewModel.load()
+            guard self.restoringPaths == saved.paths else { return }
+            self.restoringPaths = nil
+            self.navigation.paths = saved.paths.mapValues { path in
+                Array(path.prefix { self.viewModel(for: $0) != nil })
+            }
+            self.forgetClosedScreens()
+        }
     }
 
     /// どの戻る道にもない画面の ViewModel を捨てる

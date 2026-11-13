@@ -87,6 +87,17 @@ public final class GuideSearchViewModel {
         }
     }
 
+    var restorationState: SearchRestorationState {
+        SearchRestorationState(text: text, isLiteral: isLiteral, removed: removed)
+    }
+
+    func restore(_ saved: SearchRestorationState) {
+        text = saved.text
+        isLiteral = saved.isLiteral
+        removed = saved.removed
+        refresh()
+    }
+
     private func refresh() {
         var query = isLiteral ? ProgramSearchQuery(text: text) : ProgramSearchQuery(parsing: text)
         if removed.contains(.day) { query.dayOffset = nil }
