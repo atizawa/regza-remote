@@ -40,6 +40,7 @@ import com.example.regzaremote.core.ProgramListAction
 import com.example.regzaremote.core.ProgramListState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
@@ -63,7 +64,7 @@ fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Send)
         // 読み込む前は nil
         val days = list.days.orElse(null)
         when {
-            days != null && days.isEmpty() -> EmptyState("番組表がありません", "Mirakurun がこのチャンネルの番組表を持っていません。")
+            days != null && days.isEmpty() -> EmptyState(AppStrings.guideEmpty, AppStrings.guideChannelEmpty)
 
             days != null -> LazyColumn(
                 contentPadding = PaddingValues(
@@ -87,8 +88,8 @@ fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Send)
                 }
             }
 
-            message != null -> EmptyState("番組表を取得できません", message) {
-                TextButton(onClick = { send(ProgramListAction.reload()) }) { Text("もう一度試す") }
+            message != null -> EmptyState(AppStrings.guideLoadFailed, message) {
+                TextButton(onClick = { send(ProgramListAction.reload()) }) { Text(AppStrings.commonRetry) }
             }
 
             else -> Loading()
@@ -116,7 +117,7 @@ private fun ProgramRow(program: ProgramItem, send: Send) {
             Text(program.name, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (program.isReserved) ReservedBadge(compact = true)
-                if (program.isOnAir) Text("放送中", style = MaterialTheme.typography.bodySmall, color = AppTheme.accent)
+                if (program.isOnAir) Text(AppStrings.programOnAir, style = MaterialTheme.typography.bodySmall, color = AppTheme.accent)
                 program.genreName.orElse(null)?.let { Note(it) }
             }
         }

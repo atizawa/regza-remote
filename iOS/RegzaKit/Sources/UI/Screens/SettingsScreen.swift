@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import RegzaPresentation
 import SwiftUI
 
@@ -26,7 +27,7 @@ struct SettingsScreen: View {
         let serverState = state.servers
         NavigationStack(path: path) {
             Form {
-                Section("テレビ") {
+                Section(AppStrings.tvTitle) {
                     NavigationLink(value: Page.tv) {
                         LabeledContent("REGZA") {
                             Text(tvState.status.text)
@@ -35,41 +36,38 @@ struct SettingsScreen: View {
                     }
                 }
 
-                Section("表示") {
+                Section(AppStrings.commonDisplay) {
                     LiveActivityToggle()
                 }
 
                 Section {
                     NavigationLink(value: Page.guide) {
-                        LabeledContent("番組表（Mirakurun）", value: serverState.guide.status)
+                        LabeledContent(AppStrings.settingsGuideIntegration, value: serverState.guide.status)
                     }
                     // EPGStation は Mirakurun から放送を受け取るので、Mirakurun を設定してから設定できるようにする
                     NavigationLink(value: Page.stream) {
                         LabeledContent(
-                            "ライブ視聴（EPGStation）",
-                            value: serverState.hasGuideDraft ? serverState.stream.status : "先に番組表を設定")
+                            AppStrings.settingsStreamIntegration,
+                            value: serverState.hasGuideDraft ? serverState.stream.status : AppStrings.settingsGuideRequired)
                     }
                     .disabled(!serverState.hasGuideDraft)
                 } header: {
-                    Text("録画サーバーとの連携")
+                    Text(AppStrings.settingsRecordingServers)
                 } footer: {
                     Text(
-                        """
-                        Mirakurun や EPGStation を使っている場合だけ設定してください。設定すると、番組名・番組表・番組表からの録画予約や、アプリでのライブ視聴が使えます。
-                        ライブ視聴（EPGStation）は、番組表（Mirakurun）を設定すると設定できます。
-                        """)
+                        AppStrings.settingsServersHelp)
                 }
             }
-            .navigationTitle("設定")
+            .navigationTitle(AppStrings.settingsTitle)
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Page.self) { page in
                 switch page {
                 case .tv:
                     tvPage
                 case .guide:
-                    serverPage(.guide, title: "番組表（Mirakurun）")
+                    serverPage(.guide, title: AppStrings.settingsGuideIntegration)
                 case .stream:
-                    serverPage(.stream, title: "ライブ視聴（EPGStation）")
+                    serverPage(.stream, title: AppStrings.settingsStreamIntegration)
                 }
             }
             // iOS 26 の標準に合わせ、キャンセルは ×、保存は ✓ (強調色) のボタンにする
@@ -101,7 +99,7 @@ struct SettingsScreen: View {
         let state = settingsViewModel.state.tv
         return Form {
             Section {
-                TextField("IPアドレス (例: 192.168.0.10)", text: binding(state.host) { .setHost($0) })
+                TextField(AppStrings.tvHostPlaceholder, text: binding(state.host) { .setHost($0) })
                     .accessibilityIdentifier("settings.tv.host")
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never)
@@ -131,7 +129,7 @@ struct SettingsScreen: View {
                     settingsViewModel.send(.tv(.scan))
                 } label: {
                     HStack {
-                        Label(state.isScanning ? "テレビを探しています…" : "テレビを探す", systemImage: "magnifyingglass")
+                        Label(state.isScanning ? AppStrings.tvSearching : AppStrings.tvSearch, systemImage: "magnifyingglass")
                         Spacer()
                         if state.isScanning { ProgressView() }
                     }
@@ -143,22 +141,22 @@ struct SettingsScreen: View {
                         .foregroundStyle(.secondary)
                 }
             } header: {
-                Text("テレビ")
+                Text(AppStrings.tvTitle)
             } footer: {
-                Text("iPhone とテレビを同じ Wi-Fi につないでください。見つからないときは、テレビの「設定」→「ネットワーク」で IP アドレスを確認して入力してください。")
+                Text(AppStrings.tvNetworkHelpIos)
             }
 
             pairingSection(state)
 
             Section {
-                DisclosureGroup("ユーザー名とパスワードを入力", isExpanded: binding(state.isShowingManualEntry) { .setShowingManualEntry($0) }) {
-                    TextField("ユーザー名", text: binding(state.user) { .setUser($0) })
+                DisclosureGroup(AppStrings.tvCredentials, isExpanded: binding(state.isShowingManualEntry) { .setShowingManualEntry($0) }) {
+                    TextField(AppStrings.tvUsername, text: binding(state.user) { .setUser($0) })
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    SecureField("パスワード", text: binding(state.password) { .setPassword($0) })
+                    SecureField(AppStrings.tvPassword, text: binding(state.password) { .setPassword($0) })
                 }
             } footer: {
-                Text("PIN 登録に対応していない古い機種では、テレビの「外部連携設定」で設定したユーザー名とパスワードを入力してください。")
+                Text(AppStrings.tvLegacyHelp)
             }
 
             Section {
@@ -166,7 +164,7 @@ struct SettingsScreen: View {
                     settingsViewModel.send(.tv(.test))
                 } label: {
                     HStack {
-                        Text("接続テスト")
+                        Text(AppStrings.tvTest)
                         Spacer()
                         if state.isTesting { ProgressView() }
                     }
@@ -192,14 +190,14 @@ struct SettingsScreen: View {
                     settingsViewModel.send(.tv(.startPairing))
                 } label: {
                     HStack {
-                        Label(state.isRegistered ? "もう一度登録する" : "テレビに PIN を表示", systemImage: "number.square")
+                        Label(state.isRegistered ? AppStrings.tvRegisterAgain : AppStrings.tvShowPin, systemImage: "number.square")
                         Spacer()
                         if state.isPairing { ProgressView() }
                     }
                 }
                 .disabled(!state.hasAddress || state.isPairing)
             } else {
-                TextField("テレビに表示された PIN", text: binding(state.pin) { .setPIN($0) })
+                TextField(AppStrings.tvPinPlaceholder, text: binding(state.pin) { .setPIN($0) })
                     .keyboardType(.numberPad)
                     .textContentType(.oneTimeCode)
                     .font(.title3.monospacedDigit())
@@ -208,13 +206,13 @@ struct SettingsScreen: View {
                     settingsViewModel.send(.tv(.confirmPairing))
                 } label: {
                     HStack {
-                        Text("登録")
+                        Text(AppStrings.commonRegister)
                         Spacer()
                         if state.isPairing { ProgressView() }
                     }
                 }
                 .disabled(state.pin.isEmpty || state.isPairing)
-                Button("やめる", role: .cancel) {
+                Button(AppStrings.commonCancel, role: .cancel) {
                     settingsViewModel.send(.tv(.cancelPairing))
                 }
                 .disabled(state.isPairing)
@@ -225,12 +223,12 @@ struct SettingsScreen: View {
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text("PIN で登録")
+            Text(AppStrings.tvPinRegistration)
         } footer: {
             if !state.isWaitingForPIN {
-                Text("テレビの電源を入れてからボタンを押すと、テレビの画面に PIN が表示されます。")
+                Text(AppStrings.tvPinStartHelp)
             } else {
-                Text("テレビの画面に表示されている PIN を入力してください。")
+                Text(AppStrings.tvPinInputHelp)
             }
         }
     }
@@ -271,7 +269,8 @@ struct SettingsScreen: View {
                 settingsViewModel.send(.server(.scan(server)))
             } label: {
                 HStack {
-                    Label(state.isScanning ? "\(name) を探しています…" : "\(name) を探す", systemImage: "magnifyingglass")
+                    Label(
+                        state.isScanning ? AppStrings.serverSearching(name) : AppStrings.serverSearch(name), systemImage: "magnifyingglass")
                     Spacer()
                     if state.isScanning { ProgressView() }
                 }
@@ -283,26 +282,26 @@ struct SettingsScreen: View {
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text(server == .guide ? "番組表 (Mirakurun)" : "ライブ視聴 (EPGStation)")
+            Text(server == .guide ? AppStrings.settingsGuideTitle : AppStrings.settingsStreamTitle)
         } footer: {
             Text(
                 server == .guide
-                    ? "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。"
-                    : "EPGStation を動かしている場合に設定すると、放送中の番組を iPhone で見られます。家の Wi-Fi の中だけで使えます。")
+                    ? AppStrings.settingsGuideHelp
+                    : AppStrings.settingsStreamHelpIos)
         }
     }
 
     /// 録画サーバーとの連携をやめる。確かめたうえで、すぐにアドレスを消して反映する
     private func unlinkSection(_ server: ServerSetupServer, _ state: ServerSetupServerState) -> some View {
         Section {
-            Button("連携を解除", role: .destructive) { unlinking = server }
+            Button(AppStrings.settingsUnlink, role: .destructive) { unlinking = server }
                 .confirmationDialog(
                     state.unlinkTitle,
                     isPresented: Binding(get: { unlinking == server }, set: { if !$0 { unlinking = nil } }),
                     titleVisibility: .visible
                 ) {
                     // SettingsViewModel が、その設定の画面を閉じる
-                    Button("連携を解除", role: .destructive) { settingsViewModel.send(.server(.unlink(server))) }
+                    Button(AppStrings.settingsUnlink, role: .destructive) { settingsViewModel.send(.server(.unlink(server))) }
                 } message: {
                     Text(state.unlinkMessage)
                 }
@@ -329,7 +328,7 @@ private struct ServerAddressField: View {
 
     var body: some View {
         HStack {
-            TextField("IPアドレス (例: 192.168.0.2)", text: address)
+            TextField(AppStrings.serverHostPlaceholder, text: address)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -339,10 +338,10 @@ private struct ServerAddressField: View {
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 72)
-                .accessibilityLabel("ポート")
+                .accessibilityLabel(AppStrings.serverPort)
         }
         if !ServerAddress(host).isValid {
-            Text("ポートは 1〜65535 の数字で入れてください。空のままなら \(defaultPort) を使います。")
+            Text(AppStrings.serverPortHelp(defaultPort))
                 .font(.footnote)
                 .foregroundStyle(.red)
         }

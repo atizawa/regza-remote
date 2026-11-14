@@ -49,6 +49,7 @@ import com.example.regzaremote.core.GuideSearchState
 import com.example.regzaremote.core.SearchResultItem
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
@@ -68,11 +69,11 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { if (search.text.isEmpty()) focus.requestFocus() }
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("番組を探す", onBack)
+        ScreenHeader(AppStrings.searchTitle, onBack)
         SyncedTextField(
             value = search.text,
             onValueChange = { send(GuideSearchAction.setText(it)) },
-            label = "番組名・出演者・「明日の夜のドラマ」",
+            label = AppStrings.searchPlaceholder,
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = DesignDimensions.spacingOuter).focusRequester(focus),
         )
@@ -80,7 +81,7 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
             Column(Modifier.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ConditionChips(search.conditions, send)
                 Text(
-                    "「${search.text}」をそのまま探す",
+                    AppStrings.searchLiteral(search.text),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = AppTheme.accent,
@@ -93,18 +94,18 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
         val results = search.results
         when {
             search.isBlank -> EmptyState(
-                "番組を探す",
-                "1 週間分の番組から、番組名・出演者・説明で探します。\n「明日の夜のドラマ」「土曜 21時から」のように、日付・時間帯・ジャンルでも絞り込めます。",
+                AppStrings.searchTitle,
+                AppStrings.searchHelp,
             )
 
             results.isEmpty() && search.isIndexing -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     CircularProgressIndicator()
-                    Note("番組を読み込んでいます")
+                    Note(AppStrings.searchLoading)
                 }
             }
 
-            results.isEmpty() -> EmptyState("「${search.text}」に一致する結果はありません", "スペルを確認するか、新しい検索を試してください。")
+            results.isEmpty() -> EmptyState(AppStrings.searchNoResults(search.text), AppStrings.searchNoResultsHelp)
 
             else -> LazyColumn(contentPadding = PaddingValues(bottom = LocalMiniPlayerInset.current)) {
                 items(results.toList(), key = { it.program.id }) { row ->
@@ -128,7 +129,12 @@ private fun ConditionChips(conditions: Array<GuideSearchConditionChip>, send: Se
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("条件", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = AppTheme.accent)
+        Text(
+            AppStrings.searchConditionsAndroid,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = AppTheme.accent,
+        )
         conditions.forEach { chip ->
             Row(
                 Modifier
@@ -141,7 +147,7 @@ private fun ConditionChips(conditions: Array<GuideSearchConditionChip>, send: Se
                 Text(chip.label, style = MaterialTheme.typography.labelMedium)
                 Icon(
                     Icons.Filled.Close,
-                    contentDescription = "${chip.label} を外す",
+                    contentDescription = AppStrings.searchRemoveCondition(chip.label),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(12.dp),
                 )

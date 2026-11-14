@@ -48,6 +48,7 @@ import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.Note
 import java.time.Instant
 import java.time.ZoneId
@@ -64,9 +65,9 @@ fun NowPlayingBar(state: RemoteState, send: Send, modifier: Modifier = Modifier)
     // 文言は iOS と同じ NowPlayingItem.captionText・headlineText
     val caption = if (state.isSearchingTV || hasError) null else nowPlaying?.captionText?.orElse(null)
     val headline = when {
-        state.isSearchingTV -> "テレビを探しています…"
-        hasError -> "テレビに接続できません"
-        else -> nowPlaying?.headlineText ?: "接続中…"
+        state.isSearchingTV -> AppStrings.tvSearching
+        hasError -> AppStrings.remoteConnectionFailed
+        else -> nowPlaying?.headlineText ?: AppStrings.remoteConnecting
     }
     val progress = if (nowPlaying != null && nowPlaying.isHasTimeline && !hasError) nowPlaying.progress.toFloat() else null
     val key = if (nowPlaying != null && !hasError) miniPlayerKey(nowPlaying.kind.rawValue, nowPlaying.isAdvancing) else null
@@ -106,7 +107,7 @@ fun NowPlayingBar(state: RemoteState, send: Send, modifier: Modifier = Modifier)
         }
         if (key != null) {
             TextButton(onClick = { send(RemoteAction.press(key)) }) {
-                Text(if (key.rawValue == "power") "電源を入れる" else key.label, fontWeight = FontWeight.SemiBold)
+                Text(if (key.rawValue == "power") AppStrings.remotePowerOn else key.label, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -168,15 +169,15 @@ fun NowPlayingScreen(state: RemoteState, detail: NowPlayingState, send: Send) {
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
-            if (detail.isCanPowerOn) SheetButton("電源を入れる") { send(NowPlayingAction.powerOn()) }
+            if (detail.isCanPowerOn) SheetButton(AppStrings.remotePowerOn) { send(NowPlayingAction.powerOn()) }
             detail.playableChannelCode.orElse(null)?.let { code ->
-                SheetButton("アプリで見る") {
+                SheetButton(AppStrings.playerWatch) {
                     // シートを閉じてから、全画面で再生する
                     send(AppAction.closeNowPlaying())
                     send(AppAction.play(code))
                 }
             }
-            if (detail.isCanStartOver) SheetButton("この番組を最初から見る") { send(NowPlayingAction.startOver()) }
+            if (detail.isCanStartOver) SheetButton(AppStrings.playerProgramFromStart) { send(NowPlayingAction.startOver()) }
         }
     }
 }
@@ -208,9 +209,9 @@ private fun NowPlayingCard(state: RemoteState, send: Send) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         when {
-            state.isSearchingTV -> Status("テレビが見つからないため、探しています…")
+            state.isSearchingTV -> Status(AppStrings.remoteSearching)
             error != null -> Status(error, isWarning = true)
-            nowPlaying == null -> Status("接続中…")
+            nowPlaying == null -> Status(AppStrings.remoteConnecting)
             nowPlaying.kind.rawValue == "recorded" -> Playback(nowPlaying, send)
             nowPlaying.kind.rawValue == "broadcast" -> Broadcast(nowPlaying)
             else -> Status(nowPlaying.statusText.orElse(""))
@@ -236,7 +237,7 @@ private fun SourceLabel(text: String) {
 
 @Composable
 private fun Broadcast(nowPlaying: NowPlayingItem) {
-    SourceLabel(nowPlaying.channelName.ifEmpty { "放送" })
+    SourceLabel(nowPlaying.channelName.ifEmpty { AppStrings.broadcastTitle })
     when {
         nowPlaying.title.isNotEmpty() -> Text(
             nowPlaying.title,
@@ -269,7 +270,7 @@ private fun Broadcast(nowPlaying: NowPlayingItem) {
 
 @Composable
 private fun Playback(nowPlaying: NowPlayingItem, send: Send) {
-    SourceLabel(if (nowPlaying.channelName.isEmpty()) "録画番組" else "録画 · ${nowPlaying.channelName}")
+    SourceLabel(if (nowPlaying.channelName.isEmpty()) AppStrings.recordingTitle else AppStrings.recordingChannel(nowPlaying.channelName))
     Text(nowPlaying.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2)
     if (nowPlaying.chapterName.isNotEmpty()) Note(nowPlaying.chapterName)
     if (nowPlaying.duration > 0) {

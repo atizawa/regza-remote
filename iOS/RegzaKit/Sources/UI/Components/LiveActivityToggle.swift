@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import LiveActivity
 import SwiftUI
 
@@ -14,13 +15,13 @@ struct LiveActivityToggle: View {
                     set: { isOn in Task { await liveActivity.set(isOn) } }
                 )
             ) {
-                Label("ロック画面と Dynamic Island に表示", systemImage: "platter.filled.top.iphone")
+                Label(AppStrings.activityTitle, systemImage: "platter.filled.top.iphone")
             }
             .disabled(!LiveActivityController.areActivitiesEnabled)
             Text(
                 LiveActivityController.areActivitiesEnabled
-                    ? "アプリを閉じていても、番組名とリモコンのボタンを表示します。"
-                    : "iPhone の「設定」→「REGZAリモコン」で「ライブアクティビティ」をオンにすると使えます。"
+                    ? AppStrings.activityHelp
+                    : AppStrings.activityDisabledHelp
             )
             .font(.footnote)
             .foregroundStyle(.secondary)

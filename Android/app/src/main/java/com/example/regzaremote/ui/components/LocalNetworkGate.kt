@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.ProminentButton
@@ -55,13 +56,13 @@ fun LocalNetworkGate(content: @Composable () -> Unit) {
         isGranted -> content()
 
         hasRequested -> EmptyState(
-            "ローカルネットワークへのアクセスが必要です",
-            "同じ Wi-Fi のテレビを操作するため、ローカルネットワークへのアクセスを許可してください。",
+            AppStrings.networkPermissionTitle,
+            AppStrings.networkPermissionHelp,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                ProminentButton("許可する") { launcher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK) }
+                ProminentButton(AppStrings.networkPermissionAllow) { launcher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK) }
                 // 2 回断ると Android は許可を求める画面を出さなくなるので、アプリの設定を開けるようにする
-                TextButton(onClick = { context.openAppSettings() }) { Text("設定を開く") }
+                TextButton(onClick = { context.openAppSettings() }) { Text(AppStrings.commonOpenSettings) }
             }
         }
 

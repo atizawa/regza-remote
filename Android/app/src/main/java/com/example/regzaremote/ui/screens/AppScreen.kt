@@ -33,6 +33,7 @@ import com.example.regzaremote.core.AppTab
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.design.AppTheme
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.RecordIcon
 import com.example.regzaremote.ui.components.rememberState
@@ -56,10 +57,14 @@ fun AppScreen(app: RegzaAndroidApp, state: AppState, send: Send) {
         containerColor = AppTheme.background,
         bottomBar = {
             NavigationBar(containerColor = AppTheme.surface) {
-                TabItem(AppTab.remote(), "リモコン", { Icon(Icons.Filled.Home, contentDescription = null) }, tab, send)
-                TabItem(AppTab.guide(), "番組表", { Icon(Icons.Filled.DateRange, contentDescription = null) }, tab, send)
-                TabItem(AppTab.channels(), "チャンネル", { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, tab, send)
-                TabItem(AppTab.reservations(), "録画予約", { RecordIcon(Modifier.size(22.dp), color = LocalContentColor.current) }, tab, send)
+                TabItem(AppTab.remote(), AppStrings.tabRemote, { Icon(Icons.Filled.Home, contentDescription = null) }, tab, send)
+                TabItem(AppTab.guide(), AppStrings.tabGuide, { Icon(Icons.Filled.DateRange, contentDescription = null) }, tab, send)
+                TabItem(AppTab.channels(), AppStrings.tabChannels, {
+                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = null)
+                }, tab, send)
+                TabItem(AppTab.reservations(), AppStrings.tabReservations, {
+                    RecordIcon(Modifier.size(22.dp), color = LocalContentColor.current)
+                }, tab, send)
             }
         },
     ) { padding ->

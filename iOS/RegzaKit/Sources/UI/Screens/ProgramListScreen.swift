@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import Design
 import RegzaPresentation
 import SwiftUI
@@ -28,8 +29,8 @@ struct ProgramListScreen: View {
         if let days = state.days {
             if days.isEmpty {
                 ContentUnavailableView(
-                    "番組表がありません", systemImage: "calendar",
-                    description: Text("Mirakurun がこのチャンネルの番組表を持っていません。"))
+                    AppStrings.guideEmpty, systemImage: "calendar",
+                    description: Text(AppStrings.guideChannelEmpty))
             } else {
                 List {
                     ForEach(days) { group in
@@ -49,11 +50,11 @@ struct ProgramListScreen: View {
             }
         } else if let message = state.loadErrorMessage {
             ContentUnavailableView {
-                Label("番組表を取得できません", systemImage: "calendar.badge.exclamationmark")
+                Label(AppStrings.guideLoadFailed, systemImage: "calendar.badge.exclamationmark")
             } description: {
                 Text(message)
             } actions: {
-                Button("もう一度試す") { viewModel.send(.reload) }
+                Button(AppStrings.commonRetry) { viewModel.send(.reload) }
             }
         } else {
             ProgressView()
@@ -67,7 +68,7 @@ struct ReservedBadge: View {
     var compact = false
 
     var body: some View {
-        Label(compact ? "予約" : "録画予約済み", systemImage: "record.circle.fill")
+        Label(compact ? AppStrings.reservationTitle : AppStrings.reservationReserved, systemImage: "record.circle.fill")
             .font(compact ? .caption2.weight(.bold) : .caption.weight(.bold))
             .foregroundStyle(.white)
             .padding(.horizontal, compact ? 4 : 6)
@@ -95,7 +96,7 @@ private struct ProgramRow: View {
                         ReservedBadge(compact: true)
                     }
                     if program.isOnAir {
-                        Text("放送中").foregroundStyle(AppTheme.accent)
+                        Text(AppStrings.programOnAir).foregroundStyle(AppTheme.accent)
                     }
                     if let genre = program.genreName {
                         Text(genre)

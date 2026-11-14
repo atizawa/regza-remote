@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import RegzaPresentation
 import SwiftUI
 
@@ -13,13 +14,13 @@ struct RouteView: View {
             if let viewModel = appViewModel.programList(channelCode: channelCode) {
                 ProgramListScreen(viewModel: viewModel)
             } else {
-                ContentUnavailableView("チャンネルが見つかりません", systemImage: "list.bullet")
+                ContentUnavailableView(AppStrings.channelMissing, systemImage: "list.bullet")
             }
         case .programDetail(let programID, let channelCode):
             if let viewModel = appViewModel.programDetail(programID: programID, channelCode: channelCode) {
                 ProgramDetailScreen(viewModel: viewModel)
             } else {
-                ContentUnavailableView("番組が見つかりません", systemImage: "calendar.badge.exclamationmark")
+                ContentUnavailableView(AppStrings.programMissing, systemImage: "calendar.badge.exclamationmark")
             }
         case .search:
             GuideSearchScreen(guideSearchViewModel: appViewModel.guideGridViewModel.guideSearchViewModel) { row in

@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import RegzaPresentation
 import Design
 import SwiftUI
@@ -211,7 +212,7 @@ struct DirectionPad: View {
             Button {
                 remoteViewModel.send(.press(.enter))
             } label: {
-                Text("決定")
+                Text(AppStrings.remoteEnter)
                     .font(.headline)
                     .foregroundStyle(.black.opacity(0.8))
                     .frame(width: diameter * 0.38, height: diameter * 0.38)
@@ -252,7 +253,7 @@ struct BandPicker: View {
 
     var body: some View {
         Picker(
-            "放送",
+            AppStrings.broadcastTitle,
             selection: Binding(
                 get: { selected ?? .terrestrial },
                 set: { remoteViewModel.send(.selectBand($0)) }

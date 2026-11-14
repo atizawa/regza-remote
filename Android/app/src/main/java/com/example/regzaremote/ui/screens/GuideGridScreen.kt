@@ -47,6 +47,7 @@ import com.example.regzaremote.core.GuideGridState
 import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.Loading
@@ -63,10 +64,10 @@ fun GuideGridScreen(guide: GuideGridState, send: Send) {
     // 開いたら読み込む (予約した番組に印を付けるため、予約も読む)
     LaunchedEffect(Unit) { send(GuideGridAction.load()) }
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("番組表") {
+        ScreenHeader(AppStrings.tabGuide) {
             // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く (iOS 版と同じ)
             if (guide.isCanSearch) {
-                HeaderIconButton(Icons.Filled.Search, "番組を探す", modifier = Modifier.testTag("guide.search")) {
+                HeaderIconButton(Icons.Filled.Search, AppStrings.searchTitle, modifier = Modifier.testTag("guide.search")) {
                     send(AppAction.push(AppRoute.search()))
                 }
             }
@@ -74,15 +75,14 @@ fun GuideGridScreen(guide: GuideGridState, send: Send) {
         when {
             // Mirakurun がなくてもタブは消さず、何ができるかと設定のしかたを案内する
             !guide.isHasGuide -> EmptyState(
-                "番組表を使うには",
-                "録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。\n" +
-                    "設定画面の「録画サーバーとの連携」で Mirakurun のアドレスを設定してください。",
-            ) { ProminentButton("設定を開く") { send(AppAction.showSettings()) } }
+                AppStrings.guideSetupTitle,
+                AppStrings.guideSetupHelp,
+            ) { ProminentButton(AppStrings.commonOpenSettings) { send(AppAction.showSettings()) } }
 
             !guide.isHasLoaded -> Loading()
 
-            guide.columns.isEmpty() -> EmptyState("番組表を取得できません", "テレビと Mirakurun につながっているか確認してください。") {
-                TextButton(onClick = { send(GuideGridAction.load()) }) { Text("もう一度試す") }
+            guide.columns.isEmpty() -> EmptyState(AppStrings.guideLoadFailed, AppStrings.guideConnectionHelp) {
+                TextButton(onClick = { send(GuideGridAction.load()) }) { Text(AppStrings.commonRetry) }
             }
 
             else -> {

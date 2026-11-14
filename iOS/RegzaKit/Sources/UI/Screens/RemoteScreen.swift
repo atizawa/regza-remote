@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import Design
 import RegzaPresentation
 import SwiftUI
@@ -17,7 +18,7 @@ struct RemoteScreen: View {
                 powerRow
                 numberPanel
                 navigationBand
-                RemoteSection(title: "録画・再生") {
+                RemoteSection(title: AppStrings.remotePlayback) {
                     playbackPanel
                 }
                 moreSection
@@ -62,7 +63,7 @@ struct RemoteScreen: View {
     /// 音量・十字キー・チャンネル
     private var primaryControls: some View {
         HStack(alignment: .center, spacing: DesignDimensions.spacingItem) {
-            RockerControl(title: "音量", up: .volumeUp, down: .volumeDown)
+            RockerControl(title: AppStrings.remoteVolume, up: .volumeUp, down: .volumeDown)
                 .frame(width: 64)
             DirectionPad(diameter: 196)
                 .frame(maxWidth: .infinity)
@@ -77,8 +78,8 @@ struct RemoteScreen: View {
     private var navigationRow: some View {
         HStack(spacing: DesignDimensions.spacingItem) {
             KeyButton(key: .back, showsCaption: true)
-            KeyButton(key: .guide, title: "テレビ番組表", showsCaption: true)
-            KeyButton(key: .programInfo, title: "番組説明", showsCaption: true)
+            KeyButton(key: .guide, title: AppStrings.remoteTvGuide, showsCaption: true)
+            KeyButton(key: .programInfo, title: AppStrings.programDescription, showsCaption: true)
             KeyButton(key: .exit, showsCaption: true)
         }
     }
@@ -131,7 +132,7 @@ struct RemoteScreen: View {
                 withAnimation(.snappy) { isShowingMore.toggle() }
             } label: {
                 HStack {
-                    Text("その他の操作")
+                    Text(AppStrings.remoteMore)
                         .font(.footnote.weight(.semibold))
                     Spacer()
                     Image(systemName: "chevron.down")

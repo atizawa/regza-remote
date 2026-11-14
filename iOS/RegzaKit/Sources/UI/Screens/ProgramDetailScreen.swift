@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import Design
 import RegzaPresentation
 import SwiftUI
@@ -30,7 +31,7 @@ struct ProgramDetailScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Surface.background)
-        .navigationTitle("番組の詳細")
+        .navigationTitle(AppStrings.programDetails)
         .navigationBarTitleDisplayMode(.inline)
         .sensoryFeedback(.success, trigger: state.reserveCount)
         .animation(.default, value: state.isReserved)
@@ -40,14 +41,9 @@ struct ProgramDetailScreen: View {
     /// 局名・番組名・時刻。番組名をいちばん大きくする
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Text(state.channelName)
-                if program.isOnAir {
-                    Text("· 放送中")
-                }
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(AppTheme.accent)
+            Text(program.isOnAir ? AppStrings.channelOnAir(state.channelName) : state.channelName)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
 
             Text(program.name)
                 .accessibilityIdentifier("program.title")
@@ -88,7 +84,7 @@ struct ProgramDetailScreen: View {
                     Button {
                         viewModel.send(.tune(startOver: false))
                     } label: {
-                        actionLabel("切り替えて見る", systemImage: "play.fill", isBusy: state.isTuning)
+                        actionLabel(AppStrings.channelSwitchWatch, systemImage: "play.fill", isBusy: state.isTuning)
                     }
                     .buttonStyle(FilledActionStyle(color: AppTheme.accent))
                     .disabled(state.isTuning)
@@ -101,7 +97,7 @@ struct ProgramDetailScreen: View {
                 Button {
                     appViewModel.send(.play(channelCode: state.channelCode))
                 } label: {
-                    actionLabel("アプリで見る", systemImage: "play.tv", isBusy: false)
+                    actionLabel(AppStrings.playerWatch, systemImage: "play.tv", isBusy: false)
                 }
                 .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
             }
@@ -109,7 +105,7 @@ struct ProgramDetailScreen: View {
                 Button {
                     viewModel.send(.tune(startOver: true))
                 } label: {
-                    actionLabel("最初から見る", systemImage: "backward.end.alt", isBusy: false)
+                    actionLabel(AppStrings.playerFromStart, systemImage: "backward.end.alt", isBusy: false)
                 }
                 .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .primary))
                 .disabled(state.isTuning)
@@ -125,10 +121,10 @@ struct ProgramDetailScreen: View {
                 Button(role: .destructive) {
                     viewModel.send(.cancelReservation)
                 } label: {
-                    Label(isSeries ? "連ドラ予約を取り消す" : "予約を取り消す", systemImage: "xmark.circle")
+                    Label(isSeries ? AppStrings.reservationCancelSeries : AppStrings.reservationCancel, systemImage: "xmark.circle")
                 }
             } label: {
-                actionLabel("予約済み", systemImage: "checkmark", isBusy: state.reserving != nil)
+                actionLabel(AppStrings.reservationAlreadyReserved, systemImage: "checkmark", isBusy: state.reserving != nil)
             }
             .buttonStyle(FilledActionStyle(color: Surface.button, foreground: .red))
             .disabled(state.reserving != nil)
@@ -137,15 +133,15 @@ struct ProgramDetailScreen: View {
                 Button {
                     viewModel.send(.reserve(series: false))
                 } label: {
-                    Label("この回だけ録画", systemImage: "record.circle")
+                    Label(AppStrings.reservationOnce, systemImage: "record.circle")
                 }
                 Button {
                     viewModel.send(.reserve(series: true))
                 } label: {
-                    Label("連ドラ予約（毎回録画）", systemImage: "repeat")
+                    Label(AppStrings.reservationSeries, systemImage: "repeat")
                 }
             } label: {
-                actionLabel("録画予約", systemImage: "record.circle", isBusy: state.reserving != nil)
+                actionLabel(AppStrings.tabReservations, systemImage: "record.circle", isBusy: state.reserving != nil)
             }
             .buttonStyle(FilledActionStyle(color: .red))
             .disabled(state.reserving != nil)

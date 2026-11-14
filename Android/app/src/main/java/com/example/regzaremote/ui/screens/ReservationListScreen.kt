@@ -46,6 +46,7 @@ import com.example.regzaremote.core.ReservationListAction
 import com.example.regzaremote.core.ReservationListState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
@@ -81,12 +82,15 @@ fun ReservationListScreen(list: ReservationListState, send: Send) {
         isRefreshing = false
     }
 
+    val scheduledTitle = AppStrings.reservationScheduled
+    val waitingTitle = AppStrings.reservationWaitingSeries
+    val waitingHelp = AppStrings.reservationWaitingHelp
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("録画予約")
+        ScreenHeader(AppStrings.tabReservations)
         val message = list.loadErrorMessage.orElse(null)
         when {
-            message != null -> EmptyState("録画予約を取得できません", message) {
-                TextButton(onClick = { send(ReservationListAction.load()) }) { Text("もう一度試す") }
+            message != null -> EmptyState(AppStrings.reservationLoadFailed, message) {
+                TextButton(onClick = { send(ReservationListAction.load()) }) { Text(AppStrings.commonRetry) }
             }
 
             !list.isHasLoaded -> Loading()
@@ -100,7 +104,7 @@ fun ReservationListScreen(list: ReservationListState, send: Send) {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 if (list.scheduled.isEmpty() && list.waiting.isEmpty()) {
-                    EmptyState("録画予約はありません")
+                    EmptyState(AppStrings.reservationEmpty)
                 } else {
                     LazyColumn(
                         Modifier.fillMaxSize(),
@@ -122,10 +126,10 @@ fun ReservationListScreen(list: ReservationListState, send: Send) {
                                 )
                             }
                         }
-                        section("予定", null, list.scheduled.toList()) { cancelling = it }
+                        section(scheduledTitle, null, list.scheduled.toList()) { cancelling = it }
                         section(
-                            "次の回を待っている連ドラ予約",
-                            "番組表に次の回が載ると、テレビが自動で予約します。日時は最後に録画した回のものです。",
+                            waitingTitle,
+                            waitingHelp,
                             list.waiting.toList(),
                         ) { cancelling = it }
                     }
@@ -137,15 +141,20 @@ fun ReservationListScreen(list: ReservationListState, send: Send) {
     cancelling?.let { reservation ->
         AlertDialog(
             onDismissRequest = { cancelling = null },
-            title = { Text("「${reservation.title}」の予約を取り消しますか？") },
-            text = { if (reservation.isSeries) Text("連ドラ予約なので、次の回以降も録画されなくなります。") },
+            title = { Text(AppStrings.reservationCancelConfirmation(reservation.title)) },
+            text = { if (reservation.isSeries) Text(AppStrings.reservationCancelSeriesHelp) },
             confirmButton = {
                 TextButton(onClick = {
                     send(ReservationListAction.cancel(reservation.id))
                     cancelling = null
-                }) { Text(if (reservation.isSeries) "連ドラ予約を取り消す" else "予約を取り消す", color = AppTheme.red) }
+                }) {
+                    Text(
+                        if (reservation.isSeries) AppStrings.reservationCancelSeries else AppStrings.reservationCancel,
+                        color = AppTheme.red,
+                    )
+                }
             },
-            dismissButton = { TextButton(onClick = { cancelling = null }) { Text("やめる") } },
+            dismissButton = { TextButton(onClick = { cancelling = null }) { Text(AppStrings.commonCancel) } },
         )
     }
 }
@@ -184,7 +193,7 @@ private fun SwipeToCancel(item: ReservationItem, onCancel: (ReservationItem) -> 
                 Modifier.fillMaxSize().background(AppTheme.red).padding(horizontal = DesignDimensions.spacingOuter),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Text("取り消す", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text(AppStrings.reservationCancelAction, color = Color.White, fontWeight = FontWeight.SemiBold)
             }
         },
     ) {
@@ -207,7 +216,7 @@ private fun ReservationRow(item: ReservationItem) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             if (item.isRecording) {
                 RecordIcon(Modifier.size(11.dp))
-                Text("録画中", style = MaterialTheme.typography.bodySmall, color = AppTheme.red)
+                Text(AppStrings.reservationRecording, style = MaterialTheme.typography.bodySmall, color = AppTheme.red)
             }
             Note(item.timeText)
             item.repeatLabel.orElse(null)?.let {

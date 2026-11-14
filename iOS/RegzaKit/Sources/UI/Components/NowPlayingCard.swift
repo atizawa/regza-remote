@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import RegzaPresentation
 import Design
 import SwiftUI
@@ -11,7 +12,7 @@ struct NowPlayingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if remoteViewModel.state.isSearchingTV {
-                status("テレビが見つからないため、探しています…", systemImage: "magnifyingglass")
+                status(AppStrings.remoteSearching, systemImage: "magnifyingglass")
             } else if let message = remoteViewModel.state.errorMessage {
                 status(message, systemImage: "exclamationmark.triangle.fill", isWarning: true)
             } else if let nowPlaying = remoteViewModel.state.nowPlaying {
@@ -23,7 +24,7 @@ struct NowPlayingCard: View {
                 case .unknown: status(nowPlaying.statusText ?? "", systemImage: "tv")
                 }
             } else {
-                status("接続中…", systemImage: "tv")
+                status(AppStrings.remoteConnecting, systemImage: "tv")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -71,7 +72,7 @@ struct NowPlayingCard: View {
     @ViewBuilder
     private func broadcast(_ nowPlaying: NowPlayingItem) -> some View {
         sourceLabel(
-            nowPlaying.channelName.isEmpty ? "放送" : nowPlaying.channelName,
+            nowPlaying.channelName.isEmpty ? AppStrings.broadcastTitle : nowPlaying.channelName,
             systemImage: "antenna.radiowaves.left.and.right")
         if !nowPlaying.title.isEmpty {
             Text(nowPlaying.title)
@@ -95,7 +96,7 @@ struct NowPlayingCard: View {
     @ViewBuilder
     private func playback(_ nowPlaying: NowPlayingItem) -> some View {
         sourceLabel(
-            nowPlaying.channelName.isEmpty ? "録画番組" : "録画 · \(nowPlaying.channelName)",
+            nowPlaying.channelName.isEmpty ? AppStrings.recordingTitle : AppStrings.recordingChannel(nowPlaying.channelName),
             systemImage: "play.rectangle")
         Text(nowPlaying.title)
             .font(.headline)

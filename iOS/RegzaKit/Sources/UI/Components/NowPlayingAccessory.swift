@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import RegzaPresentation
 import Design
 import SwiftUI
@@ -36,14 +37,14 @@ struct NowPlayingAccessory: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(key == .power ? "電源を入れる" : key.label)
+                .accessibilityLabel(key == .power ? AppStrings.remotePowerOn : key.label)
             }
         }
         .padding(.horizontal, DesignDimensions.spacingOuter)
         .contentShape(Rectangle())
         .onTapGesture { appViewModel.send(.showNowPlaying) }
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("番組の詳細を開きます")
+        .accessibilityHint(AppStrings.programOpenDetails)
         .sheet(
             isPresented: Binding(get: { appViewModel.state.isShowingNowPlaying }, set: { if !$0 { appViewModel.send(.closeNowPlaying) } })
         ) {
@@ -74,9 +75,9 @@ struct NowPlayingAccessory: View {
 
     /// 下の大きな行: 番組名や状態 (文言は Android と同じ NowPlayingItem.headlineText)
     private var headline: String {
-        if remoteViewModel.state.isSearchingTV { return "テレビを探しています…" }
-        if remoteViewModel.state.errorMessage != nil { return "テレビに接続できません" }
-        return nowPlaying?.headlineText ?? "接続中…"
+        if remoteViewModel.state.isSearchingTV { return AppStrings.tvSearching }
+        if remoteViewModel.state.errorMessage != nil { return AppStrings.remoteConnectionFailed }
+        return nowPlaying?.headlineText ?? AppStrings.remoteConnecting
     }
 
     private var progress: Double? {

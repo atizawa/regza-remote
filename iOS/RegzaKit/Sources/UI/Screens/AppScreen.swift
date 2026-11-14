@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import Design
 import LiveActivity
 import RegzaPresentation
@@ -27,7 +28,7 @@ public struct AppScreen: View {
                 TabView(selection: Binding(get: { appViewModel.state.tab }, set: { appViewModel.send(.selectTab($0)) })) {
                     NavigationStack {
                         RemoteScreen()
-                            .navigationTitle("リモコン")
+                            .navigationTitle(AppStrings.tabRemote)
                             // ボタンを上に詰めるため、大きな見出しにしない
                             .navigationBarTitleDisplayMode(.inline)
                             // 本体が明るいグレーなので、見出しと時計を黒い文字にする
@@ -36,19 +37,21 @@ public struct AppScreen: View {
                     }
                     // 本体が明るいグレーなので、右上のボタンなども明るい背景用の色にする
                     .environment(\.colorScheme, .light)
-                    .tabItem { Label("リモコン", systemImage: "appletvremote.gen4.fill").accessibilityIdentifier("tab.remote") }
+                    .tabItem { Label(AppStrings.tabRemote, systemImage: "appletvremote.gen4.fill").accessibilityIdentifier("tab.remote") }
                     .tag(AppViewModel.Tab.remote)
 
                     GuideGridScreen(viewModel: appViewModel.guideGridViewModel)
-                        .tabItem { Label("番組表", systemImage: "calendar").accessibilityIdentifier("tab.guide") }
+                        .tabItem { Label(AppStrings.tabGuide, systemImage: "calendar").accessibilityIdentifier("tab.guide") }
                         .tag(AppViewModel.Tab.guide)
 
                     ChannelListScreen(viewModel: appViewModel.channelListViewModel)
-                        .tabItem { Label("チャンネル", systemImage: "list.bullet").accessibilityIdentifier("tab.channels") }
+                        .tabItem { Label(AppStrings.tabChannels, systemImage: "list.bullet").accessibilityIdentifier("tab.channels") }
                         .tag(AppViewModel.Tab.channels)
 
                     ReservationListScreen(viewModel: appViewModel.reservationListViewModel)
-                        .tabItem { Label("録画予約", systemImage: "record.circle").accessibilityIdentifier("tab.reservations") }
+                        .tabItem {
+                            Label(AppStrings.tabReservations, systemImage: "record.circle").accessibilityIdentifier("tab.reservations")
+                        }
                         .tag(AppViewModel.Tab.reservations)
                 }
                 // どのタブでも、テレビで映っているものをミニプレーヤーで出す
@@ -60,11 +63,11 @@ public struct AppScreen: View {
             } else {
                 NavigationStack {
                     ContentUnavailableView {
-                        Label("テレビが未設定です", systemImage: "tv.badge.wifi")
+                        Label(AppStrings.remoteUnconfigured, systemImage: "tv.badge.wifi")
                     } description: {
-                        Text("同じ Wi-Fi のテレビを探して、テレビに表示される PIN で登録してください")
+                        Text(AppStrings.remoteSetupHelp)
                     } actions: {
-                        Button("設定する") { appViewModel.send(.showSettings) }
+                        Button(AppStrings.commonConfigure) { appViewModel.send(.showSettings) }
                             .buttonStyle(.borderedProminent)
                     }
                     .toolbar { remoteToolbar }
@@ -123,7 +126,7 @@ public struct AppScreen: View {
             } label: {
                 Image(systemName: "gearshape")
             }
-            .accessibilityLabel("設定")
+            .accessibilityLabel(AppStrings.settingsTitle)
             .accessibilityIdentifier("settings.open")
         }
     }

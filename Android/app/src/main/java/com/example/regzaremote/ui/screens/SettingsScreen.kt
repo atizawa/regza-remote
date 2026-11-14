@@ -59,6 +59,7 @@ import com.example.regzaremote.core.SettingsState
 import com.example.regzaremote.core.TVSetupAction
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.FormSection
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.Note
@@ -95,11 +96,11 @@ private fun SettingsTopPage(setup: SettingsState, send: Send) {
         header = {
             // キャンセルは左上の ×、保存は右上の ✓ (iOS 版と同じ)
             ScreenHeader(
-                "設定",
+                AppStrings.settingsTitle,
                 leading = if (setup.isCanClose) {
                     (
                         {
-                            HeaderIconButton(Icons.Filled.Close, "閉じる", modifier = Modifier.testTag("settings.close")) {
+                            HeaderIconButton(Icons.Filled.Close, AppStrings.commonClose, modifier = Modifier.testTag("settings.close")) {
                                 send(SettingsAction.close())
                             }
                         }
@@ -108,29 +109,28 @@ private fun SettingsTopPage(setup: SettingsState, send: Send) {
                     null
                 },
             ) {
-                HeaderIconButton(Icons.Filled.Check, "保存", enabled = setup.isCanSave, tint = AppTheme.accent) {
+                HeaderIconButton(Icons.Filled.Check, AppStrings.commonSave, enabled = setup.isCanSave, tint = AppTheme.accent) {
                     send(SettingsAction.save())
                 }
             }
         },
     ) {
-        FormSection("テレビ") {
+        FormSection(AppStrings.tvTitle) {
             val status = setup.tv.status
             NavigationRow("REGZA", status.text, valueColor = if (status.isNeedsAttention) AppTheme.orange else null) {
                 send(SettingsAction.openPage(SettingsPage.tv()))
             }
         }
         FormSection(
-            "録画サーバーとの連携",
-            footer = "Mirakurun や EPGStation を使っている場合だけ設定してください。設定すると、番組名・番組表・番組表からの録画予約や、" +
-                "アプリでのライブ視聴が使えます。\nライブ視聴（EPGStation）は、番組表（Mirakurun）を設定すると設定できます。",
+            AppStrings.settingsRecordingServers,
+            footer = AppStrings.settingsServersHelp,
         ) {
-            NavigationRow("番組表（Mirakurun）", servers.guide.status) { send(SettingsAction.openPage(SettingsPage.guide())) }
+            NavigationRow(AppStrings.settingsGuideIntegration, servers.guide.status) { send(SettingsAction.openPage(SettingsPage.guide())) }
             RowDivider()
             // EPGStation は Mirakurun から放送を受け取るので、Mirakurun を設定してから設定できるようにする
             NavigationRow(
-                "ライブ視聴（EPGStation）",
-                if (servers.isHasGuideDraft) servers.stream.status else "先に番組表を設定",
+                AppStrings.settingsStreamIntegration,
+                if (servers.isHasGuideDraft) servers.stream.status else AppStrings.settingsGuideRequired,
                 enabled = servers.isHasGuideDraft,
             ) { send(SettingsAction.openPage(SettingsPage.stream())) }
         }
@@ -148,13 +148,13 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
 
     SettingsFrame(header = { ScreenHeader("REGZA", onBack = { send(SettingsAction.back()) }) }) {
         FormSection(
-            "テレビ",
-            footer = "スマートフォンとテレビを同じ Wi-Fi につないでください。見つからないときは、テレビの「設定」→「ネットワーク」で IP アドレスを確認して入力してください。",
+            AppStrings.tvTitle,
+            footer = AppStrings.tvNetworkHelpAndroid,
         ) {
             FormTextField(
                 state.host,
                 { send(tv(TVSetupAction.setHost(it))) },
-                "IPアドレス (例: 192.168.0.10)",
+                AppStrings.tvHostPlaceholder,
                 modifier = Modifier.testTag("settings.tv.host"),
                 enabled = !state.isWaitingForPIN,
                 keyboardType = KeyboardType.Uri,
@@ -166,12 +166,12 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
                         Text(device.name)
                         Note(device.host)
                     }
-                    if (device.isSelected) Icon(Icons.Filled.Check, contentDescription = "選択中", tint = AppTheme.accent)
+                    if (device.isSelected) Icon(Icons.Filled.Check, contentDescription = AppStrings.commonSelected, tint = AppTheme.accent)
                 }
             }
             RowDivider()
             ActionRow(
-                if (state.isScanning) "テレビを探しています…" else "テレビを探す",
+                if (state.isScanning) AppStrings.tvSearching else AppStrings.tvSearch,
                 isBusy = state.isScanning,
                 enabled = !state.isScanning && !state.isWaitingForPIN,
             ) { send(tv(TVSetupAction.scan())) }
@@ -182,16 +182,16 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
         }
 
         FormSection(
-            "PIN で登録",
+            AppStrings.tvPinRegistration,
             footer = if (state.isWaitingForPIN) {
-                "テレビの画面に表示されている PIN を入力してください。"
+                AppStrings.tvPinInputHelp
             } else {
-                "テレビの電源を入れてからボタンを押すと、テレビの画面に PIN が表示されます。"
+                AppStrings.tvPinStartHelp
             },
         ) {
             if (!state.isWaitingForPIN) {
                 ActionRow(
-                    if (state.isRegistered) "もう一度登録する" else "テレビに PIN を表示",
+                    if (state.isRegistered) AppStrings.tvRegisterAgain else AppStrings.tvShowPin,
                     isBusy = state.isPairing,
                     enabled = state.isHasAddress && !state.isPairing,
                 ) { send(tv(TVSetupAction.startPairing())) }
@@ -202,17 +202,17 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
                 FormTextField(
                     state.pin,
                     { send(tv(TVSetupAction.setPIN(it))) },
-                    "テレビに表示された PIN",
+                    AppStrings.tvPinPlaceholder,
                     keyboardType = KeyboardType.NumberPassword,
                     modifier = Modifier.focusRequester(focus),
                 )
                 RowDivider()
                 // PIN で登録できたら、SettingsViewModel が設定を閉じる
-                ActionRow("登録", isBusy = state.isPairing, enabled = state.pin.isNotBlank() && !state.isPairing) {
+                ActionRow(AppStrings.commonRegister, isBusy = state.isPairing, enabled = state.pin.isNotBlank() && !state.isPairing) {
                     send(tv(TVSetupAction.confirmPairing()))
                 }
                 RowDivider()
-                ActionRow("やめる", enabled = !state.isPairing) { send(tv(TVSetupAction.cancelPairing())) }
+                ActionRow(AppStrings.commonCancel, enabled = !state.isPairing) { send(tv(TVSetupAction.cancelPairing())) }
             }
             state.pairingMessage.orElse(null)?.let {
                 RowDivider()
@@ -220,9 +220,9 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
             }
         }
 
-        FormSection(footer = "PIN 登録に対応していない古い機種では、テレビの「外部連携設定」で設定したユーザー名とパスワードを入力してください。") {
+        FormSection(footer = AppStrings.tvLegacyHelp) {
             FormRow(onClick = { send(tv(TVSetupAction.setShowingManualEntry(!state.isShowingManualEntry))) }) {
-                Text("ユーザー名とパスワードを入力", Modifier.weight(1f))
+                Text(AppStrings.tvCredentials, Modifier.weight(1f))
                 Icon(
                     Icons.Filled.KeyboardArrowDown,
                     contentDescription = null,
@@ -232,14 +232,14 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
             }
             if (state.isShowingManualEntry) {
                 RowDivider()
-                FormTextField(state.user, { send(tv(TVSetupAction.setUser(it))) }, "ユーザー名")
+                FormTextField(state.user, { send(tv(TVSetupAction.setUser(it))) }, AppStrings.tvUsername)
                 RowDivider()
-                FormTextField(state.password, { send(tv(TVSetupAction.setPassword(it))) }, "パスワード", isPassword = true)
+                FormTextField(state.password, { send(tv(TVSetupAction.setPassword(it))) }, AppStrings.tvPassword, isPassword = true)
             }
         }
 
         FormSection {
-            ActionRow("接続テスト", isBusy = state.isTesting, enabled = state.isHasAddress && !state.isTesting) {
+            ActionRow(AppStrings.tvTest, isBusy = state.isTesting, enabled = state.isHasAddress && !state.isTesting) {
                 send(tv(TVSetupAction.test()))
             }
             state.testResult.orElse(null)?.let {
@@ -254,22 +254,24 @@ private fun TVSettingsPage(setup: SettingsState, send: Send) {
 private class ServerPage(val server: () -> ServerSetupServer, val title: String, val header: String, val footer: String, val name: String)
 
 /** 番組表 (Mirakurun) の設定 */
-private val guidePage = ServerPage(
-    server = { ServerSetupServer.guide() },
-    title = "番組表（Mirakurun）",
-    header = "番組表 (Mirakurun)",
-    footer = "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。",
-    name = "Mirakurun",
-)
+private val guidePage: ServerPage
+    @Composable get() = ServerPage(
+        server = { ServerSetupServer.guide() },
+        title = AppStrings.settingsGuideIntegration,
+        header = AppStrings.settingsGuideTitle,
+        footer = AppStrings.settingsGuideHelp,
+        name = "Mirakurun",
+    )
 
 /** ライブ視聴 (EPGStation) の設定 */
-private val streamPage = ServerPage(
-    server = { ServerSetupServer.stream() },
-    title = "ライブ視聴（EPGStation）",
-    header = "ライブ視聴 (EPGStation)",
-    footer = "EPGStation を動かしている場合に設定すると、放送中の番組をスマートフォンで見られます。家の Wi-Fi の中だけで使えます。",
-    name = "EPGStation",
-)
+private val streamPage: ServerPage
+    @Composable get() = ServerPage(
+        server = { ServerSetupServer.stream() },
+        title = AppStrings.settingsStreamIntegration,
+        header = AppStrings.settingsStreamTitle,
+        footer = AppStrings.settingsStreamHelpAndroid,
+        name = "EPGStation",
+    )
 
 /** 録画サーバーの設定の画面。保存済みなら、連携を解除するボタンも出す */
 @Composable
@@ -283,22 +285,22 @@ private fun ServerSettingsPage(page: ServerPage, state: ServerSetupServerState, 
             FormTextField(
                 state.host,
                 { host -> send(server { ServerSetupAction.setHost(it, host) }) },
-                "IPアドレス (例: 192.168.0.2)",
+                AppStrings.serverHostPlaceholder,
                 keyboardType = KeyboardType.Uri,
             )
             if (!setup.servers.isValid) {
-                MessageRow("ポートは 1〜65535 の数字で入れてください。", color = AppTheme.red)
+                MessageRow(AppStrings.serverPortInvalid, color = AppTheme.red)
             }
             state.hosts.forEach { host ->
                 RowDivider()
                 FormRow(onClick = { send(server { ServerSetupAction.setHost(it, host) }) }) {
                     Text(host, Modifier.weight(1f))
-                    if (host == state.host) Icon(Icons.Filled.Check, contentDescription = "選択中", tint = AppTheme.accent)
+                    if (host == state.host) Icon(Icons.Filled.Check, contentDescription = AppStrings.commonSelected, tint = AppTheme.accent)
                 }
             }
             RowDivider()
             ActionRow(
-                if (state.isScanning) "${page.name} を探しています…" else "${page.name} を探す",
+                if (state.isScanning) AppStrings.serverSearching(page.name) else AppStrings.serverSearch(page.name),
                 isBusy = state.isScanning,
                 enabled = !state.isScanning,
             ) { send(server { ServerSetupAction.scan(it) }) }
@@ -309,7 +311,7 @@ private fun ServerSettingsPage(page: ServerPage, state: ServerSetupServerState, 
         }
         if (state.isLinked) {
             FormSection {
-                ActionRow("連携を解除", color = AppTheme.red) { isConfirmingUnlink = true }
+                ActionRow(AppStrings.settingsUnlink, color = AppTheme.red) { isConfirmingUnlink = true }
             }
         }
     }
@@ -324,9 +326,9 @@ private fun ServerSettingsPage(page: ServerPage, state: ServerSetupServerState, 
                     isConfirmingUnlink = false
                     // すぐにアドレスを消して反映する (SettingsViewModel が設定の最初の画面に戻る)
                     send(server { ServerSetupAction.unlink(it) })
-                }) { Text("連携を解除", color = AppTheme.red) }
+                }) { Text(AppStrings.settingsUnlink, color = AppTheme.red) }
             },
-            dismissButton = { TextButton(onClick = { isConfirmingUnlink = false }) { Text("やめる") } },
+            dismissButton = { TextButton(onClick = { isConfirmingUnlink = false }) { Text(AppStrings.commonCancel) } },
         )
     }
 }

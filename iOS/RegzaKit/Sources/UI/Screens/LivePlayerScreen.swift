@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import AVKit
 import RegzaPresentation
 import Design
@@ -41,7 +42,7 @@ struct LivePlayerScreen: View {
                         }
                     }
                     .background(Surface.background.ignoresSafeArea())
-                    .navigationTitle("ライブ視聴")
+                    .navigationTitle(AppStrings.liveTitle)
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         // 閉じるだけの画面は、iOS 標準の × のボタンにそろえる
@@ -97,13 +98,13 @@ struct LivePlayerScreen: View {
                         .foregroundStyle(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
                     if canRetry {
-                        Button("準備できていない配信を止めて、もう一度試す") {
+                        Button(AppStrings.liveRetry) {
                             viewModel.send(.retryAfterStoppingStalled)
                         }
                         .buttonStyle(.borderedProminent)
                     }
                     if isLandscape {
-                        Button("閉じる") { dismiss() }
+                        Button(AppStrings.commonClose) { dismiss() }
                     }
                 }
                 .padding()
@@ -123,7 +124,7 @@ private struct ProgramInfo: View {
             let state = viewModel.state
             let program = state.program
             VStack(alignment: .leading, spacing: 6) {
-                Text(state.channelName + (program == nil ? "" : " · 放送中"))
+                Text(program == nil ? state.channelName : AppStrings.channelOnAir(state.channelName))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.accent)
                 Text(program?.name ?? state.channelName)
@@ -187,7 +188,7 @@ private struct ChannelPicker: View {
                         if row.isNowPlaying {
                             Image(systemName: "play.fill")
                                 .foregroundStyle(AppTheme.accent)
-                                .accessibilityLabel("再生中")
+                                .accessibilityLabel(AppStrings.playerNowPlaying)
                         }
                     }
                     .padding(.horizontal, DesignDimensions.spacingOuter)

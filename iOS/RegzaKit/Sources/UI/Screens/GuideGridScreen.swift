@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import RegzaPresentation
 import Design
 import SwiftUI
@@ -24,13 +25,13 @@ struct GuideGridScreen: View {
     var body: some View {
         NavigationStack(path: appViewModel.path(of: .guide)) {
             content
-                .navigationTitle("番組表")
+                .navigationTitle(AppStrings.tabGuide)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
                     if viewModel.state.canSearch {
                         ToolbarItem(placement: .topBarTrailing) {
-                            Button("番組を探す", systemImage: "magnifyingglass") { appViewModel.send(.push(.search)) }
+                            Button(AppStrings.searchTitle, systemImage: "magnifyingglass") { appViewModel.send(.push(.search)) }
                                 .accessibilityIdentifier("guide.search")
                         }
                     }
@@ -46,15 +47,12 @@ struct GuideGridScreen: View {
         if !state.hasGuide {
             // Mirakurun がなくてもタブは消さず (HIG)、何ができるかと設定のしかたを案内する
             ContentUnavailableView {
-                Label("番組表を使うには", systemImage: "calendar")
+                Label(AppStrings.guideSetupTitle, systemImage: "calendar")
             } description: {
                 Text(
-                    """
-                    録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。
-                    設定画面の「録画サーバーとの連携」で Mirakurun のアドレスを設定してください。
-                    """)
+                    AppStrings.guideSetupHelp)
             } actions: {
-                Button("設定を開く") { showSettings() }
+                Button(AppStrings.commonOpenSettings) { showSettings() }
                     .buttonStyle(.borderedProminent)
             }
         } else if !state.hasLoaded {
@@ -62,11 +60,11 @@ struct GuideGridScreen: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if state.columns.isEmpty {
             ContentUnavailableView {
-                Label("番組表を取得できません", systemImage: "calendar.badge.exclamationmark")
+                Label(AppStrings.guideLoadFailed, systemImage: "calendar.badge.exclamationmark")
             } description: {
-                Text("テレビと Mirakurun につながっているか確認してください。")
+                Text(AppStrings.guideConnectionHelp)
             } actions: {
-                Button("もう一度試す") { viewModel.send(.load) }
+                Button(AppStrings.commonRetry) { viewModel.send(.load) }
             }
         } else {
             // 毎分、今の時刻の線を動かす。表に出す時間も正時ごとに進むので、state もここで読み直す
@@ -344,10 +342,11 @@ private struct ProgramCell: View {
     /// 「22時00分から22時45分、スポーツまとめ、みどりテレビ、スポーツ、録画予約済み」
     private func accessibilityText(isOnAir: Bool) -> String {
         let time =
-            "\(program.start.formatted(date: .omitted, time: .shortened))から\(program.end.formatted(date: .omitted, time: .shortened))"
-        var parts = [isOnAir ? "放送中、\(time)" : time, program.name, channelName]
+            AppStrings.programTimeRange(
+                program.start.formatted(date: .omitted, time: .shortened), program.end.formatted(date: .omitted, time: .shortened))
+        var parts = [isOnAir ? AppStrings.programOnAirTime(time) : time, program.name, channelName]
         if let genre = program.genreName { parts.append(genre) }
-        if isReserved { parts.append("録画予約済み") }
+        if isReserved { parts.append(AppStrings.reservationReserved) }
         return parts.joined(separator: "、")
     }
 

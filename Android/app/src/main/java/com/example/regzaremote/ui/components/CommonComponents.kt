@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 
 /**
  * タブの画面の下に重ねて浮かせているミニプレーヤーの高さ。一覧の最後がミニプレーヤーに隠れないよう、
@@ -65,7 +66,10 @@ fun ScreenHeader(
     Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp)) {
         Box(Modifier.align(Alignment.CenterStart)) {
             when {
-                onBack != null -> IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る") }
+                onBack != null -> IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = AppStrings.commonBack)
+                }
+
                 leading != null -> leading()
             }
         }
@@ -170,7 +174,7 @@ fun ReservedBadge(compact: Boolean = false) {
     ) {
         RecordIcon(Modifier.size(9.dp), color = Color.White)
         Text(
-            if (compact) "予約" else "録画予約済み",
+            if (compact) AppStrings.reservationTitle else AppStrings.reservationReserved,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = Color.White,

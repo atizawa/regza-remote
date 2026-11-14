@@ -50,6 +50,7 @@ import com.example.regzaremote.core.ChannelListState
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.Loading
@@ -71,13 +72,13 @@ fun ChannelListScreen(state: ChannelListState, send: Send) {
     val tuningCode = state.tuningCode.orElse(null)
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("チャンネル") {
-            HeaderIconButton(Icons.Filled.Refresh, "読み込み直す", enabled = !state.isLoading) { send(ChannelListAction.reload()) }
+        ScreenHeader(AppStrings.tabChannels) {
+            HeaderIconButton(Icons.Filled.Refresh, AppStrings.commonReload, enabled = !state.isLoading) { send(ChannelListAction.reload()) }
         }
         val message = state.loadErrorMessage.orElse(null)
         when {
-            message != null -> EmptyState("チャンネルを取得できません", message) {
-                TextButton(onClick = { send(ChannelListAction.reload()) }) { Text("もう一度試す") }
+            message != null -> EmptyState(AppStrings.channelLoadFailed, message) {
+                TextButton(onClick = { send(ChannelListAction.reload()) }) { Text(AppStrings.commonRetry) }
             }
 
             state.rows.isEmpty() -> Loading()
@@ -162,36 +163,40 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
 
                 row.isNowPlaying -> Icon(
                     Icons.Filled.Check,
-                    contentDescription = "視聴中",
+                    contentDescription = AppStrings.channelWatching,
                     tint = AppTheme.accent,
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
             }
             if (row.isHasPrograms) {
                 IconButton(onClick = { send(AppAction.push(AppRoute.channelPrograms(row.code))) }) {
-                    Icon(Icons.Filled.DateRange, contentDescription = "${row.name} の番組表", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        Icons.Filled.DateRange,
+                        contentDescription = AppStrings.channelGuideTitle(row.name),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
         DropdownMenu(expanded = isShowingMenu, onDismissRequest = { isShowingMenu = false }) {
-            DropdownMenuItem(text = { Text("切り替える") }, onClick = {
+            DropdownMenuItem(text = { Text(AppStrings.channelSwitch) }, onClick = {
                 isShowingMenu = false
                 send(ChannelListAction.tune(row.code))
             })
             if (canStream) {
-                DropdownMenuItem(text = { Text("アプリで見る") }, onClick = {
+                DropdownMenuItem(text = { Text(AppStrings.playerWatch) }, onClick = {
                     isShowingMenu = false
                     send(AppAction.play(row.code))
                 })
             }
             if (row.isCanStartOver) {
-                DropdownMenuItem(text = { Text("最初から見る") }, onClick = {
+                DropdownMenuItem(text = { Text(AppStrings.playerFromStart) }, onClick = {
                     isShowingMenu = false
                     send(ChannelListAction.tuneFromStart(row.code))
                 })
             }
             if (row.isHasPrograms) {
-                DropdownMenuItem(text = { Text("番組表") }, onClick = {
+                DropdownMenuItem(text = { Text(AppStrings.tabGuide) }, onClick = {
                     isShowingMenu = false
                     send(AppAction.push(AppRoute.channelPrograms(row.code)))
                 })

@@ -69,6 +69,7 @@ import com.example.regzaremote.core.LivePlayerPhase
 import com.example.regzaremote.core.LivePlayerState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.ProminentButton
@@ -105,8 +106,8 @@ fun LivePlayerScreen(player: LivePlayerState, send: Send) {
             Column(Modifier.fillMaxSize().safeDrawingPadding()) {
                 // 閉じるだけの画面なので、左上の × で閉じる (映像の上には重ねない)
                 ScreenHeader(
-                    "ライブ視聴",
-                    leading = { HeaderIconButton(Icons.Filled.Close, "閉じる") { send(AppAction.closePlayer()) } },
+                    AppStrings.liveTitle,
+                    leading = { HeaderIconButton(Icons.Filled.Close, AppStrings.commonClose) { send(AppAction.closePlayer()) } },
                 )
                 Video(player, send, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
                 Column(
@@ -156,7 +157,7 @@ private fun Video(player: LivePlayerState, send: Send, modifier: Modifier) {
                     textAlign = TextAlign.Center,
                 )
                 if (failed.canRetry) {
-                    ProminentButton("準備できていない配信を止めて、もう一度試す") { send(LivePlayerAction.retryAfterStoppingStalled()) }
+                    ProminentButton(AppStrings.liveRetry) { send(LivePlayerAction.retryAfterStoppingStalled()) }
                 }
             }
 
@@ -249,7 +250,7 @@ private fun LiveBadge(modifier: Modifier) {
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Box(Modifier.size(7.dp).background(AppTheme.red, CircleShape))
-        Text("ライブ", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(AppStrings.liveBadge, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White)
     }
 }
 
@@ -265,7 +266,7 @@ private fun PlayPauseButton(isPlaying: Boolean, modifier: Modifier, onClick: () 
                 repeat(2) { Box(Modifier.size(width = 6.dp, height = 22.dp).background(Color.White, RoundedCornerShape(2.dp))) }
             }
         } else {
-            Icon(Icons.Filled.PlayArrow, contentDescription = "再生", tint = Color.White, modifier = Modifier.size(40.dp))
+            Icon(Icons.Filled.PlayArrow, contentDescription = AppStrings.playerPlay, tint = Color.White, modifier = Modifier.size(40.dp))
         }
     }
 }
@@ -276,7 +277,7 @@ private fun ProgramInfo(player: LivePlayerState) {
     val program = player.program.orElse(null)
     Column(Modifier.padding(horizontal = DesignDimensions.spacingOuter), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-            player.channelName + if (program == null) "" else " · 放送中",
+            if (program == null) player.channelName else AppStrings.channelOnAir(player.channelName),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = AppTheme.accent,
@@ -339,7 +340,7 @@ private fun ChannelRow(row: ChannelItem, onClick: () -> Unit) {
                 )
             }
         }
-        if (row.isNowPlaying) Icon(Icons.Filled.PlayArrow, contentDescription = "再生中", tint = AppTheme.accent)
+        if (row.isNowPlaying) Icon(Icons.Filled.PlayArrow, contentDescription = AppStrings.playerNowPlaying, tint = AppTheme.accent)
     }
 }
 

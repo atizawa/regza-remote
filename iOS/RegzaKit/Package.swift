@@ -54,7 +54,7 @@ let package = Package(
         // RootView は Xcode のアプリターゲットに置き、このモジュールへ依存を渡す。
         .target(
             name: "UI",
-            dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity"],
+            dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity", "Localization"],
             swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
         .testTarget(
             name: "RegzaKitTests",

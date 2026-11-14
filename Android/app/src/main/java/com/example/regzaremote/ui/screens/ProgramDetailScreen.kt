@@ -49,6 +49,7 @@ import com.example.regzaremote.core.ProgramDetailAction
 import com.example.regzaremote.core.ProgramDetailState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RecordIcon
@@ -64,7 +65,7 @@ fun ProgramDetailScreen(detail: ProgramDetailState, onBack: (() -> Unit)?, send:
     val program = detail.program
     LaunchedEffect(program.id) { send(ProgramDetailAction.appear()) }
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("番組の詳細", onBack)
+        ScreenHeader(AppStrings.programDetails, onBack)
         Column(
             Modifier.verticalScroll(
                 rememberScrollState(),
@@ -97,7 +98,7 @@ private fun DetailHeader(detail: ProgramDetailState) {
     val program = detail.program
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            detail.channelName + if (program.isOnAir) " · 放送中" else "",
+            if (program.isOnAir) AppStrings.channelOnAir(detail.channelName) else detail.channelName,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = AppTheme.accent,
@@ -145,7 +146,7 @@ private fun DetailActions(detail: ProgramDetailState, send: Send) {
         Row(horizontalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
             if (detail.isCanTune) {
                 ActionButton(
-                    "切り替えて見る",
+                    AppStrings.channelSwitchWatch,
                     AppTheme.accent,
                     isBusy = detail.isTuning,
                     enabled = !detail.isTuning,
@@ -158,14 +159,19 @@ private fun DetailActions(detail: ProgramDetailState, send: Send) {
         }
         if (detail.isCanStream) {
             Row {
-                ActionButton("アプリで見る", AppTheme.surface, foreground = MaterialTheme.colorScheme.onSurface) {
+                ActionButton(AppStrings.playerWatch, AppTheme.surface, foreground = MaterialTheme.colorScheme.onSurface) {
                     send(AppAction.play(detail.program.channelCode))
                 }
             }
         }
         if (detail.isCanStartOver) {
             Row {
-                ActionButton("最初から見る", AppTheme.surface, foreground = MaterialTheme.colorScheme.onSurface, enabled = !detail.isTuning) {
+                ActionButton(
+                    AppStrings.playerFromStart,
+                    AppTheme.surface,
+                    foreground = MaterialTheme.colorScheme.onSurface,
+                    enabled = !detail.isTuning,
+                ) {
                     send(ProgramDetailAction.tune(true))
                 }
             }
@@ -183,7 +189,7 @@ private fun RowScope.ReserveMenu(detail: ProgramDetailState, send: Send) {
         Row {
             if (detail.isReserved) {
                 ActionButton(
-                    "予約済み",
+                    AppStrings.reservationAlreadyReserved,
                     AppTheme.surface,
                     foreground = AppTheme.red,
                     isBusy = isReserving,
@@ -194,7 +200,7 @@ private fun RowScope.ReserveMenu(detail: ProgramDetailState, send: Send) {
                 ) { isShowingMenu = true }
             } else {
                 ActionButton(
-                    "録画予約",
+                    AppStrings.tabReservations,
                     AppTheme.red,
                     isBusy = isReserving,
                     enabled = !isReserving,
@@ -205,18 +211,30 @@ private fun RowScope.ReserveMenu(detail: ProgramDetailState, send: Send) {
         DropdownMenu(expanded = isShowingMenu, onDismissRequest = { isShowingMenu = false }) {
             if (detail.isReserved) {
                 DropdownMenuItem(
-                    text = { Text(if (detail.reservationIsSeries.orElse(false)) "連ドラ予約を取り消す" else "予約を取り消す", color = AppTheme.red) },
+                    text = {
+                        Text(
+                            if (detail.reservationIsSeries.orElse(
+                                    false,
+                                )
+                            ) {
+                                AppStrings.reservationCancelSeries
+                            } else {
+                                AppStrings.reservationCancel
+                            },
+                            color = AppTheme.red,
+                        )
+                    },
                     onClick = {
                         isShowingMenu = false
                         send(ProgramDetailAction.cancelReservation())
                     },
                 )
             } else {
-                DropdownMenuItem(text = { Text("この回だけ録画") }, onClick = {
+                DropdownMenuItem(text = { Text(AppStrings.reservationOnce) }, onClick = {
                     isShowingMenu = false
                     send(ProgramDetailAction.reserve(false))
                 })
-                DropdownMenuItem(text = { Text("連ドラ予約（毎回録画）") }, onClick = {
+                DropdownMenuItem(text = { Text(AppStrings.reservationSeries) }, onClick = {
                     isShowingMenu = false
                     send(ProgramDetailAction.reserve(true))
                 })

@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import RegzaPresentation
 import Design
 import SwiftUI
@@ -11,12 +12,12 @@ struct GuideSearchScreen: View {
 
     var body: some View {
         GuideSearchResults(guideSearchViewModel: guideSearchViewModel, onSelect: onSelect)
-            .navigationTitle("番組を探す")
+            .navigationTitle(AppStrings.searchTitle)
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
                 text: Binding(get: { guideSearchViewModel.state.text }, set: { guideSearchViewModel.send(.setText($0)) }),
                 isPresented: $isPresented,
-                placement: .navigationBarDrawer(displayMode: .always), prompt: "番組名・出演者・「明日の夜のドラマ」"
+                placement: .navigationBarDrawer(displayMode: .always), prompt: AppStrings.searchPlaceholder
             )
             // 開いたらすぐ打てるようにする (前に探した言葉が残っていれば結果を見せる)
             .onAppear { if guideSearchViewModel.state.text.isEmpty { isPresented = true } }
@@ -35,7 +36,7 @@ struct GuideSearchResults: View {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         ConditionChips(conditions: state.conditions) { guideSearchViewModel.send(.removeCondition($0)) }
-                        Button("「\(state.text)」をそのまま探す") { guideSearchViewModel.send(.searchLiterally) }
+                        Button(AppStrings.searchLiteral(state.text)) { guideSearchViewModel.send(.searchLiterally) }
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(AppTheme.accent)
                     }
@@ -48,12 +49,12 @@ struct GuideSearchResults: View {
         .overlay {
             if state.isBlank {
                 ContentUnavailableView {
-                    Label("番組を探す", systemImage: "magnifyingglass")
+                    Label(AppStrings.searchTitle, systemImage: "magnifyingglass")
                 } description: {
-                    Text("1 週間分の番組から、番組名・出演者・説明で探します。\n「明日の夜のドラマ」「土曜 21時から」のように、日付・時間帯・ジャンルでも絞り込めます。")
+                    Text(AppStrings.searchHelp)
                 }
             } else if state.results.isEmpty, state.isIndexing {
-                ProgressView("番組を読み込んでいます")
+                ProgressView(AppStrings.searchLoading)
             } else if state.results.isEmpty {
                 ContentUnavailableView.search(text: state.text)
             }
@@ -89,7 +90,7 @@ private struct ConditionChips: View {
                 Image(systemName: "line.3.horizontal.decrease")
                     .font(.caption)
                     .foregroundStyle(AppTheme.accent)
-                    .accessibilityLabel("読み取った条件")
+                    .accessibilityLabel(AppStrings.searchConditions)
                 ForEach(conditions) { chip in
                     Button {
                         onRemove(chip.condition)
@@ -106,7 +107,7 @@ private struct ConditionChips: View {
                         .background(Surface.button, in: Capsule())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(chip.label) を外す")
+                    .accessibilityLabel(AppStrings.searchRemoveCondition(chip.label))
                 }
             }
         }
@@ -132,7 +133,7 @@ private struct SearchResultRow: View {
                     Image(systemName: "record.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.red)
-                        .accessibilityLabel("録画予約済み")
+                        .accessibilityLabel(AppStrings.reservationReserved)
                 }
             }
             Text(program.name)

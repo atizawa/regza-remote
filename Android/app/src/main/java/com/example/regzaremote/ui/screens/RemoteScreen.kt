@@ -69,6 +69,7 @@ import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignColors
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.design.RemoteBody
+import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.ScreenHeader
@@ -92,8 +93,8 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
     Column(Modifier.fillMaxSize().background(RemoteBody.background)) {
         // 本体が明るいグレーなので、見出しと設定のボタンは黒にする
         CompositionLocalProvider(LocalContentColor provides Color.Black) {
-            ScreenHeader("リモコン") {
-                HeaderIconButton(Icons.Filled.Settings, "設定", modifier = Modifier.testTag("settings.open")) {
+            ScreenHeader(AppStrings.tabRemote) {
+                HeaderIconButton(Icons.Filled.Settings, AppStrings.settingsTitle, modifier = Modifier.testTag("settings.open")) {
                     sendAction(AppAction.showSettings())
                 }
             }
@@ -126,7 +127,7 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
 
             NavigationBand(press)
 
-            RemoteSection("録画・再生") {
+            RemoteSection(AppStrings.remotePlayback) {
                 KeyRow {
                     KeyButton(Keys.previousChapter, press, Modifier.weight(1f), size = ButtonSize.Primary)
                     KeyButton(Keys.skipBackward, press, Modifier.weight(1f), size = ButtonSize.Primary)
@@ -165,7 +166,7 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "その他の操作",
+                        AppStrings.remoteMore,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = RemoteBody.sectionText,
@@ -203,12 +204,17 @@ private fun NavigationBand(press: (RegzaKey) -> Unit) {
     ) {
         // 音量・十字キー・チャンネル
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
-            Rocker("音量", Keys.volumeUp, "+", Keys.volumeDown, "−", press, Modifier.width(64.dp))
+            Rocker(AppStrings.remoteVolume, Keys.volumeUp, "+", Keys.volumeDown, "−", press, Modifier.width(64.dp))
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { DirectionPad(press, 196.dp) }
             Rocker("CH", Keys.channelUp, null, Keys.channelDown, null, press, Modifier.width(64.dp))
         }
         KeyRow {
-            listOf(Keys.back to null, Keys.guide to "テレビ番組表", Keys.programInfo to "番組説明", Keys.exit to null).forEach { (key, title) ->
+            listOf(
+                Keys.back to null,
+                Keys.guide to AppStrings.remoteTvGuide,
+                Keys.programInfo to AppStrings.programDescription,
+                Keys.exit to null,
+            ).forEach { (key, title) ->
                 KeyButton(key, press, Modifier.weight(1f), title = title, tone = KeyTone.Black)
             }
         }
@@ -420,7 +426,7 @@ private fun DirectionPad(press: (RegzaKey) -> Unit, diameter: Dp) {
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                "決定",
+                AppStrings.remoteEnter,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black.copy(alpha = 0.8f),

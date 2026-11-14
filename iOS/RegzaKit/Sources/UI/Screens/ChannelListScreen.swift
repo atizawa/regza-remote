@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import RegzaPresentation
 import Design
 import SwiftUI
@@ -16,7 +17,7 @@ struct ChannelListScreen: View {
         let state = viewModel.state
         NavigationStack(path: appViewModel.path(of: .channels)) {
             content(state)
-                .navigationTitle("チャンネル")
+                .navigationTitle(AppStrings.tabChannels)
                 // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -26,7 +27,7 @@ struct ChannelListScreen: View {
                         } label: {
                             Image(systemName: "arrow.clockwise")
                         }
-                        .accessibilityLabel("読み込み直す")
+                        .accessibilityLabel(AppStrings.commonReload)
                         .disabled(state.isLoading)
                     }
                 }
@@ -39,11 +40,11 @@ struct ChannelListScreen: View {
     private func content(_ state: ChannelListViewModel.State) -> some View {
         if let message = state.loadErrorMessage {
             ContentUnavailableView {
-                Label("チャンネルを取得できません", systemImage: "list.bullet.rectangle")
+                Label(AppStrings.channelLoadFailed, systemImage: "list.bullet.rectangle")
             } description: {
                 Text(message)
             } actions: {
-                Button("もう一度試す") { viewModel.send(.reload) }
+                Button(AppStrings.commonRetry) { viewModel.send(.reload) }
             }
         } else if state.hasNoChannels {
             ProgressView()
@@ -101,7 +102,7 @@ struct ChannelListScreen: View {
                         Image(systemName: "checkmark")
                             .font(.body.weight(.semibold))
                             .foregroundStyle(AppTheme.accent)
-                            .accessibilityLabel("視聴中")
+                            .accessibilityLabel(AppStrings.channelWatching)
                     }
                 }
                 .contentShape(Rectangle())
@@ -121,7 +122,7 @@ struct ChannelListScreen: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
-                .accessibilityLabel("\(row.name) の番組表")
+                .accessibilityLabel(AppStrings.channelGuideTitle(row.name))
             }
         }
         // 押すとすぐ切り替わるので、切り替え以外は長押しのメニューにまとめる
@@ -130,21 +131,21 @@ struct ChannelListScreen: View {
 
     @ViewBuilder
     private func menu(for row: ChannelItem, state: ChannelListViewModel.State) -> some View {
-        Button("切り替える", systemImage: "play.fill") {
+        Button(AppStrings.channelSwitch, systemImage: "play.fill") {
             viewModel.send(.tune(row.code))
         }
         if state.canStream {
-            Button("アプリで見る", systemImage: "play.tv") {
+            Button(AppStrings.playerWatch, systemImage: "play.tv") {
                 appViewModel.send(.play(channelCode: row.code))
             }
         }
         if row.canStartOver {
-            Button("最初から見る", systemImage: "backward.end.alt") {
+            Button(AppStrings.playerFromStart, systemImage: "backward.end.alt") {
                 viewModel.send(.tuneFromStart(row.code))
             }
         }
         if row.hasPrograms {
-            Button("番組表", systemImage: "calendar") {
+            Button(AppStrings.tabGuide, systemImage: "calendar") {
                 appViewModel.send(.push(.channelPrograms(channelCode: row.code)))
             }
         }

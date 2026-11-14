@@ -10,7 +10,7 @@
     <application
         android:name=".RegzaApplication"
         android:usesCleartextTraffic="true"
-        android:label="REGZA リモコン"
+        android:label="@string/app_name"
         android:theme="@style/Theme.RegzaRemote">
         <!-- 回転しても作り直さない (ライブ視聴の再生を途切れさせない) -->
         <activity

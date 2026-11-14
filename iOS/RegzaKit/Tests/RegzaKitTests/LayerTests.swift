@@ -6,10 +6,10 @@ import Testing
 /// RegzaPresentation は Domain を外に見せないが、SwiftPM は依存の先のモジュールを import すること自体は止めないので、
 /// import を見て止める
 @Suite struct LayerTests {
-    /// 画面が読み込んでよいモジュール (Apple のものと、ViewModel・UI の型・色・Live Activity のスイッチ)
+    /// 画面が読み込んでよいモジュール (Apple のものと、ViewModel・UI の型・色・文言・Live Activity のスイッチ)
     static let viewImports: Set<String> = [
         "SwiftUI", "Foundation", "Observation", "AVKit", "UIKit",
-        "RegzaPresentation", "Design", "LiveActivity",
+        "RegzaPresentation", "Design", "Localization", "LiveActivity",
     ]
 
     /// Live Activity が読み込んでよいモジュール (Apple のものと、ViewModel・UI の型)

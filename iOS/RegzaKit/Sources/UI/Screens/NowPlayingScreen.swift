@@ -1,4 +1,5 @@
 #if os(iOS)
+import Localization
 import Design
 import RegzaPresentation
 import SwiftUI
@@ -22,13 +23,13 @@ struct NowPlayingScreen: View {
                             .padding(.horizontal, 4)
                     }
                     if state.canPowerOn {
-                        actionButton("電源を入れる", systemImage: "power") { viewModel.send(.powerOn) }
+                        actionButton(AppStrings.remotePowerOn, systemImage: "power") { viewModel.send(.powerOn) }
                     }
                     if let code = state.playableChannelCode {
-                        actionButton("アプリで見る", systemImage: "play.tv") { appViewModel.send(.play(channelCode: code)) }
+                        actionButton(AppStrings.playerWatch, systemImage: "play.tv") { appViewModel.send(.play(channelCode: code)) }
                     }
                     if state.canStartOver {
-                        actionButton("この番組を最初から見る", systemImage: "backward.end.alt") { viewModel.send(.startOver) }
+                        actionButton(AppStrings.playerProgramFromStart, systemImage: "backward.end.alt") { viewModel.send(.startOver) }
                     }
                     LiveActivityToggle()
                         .padding(DesignDimensions.spacingOuter)
