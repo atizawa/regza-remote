@@ -9,6 +9,10 @@ REGZA の HTTP リモコン API（[参考](https://misomayo.info/on/2012/04/10)�
 
 iOS 26 以上が対象。iOS・Androidとも設定の「外観」から「システムに合わせる」「ライト」「ダーク」を選べる。初期値はOSへの追従で、選択は即座に反映・端末へ保存する（テレビ接続設定の保存・キャンセルとは独立）。共通のカラートークンから、iOSのColor AssetとAndroidの標準色リソースを生成する。リモコン本体は実物を模した配色を両外観で共通にする。
 
+AndroidにもiOSと同じ中・大のリモコンウィジェットがある。先にアプリでテレビを登録し、Android 17以降ではローカルネットワークへのアクセスを許可してから、ホーム画面のウィジェット一覧で「リモコン（中）」または「リモコン（大）」を追加する。中は電源・入力切替・消音・チャンネル・音量の7ボタン、大は放送切替・数字・黒い音量／チャンネル操作帯・再生キーを備える。サイズ変更でも選んだ種類とボタンの並びは変わらず、配置領域が縦長でも本体の縦横比を保つ。ボタン以外の余白を押すとアプリを開き、ボタンはアプリ画面を開かずに送信する。未設定・認証失敗・通信失敗はメッセージで知らせる。
+
+ウィジェットはJetpack Glanceで描画し、番組取得や定期通信は行わない。`widgets/`のアクションから`AppFactory`で作る`RemoteControlService`を呼び、保存済みの設定と既存のSwift UseCase・Repository・Digest認証・OkHttpでキーだけを送る。画面用の`RegzaAndroidApp`を作らないため、stateの購読やライブ視聴の配信の後片づけは開始しない。配色は共通トークンのリモコン用リソースを使う。
+
 画面は「リモコン」（テレビを操作するボタン）と、見るための「番組表」「チャンネル」「録画予約」のタブに分けている。テレビで映っているものは、どのタブでもタブバーの上のミニプレーヤー（`tabViewBottomAccessory`）に出し、押すと番組の詳細（録画ならシーク）を開く。色は REGZA の公式サイトで使われている深い緑（`#00442D`）を基調にしている（`AppTheme`。ライトでは `#006B4F`、ダークでは暗い背景でも見える明るめの `#1D866F` を使う）。ロゴはまねしない。
 
 REGZA だけでもリモコン・Live Activity・Siri・チャンネル一覧と選局・録画予約の一覧・最初から見るが使える。Mirakurun（番組名・番組表・番組表からの予約）と EPGStation（ライブ視聴）は、設定画面の「録画サーバーとの連携」で設定した人だけが使う。番組表のタブは未設定でも消さず（タブを出したり消したりしない HIG に合わせる）、何ができるかと設定のしかたを案内する。連携は、それぞれの設定画面の「連携を解除」でやめられる。アドレスとポートは別々の欄で入れ、ポートが空なら標準のポート（Mirakurun 40772・EPGStation 8888）を使う。保存は `192.168.0.2:40780` のような 1 つの文字列。「探す」と同じサーバーの EPGStation の候補は、標準のポートだけを確かめる。EPGStation は Mirakurun から放送を受け取るので、ライブ視聴は Mirakurun を設定してから設定できるようにし（EPGStation だけでは番組名も出ず、見られない局も一覧に混ざる）、Mirakurun と同じサーバーで EPGStation が動いていれば候補として出す。Mirakurun の連携を解除すると EPGStation の連携も解除する。
@@ -137,15 +141,29 @@ mise run test-android-runtime
 ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
 ```
 
-AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest・OkHttpTransportTest の計 16 件を確認する。テレビ・Mirakurun・EPGStation への接続は不要。
+AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest・OkHttpTransportTest・ColorAppearanceTest・LocalizationResourceTest・RemoteWidgetTestを確認する。テレビ・Mirakurun・EPGStation への接続は不要。
 
 - `swiftLibrariesJniLooperAndFlowCancellation`: APK の .so の読み込み、JNI・Looper を通る state 更新と、Flow を繰り返し終了したあとの待機の解消。
 - `earlyCancellationAndStateChangesReleaseWaits`: 初回受信直後の状態変更とキャンセルが重なっても、Swift の待機が残らない。
 - `cancellingOneCollectorKeepsOtherCollectorActive`: 同じ state を購読する一方の Flow を止めても、もう一方には変更通知が届く。
 - `StateRestorationTest`: Activity 再生成による入力の維持と、Bundle を Parcel に退避して元の ViewModel を破棄したあとの復元。
 - `OkHttpTransportTest`: 実際の Swift → JNI → OkHttp でチャンク応答・gzip・URL のクエリ・通常のリダイレクト・タイムアウト・Call の取消を確認する。MockWebServer はテスト APK だけに使用する。
+- `RemoteWidgetTest`: 中・大の登録・キーの並び・リサイズ後の表示範囲を確認し、Glanceの実際のボタンからJNI・保存済みの認証情報・Digest認証・OkHttpを通してキーを送る。
 - `TLSTransportTest`: 端末内の TLS サーバーとのハンドシェイクと HTTP 送受信、システム CA で信頼されない自己署名証明書の拒否、信頼済み証明書のホスト名不一致による拒否、テレビの自己署名例外とリダイレクトの抑止。外部通信は行わず、テスト用の信頼先を OkHttp の DI で渡す。
 - `stoppedScreenReleasesWaitAndReceivesLatestStateOnRestart`: 実際の rememberState を Compose で動かし、Lifecycle が CREATED に下がると待機が終了し、STARTED に戻ると最新の state を受け取る。
+
+ウィジェット一覧のプレビューは、本番と同じGlanceの描画から作った中・大それぞれのPNGを使う。配置を変更したときは、専用エミュレーターを指定して次の手順で画像を更新する（接続中の他の端末にはインストールしない）。
+
+```sh
+export ANDROID_SERIAL=emulator-5580
+mise -C Android exec -- ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+mise -C Android exec -- adb -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/debug/app-debug.apk
+mise -C Android exec -- adb -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+mise -C Android exec -- adb -s "$ANDROID_SERIAL" shell am instrument -w -e class 'com.example.regzaremote.RemoteWidgetTest#layoutsFollowIOSFamiliesAndKeepTheirKeysAfterResizing' -e exportWidgetPreviews true com.example.regzaremote.test/androidx.test.runner.AndroidJUnitRunner
+for size in medium large; do
+  mise -C Android exec -- adb -s "$ANDROID_SERIAL" exec-out run-as com.example.regzaremote cat "files/widget-previews/remote_widget_${size}_preview.png" > "Android/app/src/main/res/drawable-nodpi/remote_widget_${size}_preview.png"
+done
+```
 
 Swift／Java の接続コード、state の待機・キャンセル、Looper、OkHttpTransport、.so の梱包、Swift・swift-java・NDK の版を変更したときに実行する。ホストの JVM の振る舞いテストと併せて確認する。接続済み端末が必要なため、`mise run check` には含めていない。現在の CI の Android ジョブもテスト APK のビルドまでで、端末上での実行は別途行う。
 

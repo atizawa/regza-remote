@@ -399,4 +399,22 @@ object AppStrings {
 
     val tvUsername: String
         @Composable get() = stringResource(R.string.tv_username)
+
+    val widgetLargeDescription: String
+        @Composable get() = stringResource(R.string.widget_large_description)
+
+    val widgetLargeTitle: String
+        @Composable get() = stringResource(R.string.widget_large_title)
+
+    val widgetMediumDescription: String
+        @Composable get() = stringResource(R.string.widget_medium_description)
+
+    val widgetMediumTitle: String
+        @Composable get() = stringResource(R.string.widget_medium_title)
+
+    val widgetPermissionRequired: String
+        @Composable get() = stringResource(R.string.widget_permission_required)
+
+    val widgetSendFailed: String
+        @Composable get() = stringResource(R.string.widget_send_failed)
 }

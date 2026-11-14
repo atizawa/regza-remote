@@ -17,6 +17,9 @@ import java.util.Optional
 object AppFactory {
     private val httpClient by lazy { OkHttpTransport() }
 
+    fun makeRemoteControlService(context: Context): RemoteControlService =
+        RemoteControlService(context.applicationContext, RegzaAndroidAppFactory.`init`(httpClient))
+
     fun makeApp(context: Context): RegzaAndroidApp =
         RegzaAndroidAppFactory.`init`(httpClient).makeApp(AndroidStorage(context.applicationContext))
 

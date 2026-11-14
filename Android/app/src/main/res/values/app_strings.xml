@@ -132,4 +132,10 @@
     <string name="tv_test" formatted="false">"接続テスト"</string>
     <string name="tv_title" formatted="false">"テレビ"</string>
     <string name="tv_username" formatted="false">"ユーザー名"</string>
+    <string name="widget_large_description" formatted="false">"数字・放送切替・再生キーを備えたリモコンです。アプリを開かずに操作できます。"</string>
+    <string name="widget_large_title" formatted="false">"リモコン（大）"</string>
+    <string name="widget_medium_description" formatted="false">"アプリを開かずに、電源・音量・チャンネルを操作できます。"</string>
+    <string name="widget_medium_title" formatted="false">"リモコン（中）"</string>
+    <string name="widget_permission_required" formatted="false">"アプリを開き、ローカルネットワークへのアクセスを許可してください。"</string>
+    <string name="widget_send_failed" formatted="false">"送信できませんでした。テレビと接続設定を確認してください。"</string>
 </resources>

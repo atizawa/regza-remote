@@ -12,6 +12,24 @@
         android:usesCleartextTraffic="true"
         android:label="@string/app_name"
         android:theme="@style/Theme.RegzaRemote">
+        <receiver
+            android:name=".widgets.RemoteWidgetReceiver"
+            android:label="@string/widget_medium_title"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/remote_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widgets.LargeRemoteWidgetReceiver"
+            android:label="@string/widget_large_title"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/remote_widget_large_info" />
+        </receiver>
         <!-- 回転しても作り直さない (ライブ視聴の再生を途切れさせない) -->
         <activity
             android:name=".MainActivity"

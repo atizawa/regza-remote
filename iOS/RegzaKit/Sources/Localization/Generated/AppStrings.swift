@@ -287,4 +287,16 @@ public enum AppStrings {
     public static var tvTitle: String { String(localized: "tv_title", bundle: .module) }
 
     public static var tvUsername: String { String(localized: "tv_username", bundle: .module) }
+
+    public static var widgetLargeDescription: String { String(localized: "widget_large_description", bundle: .module) }
+
+    public static var widgetLargeTitle: String { String(localized: "widget_large_title", bundle: .module) }
+
+    public static var widgetMediumDescription: String { String(localized: "widget_medium_description", bundle: .module) }
+
+    public static var widgetMediumTitle: String { String(localized: "widget_medium_title", bundle: .module) }
+
+    public static var widgetPermissionRequired: String { String(localized: "widget_permission_required", bundle: .module) }
+
+    public static var widgetSendFailed: String { String(localized: "widget_send_failed", bundle: .module) }
 }

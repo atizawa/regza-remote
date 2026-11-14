@@ -1572,6 +1572,78 @@
           }
         }
       }
+    },
+    "widget_large_description": {
+      "extractionState": "manual",
+      "comment": "Androidのホーム画面ウィジェット",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数字・放送切替・再生キーを備えたリモコンです。アプリを開かずに操作できます。"
+          }
+        }
+      }
+    },
+    "widget_large_title": {
+      "extractionState": "manual",
+      "comment": "Androidのホーム画面ウィジェット",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモコン（大）"
+          }
+        }
+      }
+    },
+    "widget_medium_description": {
+      "extractionState": "manual",
+      "comment": "Androidのホーム画面ウィジェット",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリを開かずに、電源・音量・チャンネルを操作できます。"
+          }
+        }
+      }
+    },
+    "widget_medium_title": {
+      "extractionState": "manual",
+      "comment": "Androidのホーム画面ウィジェット",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモコン（中）"
+          }
+        }
+      }
+    },
+    "widget_permission_required": {
+      "extractionState": "manual",
+      "comment": "Androidのホーム画面ウィジェット",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリを開き、ローカルネットワークへのアクセスを許可してください。"
+          }
+        }
+      }
+    },
+    "widget_send_failed": {
+      "extractionState": "manual",
+      "comment": "Androidのホーム画面ウィジェット",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信できませんでした。テレビと接続設定を確認してください。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
