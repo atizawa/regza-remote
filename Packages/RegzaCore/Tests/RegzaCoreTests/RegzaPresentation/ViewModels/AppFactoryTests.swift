@@ -13,7 +13,7 @@ import Testing
             tvUseCase: tvUseCase,
             channelUseCase: ChannelUseCaseProtocolMock(), guideUseCase: GuideUseCaseProtocolMock(),
             recordingUseCase: RecordingUseCaseProtocolMock(), streamUseCase: StreamUseCaseProtocolMock(),
-            setupUseCase: SetupUseCaseProtocolMock())
+            setupUseCase: SetupUseCaseProtocolMock(), appPreferencesUseCase: AppPreferencesUseCaseProtocolMock(appearance: .system))
 
         await appViewModel.remoteViewModel.sendAndWait(.press(.volumeUp))
 

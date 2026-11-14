@@ -10,6 +10,7 @@ extension AppFactory {
         recordingRepository: any RecordingRepositoryProtocol,
         streamRepository: any StreamRepositoryProtocol,
         deviceRepository: any DeviceRepositoryProtocol,
+        appPreferencesRepository: any AppPreferencesRepositoryProtocol,
         initialNowPlaying: NowPlayingItem? = nil,
         onGuideHostChange: @escaping @MainActor (String) async -> Void = { _ in }
     ) -> AppViewModel {
@@ -26,7 +27,8 @@ extension AppFactory {
             ) { [weak remoteViewModel] host in
                 await onGuideHostChange(host)
                 remoteViewModel?.send(.refresh)
-            }
+            },
+            appPreferencesUseCase: AppPreferencesUseCase(appPreferencesRepository: appPreferencesRepository)
         )
     }
 

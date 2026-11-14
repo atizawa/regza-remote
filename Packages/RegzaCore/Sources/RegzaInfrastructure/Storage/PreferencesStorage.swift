@@ -10,4 +10,5 @@ public enum PreferencesKey: String, CaseIterable, Sendable {
     case guideHost
     case streamHost
     case ownStreamIDs
+    case appearance
 }

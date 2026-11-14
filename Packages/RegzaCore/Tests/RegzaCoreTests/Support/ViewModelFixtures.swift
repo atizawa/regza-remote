@@ -32,6 +32,7 @@ struct ViewModelFixtures {
             guideRepository: GuideRepositoryProtocolMock(guideHost: guideHost ?? (programs.isEmpty ? "" : "192.0.2.2"), programs: programs),
             recordingRepository: RecordingRepositoryProtocolMock(reservations: reservations),
             streamRepository: StreamRepositoryProtocolMock(streamHost: ""), deviceRepository: DeviceRepositoryProtocolMock(),
+            appPreferencesRepository: AppPreferencesRepositoryProtocolMock(preferences: .init()),
             initialNowPlaying: nowPlaying.map(UseCaseModelMapper.nowPlaying))
     }
 

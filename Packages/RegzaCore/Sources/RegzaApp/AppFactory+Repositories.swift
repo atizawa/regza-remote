@@ -33,6 +33,7 @@ public enum AppFactory {
             tvRepository: tvRepository, guideRepository: guideRepository,
             recordingRepository: recordingRepository, streamRepository: streamRepository,
             deviceRepository: NetworkDeviceRepository(transport: transport),
+            appPreferencesRepository: AppPreferencesRepository(preferencesManager: preferencesManager),
             onGuideHostChange: { host in
                 await tvRepository.updateGuide(mirakurunAPIClient: host.isEmpty ? nil : remoteGuideAPIClient.replacingHost(host))
             }

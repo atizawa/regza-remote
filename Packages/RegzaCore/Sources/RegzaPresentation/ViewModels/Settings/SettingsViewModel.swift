@@ -12,12 +12,21 @@ public final class SettingsViewModel {
     let serverSetupViewModel: ServerSetupViewModel
     /// 設定を閉じる (AppViewModel が渡す)
     @ObservationIgnored private let close: @MainActor () -> Void
+    @ObservationIgnored private let onAppearanceChange: @MainActor (AppAppearance) -> Void
+    private var appearance: AppAppearance
 
-    package init(remoteViewModel: RemoteViewModel, setupUseCase: any SetupUseCaseProtocol, close: @escaping @MainActor () -> Void) {
+    package init(
+        remoteViewModel: RemoteViewModel, setupUseCase: any SetupUseCaseProtocol,
+        appearance: AppAppearance = .system,
+        onAppearanceChange: @escaping @MainActor (AppAppearance) -> Void = { _ in },
+        close: @escaping @MainActor () -> Void
+    ) {
         self.remoteViewModel = remoteViewModel
         tvSetupViewModel = TVSetupViewModel(remoteViewModel: remoteViewModel, setupUseCase: setupUseCase)
         serverSetupViewModel = ServerSetupViewModel(setupUseCase: setupUseCase)
         self.close = close
+        self.appearance = appearance
+        self.onAppearanceChange = onAppearanceChange
         // テレビが未設定なら、テレビの設定の画面から始める
         path = remoteViewModel.connection.isConfigured ? [] : [.tv]
     }
@@ -35,6 +44,7 @@ public final class SettingsViewModel {
         let tv = tvSetupViewModel.state
         let servers = serverSetupViewModel.state
         return State(
+            appearance: appearance,
             path: path,
             canClose: remoteViewModel.state.isConfigured,
             canSave: tv.canSave && servers.isValid,
@@ -45,6 +55,10 @@ public final class SettingsViewModel {
 
     public func send(_ action: Action) {
         switch action {
+        case .setAppearance(let appearance):
+            guard self.appearance != appearance else { return }
+            self.appearance = appearance
+            onAppearanceChange(appearance)
         case .setPath(let path): open(path)
         case .openPage(let page): open(path + [page])
         case .back: open(path.dropLast())
@@ -122,6 +136,7 @@ extension SettingsViewModel: IntrospectableActions {
             actions.map { ActionDescription(prefix + $0.name, $0.summary, parameters: $0.parameters) }
         }
         return [
+            ActionDescription("setAppearance", "外観を保存して切り替える", parameters: ["appearance": "system | light | dark"]),
             ActionDescription("openPage", "設定の中の画面を開く", parameters: ["page": "tv | guide | stream"]),
             ActionDescription("back", "設定の中で 1 つ戻る"),
             ActionDescription("setPath", "設定の中の画面の並びをまとめて変える (iOS で戻るスワイプをしたときと同じ)", parameters: ["path": "[tv | guide | stream]"]),
@@ -134,6 +149,11 @@ extension SettingsViewModel: IntrospectableActions {
         if name.hasPrefix("tv.") { return .tv(try tvSetupViewModel.introspectionAction(String(name.dropFirst(3)), arguments)) }
         if name.hasPrefix("server.") { return .server(try serverSetupViewModel.introspectionAction(String(name.dropFirst(7)), arguments)) }
         switch name {
+        case "setAppearance":
+            guard let appearance = AppAppearance(rawValue: try arguments.string("appearance")) else {
+                throw IntrospectionError.invalidArgument("appearance")
+            }
+            return .setAppearance(appearance)
         case "openPage":
             guard let page = SettingsPage(rawValue: try arguments.string("page")) else { throw IntrospectionError.invalidArgument("page") }
             return .openPage(page)

@@ -28,6 +28,7 @@ public final class UserDefaultsStorage: PreferencesStorage, @unchecked Sendable 
         case .guideHost: "mirakurun.host"
         case .streamHost: "epgstation.host"
         case .ownStreamIDs: "epgstation.ownStreams"
+        case .appearance: "app.appearance"
         }
     }
 }

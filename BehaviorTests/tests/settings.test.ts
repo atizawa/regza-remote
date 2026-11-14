@@ -3,6 +3,17 @@ import { expect, test } from "bun:test";
 import { describeOnBothPlatforms } from "../sdk/app";
 
 describeOnBothPlatforms("設定", (app) => {
+  test("外観を即時に切り替え、設定を閉じても選択を保持する", async () => {
+    await app().do("app", "showSettings");
+    for (const appearance of ["dark", "light", "system"]) {
+      await app().do("app/settings", "setAppearance", { appearance }, (node) => node.state.appearance === appearance);
+      expect((await app().ls("app")).state.appearance).toBe(appearance);
+    }
+    await app().do("app/settings", "close");
+    await app().do("app", "showSettings");
+    expect((await app().ls("app/settings")).state.appearance).toBe("system");
+  });
+
   test("設定の中の画面を開いて戻り、閉じる", async () => {
     await app().do("app", "showSettings");
     expect((await app().ls("app/settings")).state.path).toEqual([]);

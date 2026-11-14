@@ -18,13 +18,14 @@ extension AppFactory {
         recordingUseCase: any RecordingUseCaseProtocol,
         streamUseCase: any StreamUseCaseProtocol,
         setupUseCase: any SetupUseCaseProtocol,
+        appPreferencesUseCase: any AppPreferencesUseCaseProtocol,
         initialNowPlaying: NowPlayingItem? = nil
     ) -> AppViewModel {
         makeAppViewModel(
             remoteViewModel: makeRemoteViewModel(tvUseCase: tvUseCase, nowPlaying: initialNowPlaying),
             channelUseCase: channelUseCase, guideUseCase: guideUseCase,
             recordingUseCase: recordingUseCase, streamUseCase: streamUseCase,
-            setupUseCase: setupUseCase)
+            setupUseCase: setupUseCase, appPreferencesUseCase: appPreferencesUseCase)
     }
 
     public static func makeAppViewModel(
@@ -33,12 +34,13 @@ extension AppFactory {
         guideUseCase: any GuideUseCaseProtocol,
         recordingUseCase: any RecordingUseCaseProtocol,
         streamUseCase: any StreamUseCaseProtocol,
-        setupUseCase: any SetupUseCaseProtocol
+        setupUseCase: any SetupUseCaseProtocol,
+        appPreferencesUseCase: any AppPreferencesUseCaseProtocol
     ) -> AppViewModel {
         AppViewModel(
             remoteViewModel: remoteViewModel,
             channelUseCase: channelUseCase, guideUseCase: guideUseCase,
             recordingUseCase: recordingUseCase, streamUseCase: streamUseCase,
-            setupUseCase: setupUseCase)
+            setupUseCase: setupUseCase, appPreferencesUseCase: appPreferencesUseCase)
     }
 }

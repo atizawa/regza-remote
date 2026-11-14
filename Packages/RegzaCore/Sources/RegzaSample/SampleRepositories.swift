@@ -24,8 +24,15 @@ extension AppViewModel {
         return AppFactory.makeAppViewModel(
             tvRepository: tvRepository, guideRepository: guideRepository, recordingRepository: recordingRepository,
             streamRepository: streamRepository, deviceRepository: SampleDeviceRepository(),
+            appPreferencesRepository: SampleAppPreferencesRepository(),
             initialNowPlaying: nowPlaying.map(UseCaseModelMapper.nowPlaying))
     }
+}
+
+@MainActor
+private final class SampleAppPreferencesRepository: AppPreferencesRepositoryProtocol {
+    var preferences = AppPreferencesData()
+    func save(_ preferences: AppPreferencesData) { self.preferences = preferences }
 }
 
 /// 見本のテレビ。キーを送っても何もせず、選局すると、その局に切り替わったものとして出す

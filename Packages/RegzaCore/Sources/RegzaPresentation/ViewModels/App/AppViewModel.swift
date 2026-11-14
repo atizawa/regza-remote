@@ -13,6 +13,8 @@ public final class AppViewModel {
     package let streamUseCase: any StreamUseCaseProtocol
     package let setupUseCase: any SetupUseCaseProtocol
     package let channelUseCase: any ChannelUseCaseProtocol
+    private let appPreferencesUseCase: any AppPreferencesUseCaseProtocol
+    public private(set) var appearance: AppAppearance
 
     // MARK: - 状態と操作
 
@@ -35,6 +37,7 @@ public final class AppViewModel {
 
     public var state: State {
         var state = navigation
+        state.appearance = appearance
         state.playingChannelCode = livePlayerViewModel?.state.channelCode
         return state
     }
@@ -43,7 +46,8 @@ public final class AppViewModel {
     package init(
         remoteViewModel: RemoteViewModel, channelUseCase: any ChannelUseCaseProtocol, guideUseCase: any GuideUseCaseProtocol,
         recordingUseCase: any RecordingUseCaseProtocol,
-        streamUseCase: any StreamUseCaseProtocol, setupUseCase: any SetupUseCaseProtocol
+        streamUseCase: any StreamUseCaseProtocol, setupUseCase: any SetupUseCaseProtocol,
+        appPreferencesUseCase: any AppPreferencesUseCaseProtocol
     ) {
         self.channelUseCase = channelUseCase
         self.remoteViewModel = remoteViewModel
@@ -51,6 +55,8 @@ public final class AppViewModel {
         self.recordingUseCase = recordingUseCase
         self.streamUseCase = streamUseCase
         self.setupUseCase = setupUseCase
+        self.appPreferencesUseCase = appPreferencesUseCase
+        appearance = appPreferencesUseCase.appearance
         channelListViewModel = ChannelListViewModel(
             remoteViewModel: remoteViewModel, channelUseCase: channelUseCase, guideUseCase: guideUseCase, streamUseCase: streamUseCase)
         guideGridViewModel = GuideGridViewModel(
@@ -83,9 +89,12 @@ public final class AppViewModel {
         case .pop:
             if next.paths[next.tab]?.isEmpty == false { next.paths[next.tab]?.removeLast() }
         case .showSettings:
-            settingsViewModel = SettingsViewModel(remoteViewModel: remoteViewModel, setupUseCase: setupUseCase) { [weak self] in
-                self?.send(.closeSettings)
-            }
+            settingsViewModel = SettingsViewModel(
+                remoteViewModel: remoteViewModel, setupUseCase: setupUseCase, appearance: appearance,
+                onAppearanceChange: { [weak self] appearance in
+                    self?.appPreferencesUseCase.setAppearance(appearance)
+                    self?.appearance = appearance
+                }, close: { [weak self] in self?.send(.closeSettings) })
             next.isShowingSettings = true
         case .closeSettings:
             if let settingsViewModel {

@@ -9,6 +9,60 @@ import RegzaDomain
 import RegzaSharedModels
 
 
+public final class AppPreferencesRepositoryProtocolMock: AppPreferencesRepositoryProtocol {
+    public init() { }
+    public init(preferences: AppPreferencesData) {
+        self._preferences = preferences
+    }
+
+
+
+    private var _preferences: AppPreferencesData!
+    public var preferences: AppPreferencesData {
+        get { return _preferences }
+        set { _preferences = newValue }
+    }
+
+    public private(set) var saveCallCount = 0
+    public var saveArgValues: [AppPreferencesData] = []
+    public var saveHandler: ((AppPreferencesData) -> ())?
+    public func save(_ preferences: AppPreferencesData) {
+        saveCallCount += 1
+        saveArgValues.append(preferences)
+        if let saveHandler = saveHandler {
+            saveHandler(preferences)
+        }
+
+    }
+}
+
+public final class AppPreferencesUseCaseProtocolMock: AppPreferencesUseCaseProtocol {
+    public init() { }
+    public init(appearance: AppAppearance) {
+        self._appearance = appearance
+    }
+
+
+
+    private var _appearance: AppAppearance!
+    public var appearance: AppAppearance {
+        get { return _appearance }
+        set { _appearance = newValue }
+    }
+
+    public private(set) var setAppearanceCallCount = 0
+    public var setAppearanceArgValues: [AppAppearance] = []
+    public var setAppearanceHandler: ((AppAppearance) -> ())?
+    public func setAppearance(_ appearance: AppAppearance) {
+        setAppearanceCallCount += 1
+        setAppearanceArgValues.append(appearance)
+        if let setAppearanceHandler = setAppearanceHandler {
+            setAppearanceHandler(appearance)
+        }
+
+    }
+}
+
 public final class ChannelUseCaseProtocolMock: ChannelUseCaseProtocol {
     public init() { }
     public init(bands: [BroadcastBand] = [BroadcastBand](), liveBands: [BroadcastBand] = [BroadcastBand]()) {
