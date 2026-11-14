@@ -7,7 +7,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-/** OS のライト・ダーク設定に従い、共通トークンの標準色リソースを使う。 */
+/** 現在の外観に従い、共通トークンの標準色リソースを使う。 */
 object AppTheme {
     val accent: Color
         @Composable get() = DesignColors.brandAccent

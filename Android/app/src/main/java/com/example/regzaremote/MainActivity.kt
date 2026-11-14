@@ -18,6 +18,7 @@ import com.example.regzaremote.bridge.appStates
 import com.example.regzaremote.bridge.livePlayerStates
 import com.example.regzaremote.bridge.settingsStates
 import com.example.regzaremote.design.AppTheme
+import com.example.regzaremote.design.AppearanceTheme
 import com.example.regzaremote.ui.components.LocalNetworkGate
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.screens.AppScreen
@@ -40,11 +41,21 @@ class MainActivity : ComponentActivity() {
                         val regzaViewModel: RegzaViewModel = viewModel(factory = appViewModelFactory)
                         val app = regzaViewModel.app
                         val state = rememberState(app) { app.appStates() } ?: return@LocalNetworkGate
-                        // 設定は開いている間だけ state が届く
-                        val settings = rememberState(app) { app.settingsStates() }
-                        if (settings != null) SettingsScreen(settings, regzaViewModel.send) else AppScreen(app, state, regzaViewModel.send)
-                        // アプリで見る (ライブ視聴) は、どの画面の上にも全画面で重ねる
-                        rememberState(app) { app.livePlayerStates() }?.let { LivePlayerScreen(it, regzaViewModel.send) }
+                        AppearanceTheme(state.appearance.rawValue) {
+                            Surface(modifier = Modifier.fillMaxSize(), color = AppTheme.background) {
+                                // 設定は開いている間だけ state が届く
+                                val settings = rememberState(app) { app.settingsStates() }
+                                if (settings !=
+                                    null
+                                ) {
+                                    SettingsScreen(settings, regzaViewModel.send)
+                                } else {
+                                    AppScreen(app, state, regzaViewModel.send)
+                                }
+                                // アプリで見る (ライブ視聴) は、どの画面の上にも全画面で重ねる
+                                rememberState(app) { app.livePlayerStates() }?.let { LivePlayerScreen(it, regzaViewModel.send) }
+                            }
+                        }
                     }
                 }
             }

@@ -38,6 +38,7 @@ struct RootView: View {
 
     var body: some View {
         AppScreen(appViewModel: appViewModel, liveActivity: liveActivity, debugPlayerViewModel: debugPlayerViewModel)
+            .preferredColorScheme(appViewModel.appearance.preferredColorScheme)
             .onAppear {
                 appContainer.restoreUIState(savedStateJSON)
             }

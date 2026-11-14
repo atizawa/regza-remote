@@ -1,0 +1,27 @@
+appId: ${APP_ID}
+name: 外観の切り替えと選択の保持
+---
+- runFlow: ../shared/launch.yaml
+- tapOn:
+    id: settings.open
+- tapOn: システムに合わせる
+- tapOn: ダーク
+- tapOn:
+    id: settings.close
+- tapOn:
+    id: settings.open
+- assertVisible: ダーク
+- tapOn: ダーク
+- tapOn: ライト
+- tapOn:
+    id: settings.close
+- tapOn:
+    id: settings.open
+- assertVisible: ライト
+- tapOn: ライト
+- tapOn: システムに合わせる
+- tapOn:
+    id: settings.close
+- tapOn:
+    id: settings.open
+- assertVisible: システムに合わせる

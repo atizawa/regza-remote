@@ -37,6 +37,7 @@ struct SettingsScreen: View {
                 }
 
                 Section(AppStrings.commonDisplay) {
+                    appearancePicker
                     LiveActivityToggle()
                 }
 
@@ -86,6 +87,46 @@ struct SettingsScreen: View {
             .onChange(of: tvState.isWaitingForPIN) { _, isWaiting in
                 if isWaiting { isPINFocused = true }
             }
+        }
+        .preferredColorScheme(state.appearance.preferredColorScheme)
+    }
+
+    private var appearancePicker: some View {
+        let appearance = settingsViewModel.state.appearance
+        let title =
+            switch appearance {
+            case .system: AppStrings.appearanceSystem
+            case .light: AppStrings.appearanceLight
+            case .dark: AppStrings.appearanceDark
+            }
+        return LabeledContent(AppStrings.appearanceTitle) {
+            Menu {
+                Picker(
+                    AppStrings.appearanceTitle,
+                    selection: Binding(get: { settingsViewModel.state.appearance }, set: { settingsViewModel.send(.setAppearance($0)) })
+                ) {
+                    Text(AppStrings.appearanceSystem).tag(AppAppearance.system)
+                    Text(AppStrings.appearanceLight).tag(AppAppearance.light)
+                    Text(AppStrings.appearanceDark).tag(AppAppearance.dark)
+                }
+                .pickerStyle(.inline)
+            } label: {
+                HStack {
+                    // 全候補が収まる幅を確保し、選択を変えてもメニューの基準位置を保つ。
+                    ZStack(alignment: .trailing) {
+                        Text(AppStrings.appearanceSystem).hidden()
+                        Text(AppStrings.appearanceLight).hidden()
+                        Text(AppStrings.appearanceDark).hidden()
+                    }
+                    .overlay(alignment: .trailing) { Text(title) }
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(.tint)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings.appearance")
         }
     }
 

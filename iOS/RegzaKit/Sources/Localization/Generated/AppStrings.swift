@@ -10,6 +10,14 @@ public enum AppStrings {
 
     public static var appName: String { String(localized: "app_name", bundle: .module) }
 
+    public static var appearanceDark: String { String(localized: "appearance_dark", bundle: .module) }
+
+    public static var appearanceLight: String { String(localized: "appearance_light", bundle: .module) }
+
+    public static var appearanceSystem: String { String(localized: "appearance_system", bundle: .module) }
+
+    public static var appearanceTitle: String { String(localized: "appearance_title", bundle: .module) }
+
     public static var broadcastTitle: String { String(localized: "broadcast_title", bundle: .module) }
 
     public static func channelGuideTitle(_ value1: String) -> String {

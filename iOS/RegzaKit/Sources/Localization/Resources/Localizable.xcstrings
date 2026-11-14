@@ -49,6 +49,54 @@
         }
       }
     },
+    "appearance_dark": {
+      "extractionState": "manual",
+      "comment": "アプリの表示設定 / appearance_dark",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダーク"
+          }
+        }
+      }
+    },
+    "appearance_light": {
+      "extractionState": "manual",
+      "comment": "アプリの表示設定 / appearance_light",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライト"
+          }
+        }
+      }
+    },
+    "appearance_system": {
+      "extractionState": "manual",
+      "comment": "アプリの表示設定 / appearance_system",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムに合わせる"
+          }
+        }
+      }
+    },
+    "appearance_title": {
+      "extractionState": "manual",
+      "comment": "アプリの表示設定 / appearance_title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外観"
+          }
+        }
+      }
+    },
     "broadcast_title": {
       "extractionState": "manual",
       "comment": "broadcast / title",

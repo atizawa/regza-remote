@@ -3,6 +3,7 @@ package com.example.regzaremote.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
 import com.example.regzaremote.bridge.settingsStates
 import com.example.regzaremote.core.AppAction
+import com.example.regzaremote.core.AppAppearance
 import com.example.regzaremote.core.ServerSetupAction
 import com.example.regzaremote.core.ServerSetupServer
 import com.example.regzaremote.core.ServerSetupServerState
@@ -121,6 +125,9 @@ private fun SettingsTopPage(setup: SettingsState, send: Send) {
                 send(SettingsAction.openPage(SettingsPage.tv()))
             }
         }
+        FormSection(AppStrings.commonDisplay) {
+            AppearancePicker(setup, send)
+        }
         FormSection(
             AppStrings.settingsRecordingServers,
             footer = AppStrings.settingsServersHelp,
@@ -133,6 +140,36 @@ private fun SettingsTopPage(setup: SettingsState, send: Send) {
                 if (servers.isHasGuideDraft) servers.stream.status else AppStrings.settingsGuideRequired,
                 enabled = servers.isHasGuideDraft,
             ) { send(SettingsAction.openPage(SettingsPage.stream())) }
+        }
+    }
+}
+
+@Composable
+private fun AppearancePicker(setup: SettingsState, send: Send) {
+    var expanded by remember { mutableStateOf(false) }
+    val choices = remember { listOf(AppAppearance.system(), AppAppearance.light(), AppAppearance.dark()) }
+
+    @Composable
+    fun label(value: String): String = when (value) {
+        "light" -> AppStrings.appearanceLight
+        "dark" -> AppStrings.appearanceDark
+        else -> AppStrings.appearanceSystem
+    }
+    Box(Modifier.testTag("settings.appearance")) {
+        NavigationRow(AppStrings.appearanceTitle, label(setup.appearance.rawValue)) { expanded = true }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            choices.forEach { appearance ->
+                DropdownMenuItem(
+                    text = { Text(label(appearance.rawValue)) },
+                    onClick = {
+                        send(SettingsAction.setAppearance(appearance))
+                        expanded = false
+                    },
+                    trailingIcon = {
+                        if (setup.appearance.rawValue == appearance.rawValue) Icon(Icons.Filled.Check, contentDescription = null)
+                    },
+                )
+            }
         }
     }
 }

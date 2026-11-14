@@ -30,7 +30,7 @@ JSON と生成結果を一緒に Git に含める。主な生成物は以下の�
 
 Android XMLはStyle Dictionary標準の `android/colors` で生成する。
 Color Assetへの配置は `generate.ts`・`color-assets.ts`、Swift・Kotlinのリソース参照は `formats.ts` の小さな専用処理で生成する。
-Swiftはパッケージの `.module`、Composeは `colorResource` を使い、外観に応じた解決はOSに任せる。
+Swiftはパッケージの `.module`、Composeは `colorResource` を使い、外観に応じた解決はOSに任せる。設定の外観を変更すると、iOSは `preferredColorScheme`、Androidは `AppearanceTheme` でリソースの解決とMaterial・システムバーの配色を切り替える。「システムに合わせる」ではOS設定に追従する。
 `AppTheme` は色の値を持たず、標準リソースの色をテーマに適用する。
 Color Assetの削除・改名も生成時に反映し、確認時は不要な生成物も検出する。
 成分と透明度は必ず小数表記で出力する。例えば整数文字列 `"1"` はactoolに `1/255` と解釈されるため使わない。

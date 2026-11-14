@@ -19,6 +19,18 @@ object AppStrings {
     val appName: String
         @Composable get() = stringResource(R.string.app_name)
 
+    val appearanceDark: String
+        @Composable get() = stringResource(R.string.appearance_dark)
+
+    val appearanceLight: String
+        @Composable get() = stringResource(R.string.appearance_light)
+
+    val appearanceSystem: String
+        @Composable get() = stringResource(R.string.appearance_system)
+
+    val appearanceTitle: String
+        @Composable get() = stringResource(R.string.appearance_title)
+
     val broadcastTitle: String
         @Composable get() = stringResource(R.string.broadcast_title)
 
