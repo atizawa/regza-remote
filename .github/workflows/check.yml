@@ -93,7 +93,4 @@ jobs:
         working-directory: Android
         run: mise run install-android-swift-sdk
       - run: mise run build-android
-      - name: 振る舞いのテストの道具 (bun) を入れる
-        working-directory: BehaviorTests
-        run: mise install
       - run: mise run test-behavior

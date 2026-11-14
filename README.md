@@ -44,7 +44,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   mise.toml                   共通設定の Swift ツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
 ```
 
-- Swift のコードの書き方は swift-format（Swift のツールチェーンに入っている Apple の道具）でそろえる。設定は `.swift-format`（行の長さ 140・インデントは空白 4 つ・`#if` の中は下げない、ほかは既定の決まり）。Kotlin は ktlint でそろえる。設定は `.editorconfig`（Android Studio の書き方・行の長さ 140・`@Composable` の関数は大文字で始めてよい）で、Android Studio もこの設定で整形する。複数行に並べたものは、Kotlin では宣言でも呼び出しでも末尾にコンマを付け、Swift では配列や辞書に付ける（関数の引数は書いたとおりに残す。swift-format の「必ず付ける」は閉じかっこの前に `, )` を残す不具合があるため使わない）。`mise run lint` で両方を確かめ、`mise run format` で両方を直す。道具が作るファイル（`Generated/`・`.build/`）は対象にしない。ルートの `mise.toml` には共通タスクと ktlint の設定を置き、Swift の版は `toolchains.toml` を参照する。ルートでは Swift のコンパイラを切り替えない（初めてのときは `mise trust` と `mise install` が要る）
+- Swift のコードの書き方は swift-format（Swift のツールチェーンに入っている Apple の道具）でそろえる。設定は `.swift-format`（行の長さ 140・インデントは空白 4 つ・`#if` の中は下げない、ほかは既定の決まり）。Kotlin は ktlint でそろえる。設定は `.editorconfig`（Android Studio の書き方・行の長さ 140・`@Composable` の関数は大文字で始めてよい）で、Android Studio もこの設定で整形する。複数行に並べたものは、Kotlin では宣言でも呼び出しでも末尾にコンマを付け、Swift では配列や辞書に付ける（関数の引数は書いたとおりに残す。swift-format の「必ず付ける」は閉じかっこの前に `, )` を残す不具合があるため使わない）。`mise run lint` で両方を確かめ、`mise run format` で両方を直す。道具が作るファイル（`Generated/`・`.build/`）は対象にしない。ルートの `mise.toml` には共通タスクと Bun・ktlint の設定を置き、Swift の版は `toolchains.toml` を参照する。ルートでは Swift のコンパイラを切り替えない（初めてのときは `mise trust` と `mise install` が要る）
 - Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装し、URLSession と OkHttp で共有する。
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
@@ -68,6 +68,17 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - REGZA・Mirakurun・EPGStation の API は `OpenAPI/` の仕様から Swift OpenAPI Generator で生成する。生成クライアント、Digest 認証・LenientJSON のミドルウェア、既存の `HTTPTransport` を包む `ClientTransport` はすべて共有する。構成と生成方法は [OpenAPI/README.md](OpenAPI/README.md)。
 
 ## 開発
+
+共通ツールと生成・テスト・ビルドのタスクは、ルートの `mise.toml` で管理する。
+普段はルートから `mise run <タスク名>` を実行する。Bunの版もルートに1か所だけ定義する。
+生成コード・設定・テストコードはそれぞれのディレクトリに置き、miseのタスクから作業ディレクトリを指定する。
+
+| 設定ファイル | 役割 |
+| --- | --- |
+| `mise.toml` | 共通ツール（Bun・ktlint）と実行タスク |
+| `mise.linux.toml` | Linux用Swiftの選択 |
+| `Android/mise.toml` | Android用Swift・JDK・SDKと専用タスク |
+| `UITests/mise.toml` | Maestro・JDKと端末でのUIテストの準備・実行 |
 
 Android の APK ビルド・ホストの JVM テストは macOS と Linux を対象にする。Linux の APK ビルドは Android NDK のホストツールに合わせて x86_64 を使う。iOS のビルド・RegzaKit のテストは Xcode が必要なため macOS で行う。Windows ネイティブの開発環境は対象外で、WSL2 は Linux の手順を使う（Windows 側の Android Studio とのプレビュー連携は別途検証が必要）。
 
@@ -105,7 +116,8 @@ mise run prepare-android-preview          # エディタの横にプレビュー
 mise run test-android-runtime             # arm64 のエミュレーター/実機で .so・JNI・Looper・OkHttp・Android TLS を確かめる
 ./gradlew :app:assembleRelease            # 配るアプリ。作ったあと、APK に手元のフォルダの場所が入っていないことも確かめる (checkReleaseApk)
 
-cd BehaviorTests && mise run test         # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
+cd ..                                    # リポジトリのルートへ戻る
+mise run test-behavior                    # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
 ```
 
 画面の復元対象は iOS・Android で共通の `AppViewModel` が定義する。Android は `RegzaViewModel` の `SavedStateHandle`、iOS は `RootView` の `SceneStorage` と AppServices の `AppStateRestoration` へ接続する。OS の保存時に入力・検索条件・選択中タブ・設定画面・戻る道・番組表の日付と放送種別を小さな JSON にまとめ、新しい ViewModel へ戻す。番組やチャンネルは再取得し、存在しない画面は戻る道から除く。未保存のパスワード・PIN・通信中フラグ・ライブ視聴の実行状態は含めない。保存済み認証情報は従来どおり StorageManager から読む。iOS はシーンが非アクティブ・バックグラウンドへ移る際に退避し、画面の初回表示時だけ読み戻す。Siri や Live Activity による画面のない起動では復元せず、開発用の SampleData では既存の保存状態を上書きしない。

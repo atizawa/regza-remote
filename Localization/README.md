@@ -9,7 +9,7 @@ mise run generate-localizations
 mise run check-localizations
 ```
 
-初回は `mise -C Localization install` を実行する。既存の振る舞いテストと同じ版のBunを使い、追加のライブラリや翻訳サービスは不要。
+初回はルートで `mise install` を実行する。Bunの版と実行タスクはルートの `mise.toml` で管理し、追加のライブラリや翻訳サービスは不要。
 変換処理はこのディレクトリの専用コードであり、XcodeやAndroidの標準生成機能ではない。
 変換後のリソースのコンパイル・選択・書式処理は各OSの標準機能に任せる。
 

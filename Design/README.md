@@ -52,6 +52,6 @@ Style Dictionary の標準命名変換で、グループ名と項目名を組み
 リモコン本体とLive Activityの暗い背景は実物の見た目や表示用途を保つため、両外観で共通にする。
 
 Style Dictionary の版は `package.json`、間接依存は `bun.lock` で固定する。
-実行には既存の振る舞いテストと同じ版の Bun を使う (`mise.toml`)。
-初回は `mise -C Design install` を実行する。生成・確認タスクは `bun install --frozen-lockfile` を先に実行する。
+実行には振る舞いテストと共通のBunを使う。版と実行タスクはルートの `mise.toml` で管理する。
+初回はルートで `mise install` を実行する。生成・確認タスクは `bun install --frozen-lockfile` を先に実行する。
 アプリの実行時依存には追加しない。

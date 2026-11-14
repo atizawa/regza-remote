@@ -5,7 +5,6 @@ MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED = "true"
 
 [tools]
 maestro = "cli-2.12.1"
-bun = "{{ read_toml(path='../BehaviorTests/mise.toml')['tools']['bun'] }}"
 java = "temurin-{{ exec(command='sed -n s/^toolchainVersion=//p ../Android/gradle/gradle-daemon-jvm.properties') }}"
 
 [tasks.prepare-android]

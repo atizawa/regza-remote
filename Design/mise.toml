@@ -1,8 +1,0 @@
-[tools]
-bun = "{{ read_toml(path='../BehaviorTests/mise.toml')['tools']['bun'] }}"
-
-[tasks.generate]
-run = ["bun install --frozen-lockfile", "bun generate.ts"]
-
-[tasks.check]
-run = ["bun install --frozen-lockfile", "bun test", "bun generate.ts --check"]

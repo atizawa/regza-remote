@@ -9,7 +9,7 @@ ANDROID_SERIAL=emulator-5554 mise run test-ui-android
 IOS_SIMULATOR_UDID=<UDID> mise run test-ui-ios
 ```
 
-タスクは debug アプリのビルド・インストール、HTTP スタブの起動、Maestro、後片づけまで行う。iOS は macOS / Xcode のシミュレーターを使用する。Android は既存の開発環境に加えて `adb reverse` を使用する。Maestro・Java・Bun はこのディレクトリの mise 設定で固定し、通常のビルドや CI に追加のインストールを要求しない。
+タスクは debug アプリのビルド・インストール、HTTP スタブの起動、Maestro、後片づけまで行う。iOS は macOS / Xcode のシミュレーターを使用する。Android は既存の開発環境に加えて `adb reverse` を使用する。Maestro・Java はこのディレクトリのmise設定、共通のBunはルートのmise設定で固定する。Maestroは通常のビルドやCIの導入対象に含めない。
 
 iOS のバンドル ID はビルドした Info.plist から取得するため、Local.xcconfig の変更も反映される。結果・スクリーンショット・ログは `.build/<OS>-results/`、HTTP リクエストの記録は `.build/server-<OS>.log` に置く。
 
