@@ -58,6 +58,6 @@ let package = Package(
             swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
         .testTarget(
             name: "RegzaKitTests",
-            dependencies: ["AppServices", .product(name: "RegzaInfrastructure", package: "RegzaCore")]),
+            dependencies: ["AppServices", "Localization", .product(name: "RegzaInfrastructure", package: "RegzaCore")]),
     ]
 )
