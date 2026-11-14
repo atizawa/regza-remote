@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Localizable.xcstringsから生成。直接編集せずmise run generate-localizationsを実行してください。 -->
+<resources>
+    <string name="activity_disabled_help" formatted="false">"iPhone の「設定」→「REGZAリモコン」で「ライブアクティビティ」をオンにすると使えます。"</string>
+    <string name="activity_help" formatted="false">"アプリを閉じていても、番組名とリモコンのボタンを表示します。"</string>
+    <string name="activity_title" formatted="false">"ロック画面と Dynamic Island に表示"</string>
+    <string name="app_name" formatted="false">"REGZA リモコン"</string>
+    <string name="broadcast_title" formatted="false">"放送"</string>
+    <string name="channel_guide_title">"%1$s の番組表"</string>
+    <string name="channel_list_title" formatted="false">"チャンネル一覧"</string>
+    <string name="channel_load_failed" formatted="false">"チャンネルを取得できません"</string>
+    <string name="channel_missing" formatted="false">"チャンネルが見つかりません"</string>
+    <string name="channel_on_air">"%1$s · 放送中"</string>
+    <string name="channel_switch" formatted="false">"切り替える"</string>
+    <string name="channel_switch_watch" formatted="false">"切り替えて見る"</string>
+    <string name="channel_watching" formatted="false">"視聴中"</string>
+    <string name="common_back" formatted="false">"戻る"</string>
+    <string name="common_cancel" formatted="false">"やめる"</string>
+    <string name="common_close" formatted="false">"閉じる"</string>
+    <string name="common_configure" formatted="false">"設定する"</string>
+    <string name="common_display" formatted="false">"表示"</string>
+    <string name="common_open_settings" formatted="false">"設定を開く"</string>
+    <string name="common_register" formatted="false">"登録"</string>
+    <string name="common_reload" formatted="false">"読み込み直す"</string>
+    <string name="common_retry" formatted="false">"もう一度試す"</string>
+    <string name="common_save" formatted="false">"保存"</string>
+    <string name="common_selected" formatted="false">"選択中"</string>
+    <string name="guide_channel_empty" formatted="false">"Mirakurun がこのチャンネルの番組表を持っていません。"</string>
+    <string name="guide_connection_help" formatted="false">"テレビと Mirakurun につながっているか確認してください。"</string>
+    <string name="guide_empty" formatted="false">"番組表がありません"</string>
+    <string name="guide_load_failed" formatted="false">"番組表を取得できません"</string>
+    <string name="guide_setup_help" formatted="false">"録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。\n設定画面の「録画サーバーとの連携」で Mirakurun のアドレスを設定してください。"</string>
+    <string name="guide_setup_title" formatted="false">"番組表を使うには"</string>
+    <string name="live_badge" formatted="false">"ライブ"</string>
+    <string name="live_retry" formatted="false">"準備できていない配信を止めて、もう一度試す"</string>
+    <string name="live_title" formatted="false">"ライブ視聴"</string>
+    <string name="network_permission_allow" formatted="false">"許可する"</string>
+    <string name="network_permission_help" formatted="false">"同じ Wi-Fi のテレビを操作するため、ローカルネットワークへのアクセスを許可してください。"</string>
+    <string name="network_permission_title" formatted="false">"ローカルネットワークへのアクセスが必要です"</string>
+    <string name="player_from_start" formatted="false">"最初から見る"</string>
+    <string name="player_now_playing" formatted="false">"再生中"</string>
+    <string name="player_play" formatted="false">"再生"</string>
+    <string name="player_program_from_start" formatted="false">"この番組を最初から見る"</string>
+    <string name="player_watch" formatted="false">"アプリで見る"</string>
+    <string name="program_channel_guide" formatted="false">"1 局の番組表"</string>
+    <string name="program_description" formatted="false">"番組説明"</string>
+    <string name="program_details" formatted="false">"番組の詳細"</string>
+    <string name="program_missing" formatted="false">"番組が見つかりません"</string>
+    <string name="program_on_air" formatted="false">"放送中"</string>
+    <string name="program_on_air_time">"放送中、%1$s"</string>
+    <string name="program_open_details" formatted="false">"番組の詳細を開きます"</string>
+    <string name="program_time_range">"%1$sから%2$s"</string>
+    <string name="recording_channel">"録画 · %1$s"</string>
+    <string name="recording_title" formatted="false">"録画番組"</string>
+    <string name="remote_connecting" formatted="false">"接続中…"</string>
+    <string name="remote_connection_failed" formatted="false">"テレビに接続できません"</string>
+    <string name="remote_enter" formatted="false">"決定"</string>
+    <string name="remote_more" formatted="false">"その他の操作"</string>
+    <string name="remote_playback" formatted="false">"録画・再生"</string>
+    <string name="remote_power_on" formatted="false">"電源を入れる"</string>
+    <string name="remote_searching" formatted="false">"テレビが見つからないため、探しています…"</string>
+    <string name="remote_setup_help" formatted="false">"同じ Wi-Fi のテレビを探して、テレビに表示される PIN で登録してください"</string>
+    <string name="remote_tv_guide" formatted="false">"テレビ番組表"</string>
+    <string name="remote_unconfigured" formatted="false">"テレビが未設定です"</string>
+    <string name="remote_volume" formatted="false">"音量"</string>
+    <string name="reservation_already_reserved" formatted="false">"予約済み"</string>
+    <string name="reservation_cancel" formatted="false">"予約を取り消す"</string>
+    <string name="reservation_cancel_action" formatted="false">"取り消す"</string>
+    <string name="reservation_cancel_confirmation">"「%1$s」の予約を取り消しますか？"</string>
+    <string name="reservation_cancel_series" formatted="false">"連ドラ予約を取り消す"</string>
+    <string name="reservation_cancel_series_help" formatted="false">"連ドラ予約なので、次の回以降も録画されなくなります。"</string>
+    <string name="reservation_empty" formatted="false">"録画予約はありません"</string>
+    <string name="reservation_load_failed" formatted="false">"録画予約を取得できません"</string>
+    <string name="reservation_once" formatted="false">"この回だけ録画"</string>
+    <string name="reservation_recording" formatted="false">"録画中"</string>
+    <string name="reservation_reserved" formatted="false">"録画予約済み"</string>
+    <string name="reservation_scheduled" formatted="false">"予定"</string>
+    <string name="reservation_series" formatted="false">"連ドラ予約（毎回録画）"</string>
+    <string name="reservation_title" formatted="false">"予約"</string>
+    <string name="reservation_waiting_help" formatted="false">"番組表に次の回が載ると、テレビが自動で予約します。日時は最後に録画した回のものです。"</string>
+    <string name="reservation_waiting_series" formatted="false">"次の回を待っている連ドラ予約"</string>
+    <string name="search_conditions" formatted="false">"読み取った条件"</string>
+    <string name="search_conditions_android" formatted="false">"条件"</string>
+    <string name="search_help" formatted="false">"1 週間分の番組から、番組名・出演者・説明で探します。\n「明日の夜のドラマ」「土曜 21時から」のように、日付・時間帯・ジャンルでも絞り込めます。"</string>
+    <string name="search_literal">"「%1$s」をそのまま探す"</string>
+    <string name="search_loading" formatted="false">"番組を読み込んでいます"</string>
+    <string name="search_no_results">"「%1$s」に一致する結果はありません"</string>
+    <string name="search_no_results_help" formatted="false">"スペルを確認するか、新しい検索を試してください。"</string>
+    <string name="search_placeholder" formatted="false">"番組名・出演者・「明日の夜のドラマ」"</string>
+    <string name="search_remove_condition">"%1$s を外す"</string>
+    <string name="search_title" formatted="false">"番組を探す"</string>
+    <string name="server_host_placeholder" formatted="false">"IPアドレス (例: 192.168.0.2)"</string>
+    <string name="server_port" formatted="false">"ポート"</string>
+    <string name="server_port_help">"ポートは 1〜65535 の数字で入れてください。空のままなら %1$d を使います。"</string>
+    <string name="server_port_invalid" formatted="false">"ポートは 1〜65535 の数字で入れてください。"</string>
+    <string name="server_search">"%1$s を探す"</string>
+    <string name="server_searching">"%1$s を探しています…"</string>
+    <string name="settings_guide_help" formatted="false">"Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。"</string>
+    <string name="settings_guide_integration" formatted="false">"番組表（Mirakurun）"</string>
+    <string name="settings_guide_required" formatted="false">"先に番組表を設定"</string>
+    <string name="settings_guide_title" formatted="false">"番組表 (Mirakurun)"</string>
+    <string name="settings_recording_servers" formatted="false">"録画サーバーとの連携"</string>
+    <string name="settings_servers_help" formatted="false">"Mirakurun や EPGStation を使っている場合だけ設定してください。設定すると、番組名・番組表・番組表からの録画予約や、アプリでのライブ視聴が使えます。\nライブ視聴（EPGStation）は、番組表（Mirakurun）を設定すると設定できます。"</string>
+    <string name="settings_stream_help_android" formatted="false">"EPGStation を動かしている場合に設定すると、放送中の番組をスマートフォンで見られます。家の Wi-Fi の中だけで使えます。"</string>
+    <string name="settings_stream_help_ios" formatted="false">"EPGStation を動かしている場合に設定すると、放送中の番組を iPhone で見られます。家の Wi-Fi の中だけで使えます。"</string>
+    <string name="settings_stream_integration" formatted="false">"ライブ視聴（EPGStation）"</string>
+    <string name="settings_stream_title" formatted="false">"ライブ視聴 (EPGStation)"</string>
+    <string name="settings_title" formatted="false">"設定"</string>
+    <string name="settings_unlink" formatted="false">"連携を解除"</string>
+    <string name="tab_channels" formatted="false">"チャンネル"</string>
+    <string name="tab_guide" formatted="false">"番組表"</string>
+    <string name="tab_remote" formatted="false">"リモコン"</string>
+    <string name="tab_reservations" formatted="false">"録画予約"</string>
+    <string name="tv_credentials" formatted="false">"ユーザー名とパスワードを入力"</string>
+    <string name="tv_host_placeholder" formatted="false">"IPアドレス (例: 192.168.0.10)"</string>
+    <string name="tv_legacy_help" formatted="false">"PIN 登録に対応していない古い機種では、テレビの「外部連携設定」で設定したユーザー名とパスワードを入力してください。"</string>
+    <string name="tv_network_help_android" formatted="false">"スマートフォンとテレビを同じ Wi-Fi につないでください。見つからないときは、テレビの「設定」→「ネットワーク」で IP アドレスを確認して入力してください。"</string>
+    <string name="tv_network_help_ios" formatted="false">"iPhone とテレビを同じ Wi-Fi につないでください。見つからないときは、テレビの「設定」→「ネットワーク」で IP アドレスを確認して入力してください。"</string>
+    <string name="tv_password" formatted="false">"パスワード"</string>
+    <string name="tv_pin_input_help" formatted="false">"テレビの画面に表示されている PIN を入力してください。"</string>
+    <string name="tv_pin_placeholder" formatted="false">"テレビに表示された PIN"</string>
+    <string name="tv_pin_registration" formatted="false">"PIN で登録"</string>
+    <string name="tv_pin_start_help" formatted="false">"テレビの電源を入れてからボタンを押すと、テレビの画面に PIN が表示されます。"</string>
+    <string name="tv_register_again" formatted="false">"もう一度登録する"</string>
+    <string name="tv_search" formatted="false">"テレビを探す"</string>
+    <string name="tv_searching" formatted="false">"テレビを探しています…"</string>
+    <string name="tv_show_pin" formatted="false">"テレビに PIN を表示"</string>
+    <string name="tv_test" formatted="false">"接続テスト"</string>
+    <string name="tv_title" formatted="false">"テレビ"</string>
+    <string name="tv_username" formatted="false">"ユーザー名"</string>
+</resources>

@@ -2,6 +2,8 @@
 
 両 OS 共通の余白・サイズ・ブランド色・リモコン配色は [デザイントークン](Design/README.md) の JSON から Swift・Kotlin へ生成する。
 
+画面の固定文言は [共通の文字列](Localization/README.md) のString Catalogで管理し、Android XMLと両OSの参照コードを生成する。
+
 REGZA の HTTP リモコン API（[参考](https://misomayo.info/on/2012/04/10)）を使う iOS アプリ。
 録画番組の再生中は、番組名・再生位置を Dynamic Island / ロック画面の Live Activity に表示し、そこから音量・チャンネル・再生操作もできる。
 

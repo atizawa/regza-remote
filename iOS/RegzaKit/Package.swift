@@ -18,6 +18,8 @@ let package = Package(
     targets: [
         // アプリ・Widget で共有する色やサイズ。
         .target(name: "Design", resources: [.process("Generated/DesignColors.xcassets")]),
+        // 文言の定義元。AndroidのXMLもこのString Catalogから生成する。
+        .target(name: "Localization", resources: [.process("Resources")]),
         // Live Activity の状態と更新。画面と同じく共有 ViewModel だけを使う。
         .target(
             name: "LiveActivity",

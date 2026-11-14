@@ -33,7 +33,7 @@ run = "bash scripts/check-toolchain.sh swift {{ vars.swift }}"
 
 [tasks.lint]
 description = "Swift・Kotlin の書き方と Android の依存方向を確かめる"
-depends = ["build-ktlint-rules", "check-design-tokens"]
+depends = ["build-ktlint-rules", "check-design-tokens", "check-localizations"]
 dir = "{{ config_root }}"
 shell = "bash -c"
 run = '''
@@ -75,6 +75,16 @@ run = "swift run --package-path Tools/GenerateMocks -c release GenerateMocks"
 description = "共通 JSON から iOS・Android の余白・サイズ・配色を生成する"
 dir = "{{ config_root }}/Design"
 run = "mise run generate"
+
+[tasks.generate-localizations]
+description = "iOSのString CatalogからAndroid XMLと両OSの文言参照を生成する"
+dir = "{{ config_root }}/Localization"
+run = "mise run generate"
+
+[tasks.check-localizations]
+description = "String Catalogの変換と、両OSの生成結果の一致を確認する"
+dir = "{{ config_root }}/Localization"
+run = "mise run check"
 
 [tasks.check-design-tokens]
 description = "デザイントークンの JSON と両 OS の生成結果が一致することを確認する"

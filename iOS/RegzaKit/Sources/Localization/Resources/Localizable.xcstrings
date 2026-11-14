@@ -1,0 +1,1530 @@
+{
+  "sourceLanguage": "ja",
+  "strings": {
+    "activity_disabled_help": {
+      "extractionState": "manual",
+      "comment": "activity / disabled / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone の「設定」→「REGZAリモコン」で「ライブアクティビティ」をオンにすると使えます。"
+          }
+        }
+      }
+    },
+    "activity_help": {
+      "extractionState": "manual",
+      "comment": "activity / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリを閉じていても、番組名とリモコンのボタンを表示します。"
+          }
+        }
+      }
+    },
+    "activity_title": {
+      "extractionState": "manual",
+      "comment": "activity / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロック画面と Dynamic Island に表示"
+          }
+        }
+      }
+    },
+    "app_name": {
+      "extractionState": "manual",
+      "comment": "app / name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "REGZA リモコン"
+          }
+        }
+      }
+    },
+    "broadcast_title": {
+      "extractionState": "manual",
+      "comment": "broadcast / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放送"
+          }
+        }
+      }
+    },
+    "channel_guide_title": {
+      "extractionState": "manual",
+      "comment": "channel / guide / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ の番組表"
+          }
+        }
+      }
+    },
+    "channel_list_title": {
+      "extractionState": "manual",
+      "comment": "channel / list / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャンネル一覧"
+          }
+        }
+      }
+    },
+    "channel_load_failed": {
+      "extractionState": "manual",
+      "comment": "channel / load / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャンネルを取得できません"
+          }
+        }
+      }
+    },
+    "channel_missing": {
+      "extractionState": "manual",
+      "comment": "channel / missing",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャンネルが見つかりません"
+          }
+        }
+      }
+    },
+    "channel_on_air": {
+      "extractionState": "manual",
+      "comment": "局名と放送中の表示。引数1は局名。",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · 放送中"
+          }
+        }
+      }
+    },
+    "channel_switch": {
+      "extractionState": "manual",
+      "comment": "channel / switch",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切り替える"
+          }
+        }
+      }
+    },
+    "channel_switch_watch": {
+      "extractionState": "manual",
+      "comment": "channel / switch / watch",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切り替えて見る"
+          }
+        }
+      }
+    },
+    "channel_watching": {
+      "extractionState": "manual",
+      "comment": "channel / watching",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "視聴中"
+          }
+        }
+      }
+    },
+    "common_back": {
+      "extractionState": "manual",
+      "comment": "common / back",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "戻る"
+          }
+        }
+      }
+    },
+    "common_cancel": {
+      "extractionState": "manual",
+      "comment": "操作をやめるボタン",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "やめる"
+          }
+        }
+      }
+    },
+    "common_close": {
+      "extractionState": "manual",
+      "comment": "common / close",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
+          }
+        }
+      }
+    },
+    "common_configure": {
+      "extractionState": "manual",
+      "comment": "common / configure",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定する"
+          }
+        }
+      }
+    },
+    "common_display": {
+      "extractionState": "manual",
+      "comment": "common / display",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示"
+          }
+        }
+      }
+    },
+    "common_open_settings": {
+      "extractionState": "manual",
+      "comment": "common / open / settings",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定を開く"
+          }
+        }
+      }
+    },
+    "common_register": {
+      "extractionState": "manual",
+      "comment": "common / register",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登録"
+          }
+        }
+      }
+    },
+    "common_reload": {
+      "extractionState": "manual",
+      "comment": "common / reload",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み込み直す"
+          }
+        }
+      }
+    },
+    "common_retry": {
+      "extractionState": "manual",
+      "comment": "common / retry",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度試す"
+          }
+        }
+      }
+    },
+    "common_save": {
+      "extractionState": "manual",
+      "comment": "common / save",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        }
+      }
+    },
+    "common_selected": {
+      "extractionState": "manual",
+      "comment": "common / selected",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択中"
+          }
+        }
+      }
+    },
+    "guide_channel_empty": {
+      "extractionState": "manual",
+      "comment": "guide / channel / empty",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mirakurun がこのチャンネルの番組表を持っていません。"
+          }
+        }
+      }
+    },
+    "guide_connection_help": {
+      "extractionState": "manual",
+      "comment": "guide / connection / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビと Mirakurun につながっているか確認してください。"
+          }
+        }
+      }
+    },
+    "guide_empty": {
+      "extractionState": "manual",
+      "comment": "guide / empty",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組表がありません"
+          }
+        }
+      }
+    },
+    "guide_load_failed": {
+      "extractionState": "manual",
+      "comment": "guide / load / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組表を取得できません"
+          }
+        }
+      }
+    },
+    "guide_setup_help": {
+      "extractionState": "manual",
+      "comment": "guide / setup / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画サーバー Mirakurun を使っていると、番組名つきの番組表や、番組表からの録画予約・連ドラ予約が使えます。\n設定画面の「録画サーバーとの連携」で Mirakurun のアドレスを設定してください。"
+          }
+        }
+      }
+    },
+    "guide_setup_title": {
+      "extractionState": "manual",
+      "comment": "guide / setup / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組表を使うには"
+          }
+        }
+      }
+    },
+    "live_badge": {
+      "extractionState": "manual",
+      "comment": "live / badge",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブ"
+          }
+        }
+      }
+    },
+    "live_retry": {
+      "extractionState": "manual",
+      "comment": "live / retry",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備できていない配信を止めて、もう一度試す"
+          }
+        }
+      }
+    },
+    "live_title": {
+      "extractionState": "manual",
+      "comment": "live / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブ視聴"
+          }
+        }
+      }
+    },
+    "network_permission_allow": {
+      "extractionState": "manual",
+      "comment": "network / permission / allow",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "許可する"
+          }
+        }
+      }
+    },
+    "network_permission_help": {
+      "extractionState": "manual",
+      "comment": "network / permission / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同じ Wi-Fi のテレビを操作するため、ローカルネットワークへのアクセスを許可してください。"
+          }
+        }
+      }
+    },
+    "network_permission_title": {
+      "extractionState": "manual",
+      "comment": "network / permission / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローカルネットワークへのアクセスが必要です"
+          }
+        }
+      }
+    },
+    "player_from_start": {
+      "extractionState": "manual",
+      "comment": "player / from / start",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最初から見る"
+          }
+        }
+      }
+    },
+    "player_now_playing": {
+      "extractionState": "manual",
+      "comment": "player / now / playing",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生中"
+          }
+        }
+      }
+    },
+    "player_play": {
+      "extractionState": "manual",
+      "comment": "player / play",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生"
+          }
+        }
+      }
+    },
+    "player_program_from_start": {
+      "extractionState": "manual",
+      "comment": "player / program / from / start",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この番組を最初から見る"
+          }
+        }
+      }
+    },
+    "player_watch": {
+      "extractionState": "manual",
+      "comment": "player / watch",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリで見る"
+          }
+        }
+      }
+    },
+    "program_channel_guide": {
+      "extractionState": "manual",
+      "comment": "program / channel / guide",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 局の番組表"
+          }
+        }
+      }
+    },
+    "program_description": {
+      "extractionState": "manual",
+      "comment": "program / description",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組説明"
+          }
+        }
+      }
+    },
+    "program_details": {
+      "extractionState": "manual",
+      "comment": "program / details",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組の詳細"
+          }
+        }
+      }
+    },
+    "program_missing": {
+      "extractionState": "manual",
+      "comment": "program / missing",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組が見つかりません"
+          }
+        }
+      }
+    },
+    "program_on_air": {
+      "extractionState": "manual",
+      "comment": "program / on / air",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放送中"
+          }
+        }
+      }
+    },
+    "program_on_air_time": {
+      "extractionState": "manual",
+      "comment": "program / on / air / time",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放送中、%1$@"
+          }
+        }
+      }
+    },
+    "program_open_details": {
+      "extractionState": "manual",
+      "comment": "program / open / details",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組の詳細を開きます"
+          }
+        }
+      }
+    },
+    "program_time_range": {
+      "extractionState": "manual",
+      "comment": "program / time / range",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@から%2$@"
+          }
+        }
+      }
+    },
+    "recording_channel": {
+      "extractionState": "manual",
+      "comment": "recording / channel",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画 · %1$@"
+          }
+        }
+      }
+    },
+    "recording_title": {
+      "extractionState": "manual",
+      "comment": "recording / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画番組"
+          }
+        }
+      }
+    },
+    "remote_connecting": {
+      "extractionState": "manual",
+      "comment": "remote / connecting",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続中…"
+          }
+        }
+      }
+    },
+    "remote_connection_failed": {
+      "extractionState": "manual",
+      "comment": "remote / connection / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビに接続できません"
+          }
+        }
+      }
+    },
+    "remote_enter": {
+      "extractionState": "manual",
+      "comment": "remote / enter",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "決定"
+          }
+        }
+      }
+    },
+    "remote_more": {
+      "extractionState": "manual",
+      "comment": "remote / more",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他の操作"
+          }
+        }
+      }
+    },
+    "remote_playback": {
+      "extractionState": "manual",
+      "comment": "remote / playback",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画・再生"
+          }
+        }
+      }
+    },
+    "remote_power_on": {
+      "extractionState": "manual",
+      "comment": "remote / power / on",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電源を入れる"
+          }
+        }
+      }
+    },
+    "remote_searching": {
+      "extractionState": "manual",
+      "comment": "remote / searching",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビが見つからないため、探しています…"
+          }
+        }
+      }
+    },
+    "remote_setup_help": {
+      "extractionState": "manual",
+      "comment": "remote / setup / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同じ Wi-Fi のテレビを探して、テレビに表示される PIN で登録してください"
+          }
+        }
+      }
+    },
+    "remote_tv_guide": {
+      "extractionState": "manual",
+      "comment": "remote / tv / guide",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビ番組表"
+          }
+        }
+      }
+    },
+    "remote_unconfigured": {
+      "extractionState": "manual",
+      "comment": "remote / unconfigured",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビが未設定です"
+          }
+        }
+      }
+    },
+    "remote_volume": {
+      "extractionState": "manual",
+      "comment": "remote / volume",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音量"
+          }
+        }
+      }
+    },
+    "reservation_already_reserved": {
+      "extractionState": "manual",
+      "comment": "reservation / already / reserved",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予約済み"
+          }
+        }
+      }
+    },
+    "reservation_cancel": {
+      "extractionState": "manual",
+      "comment": "reservation / cancel",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予約を取り消す"
+          }
+        }
+      }
+    },
+    "reservation_cancel_action": {
+      "extractionState": "manual",
+      "comment": "予約の取り消しを確定するボタン",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り消す"
+          }
+        }
+      }
+    },
+    "reservation_cancel_confirmation": {
+      "extractionState": "manual",
+      "comment": "reservation / cancel / confirmation",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」の予約を取り消しますか？"
+          }
+        }
+      }
+    },
+    "reservation_cancel_series": {
+      "extractionState": "manual",
+      "comment": "reservation / cancel / series",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連ドラ予約を取り消す"
+          }
+        }
+      }
+    },
+    "reservation_cancel_series_help": {
+      "extractionState": "manual",
+      "comment": "reservation / cancel / series / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連ドラ予約なので、次の回以降も録画されなくなります。"
+          }
+        }
+      }
+    },
+    "reservation_empty": {
+      "extractionState": "manual",
+      "comment": "reservation / empty",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画予約はありません"
+          }
+        }
+      }
+    },
+    "reservation_load_failed": {
+      "extractionState": "manual",
+      "comment": "reservation / load / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画予約を取得できません"
+          }
+        }
+      }
+    },
+    "reservation_once": {
+      "extractionState": "manual",
+      "comment": "reservation / once",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この回だけ録画"
+          }
+        }
+      }
+    },
+    "reservation_recording": {
+      "extractionState": "manual",
+      "comment": "reservation / recording",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画中"
+          }
+        }
+      }
+    },
+    "reservation_reserved": {
+      "extractionState": "manual",
+      "comment": "reservation / reserved",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画予約済み"
+          }
+        }
+      }
+    },
+    "reservation_scheduled": {
+      "extractionState": "manual",
+      "comment": "reservation / scheduled",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予定"
+          }
+        }
+      }
+    },
+    "reservation_series": {
+      "extractionState": "manual",
+      "comment": "reservation / series",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連ドラ予約（毎回録画）"
+          }
+        }
+      }
+    },
+    "reservation_title": {
+      "extractionState": "manual",
+      "comment": "reservation / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予約"
+          }
+        }
+      }
+    },
+    "reservation_waiting_help": {
+      "extractionState": "manual",
+      "comment": "reservation / waiting / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組表に次の回が載ると、テレビが自動で予約します。日時は最後に録画した回のものです。"
+          }
+        }
+      }
+    },
+    "reservation_waiting_series": {
+      "extractionState": "manual",
+      "comment": "reservation / waiting / series",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次の回を待っている連ドラ予約"
+          }
+        }
+      }
+    },
+    "search_conditions": {
+      "extractionState": "manual",
+      "comment": "search / conditions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み取った条件"
+          }
+        }
+      }
+    },
+    "search_conditions_android": {
+      "extractionState": "manual",
+      "comment": "search / conditions / android",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "条件"
+          }
+        }
+      }
+    },
+    "search_help": {
+      "extractionState": "manual",
+      "comment": "search / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 週間分の番組から、番組名・出演者・説明で探します。\n「明日の夜のドラマ」「土曜 21時から」のように、日付・時間帯・ジャンルでも絞り込めます。"
+          }
+        }
+      }
+    },
+    "search_literal": {
+      "extractionState": "manual",
+      "comment": "search / literal",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」をそのまま探す"
+          }
+        }
+      }
+    },
+    "search_loading": {
+      "extractionState": "manual",
+      "comment": "search / loading",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組を読み込んでいます"
+          }
+        }
+      }
+    },
+    "search_no_results": {
+      "extractionState": "manual",
+      "comment": "search / no / results",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」に一致する結果はありません"
+          }
+        }
+      }
+    },
+    "search_no_results_help": {
+      "extractionState": "manual",
+      "comment": "search / no / results / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スペルを確認するか、新しい検索を試してください。"
+          }
+        }
+      }
+    },
+    "search_placeholder": {
+      "extractionState": "manual",
+      "comment": "search / placeholder",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組名・出演者・「明日の夜のドラマ」"
+          }
+        }
+      }
+    },
+    "search_remove_condition": {
+      "extractionState": "manual",
+      "comment": "search / remove / condition",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ を外す"
+          }
+        }
+      }
+    },
+    "search_title": {
+      "extractionState": "manual",
+      "comment": "search / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組を探す"
+          }
+        }
+      }
+    },
+    "server_host_placeholder": {
+      "extractionState": "manual",
+      "comment": "server / host / placeholder",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IPアドレス (例: 192.168.0.2)"
+          }
+        }
+      }
+    },
+    "server_port": {
+      "extractionState": "manual",
+      "comment": "server / port",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポート"
+          }
+        }
+      }
+    },
+    "server_port_help": {
+      "extractionState": "manual",
+      "comment": "server / port / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポートは 1〜65535 の数字で入れてください。空のままなら %1$lld を使います。"
+          }
+        }
+      }
+    },
+    "server_port_invalid": {
+      "extractionState": "manual",
+      "comment": "server / port / invalid",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポートは 1〜65535 の数字で入れてください。"
+          }
+        }
+      }
+    },
+    "server_search": {
+      "extractionState": "manual",
+      "comment": "server / search",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ を探す"
+          }
+        }
+      }
+    },
+    "server_searching": {
+      "extractionState": "manual",
+      "comment": "server / searching",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ を探しています…"
+          }
+        }
+      }
+    },
+    "settings_guide_help": {
+      "extractionState": "manual",
+      "comment": "settings / guide / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。"
+          }
+        }
+      }
+    },
+    "settings_guide_integration": {
+      "extractionState": "manual",
+      "comment": "settings / guide / integration",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組表（Mirakurun）"
+          }
+        }
+      }
+    },
+    "settings_guide_required": {
+      "extractionState": "manual",
+      "comment": "settings / guide / required",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先に番組表を設定"
+          }
+        }
+      }
+    },
+    "settings_guide_title": {
+      "extractionState": "manual",
+      "comment": "settings / guide / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組表 (Mirakurun)"
+          }
+        }
+      }
+    },
+    "settings_recording_servers": {
+      "extractionState": "manual",
+      "comment": "settings / recording / servers",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画サーバーとの連携"
+          }
+        }
+      }
+    },
+    "settings_servers_help": {
+      "extractionState": "manual",
+      "comment": "settings / servers / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mirakurun や EPGStation を使っている場合だけ設定してください。設定すると、番組名・番組表・番組表からの録画予約や、アプリでのライブ視聴が使えます。\nライブ視聴（EPGStation）は、番組表（Mirakurun）を設定すると設定できます。"
+          }
+        }
+      }
+    },
+    "settings_stream_help_android": {
+      "extractionState": "manual",
+      "comment": "settings / stream / help / android",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EPGStation を動かしている場合に設定すると、放送中の番組をスマートフォンで見られます。家の Wi-Fi の中だけで使えます。"
+          }
+        }
+      }
+    },
+    "settings_stream_help_ios": {
+      "extractionState": "manual",
+      "comment": "settings / stream / help / ios",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EPGStation を動かしている場合に設定すると、放送中の番組を iPhone で見られます。家の Wi-Fi の中だけで使えます。"
+          }
+        }
+      }
+    },
+    "settings_stream_integration": {
+      "extractionState": "manual",
+      "comment": "settings / stream / integration",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブ視聴（EPGStation）"
+          }
+        }
+      }
+    },
+    "settings_stream_title": {
+      "extractionState": "manual",
+      "comment": "settings / stream / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブ視聴 (EPGStation)"
+          }
+        }
+      }
+    },
+    "settings_title": {
+      "extractionState": "manual",
+      "comment": "settings / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        }
+      }
+    },
+    "settings_unlink": {
+      "extractionState": "manual",
+      "comment": "settings / unlink",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連携を解除"
+          }
+        }
+      }
+    },
+    "tab_channels": {
+      "extractionState": "manual",
+      "comment": "tab / channels",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャンネル"
+          }
+        }
+      }
+    },
+    "tab_guide": {
+      "extractionState": "manual",
+      "comment": "tab / guide",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組表"
+          }
+        }
+      }
+    },
+    "tab_remote": {
+      "extractionState": "manual",
+      "comment": "tab / remote",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモコン"
+          }
+        }
+      }
+    },
+    "tab_reservations": {
+      "extractionState": "manual",
+      "comment": "tab / reservations",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画予約"
+          }
+        }
+      }
+    },
+    "tv_credentials": {
+      "extractionState": "manual",
+      "comment": "tv / credentials",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザー名とパスワードを入力"
+          }
+        }
+      }
+    },
+    "tv_host_placeholder": {
+      "extractionState": "manual",
+      "comment": "tv / host / placeholder",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IPアドレス (例: 192.168.0.10)"
+          }
+        }
+      }
+    },
+    "tv_legacy_help": {
+      "extractionState": "manual",
+      "comment": "tv / legacy / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN 登録に対応していない古い機種では、テレビの「外部連携設定」で設定したユーザー名とパスワードを入力してください。"
+          }
+        }
+      }
+    },
+    "tv_network_help_android": {
+      "extractionState": "manual",
+      "comment": "tv / network / help / android",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スマートフォンとテレビを同じ Wi-Fi につないでください。見つからないときは、テレビの「設定」→「ネットワーク」で IP アドレスを確認して入力してください。"
+          }
+        }
+      }
+    },
+    "tv_network_help_ios": {
+      "extractionState": "manual",
+      "comment": "tv / network / help / ios",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone とテレビを同じ Wi-Fi につないでください。見つからないときは、テレビの「設定」→「ネットワーク」で IP アドレスを確認して入力してください。"
+          }
+        }
+      }
+    },
+    "tv_password": {
+      "extractionState": "manual",
+      "comment": "tv / password",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード"
+          }
+        }
+      }
+    },
+    "tv_pin_input_help": {
+      "extractionState": "manual",
+      "comment": "tv / pin / input / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビの画面に表示されている PIN を入力してください。"
+          }
+        }
+      }
+    },
+    "tv_pin_placeholder": {
+      "extractionState": "manual",
+      "comment": "tv / pin / placeholder",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビに表示された PIN"
+          }
+        }
+      }
+    },
+    "tv_pin_registration": {
+      "extractionState": "manual",
+      "comment": "tv / pin / registration",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN で登録"
+          }
+        }
+      }
+    },
+    "tv_pin_start_help": {
+      "extractionState": "manual",
+      "comment": "tv / pin / start / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビの電源を入れてからボタンを押すと、テレビの画面に PIN が表示されます。"
+          }
+        }
+      }
+    },
+    "tv_register_again": {
+      "extractionState": "manual",
+      "comment": "tv / register / again",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度登録する"
+          }
+        }
+      }
+    },
+    "tv_search": {
+      "extractionState": "manual",
+      "comment": "tv / search",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビを探す"
+          }
+        }
+      }
+    },
+    "tv_searching": {
+      "extractionState": "manual",
+      "comment": "tv / searching",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビを探しています…"
+          }
+        }
+      }
+    },
+    "tv_show_pin": {
+      "extractionState": "manual",
+      "comment": "tv / show / pin",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビに PIN を表示"
+          }
+        }
+      }
+    },
+    "tv_test": {
+      "extractionState": "manual",
+      "comment": "tv / test",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続テスト"
+          }
+        }
+      }
+    },
+    "tv_title": {
+      "extractionState": "manual",
+      "comment": "tv / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビ"
+          }
+        }
+      }
+    },
+    "tv_username": {
+      "extractionState": "manual",
+      "comment": "tv / username",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザー名"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
