@@ -3,7 +3,7 @@
 // ../iOS/RegzaKit/Sources/Design/Generated/DesignDimensions.swift
 //
 
-// Design/tokens/*.json から Style Dictionary で生成。直接編集しないでください。
+// Design/tokens/ から Style Dictionary で生成。直接編集しないでください。
 // 更新: mise run generate-design-tokens
 
 

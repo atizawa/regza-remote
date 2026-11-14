@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Design/tokens/ から Style Dictionary で生成。直接編集しないでください。
+  更新: mise run generate-design-tokens
+-->
+<resources>
+  <color name="remote_background_start">#ffb0afb4</color>
+  <color name="remote_background_end">#ffa2a1a6</color>
+  <color name="remote_gray_key">#ffcccbcf</color>
+  <color name="remote_panel">#ff33323a</color>
+  <color name="remote_key">#ff1c1c20</color>
+  <color name="remote_ring">#ff212224</color>
+  <color name="remote_center_start">#ff9e9ea3</color>
+  <color name="remote_center_end">#ff85858a</color>
+  <color name="remote_power">#ffc71f24</color>
+  <color name="remote_destructive_on_gray">#ffbf1419</color>
+  <color name="remote_destructive_on_black">#ffff4545</color>
+  <color name="remote_edge">#4d000000</color>
+  <color name="remote_highlight">#1fffffff</color>
+  <color name="remote_key_blue">#ff0a84ff</color>
+  <color name="remote_key_red">#ffff3b30</color>
+  <color name="remote_key_green">#ff34c759</color>
+  <color name="remote_key_yellow">#ffffcc00</color>
+  <color name="brand_accent">#ff006b4f</color>
+  <color name="brand_activity_background">#ff03120d</color>
+  <color name="semantic_background">#fff2f2f7</color>
+  <color name="semantic_surface">#ffffffff</color>
+  <color name="semantic_primary_text">#ff000000</color>
+  <color name="semantic_secondary_text">#993c3c43</color>
+  <color name="semantic_fill">#1f767680</color>
+  <color name="semantic_separator">#4a3c3c43</color>
+  <color name="semantic_orange">#ffad5b00</color>
+  <color name="semantic_red">#ffd70015</color>
+  <color name="semantic_blue">#ff007aff</color>
+  <color name="semantic_on_accent">#ffffffff</color>
+</resources>

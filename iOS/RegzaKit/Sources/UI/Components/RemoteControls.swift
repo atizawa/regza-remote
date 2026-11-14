@@ -122,8 +122,8 @@ extension EnvironmentValues {
 /// 面の色
 enum Surface {
     /// ボタンやカードの地の色。画面の背景から一段浮かせる
-    static let button = Color(.secondarySystemGroupedBackground)
-    static let background = Color(.systemGroupedBackground)
+    static let button = DesignColors.semanticSurface
+    static let background = DesignColors.semanticBackground
 }
 
 /// 青・赤・緑・黄のカラーボタン。テレビのリモコンと同じく細長い色の帯にする

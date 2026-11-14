@@ -163,7 +163,10 @@ private fun GuideGrid(guide: GuideGridState, send: Send) {
             Box(Modifier.width(timeColumnWidth).height(headerHeight))
             Row(Modifier.horizontalScroll(horizontal)) {
                 columns.forEach { column ->
-                    Box(Modifier.width(columnWidth).height(headerHeight).gridLine(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.width(columnWidth).height(headerHeight).gridLine(AppTheme.separator),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Text(
                             column.name,
                             style = MaterialTheme.typography.labelMedium,
@@ -227,7 +230,7 @@ private fun TimeColumn(hours: List<String>, vertical: ScrollState, bottomInset: 
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.height(dpPerMinute * 60).width(timeColumnWidth).gridLine().padding(top = 2.dp),
+                modifier = Modifier.height(dpPerMinute * 60).width(timeColumnWidth).gridLine(AppTheme.separator).padding(top = 2.dp),
             )
         }
     }
@@ -240,7 +243,7 @@ private fun ProgramCell(cell: Cell, modifier: Modifier) {
         modifier
             .background(AppTheme.surface)
             .background(if (cell.isOnAir) accent.copy(alpha = 0.14f) else Color.Transparent)
-            .gridLine(),
+            .gridLine(AppTheme.separator),
     ) {
         // ジャンルは左端の細い線で示す (iOS 版と同じ)
         Box(Modifier.width(3.dp).fillMaxSize().background(genreColor(cell.genre).copy(alpha = 0.8f)))
@@ -259,7 +262,7 @@ private fun ProgramCell(cell: Cell, modifier: Modifier) {
     }
 }
 
-private fun Modifier.gridLine(): Modifier = border(0.5.dp, AppTheme.separator, RoundedCornerShape(0.dp))
+private fun Modifier.gridLine(color: Color): Modifier = border(0.5.dp, color, RoundedCornerShape(0.dp))
 
 /** ジャンル (ARIB の大分類) ごとの色 (iOS 版と同じ並び) */
 private fun genreColor(genre: Int): Color = when (genre) {

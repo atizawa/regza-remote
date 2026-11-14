@@ -3,6 +3,7 @@ package com.example.regzaremote
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,9 +28,10 @@ import com.example.regzaremote.ui.screens.SettingsScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         val testServer = if (BuildConfig.DEBUG) intent.getStringExtra("UITestServer") else null
         setContent {
-            // iOS 版と同じくダークに固定し、強調色を緑にする
+            // 色リソースとMaterialの配色をOSの外観に合わせる
             MaterialTheme(colorScheme = AppTheme.colorScheme) {
                 Surface(modifier = Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }, color = AppTheme.background) {
                     // テレビは同じ LAN にあるので、ローカルネットワークへのアクセスを許可されてから画面を出す

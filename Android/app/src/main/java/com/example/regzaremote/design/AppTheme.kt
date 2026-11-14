@@ -1,36 +1,59 @@
 package com.example.regzaremote.design
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-/** アプリの色 (iOS 版の AppTheme と同じ)。ダークに固定し、ボタンや選択中の印は明るめの緑にする */
+/** OS のライト・ダーク設定に従い、共通トークンの標準色リソースを使う。 */
 object AppTheme {
-    val accent = DesignColors.brandAccent
+    val accent: Color
+        @Composable get() = DesignColors.brandAccent
 
-    /** iOS の systemGroupedBackground・secondarySystemGroupedBackground (ダーク) に合わせた面の色 */
-    val background = Color.Black
-    val surface = Color(0xFF1C1C1E)
+    val background: Color
+        @Composable get() = DesignColors.semanticBackground
 
-    /** 日付やポートなど、控えめな塗り (iOS の .fill.tertiary) */
-    val fill = Color(0x3D767680)
-    val separator = Color(0x5C545458)
-    val secondaryText = Color(0x99EBEBF5)
-    val orange = Color(0xFFFF9F0A)
-    val red = Color(0xFFFF453A)
-    val blue = Color(0xFF0A84FF)
+    val surface: Color
+        @Composable get() = DesignColors.semanticSurface
 
-    val colorScheme = darkColorScheme(
-        primary = accent,
-        onPrimary = Color.White,
-        secondaryContainer = accent,
-        onSecondaryContainer = Color.White,
-        background = background,
-        surface = background,
-        surfaceContainer = surface,
-        surfaceContainerLow = surface,
-        surfaceContainerHigh = surface,
-        onSurfaceVariant = secondaryText,
-        outlineVariant = separator,
-        error = red,
-    )
+    val fill: Color
+        @Composable get() = DesignColors.semanticFill
+
+    val separator: Color
+        @Composable get() = DesignColors.semanticSeparator
+
+    val secondaryText: Color
+        @Composable get() = DesignColors.semanticSecondaryText
+
+    val orange: Color
+        @Composable get() = DesignColors.semanticOrange
+
+    val red: Color
+        @Composable get() = DesignColors.semanticRed
+
+    val blue: Color
+        @Composable get() = DesignColors.semanticBlue
+
+    val colorScheme: ColorScheme
+        @Composable get() {
+            val defaults = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
+            return defaults.copy(
+                primary = accent,
+                onPrimary = DesignColors.semanticOnAccent,
+                secondaryContainer = accent,
+                onSecondaryContainer = DesignColors.semanticOnAccent,
+                background = background,
+                onBackground = DesignColors.semanticPrimaryText,
+                surface = background,
+                onSurface = DesignColors.semanticPrimaryText,
+                surfaceContainer = surface,
+                surfaceContainerLow = surface,
+                surfaceContainerHigh = surface,
+                onSurfaceVariant = secondaryText,
+                outlineVariant = separator,
+                error = red,
+            )
+        }
 }

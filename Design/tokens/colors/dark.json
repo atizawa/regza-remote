@@ -1,0 +1,152 @@
+{
+  "brand": {
+    "$type": "color",
+    "accent": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.11372549,
+          0.5254902,
+          0.43529412
+        ],
+        "alpha": 1
+      },
+      "$description": "ボタンや選択中の印に使う緑"
+    },
+    "activityBackground": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.01176471,
+          0.07058824,
+          0.05098039
+        ],
+        "alpha": 1
+      },
+      "$description": "Live Activityの背景"
+    }
+  },
+  "semantic": {
+    "$type": "color",
+    "background": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "alpha": 1
+      },
+      "$description": "background"
+    },
+    "surface": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.10980392,
+          0.10980392,
+          0.11764706
+        ],
+        "alpha": 1
+      },
+      "$description": "surface"
+    },
+    "primaryText": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 1
+      },
+      "$description": "primaryText"
+    },
+    "secondaryText": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.92156863,
+          0.92156863,
+          0.96078431
+        ],
+        "alpha": 0.6
+      },
+      "$description": "secondaryText"
+    },
+    "fill": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.4627451,
+          0.4627451,
+          0.50196078
+        ],
+        "alpha": 0.24
+      },
+      "$description": "fill"
+    },
+    "separator": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.32941176,
+          0.32941176,
+          0.34509804
+        ],
+        "alpha": 0.36
+      },
+      "$description": "separator"
+    },
+    "orange": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.62352941,
+          0.03921569
+        ],
+        "alpha": 1
+      },
+      "$description": "orange"
+    },
+    "red": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          0.27058824,
+          0.22745098
+        ],
+        "alpha": 1
+      },
+      "$description": "red"
+    },
+    "blue": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.03921569,
+          0.51764706,
+          1.0
+        ],
+        "alpha": 1
+      },
+      "$description": "blue"
+    },
+    "onAccent": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "alpha": 1
+      },
+      "$description": "onAccent"
+    }
+  }
+}

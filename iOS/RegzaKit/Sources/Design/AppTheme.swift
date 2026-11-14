@@ -1,13 +1,10 @@
 #if os(iOS)
 import SwiftUI
 
-/// アプリとウィジェット (Live Activity) で共通の色 (どちらも暗い背景)。REGZA の公式サイトの深い緑 (#00442D) を基調にする
+/// アプリとウィジェットの共通色。Color Asset がOSの外観に応じて色を選ぶ。
 public enum AppTheme {
-    /// ボタンや選択中の印などの色。アプリはダークモード固定 (Info.plist の UIUserInterfaceStyle) なので、
-    /// 公式サイトの深い緑 (#00442D) では暗い背景で見えにくいため、明るめの緑にする
     public static let accent = DesignColors.brandAccent
-
-    /// Live Activity の背景 (緑みのある黒)
+    /// Live Activity は映像を扱うため、背景を暗い緑で統一する。
     public static let activityBackground = DesignColors.brandActivityBackground
 }
 #endif
