@@ -5,6 +5,23 @@ import RegzaPresentation
 /// APIClient・StorageManager から、本番用の Repository を組み立てる。
 @MainActor
 public enum AppFactory {
+    /// ウィジェットなど、画面を作らずにテレビだけを操作する入口。
+    public static func makeLiveTVUseCase(
+        secureStorageManager: SecureStorageManager,
+        preferencesManager: PreferencesManager,
+        transport: any HTTPTransport
+    ) -> TVUseCase {
+        let connectionState = RegzaConnectionState(
+            connection: RegzaTVRepository.loadConnection(secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
+        )
+        let tvRepository = RegzaTVRepository(
+            secureStorageManager: secureStorageManager, preferencesManager: preferencesManager,
+            regzaAPIClient: RegzaAPIClient(connection: connectionState.connection, transport: transport),
+            connectionState: connectionState,
+            locateTV: { await RegzaDiscovery.locate($0, transport: transport) })
+        return TVUseCase(tvRepository: tvRepository)
+    }
+
     /// 通信・保存の実装は OS の起動処理から渡す。グローバル設定は参照しない。
     public static func makeLiveAppViewModel(
         secureStorageManager: SecureStorageManager,
