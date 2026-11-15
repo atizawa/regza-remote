@@ -30,6 +30,13 @@ extension Introspectable {
     public var introspectionTarget: any Introspectable { self }
 }
 
+extension Introspectable {
+    /// 通信などの途中でなくなるまで待つ。見回らず、isBusy が読む値が変わったときだけ確かめ直す
+    public func waitUntilIdle() async {
+        await waitUntil { !self.isBusy }
+    }
+}
+
 /// 名前と引数の操作を、画面の Action の型に置き換えられる ViewModel。置き換えは 1 か所 (action(_:_:)) に書き、
 /// CLI (perform) と Android の振る舞いのテストの相手 (置き換えた Action を Android と同じ道で送る) の両方で使う
 @MainActor
@@ -61,10 +68,9 @@ extension IntrospectableActions {
     /// 操作を送り、それで始まった処理 (テレビとのやり取りなど) が終わるまで待つ。
     /// 画面のない入口 (iOS の Siri やロック画面のボタン) が、終わってから結果 (state) を見るのに使う
     public func sendAndWait(_ action: Action) async {
+        // 処理は送った時点で数え始める (Work.run) ので、送った直後から待ってよい
         send(action)
-        while isBusy {
-            try? await Task.sleep(for: .milliseconds(50))
-        }
+        await waitUntilIdle()
     }
 }
 
@@ -181,17 +187,22 @@ public struct Introspector {
 
     /// どの ViewModel も通信などの途中でなくなるまで待つ。`timeout` 秒たったら false
     public func waitUntilIdle(timeout: TimeInterval = 15) async -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        // 操作を送った直後は、まだ通信が始まっていないことがあるので少し待つ
+        // 操作を後回しで送る経路 (Android の振る舞いのテストの相手) では、送った直後はまだ処理が始まっていないことがあるので少し待つ
         try? await Task.sleep(for: .milliseconds(50))
-        while Date() < deadline {
-            if !anyBusy(root) { return true }
-            try? await Task.sleep(for: .milliseconds(50))
+        // 開いている ViewModel も変わるので、木全体を読む条件で待つ。見回らず、読んだ値が変わったときだけ確かめ直す
+        let root = root
+        let waiting = Task { await waitUntil { !Self.anyBusy(root) } }
+        // 時間切れになったら待つのをやめる (waitUntil は取り消されると返る)
+        let timer = Task {
+            try? await Task.sleep(for: .seconds(timeout))
+            waiting.cancel()
         }
-        return false
+        await waiting.value
+        timer.cancel()
+        return !Self.anyBusy(root)
     }
 
-    private func anyBusy(_ node: any Introspectable) -> Bool {
+    private static func anyBusy(_ node: any Introspectable) -> Bool {
         node.isBusy || node.introspectionChildren.contains(where: anyBusy)
     }
 }

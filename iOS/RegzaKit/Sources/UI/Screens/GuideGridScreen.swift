@@ -153,8 +153,7 @@ struct GuideGridScreen: View {
     }
 
     private func load() async {
-        viewModel.send(.load)
-        await waitWhileBusy(viewModel)
+        await viewModel.sendAndWait(.load)
     }
 }
 

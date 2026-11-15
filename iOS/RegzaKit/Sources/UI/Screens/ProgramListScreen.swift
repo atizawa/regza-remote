@@ -19,8 +19,7 @@ struct ProgramListScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .task { viewModel.send(.appear) }
             .refreshable {
-                viewModel.send(.reload)
-                await waitWhileBusy(viewModel)
+                await viewModel.sendAndWait(.reload)
             }
     }
 

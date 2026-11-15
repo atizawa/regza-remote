@@ -21,8 +21,7 @@ struct ReservationListScreen: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .task { viewModel.send(.load) }
                 .refreshable {
-                    viewModel.send(.load)
-                    await waitWhileBusy(viewModel)
+                    await viewModel.sendAndWait(.load)
                 }
                 .confirmationDialog(
                     canceling.map { AppStrings.reservationCancelConfirmation($0.title) } ?? "",
