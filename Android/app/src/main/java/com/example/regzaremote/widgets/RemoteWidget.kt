@@ -62,10 +62,21 @@ private fun RemoteWidgetContent(large: Boolean) {
     val aspectRatio = if (large) 300f / 360f else 2f
     val width = minOf(available.width, available.height * aspectRatio)
     val height = width / aspectRatio
+    val bodyModifier = when {
+        width == available.width && height == available.height -> GlanceModifier.fillMaxSize()
+        width == available.width -> GlanceModifier.fillMaxWidth().height(height)
+        height == available.height -> GlanceModifier.fillMaxHeight().width(width)
+        else -> GlanceModifier.width(width).height(height)
+    }
     // ランチャーのセルが縦長でも、見本と同じ本体の縦横比を保つ。
     CompositionLocalProvider(LocalWidgetScale provides (width.value / 300f).coerceAtMost(1f)) {
-        Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            RemoteWidgetBody(large, GlanceModifier.width(width).height(height))
+        Box(
+            GlanceModifier.fillMaxSize()
+                .background(ImageProvider(R.drawable.widget_remote_background))
+                .clickable(actionStartActivity<MainActivity>()),
+            contentAlignment = Alignment.Center,
+        ) {
+            RemoteWidgetBody(large, bodyModifier.padding((6 * LocalWidgetScale.current).dp))
         }
     }
 }
@@ -74,8 +85,7 @@ private fun RemoteWidgetContent(large: Boolean) {
 private fun RemoteWidgetBody(large: Boolean, modifier: GlanceModifier) {
     val scale = LocalWidgetScale.current
     Column(
-        modifier.background(ImageProvider(R.drawable.widget_remote_background)).padding((6 * scale).dp)
-            .clickable(actionStartActivity<MainActivity>()),
+        modifier,
     ) {
         if (large) {
             Row(GlanceModifier.fillMaxWidth().height((30 * scale).dp)) {
