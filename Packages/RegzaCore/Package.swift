@@ -14,6 +14,8 @@ let package = Package(
         .library(name: "RegzaPresentation", targets: ["RegzaPresentation"]),
         // UI の型だけ (Android で、これらの型の Java のつなぎを作るのに使う)
         .library(name: "RegzaSharedModels", targets: ["RegzaSharedModels"]),
+        // 共有の Swift が画面に出す文言 (OS が起動時に、自分の文言を入れる)
+        .library(name: "RegzaStrings", targets: ["RegzaStrings"]),
         // 本物の機器につなぐ組み立て (iOS・Android・CLI)
         .library(name: "RegzaApp", targets: ["RegzaApp"]),
         // つながない見本の組み立て (iOS の開発用の見本・テスト)
@@ -63,13 +65,16 @@ let package = Package(
         ),
         // Domain: Repository と UseCase の間で使う Data、Repository の protocol、UseCase と SharedModel への変換。SharedModels だけに依存する
         // SharedModels: UI で使う型。Domain の UseCase が Data から作る。Android からも使うので、Java のクラスにできる形にする
-        .target(name: "RegzaSharedModels", exclude: ["README.md"]),
-        .target(name: "RegzaDomain", dependencies: ["RegzaSharedModels"]),
+        // Strings: 共有の Swift が画面に出す文言。String Catalog から生成したキーで引き、OS が入れた文言を使う (入っていなければ元言語)
+        .target(name: "RegzaStrings"),
+        .target(name: "RegzaSharedModels", dependencies: ["RegzaStrings"], exclude: ["README.md"]),
+        .target(name: "RegzaDomain", dependencies: ["RegzaSharedModels", "RegzaStrings"]),
         // Infrastructure: テレビ・Mirakurun・EPGStation との通信、HTTP、暗号、通信の形から Domain の型への変換 (Mappers)
         .target(
             name: "RegzaInfrastructure",
             dependencies: [
                 "RegzaDomain",
+                "RegzaStrings",
                 "RegzaTVAPI",
                 "MirakurunAPI",
                 "EPGStationAPI",
@@ -81,7 +86,7 @@ let package = Package(
         // Domain の型を出せないようにする (Domain を使う初期化などは、同じパッケージの組み立てだけが使える package にする)
         .target(
             name: "RegzaPresentation",
-            dependencies: ["RegzaDomain"],
+            dependencies: ["RegzaDomain", "RegzaStrings"],
             swiftSettings: [.enableUpcomingFeature("InternalImportsByDefault")]
         ),
         // 組み立てる場所 (Composition Root): どの Repository の実装を使うかを決めて AppViewModel を作る
@@ -91,6 +96,6 @@ let package = Package(
         .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp", "RegzaSample"]),
         .testTarget(
             name: "RegzaCoreTests",
-            dependencies: ["RegzaApp", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels"]),
+            dependencies: ["RegzaApp", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels", "RegzaStrings"]),
     ]
 )

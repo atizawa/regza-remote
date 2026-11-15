@@ -1,6 +1,7 @@
 public import Foundation
 public import Observation
 package import RegzaDomain
+import RegzaStrings
 
 /// 設定の画面の ViewModel。テレビの登録 (TVSetupViewModel) と録画サーバー (ServerSetupViewModel) を部品に持ち、
 /// 設定の中の画面の移り変わりと、保存・閉じるを受け持つ
@@ -126,7 +127,7 @@ extension SettingsViewModel: IntrospectableActions {
     /// パスワードは見せない (入っているかどうかだけ)
     nonisolated public static func introspectionJSON(of state: State) -> JSONValue {
         var state = state
-        if !state.tv.password.isEmpty { state.tv.password = "(入力済み)" }
+        if !state.tv.password.isEmpty { state.tv.password = CoreStrings.settingsPasswordEntered }
         return JSONValue(reflecting: state)
     }
 

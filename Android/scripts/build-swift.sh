@@ -182,10 +182,10 @@ extract_module RegzaAndroidBridge RegzaAndroidBridge/Sources/RegzaAndroidBridge 
 # swift-java はこれを SwiftPM のプラグインでしか作らないので (enableJavaCallbacks)、同じ手順を手で行う:
 # jextract が作ったインターフェースを javac でコンパイルし (ほかのモジュールの Java のクラスも参照する)、wrap-java で包む
 callbacks=.build/swift/bridge-callbacks
-begin_stage "swift-java 互換対応: Kotlin の保存先・通信へのコールバック生成" "RegzaAndroidBridgeJava" "$callbacks/swift-java.config"
+begin_stage "swift-java 互換対応: Kotlin の保存先・文言・通信へのコールバック生成" "RegzaAndroidBridgeJava" "$callbacks/swift-java.config"
 rm -rf "$callbacks" && mkdir -p "$callbacks/classes"
 # Kotlin が実装する protocol と、引数に使う Swift の型を明示する。
-callback_types=(RegzaAndroidStorage RegzaAndroidHTTPClient RegzaAndroidHTTPRequest RegzaAndroidHTTPCompletion)
+callback_types=(RegzaAndroidStorage RegzaAndroidStrings RegzaAndroidHTTPClient RegzaAndroidHTTPRequest RegzaAndroidHTTPCompletion)
 java_package=$(jq -er '.javaPackage' RegzaAndroid/swift-java.common.config)
 for callback_type in "${callback_types[@]}"; do
   callback_interface="$bridge_java/${java_package//.//}/$callback_type.java"

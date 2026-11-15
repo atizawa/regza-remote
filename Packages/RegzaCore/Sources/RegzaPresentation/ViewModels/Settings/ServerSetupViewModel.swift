@@ -1,6 +1,7 @@
 public import Foundation
 public import Observation
 package import RegzaDomain
+import RegzaStrings
 
 /// 設定の中の録画サーバー (番組表の Mirakurun・ライブ視聴の EPGStation) の設定 (SettingsViewModel の部品)
 @MainActor
@@ -38,14 +39,14 @@ public final class ServerSetupViewModel {
             guide: ServerState(
                 host: guideHost, defaultPort: ServerPort.mirakurun, hosts: guideHosts, isScanning: isScanningGuide,
                 message: guideMessage, status: Self.status(guideHost), isLinked: !setupUseCase.linkedGuideHost.isEmpty,
-                unlinkTitle: "Mirakurun との連携を解除しますか？",
-                unlinkMessage: "番組名・番組表・番組表からの録画予約が使えなくなります。ライブ視聴（EPGStation）の連携も解除されます。"
+                unlinkTitle: CoreStrings.serverGuideUnlinkTitle,
+                unlinkMessage: CoreStrings.serverGuideUnlinkMessage
             ),
             stream: ServerState(
                 host: streamHost, defaultPort: ServerPort.epgStation, hosts: streamHosts, isScanning: isScanningStream,
                 message: streamMessage, status: Self.status(streamHost), isLinked: !setupUseCase.linkedStreamHost.isEmpty,
-                unlinkTitle: "EPGStation との連携を解除しますか？",
-                unlinkMessage: "アプリでのライブ視聴が使えなくなります。"
+                unlinkTitle: CoreStrings.serverStreamUnlinkTitle,
+                unlinkMessage: CoreStrings.serverStreamUnlinkMessage
             ),
             hasGuideDraft: !ServerAddress(guideHost).saved.isEmpty,
             isValid: ServerAddress(guideHost).isValid && ServerAddress(streamHost).isValid
@@ -66,7 +67,7 @@ public final class ServerSetupViewModel {
 
     private static func status(_ host: String) -> String {
         let host = ServerAddress(host).saved
-        return host.isEmpty ? "未設定" : host
+        return host.isEmpty ? CoreStrings.setupNotConfigured : host
     }
 
     private func scanGuide() async {
@@ -78,7 +79,7 @@ public final class ServerSetupViewModel {
             guideHost = first
         }
         if guideHosts.isEmpty {
-            guideMessage = "見つかりませんでした。Mirakurun が動いているか、ポート \(ServerPort.mirakurun) で待ち受けているか確認してください。"
+            guideMessage = CoreStrings.serverGuideNotFound(ServerPort.mirakurun)
         }
     }
 
@@ -91,7 +92,7 @@ public final class ServerSetupViewModel {
             streamHost = first
         }
         if streamHosts.isEmpty {
-            streamMessage = "見つかりませんでした。EPGStation が動いているか、ポート \(ServerPort.epgStation) で待ち受けているか確認してください。"
+            streamMessage = CoreStrings.serverStreamNotFound(ServerPort.epgStation)
         }
     }
 
@@ -101,7 +102,7 @@ public final class ServerSetupViewModel {
         guard let server = await setupUseCase.streamServer(sameAs: ServerAddress(guideHost).address) else { return }
         streamHosts = [server]
         streamHost = server
-        streamMessage = "Mirakurun と同じサーバーで EPGStation が見つかりました。よければ「保存」を押してください。"
+        streamMessage = CoreStrings.serverStreamFound
     }
 
     func unlink(_ server: Server) async {

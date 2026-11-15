@@ -1,4 +1,5 @@
 import Foundation
+internal import RegzaStrings
 
 /// Repository の Data と、UseCase が公開する SharedModel の境界。
 package enum UseCaseModelMapper {
@@ -47,7 +48,7 @@ package enum UseCaseModelMapper {
         return ProgramItem(
             id: data.id, channelCode: data.channelCode, name: data.name, description: data.description,
             start: data.start, end: data.end, startText: DisplayText.time(data.start),
-            timeText: "\(DisplayText.range(data.start, data.end)) · \(minutes)分",
+            timeText: CoreStrings.programTimeWithMinutes(DisplayText.range(data.start, data.end), minutes),
             genreName: data.genreName, genre: data.genres.first ?? -1, isOnAir: data.isOnAir(at: now),
             isReserved: isReserved
         )

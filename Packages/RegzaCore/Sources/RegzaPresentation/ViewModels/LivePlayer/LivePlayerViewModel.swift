@@ -1,6 +1,7 @@
 public import Foundation
 public import Observation
 package import RegzaDomain
+import RegzaStrings
 
 /// EPGStation のライブ配信をアプリで見る画面 (ライブ視聴) の ViewModel。
 /// 配信を頼み、準備できたら再生する URL を出す (再生そのものは OS ごとの画面がする)。
@@ -50,7 +51,7 @@ public final class LivePlayerViewModel {
             channelName: channel.name,
             phase: phase,
             program: guideUseCase.currentProgram(for: channel, at: now).map { guideUseCase.item($0, now: now) },
-            preparingMessage: "\(channel.name) の配信を準備しています…（20 秒ほど）",
+            preparingMessage: CoreStrings.playerPreparing(channel.name),
             bands: bands,
             band: band,
             channels: channelUseCase.liveItems(band: band, watchingCode: channel.code, now: now)
@@ -103,7 +104,7 @@ public final class LivePlayerViewModel {
     private func run(_ channel: ChannelItem) async {
         phase = .preparing
         guard streamUseCase.isPlayable(channelCode: channel.code) else {
-            phase = .failed(message: "このチャンネルは EPGStation で見られません。", canRetry: false)
+            phase = .failed(message: CoreStrings.playerUnavailable, canRetry: false)
             return
         }
         var requested: Int?

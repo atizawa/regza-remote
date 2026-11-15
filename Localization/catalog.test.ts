@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { androidXML, format, messages, xmlText, type Catalog } from "./catalog";
+import { androidXML, format, messages, splitCore, xmlText, type Catalog } from "./catalog";
 
 const unit = (value: string) => ({ stringUnit: { state: "translated", value } });
 function catalog(value: object): Catalog {
@@ -58,4 +58,16 @@ test("非翻訳指定と書式なしのパーセントを保持する", () => {
   const xml = androidXML(messages(data), "ja");
   expect(xml).toContain('translatable="false" formatted="false">"100%"');
   expect(() => xmlText("invalid\u0000text")).toThrow("制御文字");
+});
+
+test("core_ のキーを共有の Swift の文言に分け、複数形を拒否する", () => {
+  const data: Catalog = { sourceLanguage: "ja", version: "1.0", strings: {
+    core_key_power: { localizations: { ja: unit("電源") } },
+    remote_title: { localizations: { ja: unit("リモコン") } },
+  } };
+  const { core, app } = splitCore(messages(data));
+  expect(core.map(entry => entry.key)).toEqual(["core_key_power"]);
+  expect(app.map(entry => entry.key)).toEqual(["remote_title"]);
+  data.strings.core_item_count = { localizations: { ja: { variations: { plural: { other: unit("%lld 件") } } } as never } };
+  expect(() => splitCore(messages(data))).toThrow("複数形");
 });

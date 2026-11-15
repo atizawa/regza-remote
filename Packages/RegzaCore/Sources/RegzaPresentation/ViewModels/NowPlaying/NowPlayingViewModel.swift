@@ -1,6 +1,7 @@
 public import Foundation
 public import Observation
 package import RegzaDomain
+import RegzaStrings
 
 /// いま映っているものの詳細のシートの ViewModel。
 /// 待機中なら電源を入れる、放送ならアプリで見る・最初から見る、を出す
@@ -32,7 +33,7 @@ public final class NowPlayingViewModel {
         let isWatching = nowPlaying?.kind == .broadcast || nowPlaying?.kind == .recorded
         let description = nowPlaying?.description ?? ""
         return State(
-            title: isConnected && isWatching ? "視聴中" : "テレビ",
+            title: isConnected && isWatching ? CoreStrings.nowPlayingTitleWatching : CoreStrings.nowPlayingTitleTv,
             description: description.isEmpty ? nil : description,
             canPowerOn: nowPlaying?.kind == .standby && remoteState.errorMessage == nil,
             playableChannelCode: streamUseCase.canStream && nowPlaying?.kind == .broadcast ? remoteViewModel.nowPlayingChannel?.code : nil,

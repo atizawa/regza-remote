@@ -1,4 +1,5 @@
 import Foundation
+internal import RegzaStrings
 
 /// REGZA のリモコンのキー (UI で使う形)。画面に出す名前とアイコンを持つ。
 /// 値はキーの名前 (`power` など)。テレビに送るキーコードへの変換は Infrastructure がする (RegzaKey+Code)
@@ -89,60 +90,60 @@ public enum RegzaKey: String, CaseIterable, Identifiable, Sendable {
         case .num10: "10"
         case .num11: "11"
         case .num12: "12"
-        case .input: "入力切替"
-        case .mute: "消音"
-        case .power: "電源"
-        case .audio: "音声切替"
-        case .volumeUp: "音量＋"
-        case .channelUp: "チャンネル＋"
-        case .display: "画面表示"
-        case .volumeDown: "音量−"
-        case .channelDown: "チャンネル−"
-        case .broadband: "ブロードバンド"
-        case .quick: "クイック"
-        case .multiScreen: "マルチ画面"
-        case .screenSize: "画面サイズ"
-        case .back: "戻る"
-        case .exit: "終了"
-        case .enter: "決定"
-        case .up: "上"
-        case .down: "下"
-        case .right: "右"
-        case .left: "左"
-        case .channelNumber: "CH番号"
-        case .radioData: "ラジオ/データ"
-        case .guide: "番組表"
-        case .programInfo: "番組説明"
-        case .miniGuide: "ミニ番組表"
-        case .blue: "青"
-        case .red: "赤"
-        case .green: "緑"
-        case .yellow: "黄"
-        case .terrestrial: "地デジ"
+        case .input: CoreStrings.keyInput
+        case .mute: CoreStrings.keyMute
+        case .power: CoreStrings.keyPower
+        case .audio: CoreStrings.keyAudio
+        case .volumeUp: CoreStrings.keyVolumeUp
+        case .channelUp: CoreStrings.keyChannelUp
+        case .display: CoreStrings.keyDisplay
+        case .volumeDown: CoreStrings.keyVolumeDown
+        case .channelDown: CoreStrings.keyChannelDown
+        case .broadband: CoreStrings.keyBroadband
+        case .quick: CoreStrings.keyQuick
+        case .multiScreen: CoreStrings.keyMultiScreen
+        case .screenSize: CoreStrings.keyScreenSize
+        case .back: CoreStrings.keyBack
+        case .exit: CoreStrings.keyExit
+        case .enter: CoreStrings.keyEnter
+        case .up: CoreStrings.keyUp
+        case .down: CoreStrings.keyDown
+        case .right: CoreStrings.keyRight
+        case .left: CoreStrings.keyLeft
+        case .channelNumber: CoreStrings.keyChannelNumber
+        case .radioData: CoreStrings.keyRadioData
+        case .guide: CoreStrings.keyGuide
+        case .programInfo: CoreStrings.keyProgramInfo
+        case .miniGuide: CoreStrings.keyMiniGuide
+        case .blue: CoreStrings.keyBlue
+        case .red: CoreStrings.keyRed
+        case .green: CoreStrings.keyGreen
+        case .yellow: CoreStrings.keyYellow
+        case .terrestrial: CoreStrings.keyTerrestrial
         case .bs: "BS"
         case .cs: "CS"
-        case .pause: "一時停止"
-        case .record: "録画"
-        case .pageUp: "ページ上"
-        case .pageDown: "ページ下"
-        case .skipForward: "30秒送り"
-        case .skipBackward: "10秒戻し"
-        case .nextChapter: "次へスキップ"
-        case .previousChapter: "前へスキップ"
-        case .recordedList: "録画リスト"
-        case .newsNow: "今すぐニュース"
-        case .stop: "停止"
-        case .rewind: "巻き戻し"
-        case .play: "再生"
-        case .fastForward: "早送り"
-        case .timeShift: "タイムシフト"
-        case .jumpToStart: "始めにジャンプ"
-        case .settings: "設定メニュー"
-        case .regzaMenu: "レグザメニュー"
-        case .programSearch: "番組検索"
+        case .pause: CoreStrings.keyPause
+        case .record: CoreStrings.keyRecord
+        case .pageUp: CoreStrings.keyPageUp
+        case .pageDown: CoreStrings.keyPageDown
+        case .skipForward: CoreStrings.keySkipForward
+        case .skipBackward: CoreStrings.keySkipBackward
+        case .nextChapter: CoreStrings.keyNextChapter
+        case .previousChapter: CoreStrings.keyPreviousChapter
+        case .recordedList: CoreStrings.keyRecordedList
+        case .newsNow: CoreStrings.keyNewsNow
+        case .stop: CoreStrings.keyStop
+        case .rewind: CoreStrings.keyRewind
+        case .play: CoreStrings.keyPlay
+        case .fastForward: CoreStrings.keyFastForward
+        case .timeShift: CoreStrings.keyTimeShift
+        case .jumpToStart: CoreStrings.keyJumpToStart
+        case .settings: CoreStrings.keySettings
+        case .regzaMenu: CoreStrings.keyRegzaMenu
+        case .programSearch: CoreStrings.keyProgramSearch
         case .threeD: "3D"
-        case .dData: "dデータ"
-        case .subtitle: "字幕"
+        case .dData: CoreStrings.keyDData
+        case .subtitle: CoreStrings.keySubtitle
         }
     }
 

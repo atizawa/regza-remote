@@ -2,6 +2,7 @@
 import Foundation
 import RegzaApp
 import LiveActivity
+import Localization
 
 /// アプリのプロセスに 1 つだけ置く、アプリ全体の ViewModel の組み立て (Composition Root)。
 /// 画面と、画面のない入口 (Live Activity・ウィジェット・コントロールセンターのボタン、Siri、閉じている間の更新) が同じものを使う。
@@ -35,6 +36,8 @@ public final class AppContainer {
     }
 
     private convenience init() {
+        // 共有の Swift の文言を、組み立てる前にこのアプリの言語にする
+        CoreStringsSetup.install()
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         let argumentServer = arguments.firstIndex(of: "-UITestServer").flatMap { index in

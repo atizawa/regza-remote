@@ -1,6 +1,7 @@
 public import Foundation
 public import Observation
 package import RegzaDomain
+import RegzaStrings
 
 /// 番組表の検索の画面の ViewModel。
 /// 打った言葉から日付・時間帯・ジャンルを読み取り (「明日の夜のサッカー」→ 明日・18 時から・サッカー)、
@@ -121,18 +122,18 @@ public final class GuideSearchViewModel {
         switch condition {
         case .day:
             switch query.dayOffset ?? 0 {
-            case 0: return "今日"
-            case 1: return "明日"
-            case 2: return "あさって"
+            case 0: return CoreStrings.dayToday
+            case 1: return CoreStrings.dayTomorrow
+            case 2: return CoreStrings.dayAfterTomorrow
             case let offset:
                 let today = BroadcastDay.start(of: Date())
                 let day = Calendar.current.date(byAdding: .day, value: offset, to: today) ?? today
-                return day.formatted(.dateTime.locale(Locale(identifier: "ja_JP")).month().day().weekday())
+                return day.formatted(.dateTime.locale(CoreStringTable.locale).month().day().weekday())
             }
         case .hours:
-            let start = query.startHour.map { "\($0)時" } ?? ""
-            let end = query.endHour.map { "\($0)時" } ?? ""
-            return "\(start)〜\(end)"
+            let start = query.startHour.map(CoreStrings.searchHour) ?? ""
+            let end = query.endHour.map(CoreStrings.searchHour) ?? ""
+            return CoreStrings.searchHourRange(start, end)
         case .genre(let genre):
             return ProgramSearch.genreNames.indices.contains(genre) ? ProgramSearch.genreNames[genre] : ""
         }

@@ -1,4 +1,5 @@
 import Foundation
+internal import RegzaStrings
 
 /// 録画予約 (`GET /v2/remote/pvr/reserves/list`)。
 ///
@@ -31,12 +32,12 @@ public struct ReservationData: Decodable, Hashable, Sendable, Identifiable {
 
     public var repeatLabel: String? {
         switch repeatRule {
-        case "daily": "毎日"
-        case "weekly": "毎週"
-        case "mtof": "月〜金"
-        case "mtos": "月〜土"
+        case "daily": CoreStrings.repeatDaily
+        case "weekly": CoreStrings.repeatWeekly
+        case "mtof": CoreStrings.repeatWeekdays
+        case "mtos": CoreStrings.repeatMondayToSaturday
         case "", "none": nil
-        default: "繰り返し"
+        default: CoreStrings.repeatOther
         }
     }
 

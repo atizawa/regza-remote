@@ -78,6 +78,16 @@ export function messages(catalog: Catalog): Message[] {
   });
 }
 
+/** core_ で始まるキー (共有の Swift が引く文言) と、それ以外 (OS の画面の文言) に分ける */
+export function splitCore(entries: Message[]): { core: Message[]; app: Message[] } {
+  const core = entries.filter(entry => entry.key.startsWith("core_"));
+  for (const entry of core) {
+    // OS は起動時に文言をまとめて共有の Swift へ渡すので、引くたびに数で変わる複数形は扱わない
+    if (entry.plural) throw new Error(`共有の Swift の文言に複数形は使えません: ${entry.key}`);
+  }
+  return { core, app: entries.filter(entry => !entry.key.startsWith("core_")) };
+}
+
 export function xmlText(text: string): string {
   if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text)) throw new Error("XMLに使えない制御文字があります。");
   const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/'/g, "\\'")

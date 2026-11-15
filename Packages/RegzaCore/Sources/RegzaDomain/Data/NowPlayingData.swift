@@ -1,4 +1,5 @@
 import Foundation
+internal import RegzaStrings
 
 /// 画面や Live Activity に出すための視聴状況。
 public struct NowPlayingData: Equatable, Sendable {
@@ -88,7 +89,7 @@ public struct NowPlayingData: Equatable, Sendable {
             if title.isEmpty { return genre.isEmpty ? nil : genre }
             return channelName.isEmpty ? nil : channelName
         case .recorded:
-            return channelName.isEmpty ? "録画" : "録画 · \(channelName)"
+            return channelName.isEmpty ? CoreStrings.nowPlayingRecording : CoreStrings.nowPlayingRecordingChannel(channelName)
         default:
             return nil
         }
@@ -99,7 +100,7 @@ public struct NowPlayingData: Equatable, Sendable {
         switch kind {
         case .broadcast:
             if !title.isEmpty { return title }
-            return channelName.isEmpty ? "放送" : channelName
+            return channelName.isEmpty ? CoreStrings.nowPlayingBroadcast : channelName
         case .recorded: return title
         default: return statusText ?? ""
         }
@@ -109,9 +110,9 @@ public struct NowPlayingData: Equatable, Sendable {
     public var statusText: String? {
         switch kind {
         case .broadcast, .recorded: nil
-        case .external: "外部入力"
-        case .standby: "待機中"
-        case .unknown: "接続済み"
+        case .external: CoreStrings.nowPlayingExternal
+        case .standby: CoreStrings.nowPlayingStandby
+        case .unknown: CoreStrings.nowPlayingConnected
         }
     }
 

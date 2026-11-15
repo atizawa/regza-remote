@@ -21,13 +21,19 @@ let package = Package(
                 .product(name: "RegzaApp", package: "RegzaCore"),
                 // 見本の通信で組み立てる入口 (RegzaAndroidApp.sample。JVM のテストで使う)
                 .product(name: "RegzaSample", package: "RegzaCore"),
+                // 共有の Swift の文言に、Android の文字列リソースを入れる
+                .product(name: "RegzaStrings", package: "RegzaCore"),
             ],
             // swift-java が作るつなぎと同じく、5 のモードにする
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
             name: "RegzaAndroidBridgeTests",
-            dependencies: ["RegzaAndroidBridge", .product(name: "RegzaApp", package: "RegzaCore")],
+            dependencies: [
+                "RegzaAndroidBridge",
+                .product(name: "RegzaApp", package: "RegzaCore"),
+                .product(name: "RegzaStrings", package: "RegzaCore"),
+            ],
             // 窓口の非同期の関数 (Java の Future になる) を MainActor から呼ぶので、窓口と同じ 5 のモードにする
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

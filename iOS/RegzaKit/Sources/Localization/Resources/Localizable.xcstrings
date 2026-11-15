@@ -349,6 +349,1578 @@
         }
       }
     },
+    "core_band_other": {
+      "extractionState": "manual",
+      "comment": "core / band / other",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他"
+          }
+        }
+      }
+    },
+    "core_band_terrestrial": {
+      "extractionState": "manual",
+      "comment": "core / band / terrestrial",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地デジ"
+          }
+        }
+      }
+    },
+    "core_channel_list_unsupported": {
+      "extractionState": "manual",
+      "comment": "core / channel / list / unsupported",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この機種はチャンネル一覧の取得に対応していません。"
+          }
+        }
+      }
+    },
+    "core_channel_tune_failed": {
+      "extractionState": "manual",
+      "comment": "core / channel / tune / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ に切り替えられませんでした。テレビの電源が入っているか確認してください。"
+          }
+        }
+      }
+    },
+    "core_date_day_short": {
+      "extractionState": "manual",
+      "comment": "core / date / day / short",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "d(E)"
+          }
+        }
+      }
+    },
+    "core_day_after_tomorrow": {
+      "extractionState": "manual",
+      "comment": "core / day / after / tomorrow",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あさって"
+          }
+        }
+      }
+    },
+    "core_day_today": {
+      "extractionState": "manual",
+      "comment": "core / day / today",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日"
+          }
+        }
+      }
+    },
+    "core_day_tomorrow": {
+      "extractionState": "manual",
+      "comment": "core / day / tomorrow",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明日"
+          }
+        }
+      }
+    },
+    "core_error_command_rejected": {
+      "extractionState": "manual",
+      "comment": "core / error / command / rejected",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビがコマンドを拒否しました (%@)"
+          }
+        }
+      }
+    },
+    "core_error_http_status": {
+      "extractionState": "manual",
+      "comment": "core / error / http / status",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPエラー (%lld)"
+          }
+        }
+      }
+    },
+    "core_error_invalid_host": {
+      "extractionState": "manual",
+      "comment": "core / error / invalid / host",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IPアドレスが正しくありません"
+          }
+        }
+      }
+    },
+    "core_error_invalid_pin": {
+      "extractionState": "manual",
+      "comment": "core / error / invalid / pin",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN が正しくありません。テレビに表示されている数字を確認してください"
+          }
+        }
+      }
+    },
+    "core_error_invalid_response": {
+      "extractionState": "manual",
+      "comment": "core / error / invalid / response",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不正なレスポンスです"
+          }
+        }
+      }
+    },
+    "core_error_not_configured": {
+      "extractionState": "manual",
+      "comment": "core / error / not / configured",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続先が設定されていません"
+          }
+        }
+      }
+    },
+    "core_error_request_cancelled": {
+      "extractionState": "manual",
+      "comment": "core / error / request / cancelled",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通信を取り消しました"
+          }
+        }
+      }
+    },
+    "core_error_stream_unavailable": {
+      "extractionState": "manual",
+      "comment": "core / error / stream / unavailable",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信の準備ができませんでした"
+          }
+        }
+      }
+    },
+    "core_error_unauthorized": {
+      "extractionState": "manual",
+      "comment": "core / error / unauthorized",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認証に失敗しました。ユーザー名とパスワードを確認してください"
+          }
+        }
+      }
+    },
+    "core_error_unsupported": {
+      "extractionState": "manual",
+      "comment": "core / error / unsupported",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この機種は対応していません"
+          }
+        }
+      }
+    },
+    "core_genre_anime": {
+      "extractionState": "manual",
+      "comment": "core / genre / anime",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アニメ"
+          }
+        }
+      }
+    },
+    "core_genre_documentary": {
+      "extractionState": "manual",
+      "comment": "core / genre / documentary",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドキュメンタリー"
+          }
+        }
+      }
+    },
+    "core_genre_drama": {
+      "extractionState": "manual",
+      "comment": "core / genre / drama",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラマ"
+          }
+        }
+      }
+    },
+    "core_genre_hobby": {
+      "extractionState": "manual",
+      "comment": "core / genre / hobby",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "趣味・教育"
+          }
+        }
+      }
+    },
+    "core_genre_information": {
+      "extractionState": "manual",
+      "comment": "core / genre / information",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "情報"
+          }
+        }
+      }
+    },
+    "core_genre_movie": {
+      "extractionState": "manual",
+      "comment": "core / genre / movie",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映画"
+          }
+        }
+      }
+    },
+    "core_genre_music": {
+      "extractionState": "manual",
+      "comment": "core / genre / music",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽"
+          }
+        }
+      }
+    },
+    "core_genre_news": {
+      "extractionState": "manual",
+      "comment": "core / genre / news",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ニュース"
+          }
+        }
+      }
+    },
+    "core_genre_sports": {
+      "extractionState": "manual",
+      "comment": "core / genre / sports",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スポーツ"
+          }
+        }
+      }
+    },
+    "core_genre_theater": {
+      "extractionState": "manual",
+      "comment": "core / genre / theater",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "劇場・公演"
+          }
+        }
+      }
+    },
+    "core_genre_variety": {
+      "extractionState": "manual",
+      "comment": "core / genre / variety",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バラエティ"
+          }
+        }
+      }
+    },
+    "core_genre_welfare": {
+      "extractionState": "manual",
+      "comment": "core / genre / welfare",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "福祉"
+          }
+        }
+      }
+    },
+    "core_key_audio": {
+      "extractionState": "manual",
+      "comment": "core / key / audio",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声切替"
+          }
+        }
+      }
+    },
+    "core_key_back": {
+      "extractionState": "manual",
+      "comment": "core / key / back",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "戻る"
+          }
+        }
+      }
+    },
+    "core_key_blue": {
+      "extractionState": "manual",
+      "comment": "core / key / blue",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "青"
+          }
+        }
+      }
+    },
+    "core_key_broadband": {
+      "extractionState": "manual",
+      "comment": "core / key / broadband",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブロードバンド"
+          }
+        }
+      }
+    },
+    "core_key_channel_down": {
+      "extractionState": "manual",
+      "comment": "core / key / channel / down",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャンネル−"
+          }
+        }
+      }
+    },
+    "core_key_channel_number": {
+      "extractionState": "manual",
+      "comment": "core / key / channel / number",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CH番号"
+          }
+        }
+      }
+    },
+    "core_key_channel_up": {
+      "extractionState": "manual",
+      "comment": "core / key / channel / up",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャンネル＋"
+          }
+        }
+      }
+    },
+    "core_key_d_data": {
+      "extractionState": "manual",
+      "comment": "core / key / d / data",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dデータ"
+          }
+        }
+      }
+    },
+    "core_key_display": {
+      "extractionState": "manual",
+      "comment": "core / key / display",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面表示"
+          }
+        }
+      }
+    },
+    "core_key_down": {
+      "extractionState": "manual",
+      "comment": "core / key / down",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下"
+          }
+        }
+      }
+    },
+    "core_key_enter": {
+      "extractionState": "manual",
+      "comment": "core / key / enter",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "決定"
+          }
+        }
+      }
+    },
+    "core_key_exit": {
+      "extractionState": "manual",
+      "comment": "core / key / exit",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終了"
+          }
+        }
+      }
+    },
+    "core_key_fast_forward": {
+      "extractionState": "manual",
+      "comment": "core / key / fast / forward",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "早送り"
+          }
+        }
+      }
+    },
+    "core_key_green": {
+      "extractionState": "manual",
+      "comment": "core / key / green",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "緑"
+          }
+        }
+      }
+    },
+    "core_key_guide": {
+      "extractionState": "manual",
+      "comment": "core / key / guide",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組表"
+          }
+        }
+      }
+    },
+    "core_key_input": {
+      "extractionState": "manual",
+      "comment": "core / key / input",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力切替"
+          }
+        }
+      }
+    },
+    "core_key_jump_to_start": {
+      "extractionState": "manual",
+      "comment": "core / key / jump / to / start",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "始めにジャンプ"
+          }
+        }
+      }
+    },
+    "core_key_left": {
+      "extractionState": "manual",
+      "comment": "core / key / left",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左"
+          }
+        }
+      }
+    },
+    "core_key_mini_guide": {
+      "extractionState": "manual",
+      "comment": "core / key / mini / guide",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミニ番組表"
+          }
+        }
+      }
+    },
+    "core_key_multi_screen": {
+      "extractionState": "manual",
+      "comment": "core / key / multi / screen",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マルチ画面"
+          }
+        }
+      }
+    },
+    "core_key_mute": {
+      "extractionState": "manual",
+      "comment": "core / key / mute",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消音"
+          }
+        }
+      }
+    },
+    "core_key_news_now": {
+      "extractionState": "manual",
+      "comment": "core / key / news / now",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐニュース"
+          }
+        }
+      }
+    },
+    "core_key_next_chapter": {
+      "extractionState": "manual",
+      "comment": "core / key / next / chapter",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次へスキップ"
+          }
+        }
+      }
+    },
+    "core_key_page_down": {
+      "extractionState": "manual",
+      "comment": "core / key / page / down",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページ下"
+          }
+        }
+      }
+    },
+    "core_key_page_up": {
+      "extractionState": "manual",
+      "comment": "core / key / page / up",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページ上"
+          }
+        }
+      }
+    },
+    "core_key_pause": {
+      "extractionState": "manual",
+      "comment": "core / key / pause",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止"
+          }
+        }
+      }
+    },
+    "core_key_play": {
+      "extractionState": "manual",
+      "comment": "core / key / play",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生"
+          }
+        }
+      }
+    },
+    "core_key_power": {
+      "extractionState": "manual",
+      "comment": "core / key / power",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電源"
+          }
+        }
+      }
+    },
+    "core_key_previous_chapter": {
+      "extractionState": "manual",
+      "comment": "core / key / previous / chapter",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前へスキップ"
+          }
+        }
+      }
+    },
+    "core_key_program_info": {
+      "extractionState": "manual",
+      "comment": "core / key / program / info",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組説明"
+          }
+        }
+      }
+    },
+    "core_key_program_search": {
+      "extractionState": "manual",
+      "comment": "core / key / program / search",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組検索"
+          }
+        }
+      }
+    },
+    "core_key_quick": {
+      "extractionState": "manual",
+      "comment": "core / key / quick",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クイック"
+          }
+        }
+      }
+    },
+    "core_key_radio_data": {
+      "extractionState": "manual",
+      "comment": "core / key / radio / data",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ラジオ/データ"
+          }
+        }
+      }
+    },
+    "core_key_record": {
+      "extractionState": "manual",
+      "comment": "core / key / record",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画"
+          }
+        }
+      }
+    },
+    "core_key_recorded_list": {
+      "extractionState": "manual",
+      "comment": "core / key / recorded / list",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画リスト"
+          }
+        }
+      }
+    },
+    "core_key_red": {
+      "extractionState": "manual",
+      "comment": "core / key / red",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "赤"
+          }
+        }
+      }
+    },
+    "core_key_regza_menu": {
+      "extractionState": "manual",
+      "comment": "core / key / regza / menu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レグザメニュー"
+          }
+        }
+      }
+    },
+    "core_key_rewind": {
+      "extractionState": "manual",
+      "comment": "core / key / rewind",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "巻き戻し"
+          }
+        }
+      }
+    },
+    "core_key_right": {
+      "extractionState": "manual",
+      "comment": "core / key / right",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右"
+          }
+        }
+      }
+    },
+    "core_key_screen_size": {
+      "extractionState": "manual",
+      "comment": "core / key / screen / size",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面サイズ"
+          }
+        }
+      }
+    },
+    "core_key_settings": {
+      "extractionState": "manual",
+      "comment": "core / key / settings",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定メニュー"
+          }
+        }
+      }
+    },
+    "core_key_skip_backward": {
+      "extractionState": "manual",
+      "comment": "core / key / skip / backward",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "10秒戻し"
+          }
+        }
+      }
+    },
+    "core_key_skip_forward": {
+      "extractionState": "manual",
+      "comment": "core / key / skip / forward",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30秒送り"
+          }
+        }
+      }
+    },
+    "core_key_stop": {
+      "extractionState": "manual",
+      "comment": "core / key / stop",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止"
+          }
+        }
+      }
+    },
+    "core_key_subtitle": {
+      "extractionState": "manual",
+      "comment": "core / key / subtitle",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕"
+          }
+        }
+      }
+    },
+    "core_key_terrestrial": {
+      "extractionState": "manual",
+      "comment": "core / key / terrestrial",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地デジ"
+          }
+        }
+      }
+    },
+    "core_key_time_shift": {
+      "extractionState": "manual",
+      "comment": "core / key / time / shift",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイムシフト"
+          }
+        }
+      }
+    },
+    "core_key_up": {
+      "extractionState": "manual",
+      "comment": "core / key / up",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上"
+          }
+        }
+      }
+    },
+    "core_key_volume_down": {
+      "extractionState": "manual",
+      "comment": "core / key / volume / down",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音量−"
+          }
+        }
+      }
+    },
+    "core_key_volume_up": {
+      "extractionState": "manual",
+      "comment": "core / key / volume / up",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音量＋"
+          }
+        }
+      }
+    },
+    "core_key_yellow": {
+      "extractionState": "manual",
+      "comment": "core / key / yellow",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "黄"
+          }
+        }
+      }
+    },
+    "core_list_separator": {
+      "extractionState": "manual",
+      "comment": "core / list / separator",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "・"
+          }
+        }
+      }
+    },
+    "core_locale": {
+      "extractionState": "manual",
+      "comment": "core / locale",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ja_JP"
+          }
+        }
+      }
+    },
+    "core_now_playing_broadcast": {
+      "extractionState": "manual",
+      "comment": "core / now / playing / broadcast",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放送"
+          }
+        }
+      }
+    },
+    "core_now_playing_connected": {
+      "extractionState": "manual",
+      "comment": "core / now / playing / connected",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続済み"
+          }
+        }
+      }
+    },
+    "core_now_playing_external": {
+      "extractionState": "manual",
+      "comment": "core / now / playing / external",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部入力"
+          }
+        }
+      }
+    },
+    "core_now_playing_recording": {
+      "extractionState": "manual",
+      "comment": "core / now / playing / recording",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画"
+          }
+        }
+      }
+    },
+    "core_now_playing_recording_channel": {
+      "extractionState": "manual",
+      "comment": "core / now / playing / recording / channel",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画 · %@"
+          }
+        }
+      }
+    },
+    "core_now_playing_standby": {
+      "extractionState": "manual",
+      "comment": "core / now / playing / standby",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中"
+          }
+        }
+      }
+    },
+    "core_now_playing_title_tv": {
+      "extractionState": "manual",
+      "comment": "core / now / playing / title / tv",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビ"
+          }
+        }
+      }
+    },
+    "core_now_playing_title_watching": {
+      "extractionState": "manual",
+      "comment": "core / now / playing / title / watching",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "視聴中"
+          }
+        }
+      }
+    },
+    "core_player_preparing": {
+      "extractionState": "manual",
+      "comment": "core / player / preparing",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の配信を準備しています…（20 秒ほど）"
+          }
+        }
+      }
+    },
+    "core_player_unavailable": {
+      "extractionState": "manual",
+      "comment": "core / player / unavailable",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このチャンネルは EPGStation で見られません。"
+          }
+        }
+      }
+    },
+    "core_program_reserve_cancel_failed": {
+      "extractionState": "manual",
+      "comment": "core / program / reserve / cancel / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予約を取り消せませんでした: %@"
+          }
+        }
+      }
+    },
+    "core_program_reserve_done": {
+      "extractionState": "manual",
+      "comment": "core / program / reserve / done",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予約しました。テレビの予約一覧に反映されるまで少しかかることがあります。"
+          }
+        }
+      }
+    },
+    "core_program_reserve_rejected": {
+      "extractionState": "manual",
+      "comment": "core / program / reserve / rejected",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビが予約を受け付けませんでした (%@)。テレビの予約一覧や録画機器を確認してください。"
+          }
+        }
+      }
+    },
+    "core_program_reserved": {
+      "extractionState": "manual",
+      "comment": "core / program / reserved",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画予約済み"
+          }
+        }
+      }
+    },
+    "core_program_series_reserved": {
+      "extractionState": "manual",
+      "comment": "core / program / series / reserved",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連ドラ予約済み"
+          }
+        }
+      }
+    },
+    "core_program_series_reserved_repeat": {
+      "extractionState": "manual",
+      "comment": "core / program / series / reserved / repeat",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連ドラ予約済み（%@）"
+          }
+        }
+      }
+    },
+    "core_program_time_with_minutes": {
+      "extractionState": "manual",
+      "comment": "core / program / time / with / minutes",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$lld分"
+          }
+        }
+      }
+    },
+    "core_program_tuned": {
+      "extractionState": "manual",
+      "comment": "core / program / tuned",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビを%@に切り替えました。"
+          }
+        }
+      }
+    },
+    "core_program_tuned_from_start": {
+      "extractionState": "manual",
+      "comment": "core / program / tuned / from / start",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビを%@に切り替えて、最初から再生しました。"
+          }
+        }
+      }
+    },
+    "core_repeat_daily": {
+      "extractionState": "manual",
+      "comment": "core / repeat / daily",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "毎日"
+          }
+        }
+      }
+    },
+    "core_repeat_monday_to_saturday": {
+      "extractionState": "manual",
+      "comment": "core / repeat / monday / to / saturday",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "月〜土"
+          }
+        }
+      }
+    },
+    "core_repeat_other": {
+      "extractionState": "manual",
+      "comment": "core / repeat / other",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繰り返し"
+          }
+        }
+      }
+    },
+    "core_repeat_weekdays": {
+      "extractionState": "manual",
+      "comment": "core / repeat / weekdays",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "月〜金"
+          }
+        }
+      }
+    },
+    "core_repeat_weekly": {
+      "extractionState": "manual",
+      "comment": "core / repeat / weekly",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "毎週"
+          }
+        }
+      }
+    },
+    "core_reservation_cancel_failed": {
+      "extractionState": "manual",
+      "comment": "core / reservation / cancel / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」の予約を取り消せませんでした: %2$@"
+          }
+        }
+      }
+    },
+    "core_reservation_list_unsupported": {
+      "extractionState": "manual",
+      "comment": "core / reservation / list / unsupported",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この機種は対応していません。"
+          }
+        }
+      }
+    },
+    "core_search_hour": {
+      "extractionState": "manual",
+      "comment": "core / search / hour",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld時"
+          }
+        }
+      }
+    },
+    "core_search_hour_range": {
+      "extractionState": "manual",
+      "comment": "core / search / hour / range",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@〜%2$@"
+          }
+        }
+      }
+    },
+    "core_search_on_air_until": {
+      "extractionState": "manual",
+      "comment": "core / search / on / air / until",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放送中 〜%@"
+          }
+        }
+      }
+    },
+    "core_search_reason_cast": {
+      "extractionState": "manual",
+      "comment": "core / search / reason / cast",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ が出演"
+          }
+        }
+      }
+    },
+    "core_search_reason_description": {
+      "extractionState": "manual",
+      "comment": "core / search / reason / description",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "説明に「%@」"
+          }
+        }
+      }
+    },
+    "core_search_starts_at": {
+      "extractionState": "manual",
+      "comment": "core / search / starts / at",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@〜"
+          }
+        }
+      }
+    },
+    "core_server_guide_not_found": {
+      "extractionState": "manual",
+      "comment": "core / server / guide / not / found",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見つかりませんでした。Mirakurun が動いているか、ポート %lld で待ち受けているか確認してください。"
+          }
+        }
+      }
+    },
+    "core_server_guide_unlink_message": {
+      "extractionState": "manual",
+      "comment": "core / server / guide / unlink / message",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組名・番組表・番組表からの録画予約が使えなくなります。ライブ視聴（EPGStation）の連携も解除されます。"
+          }
+        }
+      }
+    },
+    "core_server_guide_unlink_title": {
+      "extractionState": "manual",
+      "comment": "core / server / guide / unlink / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mirakurun との連携を解除しますか？"
+          }
+        }
+      }
+    },
+    "core_server_stream_found": {
+      "extractionState": "manual",
+      "comment": "core / server / stream / found",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mirakurun と同じサーバーで EPGStation が見つかりました。よければ「保存」を押してください。"
+          }
+        }
+      }
+    },
+    "core_server_stream_not_found": {
+      "extractionState": "manual",
+      "comment": "core / server / stream / not / found",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見つかりませんでした。EPGStation が動いているか、ポート %lld で待ち受けているか確認してください。"
+          }
+        }
+      }
+    },
+    "core_server_stream_unlink_message": {
+      "extractionState": "manual",
+      "comment": "core / server / stream / unlink / message",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリでのライブ視聴が使えなくなります。"
+          }
+        }
+      }
+    },
+    "core_server_stream_unlink_title": {
+      "extractionState": "manual",
+      "comment": "core / server / stream / unlink / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EPGStation との連携を解除しますか？"
+          }
+        }
+      }
+    },
+    "core_settings_password_entered": {
+      "extractionState": "manual",
+      "comment": "core / settings / password / entered",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(入力済み)"
+          }
+        }
+      }
+    },
+    "core_setup_not_configured": {
+      "extractionState": "manual",
+      "comment": "core / setup / not / configured",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未設定"
+          }
+        }
+      }
+    },
+    "core_time_range": {
+      "extractionState": "manual",
+      "comment": "core / time / range",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ 〜 %3$@"
+          }
+        }
+      }
+    },
+    "core_tv_connected": {
+      "extractionState": "manual",
+      "comment": "core / tv / connected",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続できました"
+          }
+        }
+      }
+    },
+    "core_tv_connected_detail": {
+      "extractionState": "manual",
+      "comment": "core / tv / connected / detail",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続できました: %@"
+          }
+        }
+      }
+    },
+    "core_tv_pairing_unsupported": {
+      "extractionState": "manual",
+      "comment": "core / tv / pairing / unsupported",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この機種は PIN 登録に対応していません。下の「ユーザー名とパスワードを入力」から設定してください。"
+          }
+        }
+      }
+    },
+    "core_tv_pin_required": {
+      "extractionState": "manual",
+      "comment": "core / tv / pin / required",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIN の登録が必要"
+          }
+        }
+      }
+    },
+    "core_tv_scan_not_found": {
+      "extractionState": "manual",
+      "comment": "core / tv / scan / not / found",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見つかりませんでした。テレビの電源が入っているか、テレビと同じ Wi-Fi につながっているか確認してください。"
+          }
+        }
+      }
+    },
+    "core_tv_scan_not_found_ios": {
+      "extractionState": "manual",
+      "comment": "core / tv / scan / not / found / ios",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見つかりませんでした。テレビの電源が入っているか、iPhone の「設定」→「プライバシーとセキュリティ」→「ローカルネットワーク」でこのアプリが許可されているか確認してください。"
+          }
+        }
+      }
+    },
     "guide_channel_empty": {
       "extractionState": "manual",
       "comment": "guide / channel / empty",

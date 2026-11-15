@@ -1,6 +1,7 @@
 #if !os(Android)
 import Foundation
 import RegzaDomain
+internal import RegzaStrings
 
 #if canImport(FoundationNetworking)
 import FoundationNetworking
@@ -37,7 +38,7 @@ public final class URLSessionTransport: HTTPTransport {
                         continuation.resume(
                             returning: HTTPResponse(statusCode: response.statusCode, headers: headers, body: data ?? Data()))
                     } else {
-                        continuation.resume(throwing: RegzaError.network("不正なレスポンスです"))
+                        continuation.resume(throwing: RegzaError.network(CoreStrings.errorInvalidResponse))
                     }
                 }
                 running.start(task)

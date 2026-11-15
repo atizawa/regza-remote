@@ -19,7 +19,9 @@ let package = Package(
         // アプリ・Widget で共有する色やサイズ。
         .target(name: "Design", resources: [.process("Generated/DesignColors.xcassets")]),
         // 文言の定義元。AndroidのXMLもこのString Catalogから生成する。
-        .target(name: "Localization", resources: [.process("Resources")]),
+        .target(
+            name: "Localization", dependencies: [.product(name: "RegzaStrings", package: "RegzaCore")],
+            resources: [.process("Resources")]),
         // Live Activity の状態と更新。画面と同じく共有 ViewModel だけを使う。
         .target(
             name: "LiveActivity",
@@ -33,7 +35,7 @@ let package = Package(
                 .product(name: "RegzaApp", package: "RegzaCore"),
                 .product(name: "RegzaInfrastructure", package: "RegzaCore"),
                 .product(name: "RegzaSample", package: "RegzaCore"),
-                "LiveActivity",
+                "LiveActivity", "Localization",
             ]),
         // アプリと Widget の両方に登録する、ボタンからの操作。
         .target(

@@ -1,6 +1,7 @@
 public import Foundation
 public import Observation
 package import RegzaDomain
+import RegzaStrings
 
 /// 設定の中のテレビの登録 (SettingsViewModel の部品)。
 /// 同じネットワークのテレビを探す・PIN で登録する・ユーザー名とパスワード・接続テスト
@@ -100,9 +101,9 @@ public final class TVSetupViewModel {
 
     private var status: Status {
         let host = draft.host.trimmingCharacters(in: .whitespaces)
-        if host.isEmpty { return Status(text: "未設定", needsAttention: true) }
+        if host.isEmpty { return Status(text: CoreStrings.setupNotConfigured, needsAttention: true) }
         // PIN の登録でも手入力でも、パスワードがなければ操作できない
-        if draft.password.isEmpty { return Status(text: "PIN の登録が必要", needsAttention: true) }
+        if draft.password.isEmpty { return Status(text: CoreStrings.tvPinRequired, needsAttention: true) }
         return Status(text: host, needsAttention: false)
     }
 
@@ -122,9 +123,9 @@ public final class TVSetupViewModel {
         }
         if devices.isEmpty {
             #if os(iOS)
-            scanMessage = "見つかりませんでした。テレビの電源が入っているか、iPhone の「設定」→「プライバシーとセキュリティ」→「ローカルネットワーク」でこのアプリが許可されているか確認してください。"
+            scanMessage = CoreStrings.tvScanNotFoundIos
             #else
-            scanMessage = "見つかりませんでした。テレビの電源が入っているか、テレビと同じ Wi-Fi につながっているか確認してください。"
+            scanMessage = CoreStrings.tvScanNotFound
             #endif
         }
     }
@@ -143,7 +144,7 @@ public final class TVSetupViewModel {
             pin = ""
             isWaitingForPIN = true
         } catch RegzaError.unsupported, RegzaError.httpStatus(404) {
-            pairingMessage = "この機種は PIN 登録に対応していません。下の「ユーザー名とパスワードを入力」から設定してください。"
+            pairingMessage = CoreStrings.tvPairingUnsupported
             isShowingManualEntry = true
         } catch {
             pairingMessage = error.localizedDescription
@@ -189,7 +190,7 @@ public final class TVSetupViewModel {
         switch await remoteViewModel.testConnection(draft) {
         case .success(let nowPlaying):
             let detail = nowPlaying.title.isEmpty ? nowPlaying.channelName : nowPlaying.title
-            testResult = detail.isEmpty ? "接続できました" : "接続できました: \(detail)"
+            testResult = detail.isEmpty ? CoreStrings.tvConnected : CoreStrings.tvConnectedDetail(detail)
         case .failure(let error):
             testResult = error.localizedDescription
         }

@@ -1,5 +1,6 @@
 import Foundation
 import RegzaApp
+import RegzaStrings
 
 /// Kotlin が実装する通信の窓口。開始と取消は MainActor 上で呼び、送受信自体は OkHttp に任せる。
 public protocol RegzaAndroidHTTPClient {
@@ -38,7 +39,7 @@ public final class RegzaAndroidHTTPCompletion: @unchecked Sendable {
 
     public func succeed(_ status: Int32, _ headers: [String], _ body: [Int8]) {
         guard (100...599).contains(status), headers.count.isMultiple(of: 2) else {
-            fail("不正なレスポンスです")
+            fail(CoreStrings.errorInvalidResponse)
             return
         }
         let fields = stride(from: 0, to: headers.count, by: 2).reduce(into: [String: String]()) { fields, index in
@@ -95,7 +96,7 @@ final class AndroidHTTPTransport: HTTPTransport, @unchecked Sendable {
                 }
             }
         } onCancel: {
-            completion.fail("通信を取り消しました")
+            completion.fail(CoreStrings.errorRequestCancelled)
             Task { @MainActor in self.httpClient.cancel(outgoing.id) }
         }
     }

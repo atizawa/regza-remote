@@ -1,6 +1,7 @@
 public import Foundation
 public import Observation
 package import RegzaDomain
+import RegzaStrings
 
 /// 録画予約の一覧の画面の ViewModel
 @MainActor
@@ -67,7 +68,7 @@ public final class ReservationListViewModel {
         do {
             try await recordingUseCase.cancel(id: id)
         } catch {
-            cancelError = "「\(title)」の予約を取り消せませんでした: \(error.localizedDescription)"
+            cancelError = CoreStrings.reservationCancelFailed(title, error.localizedDescription)
         }
     }
 }
@@ -101,7 +102,7 @@ extension RegzaError {
     /// 録画まわりの画面に出すメッセージ
     package var recordingMessage: String {
         switch self {
-        case .httpStatus(404), .unsupported: "この機種は対応していません。"
+        case .httpStatus(404), .unsupported: CoreStrings.reservationListUnsupported
         default: localizedDescription
         }
     }

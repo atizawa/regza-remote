@@ -7,3 +7,4 @@ UseCase の公開するモデルは SharedModels に揃える。選局・録画�
 Android からも使うので、swift-java で Java のクラスにできる形にする:
 入れ子の型・generics・protocol を使わず、プロパティは String・数・Bool・配列・Optional・ほかの SharedModels にする。
 時刻の表記などの文字列は、ここに入れて渡す (OS ごとに書式を作り直さない)。
+画面に出す文言は直接書かず、String Catalog から生成した `CoreStrings` で引く (RegzaStrings。OS が選ばれている言語の文言を入れる)。

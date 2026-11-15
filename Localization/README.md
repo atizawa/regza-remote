@@ -39,6 +39,25 @@ Androidでは非Composableの処理やLazyListの構築コールバックへ入�
 通常のアプリビルドでは生成せず、lintとCIで変換テストと生成結果の一致を確認する。
 言語を削除した場合は専用の `app_strings.xml` だけを削除し、他のリソースを触らない。
 
-今回移すのは画面側の固定文言と、検索・予約確認など画面側で組み立てる文章。
-共有Swiftの状態・エラー・リモコンキー名、日時や番組データ、Siri・Widget等のOS連携用メタデータは既存の定義を維持する。
-これらも多言語化する場合は、共有コアの値やエラーの種類を各UIで文言へ変換する形を別途整える。
+## 共有のSwiftの文言
+
+共有のSwift（`Packages/RegzaCore`）が画面に出す文言（リモコンのキー名・エラー・状態・メッセージ・日付の書き方など）も、同じString Catalogの `core_` で始まるキーに置く。
+生成は次の2つ。`core_` のキーはOSの画面の `AppStrings` には出さない。
+
+- `Packages/RegzaCore/Sources/RegzaStrings/Generated/CoreStrings.swift`（共有のSwiftが `CoreStrings.keyPower` のように引く。元言語の文言も持つ）
+- `Android/app/src/main/java/com/example/regzaremote/localization/Generated/CoreStringResources.kt`（キーとAndroidの文字列リソースの対応）
+
+共有のSwiftはAndroidでも動き、アプリに入れた翻訳を自分では読めないので、OSが選ばれている言語の文言をまとめて入れる（`CoreStringTable.install`）。
+iOSはアプリ（`AppContainer`）とウィジェットの拡張（WidgetBundle）がプロセスごとに `CoreStringsSetup.install()` を呼び、`Bundle` から入れる。
+Androidは `RegzaApplication` が起動時と言語の変更時に、文字列リソースを `RegzaAndroidBridge.regzaUseStrings` で入れる。
+入っていないとき（CLI・テスト・Android Studioのプレビュー）と、入れた中にないキーは元言語の文言を使う。
+書式の引数はiOSの形（`%@`・`%lld`）とAndroidの形（`%1$s`・`%1$d`）のどちらからでも共有のSwiftが入れる。まとめて入れるので、`core_` のキーに複数形は使えない（生成時にエラーにする）。
+
+日付と曜日の言語は `core_locale`、短い日付の書き方は `core_date_day_short` に置き、文言の言語と日付の書き方を揃える。
+
+次は対象にしない。
+
+- Siri・ショートカット・ウィジェットやコントロールセンターの表示名などのOS連携用メタデータ（App Intents・WidgetKitの仕組みで扱う）
+- 番組検索の言葉の読み取り（「今日」「出演」など。翻訳ではなく、言語ごとに読み取り方を作る）
+- テレビやサーバーから届く日本語のデータの読み取り（局名の地域名・番組説明の見出しなど）
+- CLIや振る舞いのテスト向けの操作の説明、見本のデータ、開発用の表示

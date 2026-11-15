@@ -1,6 +1,7 @@
 public import Foundation
 public import Observation
 package import RegzaDomain
+import RegzaStrings
 
 /// チャンネル一覧の画面の ViewModel。
 /// 放送の種類ごとにチャンネルを並べ、押すとそのチャンネルに切り替える
@@ -68,7 +69,7 @@ public final class ChannelListViewModel {
 
     private static func message(for error: RegzaError) -> String {
         switch error {
-        case .httpStatus(404), .unsupported: "この機種はチャンネル一覧の取得に対応していません。"
+        case .httpStatus(404), .unsupported: CoreStrings.channelListUnsupported
         default: error.localizedDescription
         }
     }
@@ -98,7 +99,7 @@ public final class ChannelListViewModel {
                 try await remoteViewModel.tuneAndStartOver(channel)
             }
         } catch .commandRejected {
-            tuneError = "\(channel.name) に切り替えられませんでした。テレビの電源が入っているか確認してください。"
+            tuneError = CoreStrings.channelTuneFailed(channel.name)
         } catch {
             tuneError = error.localizedDescription
         }

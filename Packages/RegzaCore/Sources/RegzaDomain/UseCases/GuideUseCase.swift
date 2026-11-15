@@ -1,4 +1,5 @@
 import Foundation
+internal import RegzaStrings
 
 /// @mockable
 @MainActor
@@ -169,12 +170,12 @@ public final class GuideUseCase: GuideUseCaseProtocol {
 
     /// 「今日」「明日」「9(月)」
     static func label(of day: Date?, now: Date = Date()) -> String {
-        guard let day else { return "今日" }
+        guard let day else { return CoreStrings.dayToday }
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: BroadcastDay.start(of: now))
-        if day == tomorrow { return "明日" }
+        if day == tomorrow { return CoreStrings.dayTomorrow }
         let formatter = DateFormatter()
         formatter.locale = DisplayText.locale
-        formatter.dateFormat = "d(E)"
+        formatter.dateFormat = CoreStrings.dateDayShort
         return formatter.string(from: day)
     }
 
@@ -189,9 +190,9 @@ public final class GuideUseCase: GuideUseCaseProtocol {
 
     /// 「11/5(木) 21:00〜」。放送中は「放送中 〜21:54」
     static func searchTimeText(of program: ProgramData, now: Date = Date()) -> String {
-        if program.isOnAir(at: now) { return "放送中 〜\(DisplayText.time(program.end))" }
+        if program.isOnAir(at: now) { return CoreStrings.searchOnAirUntil(DisplayText.time(program.end)) }
         let day = program.start.formatted(.dateTime.locale(DisplayText.locale).month(.defaultDigits).day().weekday())
-        return "\(day) \(DisplayText.time(program.start))〜"
+        return CoreStrings.searchStartsAt(day, DisplayText.time(program.start))
     }
 
     /// 番組名に入っていれば言うまでもないので、出演者と説明のときだけ添える
@@ -199,10 +200,10 @@ public final class GuideUseCase: GuideUseCaseProtocol {
         let reasons = result.matches.compactMap { match -> String? in
             switch match.field {
             case .title: nil
-            case .cast: "\(match.term) が出演"
-            case .description: "説明に「\(match.term)」"
+            case .cast: CoreStrings.searchReasonCast(match.term)
+            case .description: CoreStrings.searchReasonDescription(match.term)
             }
         }
-        return reasons.isEmpty ? nil : reasons.joined(separator: "・")
+        return reasons.isEmpty ? nil : reasons.joined(separator: CoreStrings.listSeparator)
     }
 }

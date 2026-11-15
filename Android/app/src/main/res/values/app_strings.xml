@@ -30,6 +30,137 @@
     <string name="common_retry" formatted="false">"もう一度試す"</string>
     <string name="common_save" formatted="false">"保存"</string>
     <string name="common_selected" formatted="false">"選択中"</string>
+    <string name="core_band_other" formatted="false">"その他"</string>
+    <string name="core_band_terrestrial" formatted="false">"地デジ"</string>
+    <string name="core_channel_list_unsupported" formatted="false">"この機種はチャンネル一覧の取得に対応していません。"</string>
+    <string name="core_channel_tune_failed">"%1$s に切り替えられませんでした。テレビの電源が入っているか確認してください。"</string>
+    <string name="core_date_day_short" formatted="false">"d(E)"</string>
+    <string name="core_day_after_tomorrow" formatted="false">"あさって"</string>
+    <string name="core_day_today" formatted="false">"今日"</string>
+    <string name="core_day_tomorrow" formatted="false">"明日"</string>
+    <string name="core_error_command_rejected">"テレビがコマンドを拒否しました (%1$s)"</string>
+    <string name="core_error_http_status">"HTTPエラー (%1$d)"</string>
+    <string name="core_error_invalid_host" formatted="false">"IPアドレスが正しくありません"</string>
+    <string name="core_error_invalid_pin" formatted="false">"PIN が正しくありません。テレビに表示されている数字を確認してください"</string>
+    <string name="core_error_invalid_response" formatted="false">"不正なレスポンスです"</string>
+    <string name="core_error_not_configured" formatted="false">"接続先が設定されていません"</string>
+    <string name="core_error_request_cancelled" formatted="false">"通信を取り消しました"</string>
+    <string name="core_error_stream_unavailable" formatted="false">"配信の準備ができませんでした"</string>
+    <string name="core_error_unauthorized" formatted="false">"認証に失敗しました。ユーザー名とパスワードを確認してください"</string>
+    <string name="core_error_unsupported" formatted="false">"この機種は対応していません"</string>
+    <string name="core_genre_anime" formatted="false">"アニメ"</string>
+    <string name="core_genre_documentary" formatted="false">"ドキュメンタリー"</string>
+    <string name="core_genre_drama" formatted="false">"ドラマ"</string>
+    <string name="core_genre_hobby" formatted="false">"趣味・教育"</string>
+    <string name="core_genre_information" formatted="false">"情報"</string>
+    <string name="core_genre_movie" formatted="false">"映画"</string>
+    <string name="core_genre_music" formatted="false">"音楽"</string>
+    <string name="core_genre_news" formatted="false">"ニュース"</string>
+    <string name="core_genre_sports" formatted="false">"スポーツ"</string>
+    <string name="core_genre_theater" formatted="false">"劇場・公演"</string>
+    <string name="core_genre_variety" formatted="false">"バラエティ"</string>
+    <string name="core_genre_welfare" formatted="false">"福祉"</string>
+    <string name="core_key_audio" formatted="false">"音声切替"</string>
+    <string name="core_key_back" formatted="false">"戻る"</string>
+    <string name="core_key_blue" formatted="false">"青"</string>
+    <string name="core_key_broadband" formatted="false">"ブロードバンド"</string>
+    <string name="core_key_channel_down" formatted="false">"チャンネル−"</string>
+    <string name="core_key_channel_number" formatted="false">"CH番号"</string>
+    <string name="core_key_channel_up" formatted="false">"チャンネル＋"</string>
+    <string name="core_key_d_data" formatted="false">"dデータ"</string>
+    <string name="core_key_display" formatted="false">"画面表示"</string>
+    <string name="core_key_down" formatted="false">"下"</string>
+    <string name="core_key_enter" formatted="false">"決定"</string>
+    <string name="core_key_exit" formatted="false">"終了"</string>
+    <string name="core_key_fast_forward" formatted="false">"早送り"</string>
+    <string name="core_key_green" formatted="false">"緑"</string>
+    <string name="core_key_guide" formatted="false">"番組表"</string>
+    <string name="core_key_input" formatted="false">"入力切替"</string>
+    <string name="core_key_jump_to_start" formatted="false">"始めにジャンプ"</string>
+    <string name="core_key_left" formatted="false">"左"</string>
+    <string name="core_key_mini_guide" formatted="false">"ミニ番組表"</string>
+    <string name="core_key_multi_screen" formatted="false">"マルチ画面"</string>
+    <string name="core_key_mute" formatted="false">"消音"</string>
+    <string name="core_key_news_now" formatted="false">"今すぐニュース"</string>
+    <string name="core_key_next_chapter" formatted="false">"次へスキップ"</string>
+    <string name="core_key_page_down" formatted="false">"ページ下"</string>
+    <string name="core_key_page_up" formatted="false">"ページ上"</string>
+    <string name="core_key_pause" formatted="false">"一時停止"</string>
+    <string name="core_key_play" formatted="false">"再生"</string>
+    <string name="core_key_power" formatted="false">"電源"</string>
+    <string name="core_key_previous_chapter" formatted="false">"前へスキップ"</string>
+    <string name="core_key_program_info" formatted="false">"番組説明"</string>
+    <string name="core_key_program_search" formatted="false">"番組検索"</string>
+    <string name="core_key_quick" formatted="false">"クイック"</string>
+    <string name="core_key_radio_data" formatted="false">"ラジオ/データ"</string>
+    <string name="core_key_record" formatted="false">"録画"</string>
+    <string name="core_key_recorded_list" formatted="false">"録画リスト"</string>
+    <string name="core_key_red" formatted="false">"赤"</string>
+    <string name="core_key_regza_menu" formatted="false">"レグザメニュー"</string>
+    <string name="core_key_rewind" formatted="false">"巻き戻し"</string>
+    <string name="core_key_right" formatted="false">"右"</string>
+    <string name="core_key_screen_size" formatted="false">"画面サイズ"</string>
+    <string name="core_key_settings" formatted="false">"設定メニュー"</string>
+    <string name="core_key_skip_backward" formatted="false">"10秒戻し"</string>
+    <string name="core_key_skip_forward" formatted="false">"30秒送り"</string>
+    <string name="core_key_stop" formatted="false">"停止"</string>
+    <string name="core_key_subtitle" formatted="false">"字幕"</string>
+    <string name="core_key_terrestrial" formatted="false">"地デジ"</string>
+    <string name="core_key_time_shift" formatted="false">"タイムシフト"</string>
+    <string name="core_key_up" formatted="false">"上"</string>
+    <string name="core_key_volume_down" formatted="false">"音量−"</string>
+    <string name="core_key_volume_up" formatted="false">"音量＋"</string>
+    <string name="core_key_yellow" formatted="false">"黄"</string>
+    <string name="core_list_separator" formatted="false">"・"</string>
+    <string name="core_locale" formatted="false">"ja_JP"</string>
+    <string name="core_now_playing_broadcast" formatted="false">"放送"</string>
+    <string name="core_now_playing_connected" formatted="false">"接続済み"</string>
+    <string name="core_now_playing_external" formatted="false">"外部入力"</string>
+    <string name="core_now_playing_recording" formatted="false">"録画"</string>
+    <string name="core_now_playing_recording_channel">"録画 · %1$s"</string>
+    <string name="core_now_playing_standby" formatted="false">"待機中"</string>
+    <string name="core_now_playing_title_tv" formatted="false">"テレビ"</string>
+    <string name="core_now_playing_title_watching" formatted="false">"視聴中"</string>
+    <string name="core_player_preparing">"%1$s の配信を準備しています…（20 秒ほど）"</string>
+    <string name="core_player_unavailable" formatted="false">"このチャンネルは EPGStation で見られません。"</string>
+    <string name="core_program_reserve_cancel_failed">"予約を取り消せませんでした: %1$s"</string>
+    <string name="core_program_reserve_done" formatted="false">"予約しました。テレビの予約一覧に反映されるまで少しかかることがあります。"</string>
+    <string name="core_program_reserve_rejected">"テレビが予約を受け付けませんでした (%1$s)。テレビの予約一覧や録画機器を確認してください。"</string>
+    <string name="core_program_reserved" formatted="false">"録画予約済み"</string>
+    <string name="core_program_series_reserved" formatted="false">"連ドラ予約済み"</string>
+    <string name="core_program_series_reserved_repeat">"連ドラ予約済み（%1$s）"</string>
+    <string name="core_program_time_with_minutes">"%1$s · %2$d分"</string>
+    <string name="core_program_tuned">"テレビを%1$sに切り替えました。"</string>
+    <string name="core_program_tuned_from_start">"テレビを%1$sに切り替えて、最初から再生しました。"</string>
+    <string name="core_repeat_daily" formatted="false">"毎日"</string>
+    <string name="core_repeat_monday_to_saturday" formatted="false">"月〜土"</string>
+    <string name="core_repeat_other" formatted="false">"繰り返し"</string>
+    <string name="core_repeat_weekdays" formatted="false">"月〜金"</string>
+    <string name="core_repeat_weekly" formatted="false">"毎週"</string>
+    <string name="core_reservation_cancel_failed">"「%1$s」の予約を取り消せませんでした: %2$s"</string>
+    <string name="core_reservation_list_unsupported" formatted="false">"この機種は対応していません。"</string>
+    <string name="core_search_hour">"%1$d時"</string>
+    <string name="core_search_hour_range">"%1$s〜%2$s"</string>
+    <string name="core_search_on_air_until">"放送中 〜%1$s"</string>
+    <string name="core_search_reason_cast">"%1$s が出演"</string>
+    <string name="core_search_reason_description">"説明に「%1$s」"</string>
+    <string name="core_search_starts_at">"%1$s %2$s〜"</string>
+    <string name="core_server_guide_not_found">"見つかりませんでした。Mirakurun が動いているか、ポート %1$d で待ち受けているか確認してください。"</string>
+    <string name="core_server_guide_unlink_message" formatted="false">"番組名・番組表・番組表からの録画予約が使えなくなります。ライブ視聴（EPGStation）の連携も解除されます。"</string>
+    <string name="core_server_guide_unlink_title" formatted="false">"Mirakurun との連携を解除しますか？"</string>
+    <string name="core_server_stream_found" formatted="false">"Mirakurun と同じサーバーで EPGStation が見つかりました。よければ「保存」を押してください。"</string>
+    <string name="core_server_stream_not_found">"見つかりませんでした。EPGStation が動いているか、ポート %1$d で待ち受けているか確認してください。"</string>
+    <string name="core_server_stream_unlink_message" formatted="false">"アプリでのライブ視聴が使えなくなります。"</string>
+    <string name="core_server_stream_unlink_title" formatted="false">"EPGStation との連携を解除しますか？"</string>
+    <string name="core_settings_password_entered" formatted="false">"(入力済み)"</string>
+    <string name="core_setup_not_configured" formatted="false">"未設定"</string>
+    <string name="core_time_range">"%1$s %2$s 〜 %3$s"</string>
+    <string name="core_tv_connected" formatted="false">"接続できました"</string>
+    <string name="core_tv_connected_detail">"接続できました: %1$s"</string>
+    <string name="core_tv_pairing_unsupported" formatted="false">"この機種は PIN 登録に対応していません。下の「ユーザー名とパスワードを入力」から設定してください。"</string>
+    <string name="core_tv_pin_required" formatted="false">"PIN の登録が必要"</string>
+    <string name="core_tv_scan_not_found" formatted="false">"見つかりませんでした。テレビの電源が入っているか、テレビと同じ Wi-Fi につながっているか確認してください。"</string>
+    <string name="core_tv_scan_not_found_ios" formatted="false">"見つかりませんでした。テレビの電源が入っているか、iPhone の「設定」→「プライバシーとセキュリティ」→「ローカルネットワーク」でこのアプリが許可されているか確認してください。"</string>
     <string name="guide_channel_empty" formatted="false">"Mirakurun がこのチャンネルの番組表を持っていません。"</string>
     <string name="guide_connection_help" formatted="false">"テレビと Mirakurun につながっているか確認してください。"</string>
     <string name="guide_empty" formatted="false">"番組表がありません"</string>

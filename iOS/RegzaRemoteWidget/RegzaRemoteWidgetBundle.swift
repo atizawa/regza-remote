@@ -6,6 +6,11 @@ import Widgets
 
 @main
 struct RegzaRemoteWidgetBundle: WidgetBundle {
+    init() {
+        // 拡張のプロセスでも、共有の Swift の文言 (キーの名前など) をこのアプリの言語にする
+        WidgetStrings.install()
+    }
+
     var body: some Widget {
         RegzaLiveActivityWidget()
         // ホーム画面のリモコンのウィジェット

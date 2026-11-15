@@ -1,6 +1,7 @@
 public import Foundation
 public import Observation
 package import RegzaDomain
+import RegzaStrings
 
 /// 番組の詳細の画面の ViewModel。切り替え・録画予約・最初から見る
 @MainActor
@@ -65,8 +66,8 @@ public final class ProgramDetailViewModel {
     }
 
     private static func reservedText(_ reservation: ReservationItem) -> String {
-        guard reservation.isSeries else { return "録画予約済み" }
-        return reservation.repeatLabel.map { "連ドラ予約済み（\($0)）" } ?? "連ドラ予約済み"
+        guard reservation.isSeries else { return CoreStrings.programReserved }
+        return reservation.repeatLabel.map(CoreStrings.programSeriesReservedRepeat) ?? CoreStrings.programSeriesReserved
     }
 
     public func send(_ action: Action) {
@@ -91,11 +92,11 @@ public final class ProgramDetailViewModel {
             reserveCount += 1
             if !recordingUseCase.isReserved(program) {
                 // テレビの一覧にまだ反映されていない
-                reserveMessage = "予約しました。テレビの予約一覧に反映されるまで少しかかることがあります。"
+                reserveMessage = CoreStrings.programReserveDone
             }
         } catch .commandRejected(let code) {
             // 重なる予約が多い、ハードディスクがないなど
-            reserveMessage = "テレビが予約を受け付けませんでした (\(code))。テレビの予約一覧や録画機器を確認してください。"
+            reserveMessage = CoreStrings.programReserveRejected(code)
         } catch {
             reserveMessage = error.localizedDescription
         }
@@ -110,7 +111,7 @@ public final class ProgramDetailViewModel {
             try await recordingUseCase.cancel(reservation)
             reserveCount += 1
         } catch {
-            reserveMessage = "予約を取り消せませんでした: \(error.localizedDescription)"
+            reserveMessage = CoreStrings.programReserveCancelFailed(error.localizedDescription)
         }
     }
 
@@ -120,10 +121,10 @@ public final class ProgramDetailViewModel {
         do {
             if startOver {
                 try await remoteViewModel.tuneAndStartOver(channel)
-                tuneMessage = "テレビを\(channel.name)に切り替えて、最初から再生しました。"
+                tuneMessage = CoreStrings.programTunedFromStart(channel.name)
             } else {
                 try await remoteViewModel.tune(to: channel)
-                tuneMessage = "テレビを\(channel.name)に切り替えました。"
+                tuneMessage = CoreStrings.programTuned(channel.name)
             }
         } catch {
             tuneMessage = error.localizedDescription

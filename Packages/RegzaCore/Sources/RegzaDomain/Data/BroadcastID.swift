@@ -1,4 +1,5 @@
 import Foundation
+internal import RegzaStrings
 
 /// 放送の ID の変換。テレビ (`JP-G…` のチャンネル、`JP-0000…` の番組) と Mirakurun・EPGStation は
 /// 同じ放送波の ID (network_id / service_id / event_id) を使っているので、変換して照らし合わせられる
@@ -43,10 +44,13 @@ public enum BroadcastID {
 /// 番組のジャンル
 public enum ProgramGenre {
     /// ARIB STD-B10 のジャンル大分類
-    public static let names = [
-        "ニュース", "スポーツ", "情報", "ドラマ", "音楽", "バラエティ",
-        "映画", "アニメ", "ドキュメンタリー", "劇場・公演", "趣味・教育", "福祉",
-    ]
+    public static var names: [String] {
+        [
+            CoreStrings.genreNews, CoreStrings.genreSports, CoreStrings.genreInformation, CoreStrings.genreDrama,
+            CoreStrings.genreMusic, CoreStrings.genreVariety, CoreStrings.genreMovie, CoreStrings.genreAnime,
+            CoreStrings.genreDocumentary, CoreStrings.genreTheater, CoreStrings.genreHobby, CoreStrings.genreWelfare,
+        ]
+    }
 
     public static func name(_ level1: Int) -> String? {
         names.indices.contains(level1) ? names[level1] : nil

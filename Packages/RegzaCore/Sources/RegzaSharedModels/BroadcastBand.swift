@@ -1,4 +1,5 @@
 import Foundation
+internal import RegzaStrings
 
 /// 放送の種類 (地デジ・BS・CS)。番組表・チャンネル・ライブ視聴で、選んで切り替える
 public enum BroadcastBand: String, CaseIterable, Sendable {
@@ -7,10 +8,10 @@ public enum BroadcastBand: String, CaseIterable, Sendable {
     /// 「地デジ」「BS」「CS」
     public var label: String {
         switch self {
-        case .terrestrial: "地デジ"
+        case .terrestrial: CoreStrings.bandTerrestrial
         case .bs: "BS"
         case .cs: "CS"
-        case .other: "その他"
+        case .other: CoreStrings.bandOther
         }
     }
 }

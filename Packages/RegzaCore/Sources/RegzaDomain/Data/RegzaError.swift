@@ -1,4 +1,5 @@
 import Foundation
+internal import RegzaStrings
 
 public enum RegzaError: Error, Equatable, Sendable {
     case notConfigured
@@ -17,13 +18,13 @@ public enum RegzaError: Error, Equatable, Sendable {
 extension RegzaError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .notConfigured: "接続先が設定されていません"
-        case .invalidHost: "IPアドレスが正しくありません"
-        case .unauthorized: "認証に失敗しました。ユーザー名とパスワードを確認してください"
-        case .httpStatus(let code): "HTTPエラー (\(code))"
-        case .commandRejected(let code): "テレビがコマンドを拒否しました (\(code))"
-        case .unsupported: "この機種は対応していません"
-        case .invalidPIN: "PIN が正しくありません。テレビに表示されている数字を確認してください"
+        case .notConfigured: CoreStrings.errorNotConfigured
+        case .invalidHost: CoreStrings.errorInvalidHost
+        case .unauthorized: CoreStrings.errorUnauthorized
+        case .httpStatus(let code): CoreStrings.errorHttpStatus(code)
+        case .commandRejected(let code): CoreStrings.errorCommandRejected(code)
+        case .unsupported: CoreStrings.errorUnsupported
+        case .invalidPIN: CoreStrings.errorInvalidPin
         case .network(let message): message
         }
     }
