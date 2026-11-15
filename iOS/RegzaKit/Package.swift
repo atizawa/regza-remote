@@ -23,7 +23,7 @@ let package = Package(
         // Live Activity の状態と更新。画面と同じく共有 ViewModel だけを使う。
         .target(
             name: "LiveActivity",
-            dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore")],
+            dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "Localization"],
             swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
         // iOS の保存実装を共通 Factory に渡し、アプリ全体の依存を保持する。
         // 画面・Siri・Live Activity の操作は同じ AppContainer を使う。
@@ -48,7 +48,7 @@ let package = Package(
             name: "Widgets",
             dependencies: [
                 .product(name: "RegzaPresentation", package: "RegzaCore"),
-                "LiveActivity", "SystemActions", "Design",
+                "LiveActivity", "SystemActions", "Design", "Localization",
             ]),
         // 画面は ViewModel の state と Action を使い、DI・Domain・通信を扱わない。
         // RootView は Xcode のアプリターゲットに置き、このモジュールへ依存を渡す。

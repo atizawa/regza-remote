@@ -12,10 +12,10 @@ import Testing
         "RegzaPresentation", "Design", "Localization", "LiveActivity",
     ]
 
-    /// Live Activity が読み込んでよいモジュール (Apple のものと、ViewModel・UI の型)
+    /// Live Activity が読み込んでよいモジュール (Apple のものと、ViewModel・UI の型・文言)
     static let liveActivityImports: Set<String> = [
         "Foundation", "Observation", "ActivityKit", "BackgroundTasks",
-        "RegzaPresentation",
+        "RegzaPresentation", "Localization",
     ]
 
     @Test func viewsImportOnlyPresentation() throws {

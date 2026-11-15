@@ -6,6 +6,10 @@ public enum AppStrings {
 
     public static var activityHelp: String { String(localized: "activity_help", bundle: .module) }
 
+    public static func activityStartFailed(_ value1: String) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("activity_start_failed", bundle: .module, comment: ""), value1)
+    }
+
     public static var activityTitle: String { String(localized: "activity_title", bundle: .module) }
 
     public static var appName: String { String(localized: "app_name", bundle: .module) }
@@ -78,15 +82,29 @@ public enum AppStrings {
 
     public static var liveRetry: String { String(localized: "live_retry", bundle: .module) }
 
+    public static var liveStatusDisconnected: String { String(localized: "live_status_disconnected", bundle: .module) }
+
+    public static var liveStatusExternal: String { String(localized: "live_status_external", bundle: .module) }
+
+    public static var liveStatusProgramEnded: String { String(localized: "live_status_program_ended", bundle: .module) }
+
+    public static var liveStatusRecording: String { String(localized: "live_status_recording", bundle: .module) }
+
+    public static var liveStatusRemote: String { String(localized: "live_status_remote", bundle: .module) }
+
+    public static func liveStatusSentCommand(_ value1: String) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("live_status_sent_command", bundle: .module, comment: ""), value1)
+    }
+
+    public static var liveStatusStale: String { String(localized: "live_status_stale", bundle: .module) }
+
+    public static var liveStatusStandby: String { String(localized: "live_status_standby", bundle: .module) }
+
     public static var liveTitle: String { String(localized: "live_title", bundle: .module) }
 
     public static var liveUpdateChannelDescription: String { String(localized: "live_update_channel_description", bundle: .module) }
 
     public static var liveUpdateChannelName: String { String(localized: "live_update_channel_name", bundle: .module) }
-
-    public static var liveUpdateDisconnected: String { String(localized: "live_update_disconnected", bundle: .module) }
-
-    public static var liveUpdateExternal: String { String(localized: "live_update_external", bundle: .module) }
 
     public static var liveUpdateHelp: String { String(localized: "live_update_help", bundle: .module) }
 
@@ -94,19 +112,7 @@ public enum AppStrings {
 
     public static var liveUpdateOpenSettings: String { String(localized: "live_update_open_settings", bundle: .module) }
 
-    public static var liveUpdateProgramEnded: String { String(localized: "live_update_program_ended", bundle: .module) }
-
     public static var liveUpdatePromotionOff: String { String(localized: "live_update_promotion_off", bundle: .module) }
-
-    public static var liveUpdateRecording: String { String(localized: "live_update_recording", bundle: .module) }
-
-    public static var liveUpdateRemote: String { String(localized: "live_update_remote", bundle: .module) }
-
-    public static func liveUpdateSentCommand(_ value1: String) -> String {
-        String.localizedStringWithFormat(NSLocalizedString("live_update_sent_command", bundle: .module, comment: ""), value1)
-    }
-
-    public static var liveUpdateStandby: String { String(localized: "live_update_standby", bundle: .module) }
 
     public static var liveUpdateTitle: String { String(localized: "live_update_title", bundle: .module) }
 

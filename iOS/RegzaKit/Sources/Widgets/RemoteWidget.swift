@@ -70,7 +70,7 @@ private struct RemoteWidgetView: View {
                 }
                 .frame(height: Self.compactRowHeight)
                 HStack(spacing: 6) {
-                    WidgetKey(key: .terrestrial, title: "地デジ", isCompact: true)
+                    WidgetKey(key: .terrestrial, title: BroadcastBand.terrestrial.label, isCompact: true)
                     WidgetKey(key: .bs, title: "BS", isCompact: true)
                     WidgetKey(key: .cs, title: "CS", isCompact: true)
                 }

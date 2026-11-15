@@ -3,6 +3,7 @@
 <resources>
     <string name="activity_disabled_help" formatted="false">"iPhone の「設定」→「REGZAリモコン」で「ライブアクティビティ」をオンにすると使えます。"</string>
     <string name="activity_help" formatted="false">"アプリを閉じていても、番組名とリモコンのボタンを表示します。"</string>
+    <string name="activity_start_failed">"Live Activity を開始できませんでした: %1$s"</string>
     <string name="activity_title" formatted="false">"ロック画面と Dynamic Island に表示"</string>
     <string name="app_name" formatted="false">"REGZA リモコン"</string>
     <string name="appearance_dark" formatted="false">"ダーク"</string>
@@ -37,20 +38,21 @@
     <string name="guide_setup_title" formatted="false">"番組表を使うには"</string>
     <string name="live_badge" formatted="false">"ライブ"</string>
     <string name="live_retry" formatted="false">"準備できていない配信を止めて、もう一度試す"</string>
+    <string name="live_status_disconnected" formatted="false">"テレビに接続できません"</string>
+    <string name="live_status_external" formatted="false">"外部入力"</string>
+    <string name="live_status_program_ended" formatted="false">"番組が終わりました"</string>
+    <string name="live_status_recording" formatted="false">"録画"</string>
+    <string name="live_status_remote" formatted="false">"リモコン"</string>
+    <string name="live_status_sent_command">"%1$s を送信しました"</string>
+    <string name="live_status_stale" formatted="false">"アプリを開くと最新の状態に更新されます"</string>
+    <string name="live_status_standby" formatted="false">"待機中"</string>
     <string name="live_title" formatted="false">"ライブ視聴"</string>
     <string name="live_update_channel_description" formatted="false">"ロック画面と通知に、テレビで映っている番組とリモコンのボタンを表示します。"</string>
     <string name="live_update_channel_name" formatted="false">"視聴中の番組"</string>
-    <string name="live_update_disconnected" formatted="false">"テレビに接続できません"</string>
-    <string name="live_update_external" formatted="false">"外部入力"</string>
     <string name="live_update_help" formatted="false">"アプリを閉じていても、番組名とリモコンのボタンを表示します。"</string>
     <string name="live_update_notifications_off" formatted="false">"通知がオフになっています。「設定」でこのアプリの通知を許可すると使えます。"</string>
     <string name="live_update_open_settings" formatted="false">"設定を開く"</string>
-    <string name="live_update_program_ended" formatted="false">"番組が終わりました"</string>
     <string name="live_update_promotion_off" formatted="false">"「ライブアップデート」がオフのため、ステータスバーには表示しません。「設定」でこのアプリのライブアップデートをオンにできます。"</string>
-    <string name="live_update_recording" formatted="false">"録画"</string>
-    <string name="live_update_remote" formatted="false">"リモコン"</string>
-    <string name="live_update_sent_command">"%1$s を送信しました"</string>
-    <string name="live_update_standby" formatted="false">"待機中"</string>
     <string name="live_update_title" formatted="false">"ロック画面と通知に表示"</string>
     <string name="network_permission_allow" formatted="false">"許可する"</string>
     <string name="network_permission_help" formatted="false">"同じ Wi-Fi のテレビを操作するため、ローカルネットワークへのアクセスを許可してください。"</string>

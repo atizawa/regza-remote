@@ -3,6 +3,7 @@ import ActivityKit
 import AppIntents
 import Design
 import LiveActivity
+import Localization
 import RegzaPresentation
 import SystemActions
 import SwiftUI
@@ -72,7 +73,7 @@ public struct RegzaLiveActivityWidget: Widget {
     /// コンパクト表示の右側。番組名は数文字で切れて読めないので、短くした局名 (`NHK総合`。収まらなければ `4ch` `BS181`) を出す。
     /// 録画の再生中は「録画」
     private func compactTitle(_ state: RegzaActivityAttributes.ContentState) -> String {
-        if state.isRecordingPlayback { return "録画" }
+        if state.isRecordingPlayback { return AppStrings.liveStatusRecording }
         if let shortChannel = state.shortChannel, !shortChannel.isEmpty { return shortChannel }
         return "REGZA"
     }
@@ -138,28 +139,28 @@ private struct TitleText: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            case .external: Text("外部入力")
-            case .standby: Text("待機中")
-            case .disconnected: Text("テレビに接続できません")
-            case .sentCommand: Text("\(state.lastCommand ?? "") を送信しました")
-            case .remote: Text("リモコン")
+            case .external: Text(AppStrings.liveStatusExternal)
+            case .standby: Text(AppStrings.liveStatusStandby)
+            case .disconnected: Text(AppStrings.liveStatusDisconnected)
+            case .sentCommand: Text(AppStrings.liveStatusSentCommand(state.lastCommand ?? ""))
+            case .remote: Text(AppStrings.liveStatusRemote)
             }
             if !state.isConnected, state.hasInfoHeadline {
                 // 直前の情報を出しているときは、つながっていないことを小さく添える
-                Label("テレビに接続できません", systemImage: "wifi.exclamationmark")
+                Label(AppStrings.liveStatusDisconnected, systemImage: "wifi.exclamationmark")
                     .font(.caption2)
                     // 警告なのでテーマの色ではなく黄色にする
                     .foregroundStyle(.yellow)
             }
             if state.hasProgramEnded(isStale: isStale) {
                 // 次の番組が分からなかったとき
-                Text("番組が終わりました")
+                Text(AppStrings.liveStatusProgramEnded)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             // 次の番組の表示に切り替えたときは、番組が変わる時刻で stale になっているだけなので出さない
             if isStale, state.hasPredictedNextProgram != true {
-                Text("アプリを開くと最新の状態に更新されます")
+                Text(AppStrings.liveStatusStale)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -258,7 +259,7 @@ private struct ActivityButtons: View {
                         case .channelUp: Text("CH＋")
                         case .channelDown: Text("CH−")
                         // 待機中に出す唯一のボタンなので、何をするか文字で添える
-                        case .power: Label("電源を入れる", systemImage: "power")
+                        case .power: Label(AppStrings.remotePowerOn, systemImage: "power")
                         default: Image(systemName: key.systemImage ?? "circle")
                         }
                     }

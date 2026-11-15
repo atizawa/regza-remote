@@ -13,6 +13,9 @@ object AppStrings {
     val activityHelp: String
         @Composable get() = stringResource(R.string.activity_help)
 
+    @Composable
+    fun activityStartFailed(value1: String): String = stringResource(R.string.activity_start_failed, value1)
+
     val activityTitle: String
         @Composable get() = stringResource(R.string.activity_title)
 
@@ -115,6 +118,30 @@ object AppStrings {
     val liveRetry: String
         @Composable get() = stringResource(R.string.live_retry)
 
+    val liveStatusDisconnected: String
+        @Composable get() = stringResource(R.string.live_status_disconnected)
+
+    val liveStatusExternal: String
+        @Composable get() = stringResource(R.string.live_status_external)
+
+    val liveStatusProgramEnded: String
+        @Composable get() = stringResource(R.string.live_status_program_ended)
+
+    val liveStatusRecording: String
+        @Composable get() = stringResource(R.string.live_status_recording)
+
+    val liveStatusRemote: String
+        @Composable get() = stringResource(R.string.live_status_remote)
+
+    @Composable
+    fun liveStatusSentCommand(value1: String): String = stringResource(R.string.live_status_sent_command, value1)
+
+    val liveStatusStale: String
+        @Composable get() = stringResource(R.string.live_status_stale)
+
+    val liveStatusStandby: String
+        @Composable get() = stringResource(R.string.live_status_standby)
+
     val liveTitle: String
         @Composable get() = stringResource(R.string.live_title)
 
@@ -123,12 +150,6 @@ object AppStrings {
 
     val liveUpdateChannelName: String
         @Composable get() = stringResource(R.string.live_update_channel_name)
-
-    val liveUpdateDisconnected: String
-        @Composable get() = stringResource(R.string.live_update_disconnected)
-
-    val liveUpdateExternal: String
-        @Composable get() = stringResource(R.string.live_update_external)
 
     val liveUpdateHelp: String
         @Composable get() = stringResource(R.string.live_update_help)
@@ -139,23 +160,8 @@ object AppStrings {
     val liveUpdateOpenSettings: String
         @Composable get() = stringResource(R.string.live_update_open_settings)
 
-    val liveUpdateProgramEnded: String
-        @Composable get() = stringResource(R.string.live_update_program_ended)
-
     val liveUpdatePromotionOff: String
         @Composable get() = stringResource(R.string.live_update_promotion_off)
-
-    val liveUpdateRecording: String
-        @Composable get() = stringResource(R.string.live_update_recording)
-
-    val liveUpdateRemote: String
-        @Composable get() = stringResource(R.string.live_update_remote)
-
-    @Composable
-    fun liveUpdateSentCommand(value1: String): String = stringResource(R.string.live_update_sent_command, value1)
-
-    val liveUpdateStandby: String
-        @Composable get() = stringResource(R.string.live_update_standby)
 
     val liveUpdateTitle: String
         @Composable get() = stringResource(R.string.live_update_title)

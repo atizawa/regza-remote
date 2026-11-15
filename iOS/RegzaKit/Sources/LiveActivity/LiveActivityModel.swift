@@ -1,5 +1,6 @@
 #if os(iOS)
 import Foundation
+import Localization
 import Observation
 import RegzaPresentation
 
@@ -33,7 +34,7 @@ public final class LiveActivityModel {
                 await LiveActivityController.end()
             }
         } catch {
-            remoteViewModel.send(.report("Live Activity を開始できませんでした: \(error.localizedDescription)"))
+            remoteViewModel.send(.report(AppStrings.activityStartFailed(error.localizedDescription)))
         }
         isOn = LiveActivityController.isActive
         scheduleBackgroundRefresh()

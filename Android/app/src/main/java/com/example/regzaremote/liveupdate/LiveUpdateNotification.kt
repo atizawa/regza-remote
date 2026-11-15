@@ -83,19 +83,19 @@ object LiveUpdateNotification {
     private fun headline(context: Context, status: LiveStatus): String = when (status.headline.discriminator) {
         LiveHeadline.Discriminator.PROGRAM -> status.title
         LiveHeadline.Discriminator.CHANNEL -> status.channelName
-        LiveHeadline.Discriminator.EXTERNAL -> context.getString(R.string.live_update_external)
-        LiveHeadline.Discriminator.STANDBY -> context.getString(R.string.live_update_standby)
-        LiveHeadline.Discriminator.DISCONNECTED -> context.getString(R.string.live_update_disconnected)
-        LiveHeadline.Discriminator.SENTCOMMAND -> context.getString(R.string.live_update_sent_command, status.lastCommand.orElse(""))
-        LiveHeadline.Discriminator.REMOTE -> context.getString(R.string.live_update_remote)
+        LiveHeadline.Discriminator.EXTERNAL -> context.getString(R.string.live_status_external)
+        LiveHeadline.Discriminator.STANDBY -> context.getString(R.string.live_status_standby)
+        LiveHeadline.Discriminator.DISCONNECTED -> context.getString(R.string.live_status_disconnected)
+        LiveHeadline.Discriminator.SENTCOMMAND -> context.getString(R.string.live_status_sent_command, status.lastCommand.orElse(""))
+        LiveHeadline.Discriminator.REMOTE -> context.getString(R.string.live_status_remote)
     }
 
     /** 見出しの下の行。番組が終わったこと・つながらないこと・チャプター・ジャンルの順に、1 つだけ出す */
     private fun detail(context: Context, status: LiveStatus, hasEnded: Boolean): String? = when {
-        hasEnded -> context.getString(R.string.live_update_program_ended)
+        hasEnded -> context.getString(R.string.live_status_program_ended)
 
         // 直前の情報を出しているときは、つながっていないことを添える
-        !status.isConnected && status.isHasInfoHeadline -> context.getString(R.string.live_update_disconnected)
+        !status.isConnected && status.isHasInfoHeadline -> context.getString(R.string.live_status_disconnected)
 
         status.headline.discriminator == LiveHeadline.Discriminator.PROGRAM -> status.chapterName.ifEmpty { null }
 
@@ -107,7 +107,7 @@ object LiveUpdateNotification {
 
     /** ステータスバーのチップに出す短い文字。録画は「録画」、放送は短い局名 */
     private fun chip(context: Context, status: LiveStatus): String? = when {
-        status.isRecordingPlayback -> context.getString(R.string.live_update_recording)
+        status.isRecordingPlayback -> context.getString(R.string.live_status_recording)
         status.shortChannel.isNotEmpty() -> status.shortChannel
         else -> null
     }

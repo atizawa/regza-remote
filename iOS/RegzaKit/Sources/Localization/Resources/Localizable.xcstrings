@@ -25,6 +25,18 @@
         }
       }
     },
+    "activity_start_failed": {
+      "extractionState": "manual",
+      "comment": "activity / start / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Activity を開始できませんでした: %@"
+          }
+        }
+      }
+    },
     "activity_title": {
       "extractionState": "manual",
       "comment": "activity / title",
@@ -433,6 +445,102 @@
         }
       }
     },
+    "live_status_disconnected": {
+      "extractionState": "manual",
+      "comment": "live / status / disconnected",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビに接続できません"
+          }
+        }
+      }
+    },
+    "live_status_external": {
+      "extractionState": "manual",
+      "comment": "live / status / external",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部入力"
+          }
+        }
+      }
+    },
+    "live_status_program_ended": {
+      "extractionState": "manual",
+      "comment": "live / status / program / ended",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組が終わりました"
+          }
+        }
+      }
+    },
+    "live_status_recording": {
+      "extractionState": "manual",
+      "comment": "live / status / recording",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画"
+          }
+        }
+      }
+    },
+    "live_status_remote": {
+      "extractionState": "manual",
+      "comment": "live / status / remote",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモコン"
+          }
+        }
+      }
+    },
+    "live_status_sent_command": {
+      "extractionState": "manual",
+      "comment": "live / status / sent / command",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ を送信しました"
+          }
+        }
+      }
+    },
+    "live_status_stale": {
+      "extractionState": "manual",
+      "comment": "live / status / stale",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリを開くと最新の状態に更新されます"
+          }
+        }
+      }
+    },
+    "live_status_standby": {
+      "extractionState": "manual",
+      "comment": "live / status / standby",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中"
+          }
+        }
+      }
+    },
     "live_title": {
       "extractionState": "manual",
       "comment": "live / title",
@@ -465,30 +573,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "視聴中の番組"
-          }
-        }
-      }
-    },
-    "live_update_disconnected": {
-      "extractionState": "manual",
-      "comment": "live / update / disconnected",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "テレビに接続できません"
-          }
-        }
-      }
-    },
-    "live_update_external": {
-      "extractionState": "manual",
-      "comment": "live / update / external",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "外部入力"
           }
         }
       }
@@ -529,18 +613,6 @@
         }
       }
     },
-    "live_update_program_ended": {
-      "extractionState": "manual",
-      "comment": "live / update / program / ended",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "番組が終わりました"
-          }
-        }
-      }
-    },
     "live_update_promotion_off": {
       "extractionState": "manual",
       "comment": "live / update / promotion / off",
@@ -549,54 +621,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "「ライブアップデート」がオフのため、ステータスバーには表示しません。「設定」でこのアプリのライブアップデートをオンにできます。"
-          }
-        }
-      }
-    },
-    "live_update_recording": {
-      "extractionState": "manual",
-      "comment": "live / update / recording",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "録画"
-          }
-        }
-      }
-    },
-    "live_update_remote": {
-      "extractionState": "manual",
-      "comment": "live / update / remote",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リモコン"
-          }
-        }
-      }
-    },
-    "live_update_sent_command": {
-      "extractionState": "manual",
-      "comment": "live / update / sent / command",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ を送信しました"
-          }
-        }
-      }
-    },
-    "live_update_standby": {
-      "extractionState": "manual",
-      "comment": "live / update / standby",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "待機中"
           }
         }
       }
