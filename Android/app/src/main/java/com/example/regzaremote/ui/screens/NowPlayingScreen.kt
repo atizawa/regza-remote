@@ -49,6 +49,8 @@ import com.example.regzaremote.core.RemoteState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.ui.components.FormSection
+import com.example.regzaremote.ui.components.LiveUpdateToggle
 import com.example.regzaremote.ui.components.Note
 import java.time.Instant
 import java.time.ZoneId
@@ -178,6 +180,7 @@ fun NowPlayingScreen(state: RemoteState, detail: NowPlayingState, send: Send) {
                 }
             }
             if (detail.isCanStartOver) SheetButton(AppStrings.playerProgramFromStart) { send(NowPlayingAction.startOver()) }
+            FormSection { LiveUpdateToggle() }
         }
     }
 }

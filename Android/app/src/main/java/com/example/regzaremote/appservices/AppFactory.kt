@@ -30,7 +30,8 @@ object AppFactory {
                 val app = if (BuildConfig.DEBUG && testServer != null) {
                     RegzaAndroidAppFactory.`init`(httpClient).makeApp(UITestStorage(testServer))
                 } else {
-                    makeApp(applicationContext)
+                    // 通知と同じ窓口を使う
+                    AppContainer.app(applicationContext)
                 }
                 RegzaViewModel(app, createSavedStateHandle())
             }

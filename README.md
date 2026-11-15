@@ -13,6 +13,8 @@ AndroidにもiOSと同じ中・大のリモコンウィジェットがある。�
 
 ウィジェットはJetpack Glanceで描画し、番組取得や定期通信は行わない。`widgets/`のアクションから`AppFactory`で作る`RemoteControlService`を呼び、保存済みの設定と既存のSwift UseCase・Repository・Digest認証・OkHttpでキーだけを送る。画面用の`RegzaAndroidApp`を作らないため、stateの購読やライブ視聴の配信の後片づけは開始しない。配色は共通トークンのリモコン用リソースを使う。
 
+Androidでも、設定の「表示」または再生中の画面の「ロック画面と通知に表示」をオンにすると、iOSのLive Activityと同じ内容（番組名・チャンネル・進み具合・リモコンのボタン）を常駐の通知に出す。Android 16以降はLive Updatesとしてステータスバーのチップ（短い局名、録画中は「録画」）とロック画面の上にも出す。通知のボタンは3つまでなので、放送中はCH−・CH＋・消音を出す（録画は再生操作、待機中は電源）。残り時間（放送）と経過時間（録画）はシステムが進める時計で出し、進捗のバーはアプリが通知を更新したときに進む。通知をスワイプで消すとオフになる。オンにするときに通知の権限を求め、通知やライブアップデートがオフにされていれば設定を開く案内を出す。
+
 画面は「リモコン」（テレビを操作するボタン）と、見るための「番組表」「チャンネル」「録画予約」のタブに分けている。テレビで映っているものは、どのタブでもタブバーの上のミニプレーヤー（`tabViewBottomAccessory`）に出し、押すと番組の詳細（録画ならシーク）を開く。色は REGZA の公式サイトで使われている深い緑（`#00442D`）を基調にしている（`AppTheme`。ライトでは `#006B4F`、ダークでは暗い背景でも見える明るめの `#1D866F` を使う）。ロゴはまねしない。
 
 REGZA だけでもリモコン・Live Activity・Siri・チャンネル一覧と選局・録画予約の一覧・最初から見るが使える。Mirakurun（番組名・番組表・番組表からの予約）と EPGStation（ライブ視聴）は、設定画面の「録画サーバーとの連携」で設定した人だけが使う。番組表のタブは未設定でも消さず（タブを出したり消したりしない HIG に合わせる）、何ができるかと設定のしかたを案内する。連携は、それぞれの設定画面の「連携を解除」でやめられる。アドレスとポートは別々の欄で入れ、ポートが空なら標準のポート（Mirakurun 40772・EPGStation 8888）を使う。保存は `192.168.0.2:40780` のような 1 つの文字列。「探す」と同じサーバーの EPGStation の候補は、標準のポートだけを確かめる。EPGStation は Mirakurun から放送を受け取るので、ライブ視聴は Mirakurun を設定してから設定できるようにし（EPGStation だけでは番組名も出ず、見られない局も一覧に混ざる）、Mirakurun と同じサーバーで EPGStation が動いていれば候補として出す。Mirakurun の連携を解除すると EPGStation の連携も解除する。
@@ -44,7 +46,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   RegzaAndroid/               Android 向けにビルドする Swift のパッケージ（Looper と、swift-java が作る Java のつなぎ）
   ScreenGlue/                 窓口のつなぎを作る道具（screen-glue。State/・Action/ の型を swift-syntax で読む。ホストで動かし、アプリには入らない）
   scripts/                    build-swift.sh（Swift の .so と Java のクラスを作る）・swift-toolchain.sh（mise の Swift を選ぶ）
-  app/                        Kotlin・Compose のアプリ
+  app/                        Kotlin・Compose のアプリ（liveupdate/ にロック画面と通知の表示）
   mise.toml                   共通設定の Swift ツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
 ```
 
@@ -57,6 +59,8 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - OS だけの機能（iOS の Live Activity・ウィジェット・Siri）も、画面と同じく共有の ViewModel の state を読み、Action を送る。共有の部分は「何を出すか」を state に入れるだけで、OS ごとの口（protocol）は持たない
   - iOS は、アプリのプロセスに `AppViewModel` を 1 つだけ置き（`AppContainer`）、画面・Live Activity・ボタン・Siri・閉じている間の更新が同じものを使う。画面のない入口は、操作を送って終わるまで待ち（`sendAndWait`）、state を見て結果を返す
   - Live Activity は `RemoteViewModel.state` の変わり目を見て表示を更新し、番組の終了時刻が変われば起こしてもらう時刻を予約し直す
+  - ロック画面や通知に何を出すか（見出し・番組が終わったあとの次の番組への切り替え・出すボタン）は、共有の `LiveStatus`（`RemoteState.liveStatus`）が決める。iOS の Live Activity と Android の通知は、これを OS ごとの形に描くだけにする
+  - Android は、Swift の窓口（`RegzaAndroidApp`）をプロセスに 1 つだけ置き（`AppContainer`）、画面・通知のボタン・閉じている間の更新が同じものを使う。`LiveUpdateController` が `RemoteState` の変わり目を見て通知を更新し、番組の終了時刻の 30 秒後（放送でなければ 15 分後）に AlarmManager で起こしてもらって取り直す。正確な時刻のアラームは使わない
   - ボタンの App Intent（`RegzaKeyIntent`）は `LiveActivityIntent` なので、ウィジェットの拡張から押してもアプリのプロセスで動く。Siri の App Intent はふつうの `AppIntent` で、拡張にも登録すると拡張のプロセスで動くことがあるので、アプリにだけ登録する
   - 画面と Live Activity が Domain・通信・組み立てを import していないことは `RegzaKitTests` の `LayerTests` が確かめる
 - 依存オブジェクトの引数・プロパティ・組み立て時の変数は、`remoteViewModel`・`guideUseCase`・`guideRepository`・`regzaAPIClient`・`preferencesManager` のように役割を名前に含める。取得した値は `programs`・`channels` など、内容を表す名前にする。

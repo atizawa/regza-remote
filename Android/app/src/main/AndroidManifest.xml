@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Android 17 から、同じ LAN の機器 (テレビ・Mirakurun) への通信には、ユーザーの許可が要る -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <!-- ロック画面と通知に、映っている番組とリモコンのボタンを出す (Android 13 から許可が要る) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16 から、その通知をステータスバーのチップとロック画面の上に出す (Live Updates) -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <!-- ライブ視聴の配信 (EPGStation) は家の LAN の中の http なので、暗号化していない通信を許す -->
     <application
@@ -30,6 +34,10 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/remote_widget_large_info" />
         </receiver>
+        <!-- 通知のボタン・閉じている間の更新・通知を消されたこと (アプリの中からだけ送る) -->
+        <receiver
+            android:name=".liveupdate.LiveUpdateReceiver"
+            android:exported="false" />
         <!-- 回転しても作り直さない (ライブ視聴の再生を途切れさせない) -->
         <activity
             android:name=".MainActivity"

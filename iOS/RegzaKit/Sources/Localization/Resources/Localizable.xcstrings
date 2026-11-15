@@ -445,6 +445,174 @@
         }
       }
     },
+    "live_update_channel_description": {
+      "extractionState": "manual",
+      "comment": "live / update / channel / description",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロック画面と通知に、テレビで映っている番組とリモコンのボタンを表示します。"
+          }
+        }
+      }
+    },
+    "live_update_channel_name": {
+      "extractionState": "manual",
+      "comment": "live / update / channel / name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "視聴中の番組"
+          }
+        }
+      }
+    },
+    "live_update_disconnected": {
+      "extractionState": "manual",
+      "comment": "live / update / disconnected",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テレビに接続できません"
+          }
+        }
+      }
+    },
+    "live_update_external": {
+      "extractionState": "manual",
+      "comment": "live / update / external",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部入力"
+          }
+        }
+      }
+    },
+    "live_update_help": {
+      "extractionState": "manual",
+      "comment": "live / update / help",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリを閉じていても、番組名とリモコンのボタンを表示します。"
+          }
+        }
+      }
+    },
+    "live_update_notifications_off": {
+      "extractionState": "manual",
+      "comment": "live / update / notifications / off",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知がオフになっています。「設定」でこのアプリの通知を許可すると使えます。"
+          }
+        }
+      }
+    },
+    "live_update_open_settings": {
+      "extractionState": "manual",
+      "comment": "live / update / open / settings",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定を開く"
+          }
+        }
+      }
+    },
+    "live_update_program_ended": {
+      "extractionState": "manual",
+      "comment": "live / update / program / ended",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "番組が終わりました"
+          }
+        }
+      }
+    },
+    "live_update_promotion_off": {
+      "extractionState": "manual",
+      "comment": "live / update / promotion / off",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ライブアップデート」がオフのため、ステータスバーには表示しません。「設定」でこのアプリのライブアップデートをオンにできます。"
+          }
+        }
+      }
+    },
+    "live_update_recording": {
+      "extractionState": "manual",
+      "comment": "live / update / recording",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画"
+          }
+        }
+      }
+    },
+    "live_update_remote": {
+      "extractionState": "manual",
+      "comment": "live / update / remote",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモコン"
+          }
+        }
+      }
+    },
+    "live_update_sent_command": {
+      "extractionState": "manual",
+      "comment": "live / update / sent / command",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ を送信しました"
+          }
+        }
+      }
+    },
+    "live_update_standby": {
+      "extractionState": "manual",
+      "comment": "live / update / standby",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中"
+          }
+        }
+      }
+    },
+    "live_update_title": {
+      "extractionState": "manual",
+      "comment": "live / update / title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロック画面と通知に表示"
+          }
+        }
+      }
+    },
     "network_permission_allow": {
       "extractionState": "manual",
       "comment": "network / permission / allow",

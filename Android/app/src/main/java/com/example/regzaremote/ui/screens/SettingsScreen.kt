@@ -66,6 +66,7 @@ import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.FormSection
 import com.example.regzaremote.ui.components.HeaderIconButton
+import com.example.regzaremote.ui.components.LiveUpdateToggle
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RowDivider
 import com.example.regzaremote.ui.components.ScreenHeader
@@ -127,6 +128,8 @@ private fun SettingsTopPage(setup: SettingsState, send: Send) {
         }
         FormSection(AppStrings.commonDisplay) {
             AppearancePicker(setup, send)
+            RowDivider()
+            LiveUpdateToggle()
         }
         FormSection(
             AppStrings.settingsRecordingServers,

@@ -81,6 +81,12 @@ public final class RegzaAndroidApp {
         onMainActor { appViewModel.restore(json) }
     }
 
+    /// リモコンの操作を送り、終わるまで待つ。画面のない入口 (通知のボタンや、閉じている間の更新) が、
+    /// 結果を表示に反映してからプロセスを手放せるようにする
+    public func sendRemoteActionAndWait(_ action: RemoteAction) async {
+        await appViewModel.remoteViewModel.sendAndWait(action)
+    }
+
     /// 操作を、AppViewModel と開いている画面の ViewModel に手前から渡してみて、受け取ったところで止める
     @MainActor func route(_ deliver: (AnyObject) -> Bool) {
         for viewModel in viewModels {

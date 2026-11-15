@@ -118,6 +118,48 @@ object AppStrings {
     val liveTitle: String
         @Composable get() = stringResource(R.string.live_title)
 
+    val liveUpdateChannelDescription: String
+        @Composable get() = stringResource(R.string.live_update_channel_description)
+
+    val liveUpdateChannelName: String
+        @Composable get() = stringResource(R.string.live_update_channel_name)
+
+    val liveUpdateDisconnected: String
+        @Composable get() = stringResource(R.string.live_update_disconnected)
+
+    val liveUpdateExternal: String
+        @Composable get() = stringResource(R.string.live_update_external)
+
+    val liveUpdateHelp: String
+        @Composable get() = stringResource(R.string.live_update_help)
+
+    val liveUpdateNotificationsOff: String
+        @Composable get() = stringResource(R.string.live_update_notifications_off)
+
+    val liveUpdateOpenSettings: String
+        @Composable get() = stringResource(R.string.live_update_open_settings)
+
+    val liveUpdateProgramEnded: String
+        @Composable get() = stringResource(R.string.live_update_program_ended)
+
+    val liveUpdatePromotionOff: String
+        @Composable get() = stringResource(R.string.live_update_promotion_off)
+
+    val liveUpdateRecording: String
+        @Composable get() = stringResource(R.string.live_update_recording)
+
+    val liveUpdateRemote: String
+        @Composable get() = stringResource(R.string.live_update_remote)
+
+    @Composable
+    fun liveUpdateSentCommand(value1: String): String = stringResource(R.string.live_update_sent_command, value1)
+
+    val liveUpdateStandby: String
+        @Composable get() = stringResource(R.string.live_update_standby)
+
+    val liveUpdateTitle: String
+        @Composable get() = stringResource(R.string.live_update_title)
+
     val networkPermissionAllow: String
         @Composable get() = stringResource(R.string.network_permission_allow)
 
