@@ -145,7 +145,11 @@ mise run test-android-runtime
 ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
 ```
 
-AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest・OkHttpTransportTest・ColorAppearanceTest・LocalizationResourceTest・RemoteWidgetTestを確認する。テレビ・Mirakurun・EPGStation への接続は不要。
+AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest・OkHttpTransportTest・ColorAppearanceTest・LocalizationResourceTest・RemoteWidgetTest・LiveUpdateNotificationTestを確認する。テレビ・Mirakurun・EPGStation への接続は不要。
+
+画面を出すテストは、端末のロックを解除して画面を点けたままにしてから実行する。テストの前に `ScreenTestRule` が画面を点け、パスワードなどのないロックは外し、それでもロックされていれば「端末がロックされています」と伝えて落とす（ロックされたままだと Activity が前に出られず、関係のない理由で落ちるため）。Android 17 以降はローカルネットワークへのアクセスもテストの前に許可しておく（許可のダイアログが Activity の上にかぶるため）。`ui-test-junit4` が依存する `espresso-core` 3.5.0 は、新しい Android にない `InputManager.getInstance` を呼んで端末テストが落ちるので、API 23 以上で `getSystemService` を使う 3.7.0 を指定している（Android 17 の実機で確認）。
+
+Gradle の `connectedDebugAndroidTest` は、終わるとアプリを端末から消す。テストは保存先（テレビの接続先など）も書き換えるので、ふだん使っている端末では、登録したテレビの設定がなくなる。
 
 - `swiftLibrariesJniLooperAndFlowCancellation`: APK の .so の読み込み、JNI・Looper を通る state 更新と、Flow を繰り返し終了したあとの待機の解消。
 - `earlyCancellationAndStateChangesReleaseWaits`: 初回受信直後の状態変更とキャンセルが重なっても、Swift の待機が残らない。

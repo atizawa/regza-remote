@@ -30,7 +30,11 @@ import org.junit.runner.RunWith
 /** Compose の購読停止・再開が JNI 越しの Swift 待機に届くことを確かめる。 */
 @RunWith(AndroidJUnit4::class)
 class StateLifecycleTest {
-    @get:Rule
+    // 端末の準備 (ロックの解除と許可) を、画面を出す compose のルールより先に動かす
+    @get:Rule(order = 0)
+    val screen = ScreenTestRule()
+
+    @get:Rule(order = 1)
     val compose = createComposeRule()
 
     @Test

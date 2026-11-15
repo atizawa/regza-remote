@@ -21,7 +21,11 @@ import org.junit.runner.RunWith
 /** 外観変更でAndroid標準リソースを選び直し、Composeの配色へ反映する。 */
 @RunWith(AndroidJUnit4::class)
 class ColorAppearanceTest {
-    @get:Rule
+    // 端末の準備 (ロックの解除と許可) を、画面を出す compose のルールより先に動かす
+    @get:Rule(order = 0)
+    val screen = ScreenTestRule()
+
+    @get:Rule(order = 1)
     val compose = createComposeRule()
 
     @Test

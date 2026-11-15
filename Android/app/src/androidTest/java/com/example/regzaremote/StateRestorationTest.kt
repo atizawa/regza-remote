@@ -37,11 +37,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class StateRestorationTest {
+    @get:Rule
+    val screen = ScreenTestRule()
+
     /** メモリ上の ViewModel を捨て、OS に渡す Bundle だけから新しい Swift の状態を作る。 */
     @Test
     fun savedStateRestoresDraftAndSearchIntoNewViewModel() = runBlocking {
