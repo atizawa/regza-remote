@@ -79,26 +79,18 @@ public struct RegzaLiveActivityWidget: Widget {
 }
 
 extension RegzaActivityAttributes.ContentState {
-    /// 機種によっては放送中の番組名が返らないので、代わりにチャンネル名を見出しにする
-    fileprivate var showsChannelAsTitle: Bool {
-        title.isEmpty && kind == .broadcast && !channelName.isEmpty
-    }
+    /// 番組名・チャンネル名・入力などを見出しに出しているか (つながらないときは直前に取得した情報)
+    fileprivate var hasInfoHeadline: Bool { status.hasInfoHeadline }
 
-    /// 番組名・チャンネル名・入力などを見出しに出せるか (つながらないときは直前に取得した情報)
-    fileprivate var hasInfoHeadline: Bool {
-        !title.isEmpty || showsChannelAsTitle || kind == .external || kind == .standby
-    }
-
-    /// 放送中の番組が終わったか。システムは staleDate (番組の終了時刻) に stale として描き直すので、
+    /// 放送中の番組が終わったのに、次の番組が分からない。システムは staleDate (番組の終了時刻) に stale として描き直すので、
     /// アプリが止まっていてもこの時点で表示が切り替わる
     fileprivate func hasProgramEnded(isStale: Bool) -> Bool {
-        // displayed(isStale:) と同じく、stale になっていれば終了時刻を過ぎている
-        isStale && isConnected && programEnd != nil && hasPredictedNextProgram != true
+        status.hasProgramEnded(isStale: isStale, at: Date())
     }
 
     /// 見出しの上の小さなラベル。見出しと同じチャンネル名を重ねて出さない
     fileprivate func headerName(tvName: String) -> String {
-        channelName.isEmpty || showsChannelAsTitle ? tvName : channelName
+        status.headerName(tvName: tvName)
     }
 }
 
@@ -129,7 +121,8 @@ private struct TitleText: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            if !state.title.isEmpty {
+            switch state.status.headline {
+            case .program:
                 Text(state.title).lineLimit(2)
                 if !state.chapterName.isEmpty {
                     Text(state.chapterName)
@@ -137,7 +130,7 @@ private struct TitleText: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-            } else if state.showsChannelAsTitle {
+            case .channel:
                 Text(state.channelName).lineLimit(1)
                 if let genre = state.genre, !genre.isEmpty {
                     // 番組名が取れない機種では、ジャンルで何の番組かを示す
@@ -145,16 +138,11 @@ private struct TitleText: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            } else if state.kind == .external {
-                Text("外部入力")
-            } else if state.kind == .standby {
-                Text("待機中")
-            } else if !state.isConnected {
-                Text("テレビに接続できません")
-            } else if let lastCommand = state.lastCommand {
-                Text("\(lastCommand) を送信しました")
-            } else {
-                Text("リモコン")
+            case .external: Text("外部入力")
+            case .standby: Text("待機中")
+            case .disconnected: Text("テレビに接続できません")
+            case .sentCommand: Text("\(state.lastCommand ?? "") を送信しました")
+            case .remote: Text("リモコン")
             }
             if !state.isConnected, state.hasInfoHeadline {
                 // 直前の情報を出しているときは、つながっていないことを小さく添える
@@ -258,13 +246,8 @@ private struct ProgressStyleModifier: ViewModifier {
 private struct ActivityButtons: View {
     let state: RegzaActivityAttributes.ContentState
 
-    /// 押しやすいよう数を絞る。待機中は電源だけ、録画は再生操作、放送はチャンネルと音量
-    private var keys: [RegzaKey] {
-        if state.kind == .standby { return [.power] }
-        return state.isRecordingPlayback
-            ? [.skipBackward, state.isAdvancing ? .pause : .play, .skipForward]
-            : [.channelDown, .channelUp, .volumeDown, .volumeUp]
-    }
+    /// 押しやすいよう数を絞る (LiveStatus.keys)
+    private var keys: [RegzaKey] { state.status.keys }
 
     var body: some View {
         HStack(spacing: 8) {

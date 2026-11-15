@@ -21,4 +21,27 @@ public struct RemoteState: Equatable, Sendable {
     public var selectedBand: BroadcastBand?
     /// いま見ている放送の種類 (リモコンの地デジ・BS・CS の印)。チャンネル一覧から分かるときだけ
     public var nowPlayingBand: BroadcastBand?
+
+    /// ロック画面や通知に出し続けるもの
+    public var liveStatus: LiveStatus {
+        LiveStatus(
+            kind: nowPlaying?.kind ?? .unknown,
+            channelName: nowPlaying?.channelName ?? "",
+            shortChannel: nowPlaying?.shortChannel ?? "",
+            title: nowPlaying?.title ?? "",
+            chapterName: nowPlaying?.chapterName ?? "",
+            genre: nowPlaying?.genre ?? "",
+            position: nowPlaying?.position ?? 0,
+            duration: nowPlaying?.duration ?? 0,
+            // つながらない間は録画の再生位置が分からないので止めておく。放送は時刻から進めてよい
+            isAdvancing: (nowPlaying?.isAdvancing ?? false) && (isConnected || nowPlaying?.kind == .broadcast),
+            updatedAt: nowPlaying?.updatedAt ?? Date(),
+            nextProgramStart: nowPlaying?.nextProgramStart,
+            nextProgramDuration: nowPlaying?.nextProgramDuration ?? 0,
+            nextTitle: nowPlaying?.nextTitle ?? "",
+            hasPredictedNextProgram: false,
+            lastCommand: lastCommandLabel,
+            isConnected: isConnected
+        )
+    }
 }
