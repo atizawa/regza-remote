@@ -17,6 +17,7 @@ import com.example.regzaremote.appservices.RegzaViewModel
 import com.example.regzaremote.bridge.appStates
 import com.example.regzaremote.bridge.livePlayerStates
 import com.example.regzaremote.bridge.settingsStates
+import com.example.regzaremote.core.AppAppearance
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.AppearanceTheme
 import com.example.regzaremote.ui.components.LocalNetworkGate
@@ -41,7 +42,7 @@ class MainActivity : ComponentActivity() {
                         val regzaViewModel: RegzaViewModel = viewModel(factory = appViewModelFactory)
                         val app = regzaViewModel.app
                         val state = rememberState(app) { app.appStates() } ?: return@LocalNetworkGate
-                        AppearanceTheme(state.appearance.rawValue) {
+                        AppearanceTheme(state.appearance.isDark) {
                             Surface(modifier = Modifier.fillMaxSize(), color = AppTheme.background) {
                                 // 設定は開いている間だけ state が届く
                                 val settings = rememberState(app) { app.settingsStates() }
@@ -62,3 +63,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+/** 外観の選択を、AppearanceTheme に渡す形にする (null はシステムに合わせる) */
+private val AppAppearance.isDark: Boolean?
+    get() = when (discriminator) {
+        AppAppearance.Discriminator.LIGHT -> false
+        AppAppearance.Discriminator.DARK -> true
+        AppAppearance.Discriminator.SYSTEM -> null
+    }

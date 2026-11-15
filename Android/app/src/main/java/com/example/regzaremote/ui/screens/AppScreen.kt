@@ -82,8 +82,8 @@ fun AppScreen(app: RegzaAndroidApp, state: AppState, send: Send) {
 private fun RowScope.TabItem(tab: AppTab, label: String, icon: @Composable () -> Unit, selected: AppTab, send: Send) {
     NavigationBarItem(
         modifier = Modifier.testTag("tab.${tab.rawValue}"),
-        // Swift の値なので、同じタブかは rawValue で比べる
-        selected = selected.rawValue == tab.rawValue,
+        // Swift の値なので、同じタブかは case (discriminator) で比べる
+        selected = selected.discriminator == tab.discriminator,
         onClick = { send(AppAction.selectTab(tab)) },
         icon = icon,
         label = { Text(label) },

@@ -71,11 +71,16 @@ private fun entryKey(tab: AppTab, route: AppRoute?) = tab.rawValue + "/" + (rout
 @Composable
 private fun TabRoot(app: RegzaAndroidApp, tab: AppTab, remote: RemoteState, send: Send) {
     Box(Modifier.fillMaxSize().background(AppTheme.background)) {
-        when (tab.rawValue) {
-            "guide" -> rememberState(tab.rawValue) { app.guideGridStates() }?.let { GuideGridScreen(it, send) }
-            "channels" -> rememberState(tab.rawValue) { app.channelListStates() }?.let { ChannelListScreen(it, send) }
-            "reservations" -> rememberState(tab.rawValue) { app.reservationListStates() }?.let { ReservationListScreen(it, send) }
-            else -> RemoteScreen(remote, send)
+        when (tab.discriminator) {
+            AppTab.Discriminator.GUIDE -> rememberState(tab.rawValue) { app.guideGridStates() }?.let { GuideGridScreen(it, send) }
+
+            AppTab.Discriminator.CHANNELS -> rememberState(tab.rawValue) { app.channelListStates() }?.let { ChannelListScreen(it, send) }
+
+            AppTab.Discriminator.RESERVATIONS -> rememberState(tab.rawValue) {
+                app.reservationListStates()
+            }?.let { ReservationListScreen(it, send) }
+
+            AppTab.Discriminator.REMOTE -> RemoteScreen(remote, send)
         }
     }
 }

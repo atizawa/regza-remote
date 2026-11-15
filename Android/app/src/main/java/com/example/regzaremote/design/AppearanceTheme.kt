@@ -15,15 +15,18 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import com.example.regzaremote.R
 
-/** 選択した外観で標準リソース・Material・システムバーの配色をそろえる。 */
+/**
+ * 選択した外観で標準リソース・Material・システムバーの配色をそろえる。
+ * dark が null ならシステムに合わせる (design は Swift の型を読み込まないので、呼び出し側が外観の選択から決めて渡す)
+ */
 @Composable
-fun AppearanceTheme(appearance: String, content: @Composable () -> Unit) {
+fun AppearanceTheme(dark: Boolean?, content: @Composable () -> Unit) {
     val base = LocalContext.current
     val original = LocalConfiguration.current
-    val mode = when (appearance) {
-        "light" -> Configuration.UI_MODE_NIGHT_NO
-        "dark" -> Configuration.UI_MODE_NIGHT_YES
-        else -> original.uiMode and Configuration.UI_MODE_NIGHT_MASK
+    val mode = when (dark) {
+        false -> Configuration.UI_MODE_NIGHT_NO
+        true -> Configuration.UI_MODE_NIGHT_YES
+        null -> original.uiMode and Configuration.UI_MODE_NIGHT_MASK
     }
     val configuration = Configuration(original).apply {
         uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or mode
@@ -32,9 +35,9 @@ fun AppearanceTheme(appearance: String, content: @Composable () -> Unit) {
         ContextThemeWrapper(base, R.style.Theme_RegzaRemote).apply { applyOverrideConfiguration(configuration) }
     }
     val activity = LocalActivity.current
-    val dark = mode == Configuration.UI_MODE_NIGHT_YES
-    DisposableEffect(activity, dark) {
-        val style = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT) { dark }
+    val isDark = mode == Configuration.UI_MODE_NIGHT_YES
+    DisposableEffect(activity, isDark) {
+        val style = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT) { isDark }
         (activity as? androidx.activity.ComponentActivity)?.enableEdgeToEdge(style, style)
         onDispose { }
     }

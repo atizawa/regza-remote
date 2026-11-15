@@ -81,11 +81,11 @@ import com.example.regzaremote.ui.preview.SamplePreview
  */
 @Composable
 fun SettingsScreen(setup: SettingsState, send: Send) {
-    when (setup.path.lastOrNull()?.rawValue) {
-        "tv" -> TVSettingsPage(setup, send)
-        "guide" -> ServerSettingsPage(guidePage, setup.servers.guide, setup, send)
-        "stream" -> ServerSettingsPage(streamPage, setup.servers.stream, setup, send)
-        else -> SettingsTopPage(setup, send)
+    when (setup.path.lastOrNull()?.discriminator) {
+        SettingsPage.Discriminator.TV -> TVSettingsPage(setup, send)
+        SettingsPage.Discriminator.GUIDE -> ServerSettingsPage(guidePage, setup.servers.guide, setup, send)
+        SettingsPage.Discriminator.STREAM -> ServerSettingsPage(streamPage, setup.servers.stream, setup, send)
+        null -> SettingsTopPage(setup, send)
     }
 }
 
@@ -153,23 +153,23 @@ private fun AppearancePicker(setup: SettingsState, send: Send) {
     val choices = remember { listOf(AppAppearance.system(), AppAppearance.light(), AppAppearance.dark()) }
 
     @Composable
-    fun label(value: String): String = when (value) {
-        "light" -> AppStrings.appearanceLight
-        "dark" -> AppStrings.appearanceDark
-        else -> AppStrings.appearanceSystem
+    fun label(value: AppAppearance): String = when (value.discriminator) {
+        AppAppearance.Discriminator.LIGHT -> AppStrings.appearanceLight
+        AppAppearance.Discriminator.DARK -> AppStrings.appearanceDark
+        AppAppearance.Discriminator.SYSTEM -> AppStrings.appearanceSystem
     }
     Box(Modifier.testTag("settings.appearance")) {
-        NavigationRow(AppStrings.appearanceTitle, label(setup.appearance.rawValue)) { expanded = true }
+        NavigationRow(AppStrings.appearanceTitle, label(setup.appearance)) { expanded = true }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             choices.forEach { appearance ->
                 DropdownMenuItem(
-                    text = { Text(label(appearance.rawValue)) },
+                    text = { Text(label(appearance)) },
                     onClick = {
                         send(SettingsAction.setAppearance(appearance))
                         expanded = false
                     },
                     trailingIcon = {
-                        if (setup.appearance.rawValue == appearance.rawValue) Icon(Icons.Filled.Check, contentDescription = null)
+                        if (setup.appearance.discriminator == appearance.discriminator) Icon(Icons.Filled.Check, contentDescription = null)
                     },
                 )
             }

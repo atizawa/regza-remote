@@ -82,7 +82,7 @@ class StateRestorationTest {
             assertNotSame(original.app, restored.app)
             awaitDraft(restored, "192.0.2.77")
             assertEquals("復元する検索", restored.app.guideSearchState(Optional.empty()).await().get().text)
-            assertEquals("guide", restored.app.appState(Optional.empty()).await().get().tab.rawValue)
+            assertEquals(AppTab.Discriminator.GUIDE, restored.app.appState(Optional.empty()).await().get().tab.discriminator)
             val settings = restored.app.settingsState(Optional.empty()).await().get()
             assertEquals(savedPassword, settings.tv.password)
             assertFalse(settings.tv.isPairing)

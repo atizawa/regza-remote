@@ -42,6 +42,7 @@ import com.example.regzaremote.bridge.Send
 import com.example.regzaremote.bridge.guideGridStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
+import com.example.regzaremote.core.GuideDayKind
 import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.GuideGridState
 import com.example.regzaremote.core.ProgramItem
@@ -103,10 +104,10 @@ private fun DayPicker(guide: GuideGridState, send: Send) {
     ) {
         guide.days.forEachIndexed { index, day ->
             val isSelected = index.toLong() == guide.selectedDayIndex
-            val color = when (day.kind.rawValue) {
-                "saturday" -> AppTheme.blue
-                "sunday" -> AppTheme.red
-                else -> MaterialTheme.colorScheme.onSurface
+            val color = when (day.kind.discriminator) {
+                GuideDayKind.Discriminator.SATURDAY -> AppTheme.blue
+                GuideDayKind.Discriminator.SUNDAY -> AppTheme.red
+                GuideDayKind.Discriminator.WEEKDAY -> MaterialTheme.colorScheme.onSurface
             }
             Text(
                 day.label,

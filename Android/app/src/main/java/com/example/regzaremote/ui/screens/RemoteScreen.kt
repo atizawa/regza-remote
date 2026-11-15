@@ -62,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
 import com.example.regzaremote.bridge.remoteStates
 import com.example.regzaremote.core.AppAction
+import com.example.regzaremote.core.BroadcastBand
+import com.example.regzaremote.core.NowPlayingKind
 import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
@@ -87,7 +89,7 @@ import com.example.regzaremote.ui.preview.SamplePreview
 fun RemoteScreen(state: RemoteState, sendAction: Send) {
     val nowPlaying = state.nowPlaying.orElse(null)
     val press: (RegzaKey) -> Unit = { sendAction(RemoteAction.press(it)) }
-    val band = state.nowPlayingBand.orElse(null)?.rawValue
+    val band = state.nowPlayingBand.orElse(null)?.discriminator
     var isShowingMore by rememberSaveable { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(RemoteBody.background)) {
@@ -116,8 +118,12 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
             // 地デジ・BS・CS と 1〜12。テレビのリモコンと同じ 3 列。いま見ている放送の種類は緑にする
             Column(verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
                 KeyRow {
-                    listOf(Keys.terrestrial to "terrestrial", Keys.bs to "bs", Keys.cs to "cs").forEach { (key, name) ->
-                        KeyButton(key, press, Modifier.weight(1f), size = ButtonSize.Compact, isSelected = band == name)
+                    listOf(
+                        Keys.terrestrial to BroadcastBand.Discriminator.TERRESTRIAL,
+                        Keys.bs to BroadcastBand.Discriminator.BS,
+                        Keys.cs to BroadcastBand.Discriminator.CS,
+                    ).forEach { (key, keyBand) ->
+                        KeyButton(key, press, Modifier.weight(1f), size = ButtonSize.Compact, isSelected = band == keyBand)
                     }
                 }
                 Keys.numbers.chunked(3).forEach { row ->
@@ -321,7 +327,8 @@ private fun KeyButton(
     }
 }
 
-private fun isBandKey(key: RegzaKey) = key.rawValue in setOf(Keys.terrestrial.rawValue, Keys.bs.rawValue, Keys.cs.rawValue)
+private fun isBandKey(key: RegzaKey) =
+    key.discriminator in setOf(RegzaKey.Discriminator.TERRESTRIAL, RegzaKey.Discriminator.BS, RegzaKey.Discriminator.CS)
 
 /** 物のボタンらしく、押すと少し縮んで明るくなる面 */
 @Composable
@@ -494,11 +501,11 @@ private object Keys {
 }
 
 /** ミニプレーヤーの右端のボタンに使うキー: 録画は再生/一時停止、放送は消音、待機中は電源 */
-fun miniPlayerKey(kind: String, isAdvancing: Boolean): RegzaKey? = when (kind) {
-    "recorded" -> if (isAdvancing) Keys.pause else Keys.play
-    "broadcast" -> Keys.mute
-    "standby" -> Keys.power
-    else -> null
+fun miniPlayerKey(kind: NowPlayingKind, isAdvancing: Boolean): RegzaKey? = when (kind.discriminator) {
+    NowPlayingKind.Discriminator.RECORDED -> if (isAdvancing) Keys.pause else Keys.play
+    NowPlayingKind.Discriminator.BROADCAST -> Keys.mute
+    NowPlayingKind.Discriminator.STANDBY -> Keys.power
+    NowPlayingKind.Discriminator.EXTERNAL, NowPlayingKind.Discriminator.UNKNOWN -> null
 }
 
 @Preview(name = "リモコン")

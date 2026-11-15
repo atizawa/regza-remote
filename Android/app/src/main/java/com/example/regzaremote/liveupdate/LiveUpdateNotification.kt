@@ -11,6 +11,7 @@ import android.os.Build
 import com.example.regzaremote.MainActivity
 import com.example.regzaremote.R
 import com.example.regzaremote.core.Date
+import com.example.regzaremote.core.LiveHeadline
 import com.example.regzaremote.core.LiveStatus
 import com.example.regzaremote.core.RegzaKey
 
@@ -79,14 +80,14 @@ object LiveUpdateNotification {
         return builder.build()
     }
 
-    private fun headline(context: Context, status: LiveStatus): String = when (status.headline.rawValue) {
-        "program" -> status.title
-        "channel" -> status.channelName
-        "external" -> context.getString(R.string.live_update_external)
-        "standby" -> context.getString(R.string.live_update_standby)
-        "disconnected" -> context.getString(R.string.live_update_disconnected)
-        "sentCommand" -> context.getString(R.string.live_update_sent_command, status.lastCommand.orElse(""))
-        else -> context.getString(R.string.live_update_remote)
+    private fun headline(context: Context, status: LiveStatus): String = when (status.headline.discriminator) {
+        LiveHeadline.Discriminator.PROGRAM -> status.title
+        LiveHeadline.Discriminator.CHANNEL -> status.channelName
+        LiveHeadline.Discriminator.EXTERNAL -> context.getString(R.string.live_update_external)
+        LiveHeadline.Discriminator.STANDBY -> context.getString(R.string.live_update_standby)
+        LiveHeadline.Discriminator.DISCONNECTED -> context.getString(R.string.live_update_disconnected)
+        LiveHeadline.Discriminator.SENTCOMMAND -> context.getString(R.string.live_update_sent_command, status.lastCommand.orElse(""))
+        LiveHeadline.Discriminator.REMOTE -> context.getString(R.string.live_update_remote)
     }
 
     /** 見出しの下の行。番組が終わったこと・つながらないこと・チャプター・ジャンルの順に、1 つだけ出す */
@@ -96,10 +97,10 @@ object LiveUpdateNotification {
         // 直前の情報を出しているときは、つながっていないことを添える
         !status.isConnected && status.isHasInfoHeadline -> context.getString(R.string.live_update_disconnected)
 
-        status.headline.rawValue == "program" -> status.chapterName.ifEmpty { null }
+        status.headline.discriminator == LiveHeadline.Discriminator.PROGRAM -> status.chapterName.ifEmpty { null }
 
         // 番組名が取れない機種では、ジャンルで何の番組かを示す
-        status.headline.rawValue == "channel" -> status.genre.ifEmpty { null }
+        status.headline.discriminator == LiveHeadline.Discriminator.CHANNEL -> status.genre.ifEmpty { null }
 
         else -> null
     }
@@ -128,18 +129,18 @@ object LiveUpdateNotification {
 
     private fun action(context: Context, key: RegzaKey): Notification.Action {
         // 待機中に出す唯一のボタンなので、何をするか文字で添える
-        val label = if (key.rawValue == "power") context.getString(R.string.remote_power_on) else key.label
+        val label = if (key.discriminator == RegzaKey.Discriminator.POWER) context.getString(R.string.remote_power_on) else key.label
         return Notification.Action.Builder(Icon.createWithResource(context, icon(key)), label, LiveUpdateReceiver.press(context, key))
             .build()
     }
 
-    private fun icon(key: RegzaKey): Int = when (key.rawValue) {
-        "power" -> R.drawable.widget_key_power
-        "mute" -> R.drawable.widget_key_mute
-        "play" -> R.drawable.widget_key_play
-        "pause" -> R.drawable.widget_key_pause
-        "skipBackward" -> R.drawable.widget_key_replay
-        "skipForward" -> R.drawable.widget_key_forward
+    private fun icon(key: RegzaKey): Int = when (key.discriminator) {
+        RegzaKey.Discriminator.POWER -> R.drawable.widget_key_power
+        RegzaKey.Discriminator.MUTE -> R.drawable.widget_key_mute
+        RegzaKey.Discriminator.PLAY -> R.drawable.widget_key_play
+        RegzaKey.Discriminator.PAUSE -> R.drawable.widget_key_pause
+        RegzaKey.Discriminator.SKIPBACKWARD -> R.drawable.widget_key_replay
+        RegzaKey.Discriminator.SKIPFORWARD -> R.drawable.widget_key_forward
         else -> R.drawable.ic_live_update
     }
 

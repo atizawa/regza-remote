@@ -43,7 +43,9 @@ import com.example.regzaremote.bridge.Send
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.NowPlayingAction
 import com.example.regzaremote.core.NowPlayingItem
+import com.example.regzaremote.core.NowPlayingKind
 import com.example.regzaremote.core.NowPlayingState
+import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
 import com.example.regzaremote.design.AppTheme
@@ -72,7 +74,7 @@ fun NowPlayingBar(state: RemoteState, send: Send, modifier: Modifier = Modifier)
         else -> nowPlaying?.headlineText ?: AppStrings.remoteConnecting
     }
     val progress = if (nowPlaying != null && nowPlaying.isHasTimeline && !hasError) nowPlaying.progress.toFloat() else null
-    val key = if (nowPlaying != null && !hasError) miniPlayerKey(nowPlaying.kind.rawValue, nowPlaying.isAdvancing) else null
+    val key = if (nowPlaying != null && !hasError) miniPlayerKey(nowPlaying.kind, nowPlaying.isAdvancing) else null
 
     Row(
         modifier
@@ -108,8 +110,9 @@ fun NowPlayingBar(state: RemoteState, send: Send, modifier: Modifier = Modifier)
             )
         }
         if (key != null) {
+            val label = if (key.discriminator == RegzaKey.Discriminator.POWER) AppStrings.remotePowerOn else key.label
             TextButton(onClick = { send(RemoteAction.press(key)) }) {
-                Text(if (key.rawValue == "power") AppStrings.remotePowerOn else key.label, fontWeight = FontWeight.SemiBold)
+                Text(label, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -215,8 +218,8 @@ private fun NowPlayingCard(state: RemoteState, send: Send) {
             state.isSearchingTV -> Status(AppStrings.remoteSearching)
             error != null -> Status(error, isWarning = true)
             nowPlaying == null -> Status(AppStrings.remoteConnecting)
-            nowPlaying.kind.rawValue == "recorded" -> Playback(nowPlaying, send)
-            nowPlaying.kind.rawValue == "broadcast" -> Broadcast(nowPlaying)
+            nowPlaying.kind.discriminator == NowPlayingKind.Discriminator.RECORDED -> Playback(nowPlaying, send)
+            nowPlaying.kind.discriminator == NowPlayingKind.Discriminator.BROADCAST -> Broadcast(nowPlaying)
             else -> Status(nowPlaying.statusText.orElse(""))
         }
     }

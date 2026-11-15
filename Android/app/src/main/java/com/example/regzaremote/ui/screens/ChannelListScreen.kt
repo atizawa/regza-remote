@@ -214,8 +214,8 @@ fun BandPicker(bands: Array<BroadcastBand>, band: BroadcastBand?, send: Send) {
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = DesignDimensions.spacingOuter, vertical = 8.dp)) {
         bands.forEachIndexed { index, item ->
             SegmentedButton(
-                // Swift の値なので、同じ種類かは rawValue で比べる
-                selected = item.rawValue == band?.rawValue,
+                // Swift の値なので、同じ種類かは case (discriminator) で比べる
+                selected = item.discriminator == band?.discriminator,
                 onClick = { send(RemoteAction.selectBand(java.util.Optional.of(item))) },
                 shape = SegmentedButtonDefaults.itemShape(index, bands.size),
                 // iOS の切り替えと同じく、チェックの印は付けない

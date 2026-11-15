@@ -53,7 +53,8 @@ class ColorAppearanceTest {
     @Test
     fun selectedAppearanceOverridesSystemAndSystemChoiceResumesFollowingIt() {
         val systemDark = mutableStateOf(true)
-        val appearance = mutableStateOf("light")
+        // AppearanceTheme の dark: false はライト、true はダーク、null はシステムに合わせる
+        val appearance = mutableStateOf<Boolean?>(false)
         compose.setContent {
             val configuration = Configuration(LocalConfiguration.current).apply {
                 uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
@@ -69,11 +70,11 @@ class ColorAppearanceTest {
             }
         }
         compose.onNodeWithText("fff2f2f7, fff2f2f7").assertExists()
-        compose.runOnIdle { appearance.value = "dark" }
+        compose.runOnIdle { appearance.value = true }
         compose.onNodeWithText("ff000000, ff000000").assertExists()
         compose.runOnIdle { systemDark.value = false }
         compose.onNodeWithText("ff000000, ff000000").assertExists()
-        compose.runOnIdle { appearance.value = "system" }
+        compose.runOnIdle { appearance.value = null }
         compose.onNodeWithText("fff2f2f7, fff2f2f7").assertExists()
         compose.runOnIdle { systemDark.value = true }
         compose.onNodeWithText("ff000000, ff000000").assertExists()

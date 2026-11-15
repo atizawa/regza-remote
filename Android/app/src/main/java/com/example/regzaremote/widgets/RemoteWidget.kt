@@ -102,7 +102,7 @@ private fun RemoteWidgetBody(large: Boolean, modifier: GlanceModifier) {
                 for (row in 0..3) {
                     if (row > 0) Spacer(GlanceModifier.height((6 * scale).dp))
                     KeyRow(
-                        (1..3).map { column -> RegzaKey.`init`("num${row * 3 + column}").get() },
+                        numberKeys.subList(row * 3, row * 3 + 3),
                         GlanceModifier.defaultWeight(),
                         numbers = true,
                     )
@@ -159,29 +159,30 @@ private fun WidgetKey(
 ) {
     val scale = LocalWidgetScale.current
     val name = key.rawValue
+    val kind = key.discriminator
     val background = when {
-        name == "power" -> if (compact) R.drawable.widget_power_compact else R.drawable.widget_power_key
+        kind == RegzaKey.Discriminator.POWER -> if (compact) R.drawable.widget_power_compact else R.drawable.widget_power_key
         onBand -> R.drawable.widget_black_key
         compact -> R.drawable.widget_gray_compact
         else -> R.drawable.widget_gray_key
     }
-    val foreground = ColorProvider(if (name == "power" || onBand) android.R.color.white else android.R.color.black)
+    val foreground = ColorProvider(if (kind == RegzaKey.Discriminator.POWER || onBand) android.R.color.white else android.R.color.black)
     Box(
         modifier.fillMaxHeight().background(ImageProvider(background))
             .clickable(actionRunCallback<SendRemoteKeyAction>(actionParametersOf(SendRemoteKeyAction.KEY to name)))
             .semantics { contentDescription = key.label },
         contentAlignment = Alignment.Center,
     ) {
-        val icon = when (name) {
-            "power" -> R.drawable.widget_key_power
-            "input" -> R.drawable.widget_key_input
-            "mute" -> R.drawable.widget_key_mute
-            "volumeDown" -> R.drawable.widget_key_volume_down
-            "volumeUp" -> R.drawable.widget_key_volume_up
-            "skipBackward" -> R.drawable.widget_key_replay
-            "skipForward" -> R.drawable.widget_key_forward
-            "play" -> R.drawable.widget_key_play
-            "pause" -> R.drawable.widget_key_pause
+        val icon = when (kind) {
+            RegzaKey.Discriminator.POWER -> R.drawable.widget_key_power
+            RegzaKey.Discriminator.INPUT -> R.drawable.widget_key_input
+            RegzaKey.Discriminator.MUTE -> R.drawable.widget_key_mute
+            RegzaKey.Discriminator.VOLUMEDOWN -> R.drawable.widget_key_volume_down
+            RegzaKey.Discriminator.VOLUMEUP -> R.drawable.widget_key_volume_up
+            RegzaKey.Discriminator.SKIPBACKWARD -> R.drawable.widget_key_replay
+            RegzaKey.Discriminator.SKIPFORWARD -> R.drawable.widget_key_forward
+            RegzaKey.Discriminator.PLAY -> R.drawable.widget_key_play
+            RegzaKey.Discriminator.PAUSE -> R.drawable.widget_key_pause
             else -> null
         }
         if (icon != null) {
@@ -192,23 +193,17 @@ private fun WidgetKey(
                     modifier = GlanceModifier.fillMaxSize(),
                     colorFilter = ColorFilter.tint(foreground),
                 )
-                if (name == "skipBackward" || name == "skipForward") {
+                if (kind == RegzaKey.Discriminator.SKIPBACKWARD || kind == RegzaKey.Discriminator.SKIPFORWARD) {
                     Text(
-                        if (name ==
-                            "skipBackward"
-                        ) {
-                            "10"
-                        } else {
-                            "30"
-                        },
+                        if (kind == RegzaKey.Discriminator.SKIPBACKWARD) "10" else "30",
                         style = TextStyle(color = foreground, fontSize = (8 * scale).sp, fontWeight = FontWeight.Bold),
                     )
                 }
             }
         } else {
-            val label = when (name) {
-                "channelDown" -> "CH−"
-                "channelUp" -> "CH＋"
+            val label = when (kind) {
+                RegzaKey.Discriminator.CHANNELDOWN -> "CH−"
+                RegzaKey.Discriminator.CHANNELUP -> "CH＋"
                 else -> key.label
             }
             Text(
@@ -233,3 +228,9 @@ private fun WidgetKey(
         }
     }
 }
+
+/** 大のリモコンの 1〜12 (3 列で 4 段) */
+private val numberKeys = listOf(
+    RegzaKey.num1(), RegzaKey.num2(), RegzaKey.num3(), RegzaKey.num4(), RegzaKey.num5(), RegzaKey.num6(),
+    RegzaKey.num7(), RegzaKey.num8(), RegzaKey.num9(), RegzaKey.num10(), RegzaKey.num11(), RegzaKey.num12(),
+)
