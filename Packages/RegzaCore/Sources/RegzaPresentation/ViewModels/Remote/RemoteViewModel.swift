@@ -36,7 +36,6 @@ public final class RemoteViewModel {
             lastCommandLabel: lastCommand?.label,
             tapCount: tapCount,
             isSearchingTV: isSearchingTV,
-            isSampleMode: tvUseCase.isSample,
             selectedBand: selectedBand,
             nowPlayingBand: nowPlayingChannel?.band
         )
@@ -80,7 +79,6 @@ public final class RemoteViewModel {
 
     private func press(_ key: RegzaKey) {
         tapCount += 1
-        guard !tvUseCase.isSample else { return }
         run {
             do {
                 try await self.tvUseCase.send(key)
@@ -110,7 +108,6 @@ public final class RemoteViewModel {
 
     /// チャンネル一覧を取得する。チャンネルの登録はあまり変わらないので、取得済みなら使い回す
     func loadChannels(force: Bool = false) async throws(RegzaError) {
-        guard !tvUseCase.isSample else { return }
         try await tvUseCase.loadChannels(force: force)
     }
 
@@ -142,7 +139,7 @@ public final class RemoteViewModel {
     // MARK: - 状態の定期取得
 
     private func startPolling(interval: Duration = .seconds(2)) {
-        guard pollingTask == nil, tvUseCase.connection.isConfigured, !tvUseCase.isSample else { return }
+        guard pollingTask == nil, tvUseCase.connection.isConfigured else { return }
         pollingTask = Task {
             while !Task.isCancelled {
                 await refresh()
@@ -218,7 +215,6 @@ public final class RemoteViewModel {
     package var connection: ConnectionItem { tvUseCase.connection }
     /// テレビに登録されているチャンネル。取得前は空
     package var channels: [ChannelItem] { tvUseCase.channels }
-    var isSampleMode: Bool { tvUseCase.isSample }
 
     /// いま映っている放送のチャンネル
     package var nowPlayingChannel: ChannelItem? {

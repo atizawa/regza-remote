@@ -919,11 +919,10 @@ public final class StreamUseCaseProtocolMock: StreamUseCaseProtocol {
 
 public final class TVRepositoryProtocolMock: TVRepositoryProtocol {
     public init() { }
-    public init(connection: ConnectionData, channels: [ChannelData] = [ChannelData](), timeshiftSettings: TimeshiftSettingsData? = nil, isSample: Bool = false) {
+    public init(connection: ConnectionData, channels: [ChannelData] = [ChannelData](), timeshiftSettings: TimeshiftSettingsData? = nil) {
         self._connection = connection
         self.channels = channels
         self.timeshiftSettings = timeshiftSettings
-        self.isSample = isSample
     }
 
 
@@ -940,8 +939,6 @@ public final class TVRepositoryProtocolMock: TVRepositoryProtocol {
 
     public var timeshiftSettings: TimeshiftSettingsData? = nil
 
-
-    public var isSample: Bool = false
 
     public private(set) var loadChannelsCallCount = 0
     public var loadChannelsArgValues: [Bool] = []
@@ -1068,10 +1065,9 @@ public final class TVRepositoryProtocolMock: TVRepositoryProtocol {
 
 public final class TVUseCaseProtocolMock: TVUseCaseProtocol {
     public init() { }
-    public init(connection: ConnectionItem, channels: [ChannelItem] = [ChannelItem](), isSample: Bool = false) {
+    public init(connection: ConnectionItem, channels: [ChannelItem] = [ChannelItem]()) {
         self._connection = connection
         self.channels = channels
-        self.isSample = isSample
     }
 
 
@@ -1085,8 +1081,6 @@ public final class TVUseCaseProtocolMock: TVUseCaseProtocol {
 
     public var channels: [ChannelItem] = [ChannelItem]()
 
-
-    public var isSample: Bool = false
 
     public private(set) var loadChannelsCallCount = 0
     public var loadChannelsArgValues: [Bool] = []

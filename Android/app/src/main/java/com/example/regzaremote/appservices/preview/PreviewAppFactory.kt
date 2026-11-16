@@ -16,7 +16,7 @@ import org.swift.swiftkit.core.SwiftLibraries
 object PreviewAppFactory {
     fun makeApp(inEditor: Boolean, setUp: (Send) -> Unit): Pair<RegzaAndroidApp, Send> {
         if (inEditor) HostSwiftRuntime.loadLibraries { HostSwiftLibraries.load() }
-        val app = RegzaAndroidApp.sample(PreviewStorage(), "").get()
+        val app = RegzaAndroidApp.fake(PreviewStorage(), "").get()
         val send = AppSend(app)
         setUp(send)
         if (inEditor) app.contractWaitUntilIdle().get()

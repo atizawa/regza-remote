@@ -10,9 +10,6 @@ public protocol TVRepositoryProtocol: AnyObject {
     var channels: [ChannelData] { get }
     /// タイムシフトマシンの設定 (読み込んだもの)。録画している局と時間帯で「最初から見る」を出すか決める
     var timeshiftSettings: TimeshiftSettingsData? { get }
-    /// 見本 (テレビにつながない)
-    var isSample: Bool { get }
-
     /// チャンネル一覧を読む。`force` でなければ、読み込み済みのものを使い回す
     func loadChannels(force: Bool) async throws(RegzaError)
     func loadTimeshiftSettings() async

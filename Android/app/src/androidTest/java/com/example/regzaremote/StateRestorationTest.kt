@@ -143,7 +143,7 @@ class StateRestorationTest {
         fun viewModel(): RegzaViewModel {
             val factory = viewModelFactory {
                 initializer {
-                    RegzaViewModel(RegzaAndroidApp.sample(MemoryStorage(), "").get(), createSavedStateHandle())
+                    RegzaViewModel(RegzaAndroidApp.fake(MemoryStorage(), "").get(), createSavedStateHandle())
                 }
             }
             val extras = MutableCreationExtras().apply {

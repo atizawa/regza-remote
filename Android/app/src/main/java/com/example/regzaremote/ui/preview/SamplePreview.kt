@@ -18,8 +18,8 @@ import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.design.AppTheme
 
 /**
- * 画面のプレビューの準備。プレビューそのものは、それぞれの画面のファイルの末尾に置く。iOS の開発用の見本・振る舞いのテストと同じ見本の返事 (RegzaSample の SampleTransport) で、
- * 共有の ViewModel を組み立てて、本物の state を画面に渡す (テレビにも録画サーバーにもつながない)。
+ * 画面のプレビューの準備。プレビューそのものは、それぞれの画面のファイルの末尾に置く。振る舞いのテストと同じ偽物のテレビ・録画サーバー
+ * (RegzaFakeServers) で共有の ViewModel を組み立てて、本物の state を画面に渡す (本物にはつながない)。
  *
  * state は Swift の値なので、Swift のライブラリがないと作れない。
  * - 「Run Preview」(エミュレーター): アプリと同じ Android 向けの .so を使う
@@ -52,8 +52,8 @@ fun SamplePreview(setUp: (Send) -> Unit = {}, content: @Composable (RegzaAndroid
     }
 }
 
-/** 見本のチャンネル (SampleTransport のチャンネル一覧の 1 局目) */
+/** 偽物のチャンネル一覧の 1 局目 */
 const val SAMPLE_CHANNEL = "JP-G00000001"
 
-/** 見本の番組 (SampleTransport の番組表の、1 局目の番組) */
-const val SAMPLE_PROGRAM = 1001L
+/** 偽物の番組表の、1 局目の放送中の番組 */
+const val SAMPLE_PROGRAM = 100002L

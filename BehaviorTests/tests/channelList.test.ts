@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { describeOnBothPlatforms } from "../sdk/app";
 
 describeOnBothPlatforms("チャンネル一覧", (app) => {
-  test("チャンネルのタブを開くと、見本の局が並ぶ", async () => {
+  test("チャンネルのタブを開くと、偽物の局が並ぶ", async () => {
     await app().do("app", "selectTab", { tab: "channels" }, (node) => node.state.tab === "channels");
     const list = await app().do("app/channelList", "appear", {}, (node) => node.state.rows.length > 0);
     expect(list!.state.rows.map((row: any) => row.name)).toEqual(["テスト局１", "テスト局２"]);
@@ -34,7 +34,7 @@ describeOnBothPlatforms("チャンネル一覧", (app) => {
     await app().do("app/channelList", "appear", {}, (node) => node.state.rows.length > 0);
     await app().do("app/guideGrid", "load", {}, (node) => node.state.columns.length > 0);
     await app().do("app", "openPrograms", { channel: "JP-G00000001" });
-    await app().do("app", "openProgram", { channel: "JP-G00000001", program: 1001 });
+    await app().do("app", "openProgram", { channel: "JP-G00000001", program: 100002 });
     const opened = (await app().ls("app")).state.paths.channels;
     expect(opened.length).toBe(2);
 

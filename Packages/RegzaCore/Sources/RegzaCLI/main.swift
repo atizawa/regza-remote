@@ -1,11 +1,11 @@
 import Foundation
 import RegzaApp
-import RegzaSample
+import RegzaFakeServers
 
 // regza: Mac で ViewModel を動かし、画面を通さずに状態を読んで操作する CLI (Shopify の Reflex の CLI と同じ考え方)。
 //
-//   swift run regza --sample                                   見本の通信で動かす (テレビにつながない)
-//   swift run regza --sample --fixture <JSON のファイル>       見本の返事を差し替える (SampleFixture。振る舞いのテストで使う)
+//   swift run regza --fake                                     偽物のテレビ・録画サーバーにつなぐ (本物にはつながない)
+//   swift run regza --fake --scenario <JSON のファイル>        偽物の場面を選ぶ (FakeScenario。振る舞いのテストで使う)
 //   swift run regza --host 192.0.2.10 --user U --password P    テレビにつなぐ (REGZA_HOST などの環境変数でもよい)
 //
 // 標準入力から 1 行ずつ命令を受け取り、結果を JSON で標準出力に書く:
@@ -18,38 +18,24 @@ import RegzaSample
 @MainActor
 func main() async {
     let options = Options(CommandLine.arguments.dropFirst(), environment: ProcessInfo.processInfo.environment)
-    // 見本では、テレビと番組表 (Mirakurun)・録画サーバー (EPGStation) も見本の返事を使う (Android の見本と同じ登録)
-    let connection =
-        options.sample && options.host.isEmpty
-        ? SampleTransport.connection : ConnectionData(host: options.host, user: options.user, password: options.password)
-    let secureStorageManager = SecureStorageManager(
-        storage: MemorySecureStorage(values: [
-            .password: connection.password, .pairingUserID: "00:00:5e:00:53:01",
-        ]))
-    let preferencesManager = PreferencesManager(
-        storage: MemoryPreferencesStorage(values: [.host: connection.host, .user: connection.user]))
-    if options.sample {
-        preferencesManager.setValue(SampleTransport.guideHost, forKey: .guideHost)
-        preferencesManager.setValue(SampleTransport.streamHost, forKey: .streamHost)
-    }
-    let transport: any HTTPTransport
-    if options.sample {
+    let appViewModel: AppViewModel
+    if options.fake {
         do {
-            let fixture =
-                try options.fixture.map { try SampleFixture(json: String(contentsOfFile: $0, encoding: .utf8)) } ?? SampleFixture()
-            transport = SampleTransport(fixture: fixture)
+            let scenario = try options.scenario.map { try FakeScenario(json: String(contentsOfFile: $0, encoding: .utf8)) } ?? .standard
+            appViewModel = FakeApp.makeAppViewModel(scenario: scenario)
         } catch {
-            output(IntrospectionSession.failure("fixture を読めません: \(error)"))
+            output(IntrospectionSession.failure("場面を読めません: \(error)"))
             return
         }
     } else {
-        transport = URLSessionTransport()
+        let secureStorageManager = SecureStorageManager(
+            storage: MemorySecureStorage(values: [.password: options.password, .pairingUserID: FakeScenario.pairingUserID]))
+        let preferencesManager = PreferencesManager(storage: MemoryPreferencesStorage(values: [.host: options.host, .user: options.user]))
+        appViewModel = AppFactory.makeLiveAppViewModel(
+            secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, transport: URLSessionTransport())
     }
-    // 番組表 (Mirakurun) や録画サーバーへの通信も同じ方法で送る
-    let appViewModel = AppFactory.makeLiveAppViewModel(
-        secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, transport: transport)
     let session = IntrospectionSession(root: appViewModel)
-    if !options.host.isEmpty, !options.sample {
+    if !options.host.isEmpty, !options.fake {
         // チャンネル一覧などを使う操作のため、先に読んでおく
         appViewModel.remoteViewModel.send(.loadChannels(force: false))
         _ = await session.introspector.waitUntilIdle()
@@ -82,8 +68,8 @@ func inputLines() -> AsyncStream<String> {
 }
 
 struct Options {
-    var sample = false
-    var fixture: String?
+    var fake = false
+    var scenario: String?
     var host = ""
     var user = ""
     var password = ""
@@ -95,8 +81,8 @@ struct Options {
         var iterator = arguments.makeIterator()
         while let argument = iterator.next() {
             switch argument {
-            case "--sample": sample = true
-            case "--fixture": fixture = iterator.next()
+            case "--fake": fake = true
+            case "--scenario": scenario = iterator.next()
             case "--host": host = iterator.next() ?? host
             case "--user": user = iterator.next() ?? user
             case "--password": password = iterator.next() ?? password

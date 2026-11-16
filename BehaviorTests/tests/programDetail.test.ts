@@ -19,9 +19,10 @@ describeOnBothPlatforms("番組の詳細", (app) => {
     expect(await app().failure("app/remote-0", "tune", { startOver: false })).toContain("放送中の番組ではありません");
   });
 
-  test("予約すると、予約したことを出す", async () => {
+  test("予約すると、テレビの予約の一覧に載り、予約済みと出す", async () => {
     await openNextProgram();
-    const detail = await app().do("app/remote-0", "reserve", { series: false }, (node) => node.state.message !== null);
-    expect(detail!.state.message).toContain("予約しました");
+    const detail = await app().do("app/remote-0", "reserve", { series: false }, (node) => node.state.reservedText !== null);
+    expect(detail!.state.reservedText).toBe("録画予約済み");
+    expect(detail!.state.message).toBeNull();
   });
 });

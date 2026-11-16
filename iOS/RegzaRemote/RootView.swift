@@ -21,9 +21,6 @@ struct RootView: View {
         let appViewModel = appContainer.appViewModel
         var debugPlayerViewModel: LivePlayerViewModel?
         #if DEBUG
-        if let tab = appContainer.sampleInitialTab { appViewModel.send(.selectTab(tab)) }
-        // 開発用: 起動引数 -ShowSettings YES で設定画面を開いておく
-        if UserDefaults.standard.bool(forKey: "ShowSettings") { appViewModel.send(.showSettings) }
         // 開発用: 起動引数 -LiveHost <EPGStation> -LiveChannel <チャンネルの ID> で、すぐ再生画面を開く
         if let host = UserDefaults.standard.string(forKey: "LiveHost"),
             let channelCode = UserDefaults.standard.string(forKey: "LiveChannel")

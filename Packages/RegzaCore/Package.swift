@@ -19,7 +19,7 @@ let package = Package(
         // 本物の機器につなぐ組み立て (iOS・Android・CLI)
         .library(name: "RegzaApp", targets: ["RegzaApp"]),
         // つながない見本の組み立て (iOS の開発用の見本・テスト)
-        .library(name: "RegzaSample", targets: ["RegzaSample"]),
+        .library(name: "RegzaFakeServers", targets: ["RegzaFakeServers"]),
         .executable(name: "regza", targets: ["RegzaCLI"]),
     ],
     dependencies: [
@@ -91,11 +91,25 @@ let package = Package(
         ),
         // 組み立てる場所 (Composition Root): どの Repository の実装を使うかを決めて AppViewModel を作る
         .target(name: "RegzaApp", dependencies: ["RegzaPresentation", "RegzaInfrastructure"]),
-        // 見本の Repository (テレビにも録画サーバーにもつながない)
-        .target(name: "RegzaSample", dependencies: ["RegzaApp", "RegzaDomain"]),
-        .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp", "RegzaSample"]),
+        // 偽物のテレビ・Mirakurun・EPGStation。通信の境界で差し込み、本物の Repository から上をそのまま動かす (プレビュー・振る舞いのテスト・CLI)
+        .target(
+            name: "RegzaFakeServers",
+            dependencies: [
+                "RegzaApp",
+                "RegzaDomain",
+                "RegzaPresentation",
+                "RegzaInfrastructure",
+                "RegzaTVAPI",
+                "MirakurunAPI",
+                "EPGStationAPI",
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+            ]),
+        .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp", "RegzaFakeServers"]),
         .testTarget(
             name: "RegzaCoreTests",
-            dependencies: ["RegzaApp", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels", "RegzaStrings"]),
+            dependencies: [
+                "RegzaApp", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels", "RegzaStrings",
+                "RegzaFakeServers",
+            ]),
     ]
 )

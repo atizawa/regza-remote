@@ -42,7 +42,7 @@ class AndroidRuntimeSmokeTest {
         val application = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
         assertTrue(application is RegzaApplication)
 
-        val app = RegzaAndroidApp.sample(MemoryStorage(), "").orElse(null)
+        val app = RegzaAndroidApp.fake(MemoryStorage(), "").orElse(null)
         assertNotNull(app)
         app ?: return@runBlocking
 
@@ -71,7 +71,7 @@ class AndroidRuntimeSmokeTest {
     /** 初回受信の直後に状態変更とキャンセルを重ねても、JNI 越しの Swift 待機を残さない。 */
     @Test
     fun earlyCancellationAndStateChangesReleaseWaits() = runBlocking {
-        val app = RegzaAndroidApp.sample(MemoryStorage(), "").get()
+        val app = RegzaAndroidApp.fake(MemoryStorage(), "").get()
         val send = AppSend(app)
         repeat(20) { index ->
             val received = CompletableDeferred<Unit>()
@@ -91,7 +91,7 @@ class AndroidRuntimeSmokeTest {
     /** 片方の購読を止めても、もう片方には Swift の変更通知が届く。 */
     @Test
     fun cancellingOneCollectorKeepsOtherCollectorActive() = runBlocking {
-        val app = RegzaAndroidApp.sample(MemoryStorage(), "").get()
+        val app = RegzaAndroidApp.fake(MemoryStorage(), "").get()
         val states = Channel<AppState>(Channel.UNLIMITED)
         val cancelled = launch(Dispatchers.Default) { app.appStates().collect {} }
         val active = launch(Dispatchers.Default) { app.appStates().filterNotNull().collect(states::send) }

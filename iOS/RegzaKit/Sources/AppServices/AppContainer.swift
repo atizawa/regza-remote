@@ -24,15 +24,14 @@ public final class AppContainer {
         appViewModel: AppViewModel,
         secureStorageManager: SecureStorageManager,
         preferencesManager: PreferencesManager,
-        httpTransport: any HTTPTransport = URLSessionTransport(),
-        restoresUIState: Bool = true
+        httpTransport: any HTTPTransport = URLSessionTransport()
     ) {
         self.secureStorageManager = secureStorageManager
         self.preferencesManager = preferencesManager
         self.appViewModel = appViewModel
         liveActivity = LiveActivityModel(remoteViewModel: appViewModel.remoteViewModel)
         appLifecycleService = AppLifecycleService(preferencesManager: preferencesManager, httpTransport: httpTransport)
-        appStateRestoration = restoresUIState ? AppStateRestoration(appViewModel: appViewModel) : nil
+        appStateRestoration = AppStateRestoration(appViewModel: appViewModel)
     }
 
     private convenience init() {
@@ -58,17 +57,6 @@ public final class AppContainer {
         let secureStorageManager = SecureStorageManager(storage: KeychainStorage())
         let preferencesManager = PreferencesManager(storage: UserDefaultsStorage())
         let httpTransport = URLSessionTransport()
-        #if DEBUG
-        if SampleData.isEnabled {
-            let appViewModel = SampleData.makeApp()
-            self.init(
-                appViewModel: appViewModel,
-                secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, httpTransport: httpTransport,
-                restoresUIState: false)
-            Task { await SampleData.prepareScreens(appViewModel) }
-            return
-        }
-        #endif
         let appViewModel = AppFactory.makeLiveAppViewModel(
             secureStorageManager: secureStorageManager, preferencesManager: preferencesManager, transport: httpTransport)
         self.init(
@@ -90,10 +78,4 @@ public final class AppContainer {
 
 }
 
-#if DEBUG
-extension AppContainer {
-    /// 開発用: 起動引数 -InitialTab guide などで選ぶ最初のタブ
-    public var sampleInitialTab: AppViewModel.Tab? { SampleData.initialTab }
-}
-#endif
 #endif

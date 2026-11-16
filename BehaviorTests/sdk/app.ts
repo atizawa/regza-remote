@@ -13,14 +13,14 @@ export type Platform = "ios" | "android";
 export const platforms: Platform[] = ["ios", "android"];
 
 /**
- * 同じテストを、iOS 側と Android 側の両方の相手で流す。テストごとに相手を見本の返事で起動し直す
- * (前のテストの操作が残らないように)。fixture を渡すと、まとまりの中のテストはその返事で起動する
+ * 同じテストを、iOS 側と Android 側の両方の相手で流す。テストごとに相手を偽物のテレビ・録画サーバーで起動し直す
+ * (前のテストの操作が残らないように)。scenario を渡すと、まとまりの中のテストはその場面で起動する
  */
-export function describeOnBothPlatforms(title: string, body: (app: () => App) => void, fixture?: Fixture) {
+export function describeOnBothPlatforms(title: string, body: (app: () => App) => void, scenario?: Scenario) {
   describe.each(platforms)(`%s: ${title}`, (platform) => {
     let current: App | undefined;
     beforeEach(async () => {
-      current = await App.start(platform, fixture);
+      current = await App.start(platform, scenario);
     });
     afterEach(async () => {
       await current?.close();
@@ -42,24 +42,32 @@ export interface Node {
 const repository = new URL("../../", import.meta.url).pathname;
 const commands: Record<Platform, string[]> = {
   // iOS と同じ共有の組み立てをホストで動かす
-  ios: [`${repository}Packages/RegzaCore/.build/debug/regza`, "--sample"],
+  ios: [`${repository}Packages/RegzaCore/.build/debug/regza`, "--fake"],
   // Android と同じ道 (Kotlin → swift-java のつなぎ → 窓口) をホストの JVM で動かす
   android: [
     "mise", "-C", `${repository}Android`, "exec", "--",
-    `${repository}Android/behavior-tests/build/install/regza-android/bin/regza-android`, "--sample",
+    `${repository}Android/behavior-tests/build/install/regza-android/bin/regza-android`, "--fake",
   ],
 };
 
 /**
- * 見本の返事の差し替え (Swift の SampleFixture と同じ形)。宛先 (URL の path) ごとの返事と、つながらないアドレス
+ * 偽物の場面 (Swift の FakeScenario と同じ形)。名前の場面に、宛先 (URL の path) ごとの返事と、つながらないアドレスを足す
  */
-export interface Fixture {
+export interface Scenario {
+  base?:
+    | "standard"
+    | "recordedPlaying"
+    | "noGuideServer"
+    | "notRegistered"
+    | "tvUnreachable"
+    | "emptyChannels"
+    | "guideUnreachable";
   responses?: Record<string, { status?: number; body?: unknown }>;
   unreachable?: string[];
 }
 
-/** 見本のテレビと録画サーバーのアドレス (Swift の SampleTransport と同じ) */
-export const sample = { tv: "192.0.2.10", guide: "192.0.2.20", stream: "192.0.2.30" };
+/** 偽物のテレビと録画サーバーのアドレス (Swift の FakeServers.Host と同じ) */
+export const fake = { tv: "192.0.2.10", guide: "192.0.2.20", stream: "192.0.2.30" };
 
 /** 状態が期待どおりになるまで待つ時間 */
 const timeout = 5_000;
@@ -73,13 +81,13 @@ export class App {
     this.reader = process.stdout.getReader();
   }
 
-  /** 見本の返事で相手を起動する (テレビにも録画サーバーにもつながない)。fixture で返事を差し替える */
-  static async start(platform: Platform, fixture?: Fixture): Promise<App> {
+  /** 偽物のテレビ・録画サーバーで相手を起動する (本物にはつながない)。scenario で場面を選ぶ */
+  static async start(platform: Platform, scenario?: Scenario): Promise<App> {
     const command = [...commands[platform]];
-    if (fixture) {
-      const file = join(mkdtempSync(join(tmpdir(), "regza-fixture-")), "fixture.json");
-      writeFileSync(file, JSON.stringify(fixture));
-      command.push("--fixture", file);
+    if (scenario) {
+      const file = join(mkdtempSync(join(tmpdir(), "regza-scenario-")), "scenario.json");
+      writeFileSync(file, JSON.stringify(scenario));
+      command.push("--scenario", file);
     }
     const app = new App(Bun.spawn(command, { stdin: "pipe", stdout: "pipe", stderr: "inherit" }));
     const ready = await app.read();

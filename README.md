@@ -29,10 +29,10 @@ Packages/RegzaCore/           iOS と Android で共有する Swift Package（RE
   RegzaInfrastructure         テレビ・Mirakurun・EPGStation の通信（キーコード / Digest 認証 / HTTP クライアント / status.htm 解析）
   RegzaPresentation           iOS と Android で共有する ViewModel（ViewModels/<画面>/ に ViewModel・State/・Action/）
   RegzaApp                    組み立て（どの Repository を使うかを決めて ViewModel を作る）
-  RegzaSample                 テレビにつながない見本の Repository（開発・テスト用）
+  RegzaFakeServers            偽物のテレビ・Mirakurun・EPGStation と場面（プレビュー・振る舞いのテスト・CLI 用）
   RegzaCLI                    ViewModel を動かして確かめる CLI（regza）
 iOS/RegzaKit/                 iOS だけで使う Swift Package（7 モジュール）
-  AppServices/                iOS の DI・依存の保持・終了時の配信停止（Storage/ に保存実装、Preview/ に見本の組み立て）
+  AppServices/                iOS の DI・依存の保持・終了時の配信停止（Storage/ に保存実装）
   UI/                         画面（Screens/）・補助 View（Components/）・画面遷移（Navigation/）
   Design/                     アプリとウィジェットで共通の色
   LiveActivity/               Live Activity の状態・更新・バックグラウンド更新の予約
@@ -55,7 +55,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
 - 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
-- Android の画面のプレビューは、それぞれの画面のファイルの末尾に置く（準備は `SamplePreview.kt`）。見本の返事（`RegzaSample`）で組み立てた共有の ViewModel の state を渡す。エディタの横のプレビューはホストの JVM で描くため、先に `mise run prepare-android-preview` でホスト向けライブラリを作る（macOS は .dylib、Linux は .so）。APK のビルドではホスト向けライブラリを作らない。「Run Preview」ではエミュレーターでアプリと同じ Android 向けのライブラリを使う。Swift の型は、ライブラリを読み込んだあと（`SamplePreview` の `setUp` と中身）で作る
+- Android の画面のプレビューは、それぞれの画面のファイルの末尾に置く（準備は `SamplePreview.kt`）。偽物のテレビ・録画サーバー（`RegzaFakeServers`）で組み立てた共有の ViewModel の state を渡す。エディタの横のプレビューはホストの JVM で描くため、先に `mise run prepare-android-preview` でホスト向けライブラリを作る（macOS は .dylib、Linux は .so）。APK のビルドではホスト向けライブラリを作らない。「Run Preview」ではエミュレーターでアプリと同じ Android 向けのライブラリを使う。Swift の型は、ライブラリを読み込んだあと（`SamplePreview` の `setUp` と中身）で作る
 - OS だけの機能（iOS の Live Activity・ウィジェット・Siri）も、画面と同じく共有の ViewModel の state を読み、Action を送る。共有の部分は「何を出すか」を state に入れるだけで、OS ごとの口（protocol）は持たない
   - iOS は、アプリのプロセスに `AppViewModel` を 1 つだけ置き（`AppContainer`）、画面・Live Activity・ボタン・Siri・閉じている間の更新が同じものを使う。画面のない入口は、操作を送って終わるまで待ち（`sendAndWait`）、state を見て結果を返す
   - Live Activity は `RemoteViewModel.state` の変わり目を見て表示を更新し、番組の終了時刻が変われば起こしてもらう時刻を予約し直す
@@ -109,7 +109,7 @@ iOS は Xcode 付属の Apple Swift を使い、`swift.version` と major.minor 
 
 Repository・UseCase の単体テストは [Mockolo](https://github.com/uber/mockolo) で生成するモックを使用する。対象は Domain の `@mockable` を付けた protocol。生成結果は `Tests/RegzaCoreTests/Generated/DomainMocks.swift` に置き、protocol を変更したらリポジトリのルートで `mise run generate-mocks` を実行する。Mockolo は `Tools/GenerateMocks/Package.swift` で版を固定し、アプリの依存から分離しているため、通常のアプリビルドやテストで生成ツールをビルドする必要はない。
 
-`Tests/RegzaCoreTests/Support` は、入力値の `DataFixtures.swift`、生成モックの初期値を設定する `RepositoryMocks.swift`、HTTP・保存・本番 Factory をつなぐ `HTTPTestEnvironment.swift`、ViewModel の準備と待機を行う `ViewModelFixtures.swift` に分ける。単体テストの戻り値やエラーはモックの Handler に設定し、呼び出し回数・引数は生成された記録で確認する。通信を含むテストでは本物の Repository と偽の HTTP を使い、画面プレビュー用の SampleRepository とは分ける。
+`Tests/RegzaCoreTests/Support` は、入力値の `DataFixtures.swift`、生成モックの初期値を設定する `RepositoryMocks.swift`、HTTP・保存・本番 Factory をつなぐ `HTTPTestEnvironment.swift`、ViewModel の準備と待機を行う `ViewModelFixtures.swift` に分ける。単体テストの戻り値やエラーはモックの Handler に設定し、呼び出し回数・引数は生成された記録で確認する。通信を含むテストでは本物の Repository と偽の HTTP を使う。偽物のテレビ・録画サーバー（`RegzaFakeServers`）の返事は、`FakeServersContractTests` で本物の API クライアントで読めることを確かめる。
 
 ```sh
 mise run generate-mocks                  # Domain の protocol を変更したときにモックを再生成
@@ -131,7 +131,7 @@ cd ..                                    # リポジトリのルートへ戻る
 mise run test-behavior                    # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
 ```
 
-画面の復元対象は iOS・Android で共通の `AppViewModel` が定義する。Android は `RegzaViewModel` の `SavedStateHandle`、iOS は `RootView` の `SceneStorage` と AppServices の `AppStateRestoration` へ接続する。OS の保存時に入力・検索条件・選択中タブ・設定画面・戻る道・番組表の日付と放送種別を小さな JSON にまとめ、新しい ViewModel へ戻す。番組やチャンネルは再取得し、存在しない画面は戻る道から除く。未保存のパスワード・PIN・通信中フラグ・ライブ視聴の実行状態は含めない。保存済み認証情報は従来どおり StorageManager から読む。iOS はシーンが非アクティブ・バックグラウンドへ移る際に退避し、画面の初回表示時だけ読み戻す。Siri や Live Activity による画面のない起動では復元せず、開発用の SampleData では既存の保存状態を上書きしない。
+画面の復元対象は iOS・Android で共通の `AppViewModel` が定義する。Android は `RegzaViewModel` の `SavedStateHandle`、iOS は `RootView` の `SceneStorage` と AppServices の `AppStateRestoration` へ接続する。OS の保存時に入力・検索条件・選択中タブ・設定画面・戻る道・番組表の日付と放送種別を小さな JSON にまとめ、新しい ViewModel へ戻す。番組やチャンネルは再取得し、存在しない画面は戻る道から除く。未保存のパスワード・PIN・通信中フラグ・ライブ視聴の実行状態は含めない。保存済み認証情報は従来どおり StorageManager から読む。iOS はシーンが非アクティブ・バックグラウンドへ移る際に退避し、画面の初回表示時だけ読み戻す。Siri や Live Activity による画面のない起動では復元しない。
 
 手動では、設定の IP アドレスを保存せずに入力し、「アクティビティを保存しない」をオンにしてホームへ移動したあと、履歴から戻って入力が残ることを確認する。プロセス終了も確認するときは、このオプションを戻してアプリをバックグラウンドに置き、`adb shell am kill com.example.regzaremote` で終了させる。`adb shell pidof com.example.regzaremote` で終了を確認し、履歴から戻ったときに新しい PID で入力が復元されることを確かめる。
 
@@ -191,9 +191,9 @@ Shopify の [Reflex](https://shopify.engineering/reflex) と同じ作りで、�
 
 - iOS 側の相手は `regza`（iOS と同じ共有の組み立てを macOS・Linux 上の CLI で動かす。iOS アプリそのものは起動しない）
 - Android 側の相手は `regza-android`（`Android/behavior-tests`。ホストの JVM）。命令の読み方と返す JSON は `regza` と同じもの（`IntrospectionSession`）を使い、操作を送るところと state を受け取るところだけを、アプリと同じ道（Kotlin の `send` と `xxxStates` → swift-java のつなぎ → 窓口）で行う。窓口とつなぎはホスト向けの共有ライブラリ（`RegzaJVMHost`）にして読み込む。Linux の swiftCore は使用中の Swift ツールチェーンから参照し、`/usr/lib/swift` に固定しない。エミュレーターは使わない
-- 外からの入力は見本の返事（`RegzaSample` の `SampleTransport`）で渡すので、テレビにも録画サーバーにもつながない
+- 外からの入力は偽物のテレビ・録画サーバー（`RegzaFakeServers` の `FakeServersTransport`）で渡すので、本物にはつながない。偽物は選局や予約で状態が変わり、本物の Repository から上をそのまま通る
 - テストは `sdk/app.ts` の `describeOnBothPlatforms` で書き、`do`（操作を送り、state が期待どおりになるまで待つ）と `precondition`（state が期待どおりになるまで待つ）で確かめる
-- 「テレビにつながらない」「チャンネル一覧が空」のような場面は、`describeOnBothPlatforms` に fixture（`SampleFixture`。宛先ごとの返事の差し替えと、つながらないアドレス）を渡して作る。両方の相手に、起動するときに `--fixture <JSON のファイル>` で渡る
+- 「テレビにつながらない」「チャンネル一覧が空」のような場面は、`describeOnBothPlatforms` に場面（`FakeScenario`。`base` で名前の場面を選び、1 つのテストだけの差し替えは宛先ごとの返事とつながらないアドレスで足す）を渡して作る。両方の相手に、起動するときに `--scenario <JSON のファイル>` で渡る
 - Swift 6 からは、Android の Foundation も iOS と同じ swift-foundation（JSON・Date・Calendar・URL・書式など）を土台にしているので、Mac で動かしても大半は Android と同じものを通る。Android の土台（ART と JNI・Bionic・Looper で動かす MainActor・APK の中の .so の読み込み）は `AndroidRuntimeSmokeTest` を arm64 のエミュレーターや実機で動かして確かめる。swift-corelibs-foundation に残る部分（RunLoop・Thread など）は、使う経路ごとに端末で確かめる
 
 バンドル ID（`com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`）と署名のチームは `iOS/Config/Signing.xcconfig` にまとめている。自分でビルドして実機に入れるときは、このファイルは変えずに、同じフォルダに `Local.xcconfig` を作って自分の値で上書きする（Git には入れない）。
@@ -204,11 +204,7 @@ BUNDLE_ID_PREFIX = com.yourname
 DEVELOPMENT_TEAM = ABCDE12345
 ```
 
-テレビや Mirakurun につながずに画面を確かめるときは、Debug ビルドを起動引数 `-SampleData YES` で起動すると見本データ（架空のチャンネルと番組）を表示する。`-SampleKind recorded` で録画再生中、`-InitialTab guide` / `channels` / `reservations` で最初に開くタブを選べる。`-InitialTab guide -SampleDetail YES` で放送中の番組の詳細を開く。`-SampleNoGuide YES` で Mirakurun が未設定のとき、`-ShowSettings YES` で設定画面を開いた状態を確かめられる。`-InitialTab guide -SampleSearch <言葉>` で番組の検索を開く。`-LiveHost <EPGStation のアドレス> -LiveChannel <チャンネルの ID>` で、すぐライブ視聴の再生画面を開く（実際に配信を頼むので、確かめたら EPGStation で配信を止める）。
-
-```sh
-xcrun simctl launch booted com.example.RegzaRemote -SampleData YES -InitialTab guide
-```
+テレビや Mirakurun につながずにアプリを起動して確かめるときは、UI テストの HTTP スタブ（`UITests/server.ts`）を起動し、Debug ビルドに起動引数 `-UITestServer <スタブのアドレス>` を渡す（[UITests/README.md](UITests/README.md)）。アプリには偽物を入れない。Debug ビルドを起動引数 `-LiveHost <EPGStation のアドレス> -LiveChannel <チャンネルの ID>` で起動すると、すぐライブ視聴の再生画面を開く（実際に配信を頼むので、確かめたら EPGStation で配信を止める）。
 
 画面の余白・ボタンの高さ・色は `Design`（`RemoteControls.swift`）と `AppTheme` にまとめている。余白は 16 / 12 / 24、ボタンの高さは 56 / 48 / 40 の 3 段階だけを使い、色は選択中・進行中（緑）と電源・録画（赤）だけに使う。リモコンのタブは、テレビ付属のリモコンの写真から測った色に合わせ、明るいグレーの本体にグレーのボタンと黒い文字、十字キーのあたりだけ黒い帯に黒いボタンと白い文字、銀色の決定、赤い電源ボタンの配色（`RemoteBody`・`RemoteKeyTone`）にしている。
 
@@ -448,4 +444,4 @@ App Intents で次の操作を出している（`RemoteIntents.swift`。言い�
 
 ### Maestro による UI テスト
 
-設定入力・画面遷移・入力復元の 3 フローを iOS / Android で実行する。通常の APIClient・通信をローカル HTTP スタブへ接続し、SampleData を注入しない。導入と実行方法は [UITests/README.md](UITests/README.md)。`mise run test-ui-ios` / `mise run test-ui-android` は対象端末 ID を指定して明示的に実行する。
+設定入力・画面遷移・入力復元の 3 フローを iOS / Android で実行する。通常の APIClient・通信をローカル HTTP スタブへ接続し、アプリに偽物を注入しない。導入と実行方法は [UITests/README.md](UITests/README.md)。`mise run test-ui-ios` / `mise run test-ui-android` は対象端末 ID を指定して明示的に実行する。

@@ -15,18 +15,18 @@ import org.swift.swiftkit.core.SwiftLibraries
  * 振る舞いのテスト (BehaviorTests) の Android 側の相手。regza と同じ約束事 (1 行ずつの命令と、返す JSON) を話す。
  * 命令の読み方と JSON の形は Swift の同じもの (IntrospectionSession) に任せ、操作を送るところと state を受け取るところだけを、
  * アプリと同じ道 (Kotlin の send と xxxStates → swift-java のつなぎ → 窓口 → 共有の ViewModel) で行う。
- * 見本の返事 (--sample) で組み立てるので、テレビにも録画サーバーにもつながない
+ * 偽物のテレビ・録画サーバー (--fake) で組み立てるので、本物にはつながない
  */
 fun main(args: Array<String>): Unit = runBlocking {
     HostSwiftRuntime.loadLibraries { SwiftLibraries.loadLibraryWithFallbacks("RegzaAndroid") }
-    if ("--sample" !in args) {
-        System.err.println("--sample だけに対応しています")
+    if ("--fake" !in args) {
+        System.err.println("--fake だけに対応しています")
         exitProcess(2)
     }
-    // 見本の返事を差し替える fixture (regza と同じ --fixture <JSON のファイル>)
-    val fixture = args.indexOf("--fixture").takeIf { it >= 0 }?.let { File(args[it + 1]).readText() } ?: ""
-    val app = RegzaAndroidApp.sample(MemoryStorage(), fixture).orElse(null) ?: run {
-        println("""{"error":"fixture を読めません"}""")
+    // 偽物の場面 (regza と同じ --scenario <JSON のファイル>)
+    val scenario = args.indexOf("--scenario").takeIf { it >= 0 }?.let { File(args[it + 1]).readText() } ?: ""
+    val app = RegzaAndroidApp.fake(MemoryStorage(), scenario).orElse(null) ?: run {
+        println("""{"error":"場面を読めません"}""")
         exitProcess(1)
     }
     println("""{"ready":true}""")

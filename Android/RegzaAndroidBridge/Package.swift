@@ -21,8 +21,8 @@ let package = Package(
             name: "RegzaAndroidBridge",
             dependencies: [
                 .product(name: "RegzaApp", package: "RegzaCore"),
-                // 見本の通信で組み立てる入口 (RegzaAndroidApp.sample。JVM のテストで使う)
-                .product(name: "RegzaSample", package: "RegzaCore"),
+                // 偽物のテレビ・録画サーバーで組み立てる入口 (RegzaAndroidApp.fake。プレビューと JVM のテストで使う)
+                .product(name: "RegzaFakeServers", package: "RegzaCore"),
                 // 共有の Swift の文言に、Android の文字列リソースを入れる
                 .product(name: "RegzaStrings", package: "RegzaCore"),
             ],

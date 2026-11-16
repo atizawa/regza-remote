@@ -34,7 +34,6 @@ let package = Package(
             dependencies: [
                 .product(name: "RegzaApp", package: "RegzaCore"),
                 .product(name: "RegzaInfrastructure", package: "RegzaCore"),
-                .product(name: "RegzaSample", package: "RegzaCore"),
                 "LiveActivity", "Localization",
             ]),
         // アプリと Widget の両方に登録する、ボタンからの操作。

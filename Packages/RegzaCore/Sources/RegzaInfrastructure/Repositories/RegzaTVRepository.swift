@@ -19,7 +19,6 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     public private(set) var channels: [ChannelData] = []
     /// 読み込んだ設定と、そのときの接続。接続が変わったら使わない
     private var loadedTimeshift: (settings: TimeshiftSettingsData, revision: Int)?
-    public var isSample: Bool { false }
 
     public init(
         secureStorageManager: SecureStorageManager, preferencesManager: PreferencesManager, regzaAPIClient: RegzaAPIClient,

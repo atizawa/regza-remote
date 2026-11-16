@@ -1,6 +1,6 @@
-// うまくいかない場面。見本の返事をテストごとに差し替える (fixture)
+// うまくいかない場面 (偽物の名前の場面で作る)
 import { expect, test } from "bun:test";
-import { describeOnBothPlatforms, sample } from "../sdk/app";
+import { describeOnBothPlatforms } from "../sdk/app";
 
 describeOnBothPlatforms(
   "テレビにつながらない",
@@ -18,7 +18,7 @@ describeOnBothPlatforms(
       expect(list!.state.rows).toEqual([]);
     });
   },
-  { unreachable: [sample.tv] },
+  { base: "tvUnreachable" },
 );
 
 describeOnBothPlatforms(
@@ -30,7 +30,7 @@ describeOnBothPlatforms(
       expect(list!.state.loadErrorMessage).toBeNull();
     });
   },
-  { responses: { "/v2/remote/settings/channel_list": { body: { status: 0, channel_list: [] } } } },
+  { base: "emptyChannels" },
 );
 
 describeOnBothPlatforms(
@@ -43,5 +43,5 @@ describeOnBothPlatforms(
       expect(guide!.state.columns).toEqual([]);
     });
   },
-  { unreachable: [sample.guide] },
+  { base: "guideUnreachable" },
 );

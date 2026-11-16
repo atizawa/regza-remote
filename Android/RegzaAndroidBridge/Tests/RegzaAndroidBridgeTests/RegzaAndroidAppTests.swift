@@ -120,14 +120,15 @@ struct RegzaAndroidAppTests {
         #expect(await fixture.bridge.nowPlayingState(route: nil) == nil)
     }
 
-    // MARK: - 見本
+    // MARK: - 偽物
 
-    /// 見本の返事で組み立てると、見本のテレビを登録し、チャンネル一覧を見本の返事から読む
-    @Test func sampleReadsSampleResponses() async throws {
+    /// 偽物で組み立てると、偽物のテレビを登録し、チャンネル一覧を偽物から読む
+    @Test func fakeRegistersAndReadsFakeTV() async throws {
         let storage = MemoryStorage([:])
-        let bridge = try #require(RegzaAndroidApp.sample(storage: storage, fixture: ""))
-        #expect(storage.values[AndroidStorageKey.host] == "192.0.2.10")
+        let bridge = try #require(RegzaAndroidApp.fake(storage: storage, scenario: ""))
         #expect(await bridge.appState(route: nil)?.isShowingSettings == false)
+        // 保存先への書き込みはメインスレッドで後から行う
+        try await waitUntil { storage.values[AndroidStorageKey.host] == "192.0.2.10" }
 
         bridge.perform(AppAction.selectTab(.channels))
         bridge.perform(ChannelListAction.appear)

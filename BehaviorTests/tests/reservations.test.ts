@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { describeOnBothPlatforms } from "../sdk/app";
 
 /** テレビに 1 件の予約がある (取り消しはテレビに断られる) */
-const fixture = {
+const scenario = {
   responses: {
     "/v2/remote/pvr/reserves/list": {
       body: {
@@ -37,5 +37,5 @@ describeOnBothPlatforms(
       expect(await app().failure("app/reservationList", "cancel", { reservation: "9" })).toContain("予約 9 はありません");
     });
   },
-  fixture,
+  scenario,
 );

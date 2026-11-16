@@ -10,9 +10,6 @@ public protocol TVUseCaseProtocol: AnyObject {
     /// テレビに登録されているチャンネル。取得前は空
     var channels: [ChannelItem] { get }
 
-    /// 見本 (テレビにつながない)
-    var isSample: Bool { get }
-
     func loadChannels(force: Bool) async throws(RegzaError)
 
     func send(_ key: RegzaKey) async throws(RegzaError)
@@ -69,9 +66,6 @@ public final class TVUseCase: TVUseCaseProtocol {
     public var connection: ConnectionItem { UseCaseModelMapper.connection(tvRepository.connection) }
     /// テレビに登録されているチャンネル。取得前は空
     public var channels: [ChannelItem] { tvRepository.channels.map(UseCaseModelMapper.channel) }
-    /// 見本 (テレビにつながない)
-    public var isSample: Bool { tvRepository.isSample }
-
     public func loadChannels(force: Bool = false) async throws(RegzaError) {
         try await tvRepository.loadChannels(force: force)
     }

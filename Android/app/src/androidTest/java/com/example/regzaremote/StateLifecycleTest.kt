@@ -39,7 +39,7 @@ class StateLifecycleTest {
 
     @Test
     fun stoppedScreenReleasesWaitAndReceivesLatestStateOnRestart() = runBlocking {
-        val app = RegzaAndroidApp.sample(MemoryStorage(), "").get()
+        val app = RegzaAndroidApp.fake(MemoryStorage(), "").get()
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         lateinit var owner: TestLifecycleOwner
         instrumentation.runOnMainSync {

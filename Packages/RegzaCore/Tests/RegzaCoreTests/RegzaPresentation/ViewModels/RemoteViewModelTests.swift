@@ -115,17 +115,6 @@ import Testing
         #expect(!live.appViewModel.streamUseCase.canStream)
     }
 
-    @Test func sampleModeDoesNotTalkToTV() async {
-        let remoteViewModel = ViewModelFixtures().makeApp(
-            connection: ConnectionData(host: "192.0.2.1"), nowPlaying: nil, channels: [], isSample: true
-        )
-        .remoteViewModel
-        remoteViewModel.send(.press(.power))
-        try? await remoteViewModel.loadChannels(force: true)
-        #expect(remoteViewModel.state.tapCount == 1)
-        #expect(remoteViewModel.state.isSampleMode)
-    }
-
     @Test func introspectionPressesKeys() async throws {
         let (remoteViewModel, transport, _) = makeModel { request in
             request.url.path == "/remote/remote.htm"
