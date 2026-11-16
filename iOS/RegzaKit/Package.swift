@@ -13,6 +13,8 @@ let package = Package(
         .library(name: "SystemActions", targets: ["SystemActions"]),
         .library(name: "Shortcuts", targets: ["Shortcuts"]),
         .library(name: "Widgets", targets: ["Widgets"]),
+        // プレビューを Xcode で開くためのスキーム用。アプリにも Widget にもリンクしない
+        .library(name: "UIPreviews", targets: ["UIPreviews"]),
     ],
     dependencies: [.package(path: "../../Packages/RegzaCore")],
     targets: [
@@ -56,6 +58,16 @@ let package = Package(
         .target(
             name: "UI",
             dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity", "Localization"],
+            swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
+        // 画面のプレビュー。偽物のテレビ・録画サーバー (RegzaFakeServers) で組み立てた本物の AppViewModel を、アプリと同じ AppScreen で描く。
+        // アプリにも Widget にもリンクしない
+        .target(
+            name: "UIPreviews",
+            dependencies: [
+                "UI", "LiveActivity",
+                .product(name: "RegzaPresentation", package: "RegzaCore"),
+                .product(name: "RegzaFakeServers", package: "RegzaCore"),
+            ],
             swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
         .testTarget(
             name: "RegzaKitTests",

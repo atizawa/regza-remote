@@ -18,7 +18,7 @@ import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.design.AppTheme
 
 /**
- * 画面のプレビューの準備 (debug だけ。プレビューそのものは ScreenPreviews.kt)。振る舞いのテストと同じ偽物のテレビ・録画サーバー
+ * 画面のプレビューの準備 (debug だけ。プレビューそのものは画面ごとの <画面>Previews.kt)。振る舞いのテストと同じ偽物のテレビ・録画サーバー
  * (RegzaFakeServers) で共有の ViewModel を組み立てて、本物の state を画面に渡す (本物にはつながない)。
  *
  * state は Swift の値なので、Swift のライブラリがないと作れない。

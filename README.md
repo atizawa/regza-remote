@@ -31,7 +31,7 @@ Packages/RegzaCore/           iOS と Android で共有する Swift Package（RE
   RegzaApp                    組み立て（どの Repository を使うかを決めて ViewModel を作る）
   RegzaFakeServers            偽物のテレビ・Mirakurun・EPGStation と場面（プレビュー・振る舞いのテスト・CLI 用）
   RegzaCLI                    ViewModel を動かして確かめる CLI（regza）
-iOS/RegzaKit/                 iOS だけで使う Swift Package（7 モジュール）
+iOS/RegzaKit/                 iOS だけで使う Swift Package（8 モジュール）
   AppServices/                iOS の DI・依存の保持・終了時の配信停止（Storage/ に保存実装）
   UI/                         画面（Screens/）・補助 View（Components/）・画面遷移（Navigation/）
   Design/                     アプリとウィジェットで共通の色
@@ -39,6 +39,7 @@ iOS/RegzaKit/                 iOS だけで使う Swift Package（7 モジュー
   SystemActions/              Live Activity・ウィジェット・コントロールセンターのボタンからの操作
   Shortcuts/                  Siri・ショートカット（アプリにだけ登録する）
   Widgets/                    Live Activity・ホーム画面・コントロールセンターの表示
+  UIPreviews/                 画面のプレビュー（偽物のテレビ・録画サーバーで組み立てる。アプリにはリンクしない）
 iOS/RegzaRemote/              アプリの起動・RootView（依存を画面へ渡す、終了通知を AppServices へ渡す）
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
 Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）
@@ -55,7 +56,8 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
 - Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
 - 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
-- Android の画面のプレビューは debug のソース（`app/src/debug`）の `ui/preview/ScreenPreviews.kt` に置く（準備は `FakePreview.kt`）。偽物のテレビ・録画サーバー（`RegzaFakeServers`）で組み立てた共有の ViewModel の state を渡す。偽物とプレビューは release の APK に入れない（下の「偽物は debug だけ」）。エディタの横のプレビューはホストの JVM で描くため、先に `mise run prepare-android-preview` でホスト向けライブラリを作る（macOS は .dylib、Linux は .so）。APK のビルドではホスト向けライブラリを作らない。「Run Preview」ではエミュレーターでアプリと同じ Android 向けのライブラリを使う。Swift の型は、ライブラリを読み込んだあと（`FakePreview` の `setUp` と中身）で作る
+- iOS の画面のプレビューは、画面ごとに `iOS/RegzaKit/Sources/UIPreviews/<画面>Previews.swift` に置く（準備は `FakePreview.swift`）。画面のファイルを直しながら見るときは、プレビューのファイルを開いてキャンバスでピン留めする。偽物のテレビ・録画サーバー（`RegzaFakeServers`）の場面で `AppViewModel` を組み立て、操作（タブを選ぶ・画面を開く）を送ってから、アプリと同じ `AppScreen` で描く。Xcode では `UIPreviews` のスキームで開く。`UIPreviews` はアプリにも Widget にもリンクしないので、偽物はアプリに入らない
+- Android の画面のプレビューは debug のソース（`app/src/debug`）に、画面ごとに `ui/preview/<画面>Previews.kt` として置く（準備は `FakePreview.kt`）。偽物のテレビ・録画サーバー（`RegzaFakeServers`）で組み立てた共有の ViewModel の state を渡す。偽物とプレビューは release の APK に入れない（下の「偽物は debug だけ」）。エディタの横のプレビューはホストの JVM で描くため、先に `mise run prepare-android-preview` でホスト向けライブラリを作る（macOS は .dylib、Linux は .so）。APK のビルドではホスト向けライブラリを作らない。「Run Preview」ではエミュレーターでアプリと同じ Android 向けのライブラリを使う。Swift の型は、ライブラリを読み込んだあと（`FakePreview` の `setUp` と中身）で作る
 - 偽物は debug だけ: 偽物で組み立てる入口（`RegzaAndroidBridge` の `RegzaAndroidFakes`。Kotlin からは `RegzaFakeApp.make`）は、本番の窓口とは別のモジュールにする。`build-swift.sh` は本番の .so（`RegzaAndroid`）と、入口を足した debug の .so（`RegzaAndroidDebug`）を同じ置き場でビルドし、どちらも `libRegzaAndroid.so` の名前で `app/src/release/jniLibs` と `app/src/debug/jniLibs` に分けて置く（Swift のランタイムなど共通の .so は `app/src/main/jniLibs`）。入口の Java のクラスも debug のソースにだけ入れる。本番の .so に偽物が入っていないことは、ビルドのたびに確かめる
 - OS だけの機能（iOS の Live Activity・ウィジェット・Siri）も、画面と同じく共有の ViewModel の state を読み、Action を送る。共有の部分は「何を出すか」を state に入れるだけで、OS ごとの口（protocol）は持たない
   - iOS は、アプリのプロセスに `AppViewModel` を 1 つだけ置き（`AppContainer`）、画面・Live Activity・ボタン・Siri・閉じている間の更新が同じものを使う。画面のない入口は、操作を送って終わるまで待ち（`sendAndWait`）、state を見て結果を返す
@@ -256,7 +258,7 @@ swift run --package-path ScreenGlue --scratch-path .build/screen-glue -c release
 - swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）。どのモジュールにも共通の設定（Java のパッケージなど）は `RegzaAndroid/swift-java.common.config` に 1 回だけ書き、ビルドのときにモジュールごとの設定と重ねる
 - Kotlin の送り先 `Send`（`send(ChannelListAction.tune(code))` のように、どの Action も `send` で送れる）と、state の `Flow`（`app.channelListStates(route)`）: ビルドのたびに `.build/swift/screen-glue-kotlin/` に作る
 
-Kotlin の画面は `app/src/main/java/com/example/regzaremote/ui/screens/<画面>Screen.kt` に `fun <画面>Screen(` を置き（`ChannelListScreen`）、自分の ViewModel の state を受け取って描き、操作を `send` で送る。プレビューは `app/src/debug` の `ui/preview/ScreenPreviews.kt` に足す。タブの最初の画面なら `ui/navigation/AppRoutes.kt` の `TabRoot`、タブの中で開く画面なら同じファイルの `RouteScreen` に足す。
+Kotlin の画面は `app/src/main/java/com/example/regzaremote/ui/screens/<画面>Screen.kt` に `fun <画面>Screen(` を置き（`ChannelListScreen`）、自分の ViewModel の state を受け取って描き、操作を `send` で送る。プレビューは `app/src/debug` の `ui/preview/<画面>Previews.kt` に、iOS では `iOS/RegzaKit/Sources/UIPreviews/<画面>Previews.swift` に足す。タブの最初の画面なら `ui/navigation/AppRoutes.kt` の `TabRoot`、タブの中で開く画面なら同じファイルの `RouteScreen` に足す。
 
 iOS の `UI/Screens` と Android の `ui/screens` に画面を置き、補助 View はそれぞれ `Components`・`ui/components` に分ける。色・余白などは iOS の `Design`、Android の `design` が担当する。
 
