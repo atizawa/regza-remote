@@ -220,6 +220,43 @@ candidates=.build/swift/android-libs
 rm -rf "$candidates" && mkdir -p "$candidates"
 cp "$android_products"/*.so "$runtime"/*.so "$libcxx" "$candidates/"
 
+# ICU (lib_FoundationICU.so) は約 46 MB あり、ほとんどが全言語のデータなので、日本語・英語と日本語の文字コードの分に絞って作り直す
+# (残すもの・削るものと理由は scripts/slim-icu-data.swift)。SDK の静的ライブラリ (lib_FoundationICU.a) から、データの部分だけを
+# 差し替えて、元と同じ名前・依存・ページの揃え (16 KB) でつなぎ直す。REGZA_FULL_ICU=1 なら元のまま入れる
+# (比べるとき用。Gradle の -PregzaFullICU=true で渡す)
+if [ "${REGZA_FULL_ICU:-}" != 1 ]; then
+  begin_stage "ICU のデータを日本語・英語に絞る" "lib_FoundationICU"
+  llvm_bin=$(dirname "$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin/clang++ | head -1)")
+  icu_static="$(dirname "$resources")/swift_static-${resources##*/swift-}/android/lib_FoundationICU.a"
+  icu=.build/swift/icu-slim
+  rm -rf "$icu" && mkdir -p "$icu/objects"
+  (cd "$icu/objects" && "$llvm_bin/llvm-ar" x "$icu_static")
+  # データは 1 つの配列 (icudt<版>_dat) として、icu_packaged_data のオブジェクトに入っている
+  icu_data_object="$icu/objects/icu_packaged_data.cpp.o"
+  icu_symbol=$("$llvm_bin/llvm-nm" "$icu_data_object" | sed -n 's/^[0-9a-f]* R \(icudt[0-9]*_dat\)$/\1/p')
+  [ -n "$icu_symbol" ] || { echo "ICU のデータの配列が見つかりません: $icu_data_object" >&2; false; }
+  "$llvm_bin/llvm-objcopy" -O binary --only-section=".rodata.$icu_symbol" "$icu_data_object" "$icu/full.dat"
+  "$SWIFT_COMMAND" scripts/slim-icu-data.swift "$icu/full.dat" "$icu/slim.dat"
+  printf '    .section .rodata.%s,"a",@progbits\n    .globl %s\n    .type %s,@object\n    .balign 16\n%s:\n    .incbin "%s"\n    .size %s, . - %s\n' \
+    "$icu_symbol" "$icu_symbol" "$icu_symbol" "$icu_symbol" "$PWD/$icu/slim.dat" "$icu_symbol" "$icu_symbol" > "$icu/data.S"
+  "$llvm_bin/clang" --target="$triple" -c "$icu/data.S" -o "$icu/data.o"
+  find "$icu/objects" -name '*.o' ! -name icu_packaged_data.cpp.o | sort > "$icu/objects.txt"
+  # 元の .so と同じく C++ の実行時ライブラリを静的に入れる。公開する名前は、元の .so が公開しているものだけにそろえる
+  # (多く公開すると、ほかの .so がそちらの C++ の実行時ライブラリを使ってしまうことがある)
+  { echo "{ global:"; "$llvm_bin/llvm-nm" -D --defined-only "$runtime/lib_FoundationICU.so" | awk '{print "  " $3 ";"}'; echo "local: *; };"; } \
+    > "$icu/exports.map"
+  "$llvm_bin/clang++" --target="$triple" -shared -static-libstdc++ -o "$icu/lib_FoundationICU.so" \
+    -Wl,-soname,lib_FoundationICU.so -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--version-script="$icu/exports.map" \
+    @"$icu/objects.txt" "$icu/data.o" -Wl,--whole-archive -lc++_static -lc++abi -Wl,--no-whole-archive -lm -ldl
+  "$llvm_bin/llvm-strip" --strip-unneeded "$icu/lib_FoundationICU.so"
+  # 公開している名前とその種類が、元の .so と同じであること
+  exports_diff=$(diff <("$llvm_bin/llvm-nm" -D --defined-only "$runtime/lib_FoundationICU.so" | awk '{print $2, $3}' | sort) \
+    <("$llvm_bin/llvm-nm" -D --defined-only "$icu/lib_FoundationICU.so" | awk '{print $2, $3}' | sort) || true)
+  [ -z "$exports_diff" ] || { echo "作り直した ICU の公開する名前が、元の .so と違います:" >&2; echo "$exports_diff" | head -20 >&2; false; }
+  cp "$icu/lib_FoundationICU.so" "$candidates/lib_FoundationICU.so"
+  echo "lib_FoundationICU.so: $(($(wc -c < "$runtime/lib_FoundationICU.so") / 1000000)) MB → $(($(wc -c < "$candidates/lib_FoundationICU.so") / 1000000)) MB"
+fi
+
 # 候補のうち、実際に使われるものだけを入れる (FoundationXML やテスト用のものなど、使っていないものはアプリを大きくするだけ)。
 # Java から名前で読み込むもの (RegzaAndroid・SwiftJava・swiftCore) から始めて、各 .so が使う (NEEDED) ものをたどる
 readelf=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin/llvm-readelf | head -1)
@@ -241,3 +278,18 @@ if [ -f "$out/libFoundationNetworking.so" ]; then
   false
 fi
 echo "$(ls "$out" | wc -l | tr -d ' ') 個の .so を $out に入れました。"
+
+# テスト専用の .so (端末のテストが APK の ICU の結果を確かめる)。debug の APK にだけ入るよう、debug の置き場に入れる。
+# 本番の .so と同じものだけを使うこと (使うものが APK になければ、端末のテストで読み込めない)
+begin_stage "テスト専用の .so (debug だけ)" "RegzaFoundationCheck"
+debug_out=app/src/debug/jniLibs/arm64-v8a
+"$SWIFT_COMMAND" build --jobs "$swift_build_jobs" --package-path RegzaAndroid --scratch-path .build/swift --product RegzaFoundationCheck -c release \
+  --swift-sdk "$sdk" --triple "$triple"
+rm -rf "$debug_out" && mkdir -p "$debug_out"
+cp "$android_products/libRegzaFoundationCheck.so" "$debug_out/"
+for needed in $("$readelf" -d "$debug_out/libRegzaFoundationCheck.so" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'); do
+  if [ -f "$candidates/$needed" ] && [ ! -f "$out/$needed" ]; then
+    echo "テスト専用の .so が、APK に入っていない $needed を使っています" >&2
+    false
+  fi
+done

@@ -10,6 +10,7 @@ local.properties
 # mise run build-swift で作る Swift のビルドと .so
 .build/
 app/src/main/jniLibs/
+app/src/debug/jniLibs/
 
 # mise run build-swift が作る、iOS と共有の型の Java のつなぎ
 RegzaAndroid/Sources/RegzaSharedJava/Generated/

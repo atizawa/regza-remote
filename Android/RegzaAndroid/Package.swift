@@ -17,6 +17,8 @@ let package = Package(
         // 窓口とつなぎを、ホストの JVM で動かす振る舞いのテスト (behavior-tests) から読み込むライブラリ。
         // Android 専用の部品 (Looper) は含めない
         .library(name: "RegzaJVMHost", type: .dynamic, targets: ["RegzaAndroidBridgeJava"]),
+        // テスト専用: APK の ICU の結果を確かめる。debug の APK にだけ入れる (本番の RegzaAndroid には入れない)
+        .library(name: "RegzaFoundationCheck", type: .dynamic, targets: ["RegzaFoundationCheck"]),
     ],
     dependencies: [
         .package(path: "../../Packages/RegzaCore"),
@@ -62,6 +64,14 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         // Android のメインスレッドの Looper で MainActor を動かすための宣言 (NDK の Looper と libdispatch)
+        .target(
+            name: "RegzaFoundationCheck",
+            dependencies: [
+                .product(name: "FoundationCheck", package: "RegzaAndroidBridge"),
+                .product(name: "SwiftJava", package: "swift-java"),
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         .target(
             name: "CAndroidMainLoop",
             linkerSettings: [.linkedLibrary("android")]

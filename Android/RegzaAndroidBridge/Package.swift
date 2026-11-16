@@ -9,7 +9,9 @@ let package = Package(
     name: "RegzaAndroidBridge",
     platforms: [.macOS(.v14)],
     products: [
-        .library(name: "RegzaAndroidBridge", targets: ["RegzaAndroidBridge"])
+        .library(name: "RegzaAndroidBridge", targets: ["RegzaAndroidBridge"]),
+        // テスト専用: APK の ICU の結果を確かめる (debug の APK にだけ入る .so から使う。本番の窓口には入れない)
+        .library(name: "FoundationCheck", targets: ["FoundationCheck"]),
     ],
     dependencies: [
         .package(path: "../../Packages/RegzaCore")
@@ -27,6 +29,8 @@ let package = Package(
             // swift-java が作るつなぎと同じく、5 のモードにする
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        .target(name: "FoundationCheck", dependencies: [.product(name: "RegzaStrings", package: "RegzaCore")]),
+        .testTarget(name: "FoundationCheckTests", dependencies: ["FoundationCheck"]),
         .testTarget(
             name: "RegzaAndroidBridgeTests",
             dependencies: [

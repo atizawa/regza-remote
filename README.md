@@ -71,6 +71,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
 - iOS は `AppServices/Storage` の `KeychainStorage`・`UserDefaultsStorage`、Android は `RegzaAndroidStorage` を共通の保存プロトコルにつなぐアダプターを使う。Android のパスワードは従来どおり Keystore の鍵で暗号化する。既存の保存キー・値の形式と、iOS の旧登録 ID の移行を維持する。
 - `RegzaCore` の通信は `HTTPTransport` を通す。iOS と CLI は URLSession、Android は Kotlin の `OkHttpTransport` を使う。Swift 側はリクエストと応答の値を JNI 越しに渡し、HTTP の読み取り・圧縮・DNS・プロキシ・接続管理・TLS は各プラットフォームの通信実装に任せる。通常の HTTPS は Android の信頼ストアとホスト名検証を使う。テレビの 4430 番だけは自己署名を受け入れる既存の例外を維持し、その接続ではリダイレクトを追わない。
 - APIClient・探索処理には `HTTPTransport` を明示して渡す。URLSessionTransport は Android ではビルドせず、APK に FoundationNetworking を同梱しない。`build-swift.sh` は梱包対象に FoundationNetworking が残っていれば失敗する。独自の HTTP パーサ・SocketTransport と BoringSSL の静的リンクは使用しない。
+- Android の ICU（`lib_FoundationICU.so`。日付の書式・タイムゾーン・正規化・文字コードの変換に Foundation が使う）は、約 46 MB のほとんどが全言語のデータなので、`build-swift.sh` が SDK の静的ライブラリからデータだけを絞って作り直す（約 12 MB。release の APK は約 79 MB から約 51 MB）。残すのは言語によらないデータ・日本語と英語の言語データ・テレビの古い API の応答を読む Shift_JIS・EUC-JP の変換表で、ほかの言語・ほかの文字コード・単語の区切りの辞書・文字の変換規則・文字の名前は削る（`scripts/slim-icu-data.swift`）。公開する名前は元の .so と同じものだけにそろえ（version script）、一致することをビルドで確かめる。日付・タイムゾーン・文字コード・正規化・比較は、削る前と同じ結果になることを実機で比べて確かめた（違うのは、削った言語での日付の書式と `Locale.availableIdentifiers` だけ）。アプリが頼っている結果は、端末のテスト `FoundationICUTest` が、ICU をすべて持つ Apple の環境と同じ値（`FoundationCheckTests`）になることを確かめる。確かめる処理はテスト専用の .so（`libRegzaFoundationCheck.so`）にあり、`build-swift.sh` が `app/src/debug/jniLibs` に置くので、debug の APK にだけ入り、release の APK と本番の窓口には入らない。比べるときは `./gradlew -PregzaFullICU=true :app:assembleDebug` のように、Gradle のプロパティで元のまま入れられる（切り替えると Swift の .so を作り直す）。ほかの言語の文言を足すときは、`slim-icu-data.swift` の `languages` にも足す
 - Repository と UseCase は Domain/Data の `ChannelData`・`ProgramData` などを受け渡す。UseCase は Domain に置き、画面側には `RegzaSharedModels` の型を返す。ViewModel は Data を保持せず、番組検索の索引も Domain 内で管理する。
 - `Infrastructure/Mappers` は API の型から Data への変換、`Domain/Mappers` は Data から SharedModel への変換を担当する。
 - REGZA・Mirakurun・EPGStation の API は `OpenAPI/` の仕様から Swift OpenAPI Generator で生成する。生成クライアント、Digest 認証・LenientJSON のミドルウェア、既存の `HTTPTransport` を包む `ClientTransport` はすべて共有する。構成と生成方法は [OpenAPI/README.md](OpenAPI/README.md)。
@@ -145,7 +146,7 @@ mise run test-android-runtime
 ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
 ```
 
-AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest・OkHttpTransportTest・ColorAppearanceTest・LocalizationResourceTest・RemoteWidgetTest・LiveUpdateNotificationTestを確認する。テレビ・Mirakurun・EPGStation への接続は不要。
+AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest・OkHttpTransportTest・ColorAppearanceTest・LocalizationResourceTest・RemoteWidgetTest・LiveUpdateNotificationTest・FoundationICUTestを確認する。テレビ・Mirakurun・EPGStation への接続は不要。
 
 画面を出すテストは、端末のロックを解除して画面を点けたままにしてから実行する。テストの前に `ScreenTestRule` が画面を点け、パスワードなどのないロックは外し、それでもロックされていれば「端末がロックされています」と伝えて落とす（ロックされたままだと Activity が前に出られず、関係のない理由で落ちるため）。Android 17 以降はローカルネットワークへのアクセスもテストの前に許可しておく（許可のダイアログが Activity の上にかぶるため）。`ui-test-junit4` が依存する `espresso-core` 3.5.0 は、新しい Android にない `InputManager.getInstance` を呼んで端末テストが落ちるので、API 23 以上で `getSystemService` を使う 3.7.0 を指定している（Android 17 の実機で確認）。
 

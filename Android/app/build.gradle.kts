@@ -79,6 +79,11 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     // なければ build-swift が入れる
     val sdk = androidComponents.sdkComponents.sdkDirectory
     environment("NDK_VERSION", android.ndkVersion)
+    // ICU はデータを日本語・英語に絞って作り直す。比べるときは -PregzaFullICU=true で元のまま入れる。
+    // 環境変数ではなくプロパティで受け取り、作り直しの判断にも含める (常駐の Gradle に環境変数が届かず、切り替えても飛ばされないように)
+    val fullICU = providers.gradleProperty("regzaFullICU").map { it.toBoolean() }.getOrElse(false)
+    environment("REGZA_FULL_ICU", if (fullICU) "1" else "0")
+    inputs.property("regzaFullICU", fullICU)
     doFirst { environment("ANDROID_HOME", sdk.get().asFile.path) }
 
     inputs.files(fileTree(androidDir.resolve("../Packages/RegzaCore")) { include("Package.swift", "Sources/**", "Plugins/**", "Tools/**") })
@@ -102,6 +107,8 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     inputs.files(fileTree(androidDir.resolve("ScreenGlue")) { include("Package.swift", "Package.resolved", "Sources/**") })
     inputs.property("ndkVersion", android.ndkVersion)
     outputs.dir("src/main/jniLibs")
+    // テスト専用の .so (debug の APK にだけ入る)
+    outputs.dir("src/debug/jniLibs")
     outputs.dir(androidDir.resolve(".build/swift/regzashared-java"))
     outputs.dir(androidDir.resolve(".build/swift/regzapresentation-java"))
     outputs.dir(androidDir.resolve(".build/swift/regzabridge-java"))
