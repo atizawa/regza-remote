@@ -11,6 +11,7 @@ local.properties
 .build/
 app/src/main/jniLibs/
 app/src/debug/jniLibs/
+app/src/release/jniLibs/
 
 # mise run build-swift が作る、iOS と共有の型の Java のつなぎ
 RegzaAndroid/Sources/RegzaSharedJava/Generated/
@@ -18,5 +19,7 @@ RegzaAndroid/Sources/RegzaSharedJava/Generated/
 RegzaAndroid/Sources/RegzaPresentationJava/Generated/
 # mise run build-swift が作る、窓口 (RegzaAndroidBridge) の Java のつなぎ
 RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/
+# mise run build-swift が作る、偽物で組み立てる入口 (RegzaAndroidFakes) の Java のつなぎ
+RegzaAndroid/Sources/RegzaAndroidFakesJava/Generated/
 # mise run build-swift が、共通の設定 (RegzaAndroid/swift-java.common.config) から書き出す SwiftPM のプラグインの設定
 RegzaAndroid/Sources/RegzaAndroid/swift-java.config

@@ -5,31 +5,21 @@ import com.example.regzaremote.bridge.AppSend
 import com.example.regzaremote.bridge.HostSwiftRuntime
 import com.example.regzaremote.bridge.Send
 import com.example.regzaremote.core.RegzaAndroidApp
-import com.example.regzaremote.core.RegzaAndroidStorage
+import com.example.regzaremote.core.RegzaFakeApp
 import java.io.File
 import java.nio.file.Files
-import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import org.swift.swiftkit.core.SwiftLibraries
 
-/** プレビュー用の通信・保存先・Swift 実行環境を準備する。 */
+/** プレビュー用の Swift 実行環境を準備し、偽物のテレビ・録画サーバーで組み立てる (debug だけ)。 */
 object PreviewAppFactory {
     fun makeApp(inEditor: Boolean, setUp: (Send) -> Unit): Pair<RegzaAndroidApp, Send> {
         if (inEditor) HostSwiftRuntime.loadLibraries { HostSwiftLibraries.load() }
-        val app = RegzaAndroidApp.fake(PreviewStorage(), "").get()
+        val app = RegzaFakeApp.make("").get()
         val send = AppSend(app)
         setUp(send)
         if (inEditor) app.contractWaitUntilIdle().get()
         return app to send
-    }
-}
-
-/** メモリに置くだけの保存先 (プレビューで、アプリの接続情報を書き換えないように) */
-private class PreviewStorage : RegzaAndroidStorage {
-    private val values = mutableMapOf<String, String>()
-    override fun value(key: String): Optional<String> = Optional.ofNullable(values[key])
-    override fun setValue(value: String, key: String) {
-        values[key] = value
     }
 }
 

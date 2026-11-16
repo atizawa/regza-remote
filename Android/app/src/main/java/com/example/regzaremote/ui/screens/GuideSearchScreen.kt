@@ -26,9 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -36,13 +34,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.guideSearchStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
-import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.GuideSearchAction
 import com.example.regzaremote.core.GuideSearchConditionChip
 import com.example.regzaremote.core.GuideSearchState
@@ -56,8 +51,6 @@ import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RecordIcon
 import com.example.regzaremote.ui.components.ScreenHeader
 import com.example.regzaremote.ui.components.SyncedTextField
-import com.example.regzaremote.ui.components.rememberState
-import com.example.regzaremote.ui.preview.SamplePreview
 
 /**
  * 番組を探す (state と操作は GuideSearchViewModel の GuideSearchState・GuideSearchAction)。
@@ -188,16 +181,4 @@ private fun SearchResultRow(row: SearchResultItem, send: Send) {
             Text(it, style = MaterialTheme.typography.bodySmall, color = AppTheme.accent, maxLines = 1)
         }
     }
-}
-
-// Swift の型 (画面の道など) は、SamplePreview が Swift のライブラリを読み込んでから作る
-
-@Preview(name = "番組を探す")
-@Composable
-private fun GuideSearchScreenPreview() = SamplePreview(setUp = {
-    it(GuideGridAction.load())
-    it(AppAction.push(AppRoute.search()))
-}) { app, send ->
-    val route = remember { AppRoute.search() }
-    rememberState(app) { app.guideSearchStates(route) }?.let { GuideSearchScreen(it, onBack = {}, send) }
 }

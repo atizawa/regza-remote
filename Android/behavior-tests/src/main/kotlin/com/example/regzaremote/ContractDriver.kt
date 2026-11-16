@@ -5,6 +5,7 @@ import com.example.regzaremote.bridge.contractSend
 import com.example.regzaremote.bridge.contractStateJSON
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RegzaContractCommand
+import com.example.regzaremote.core.RegzaFakeApp
 import java.io.File
 import kotlin.system.exitProcess
 import kotlinx.coroutines.future.await
@@ -25,7 +26,7 @@ fun main(args: Array<String>): Unit = runBlocking {
     }
     // 偽物の場面 (regza と同じ --scenario <JSON のファイル>)
     val scenario = args.indexOf("--scenario").takeIf { it >= 0 }?.let { File(args[it + 1]).readText() } ?: ""
-    val app = RegzaAndroidApp.fake(MemoryStorage(), scenario).orElse(null) ?: run {
+    val app = RegzaFakeApp.make(scenario).orElse(null) ?: run {
         println("""{"error":"場面を読めません"}""")
         exitProcess(1)
     }

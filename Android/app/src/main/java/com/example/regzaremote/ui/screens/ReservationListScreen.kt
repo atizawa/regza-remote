@@ -37,10 +37,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.reservationListStates
 import com.example.regzaremote.core.ReservationItem
 import com.example.regzaremote.core.ReservationListAction
 import com.example.regzaremote.core.ReservationListState
@@ -55,9 +53,7 @@ import com.example.regzaremote.ui.components.RecordIcon
 import com.example.regzaremote.ui.components.RowDivider
 import com.example.regzaremote.ui.components.ScreenHeader
 import com.example.regzaremote.ui.components.SectionHeader
-import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.components.sectionRowShape
-import com.example.regzaremote.ui.preview.SamplePreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
@@ -225,10 +221,4 @@ private fun ReservationRow(item: ReservationItem) {
         }
         item.channelName.orElse(null)?.let { Note(it) }
     }
-}
-
-@Preview(name = "録画予約")
-@Composable
-private fun ReservationListScreenPreview() = SamplePreview(setUp = { it(ReservationListAction.load()) }) { app, send ->
-    rememberState(app) { app.reservationListStates() }?.let { ReservationListScreen(it, send) }
 }

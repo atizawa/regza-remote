@@ -166,6 +166,7 @@ shared_java=.build/swift/regzashared-java
 presentation_java=.build/swift/regzapresentation-java
 bridge_java=.build/swift/regzabridge-java
 bridge_generated=RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated
+fakes_java=.build/swift/regzafakes-java
 
 # 共有の UI の型 (RegzaSharedModels)。すべてそのまま Java のクラスにする
 extract_module RegzaSharedModels ../Packages/RegzaCore/Sources/RegzaSharedModels \
@@ -214,11 +215,17 @@ jq -n --arg package "$java_package" --args '{classes: ($ARGS.positional | map({k
   --single-swift-file-output JavaCallbacks.swift \
   --depends-on SwiftJava="$PWD/.build/swift-tool/checkouts/swift-java/Sources/SwiftJava/swift-java.config"
 
+# 偽物のテレビ・録画サーバーで組み立てる入口 (RegzaAndroidBridge の RegzaAndroidFakes)。debug の .so とホストの JVM 向けにだけ入れる
+extract_module RegzaAndroidFakes RegzaAndroidBridge/Sources/RegzaAndroidFakes \
+  RegzaAndroid/Sources/RegzaAndroidFakesJava/Generated "$fakes_java" "$shared_java" "$presentation_java" "$bridge_java"
+
 # Swift のランタイムは共有ライブラリとして入れ、NEEDED をたどって使うものだけを梱包する。
+# 本番の .so (RegzaAndroid) と、偽物の入口を足した debug の .so (RegzaAndroidDebug) を同じ置き場でビルドする (2 つ目はほぼつなぐだけ)
 begin_stage "Android native ライブラリのビルド" "RegzaAndroid" "RegzaAndroid/Sources/RegzaAndroid/swift-java.config"
-android_build=("$SWIFT_COMMAND" build --jobs "$swift_build_jobs" --package-path RegzaAndroid --scratch-path .build/swift --product RegzaAndroid -c release
+android_build=("$SWIFT_COMMAND" build --jobs "$swift_build_jobs" --package-path RegzaAndroid --scratch-path .build/swift -c release
   --swift-sdk "$sdk" --triple "$triple")
-"${android_build[@]}"
+"${android_build[@]}" --product RegzaAndroid
+"${android_build[@]}" --product RegzaAndroidDebug
 android_products=$("${android_build[@]}" --show-bin-path)
 
 # 入れる候補: libRegzaAndroid.so と swift-java の libSwiftJava.so、SDK の Swift の .so、NDK の libc++_shared.so
@@ -266,10 +273,13 @@ if [ "${REGZA_FULL_ICU:-}" != 1 ]; then
 fi
 
 # 候補のうち、実際に使われるものだけを入れる (FoundationXML やテスト用のものなど、使っていないものはアプリを大きくするだけ)。
-# Java から名前で読み込むもの (RegzaAndroid・SwiftJava・swiftCore) から始めて、各 .so が使う (NEEDED) ものをたどる
+# Java から名前で読み込むもの (RegzaAndroid・SwiftJava・swiftCore) から始めて、各 .so が使う (NEEDED) ものをたどる。
+# 本番と debug の .so はどちらも libRegzaAndroid.so の名前で読み込まれるので、たどったあとで release と debug の置き場に分ける
 readelf=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin/llvm-readelf | head -1)
-rm -rf "$out" && mkdir -p "$out"
-cp "$candidates"/libRegzaAndroid.so "$candidates"/libSwiftJava.so "$candidates"/libswiftCore.so "$out/"
+release_out=app/src/release/jniLibs/arm64-v8a
+debug_out=app/src/debug/jniLibs/arm64-v8a
+rm -rf "$out" "$release_out" "$debug_out" && mkdir -p "$out" "$release_out" "$debug_out"
+cp "$candidates"/libRegzaAndroid.so "$candidates"/libRegzaAndroidDebug.so "$candidates"/libSwiftJava.so "$candidates"/libswiftCore.so "$out/"
 while :; do
   added=0
   for needed in $(for lib in "$out"/*.so; do "$readelf" -d "$lib"; done | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p' | sort -u); do
@@ -285,15 +295,23 @@ if [ -f "$out/libFoundationNetworking.so" ]; then
   echo "Android の通信は OkHttp を使います。FoundationNetworking への依存が残っています。" >&2
   false
 fi
-echo "$(ls "$out" | wc -l | tr -d ' ') 個の .so を $out に入れました。"
+mv "$out/libRegzaAndroid.so" "$release_out/libRegzaAndroid.so"
+mv "$out/libRegzaAndroidDebug.so" "$debug_out/libRegzaAndroid.so"
+echo "$(ls "$out" | wc -l | tr -d ' ') 個の .so を $out に入れ、本番と debug の libRegzaAndroid.so を $release_out と $debug_out に入れました。"
+
+# 本番の .so に偽物 (RegzaFakeServers・RegzaAndroidFakes) が入っていないこと。debug の .so には入っていること (確かめ方が効いていること)
+begin_stage "本番の .so に偽物が入っていないことの確認" "RegzaAndroid"
+fake_marker='RegzaFakeServers|RegzaAndroidFakes'
+if grep -aEq "$fake_marker" "$release_out/libRegzaAndroid.so"; then
+  echo "本番の libRegzaAndroid.so に偽物が入っています" >&2
+  false
+fi
+grep -aEq "$fake_marker" "$debug_out/libRegzaAndroid.so" || { echo "debug の libRegzaAndroid.so に偽物が見つかりません (確かめ方が古くなっています)" >&2; false; }
 
 # テスト専用の .so (端末のテストが APK の ICU の結果を確かめる)。debug の APK にだけ入るよう、debug の置き場に入れる。
 # 本番の .so と同じものだけを使うこと (使うものが APK になければ、端末のテストで読み込めない)
 begin_stage "テスト専用の .so (debug だけ)" "RegzaFoundationCheck"
-debug_out=app/src/debug/jniLibs/arm64-v8a
-"$SWIFT_COMMAND" build --jobs "$swift_build_jobs" --package-path RegzaAndroid --scratch-path .build/swift --product RegzaFoundationCheck -c release \
-  --swift-sdk "$sdk" --triple "$triple"
-rm -rf "$debug_out" && mkdir -p "$debug_out"
+"${android_build[@]}" --product RegzaFoundationCheck
 cp "$android_products/libRegzaFoundationCheck.so" "$debug_out/"
 for needed in $("$readelf" -d "$debug_out/libRegzaFoundationCheck.so" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'); do
   if [ -f "$candidates/$needed" ] && [ ! -f "$out/$needed" ]; then

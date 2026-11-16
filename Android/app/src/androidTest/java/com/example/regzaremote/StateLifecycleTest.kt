@@ -16,7 +16,7 @@ import com.example.regzaremote.bridge.appStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppTab
 import com.example.regzaremote.core.RegzaAndroidApp
-import com.example.regzaremote.core.RegzaAndroidStorage
+import com.example.regzaremote.core.RegzaFakeApp
 import com.example.regzaremote.ui.components.rememberState
 import java.util.Optional
 import kotlinx.coroutines.delay
@@ -39,7 +39,7 @@ class StateLifecycleTest {
 
     @Test
     fun stoppedScreenReleasesWaitAndReceivesLatestStateOnRestart() = runBlocking {
-        val app = RegzaAndroidApp.fake(MemoryStorage(), "").get()
+        val app = RegzaFakeApp.make("").get()
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         lateinit var owner: TestLifecycleOwner
         instrumentation.runOnMainSync {
@@ -85,14 +85,6 @@ class StateLifecycleTest {
 
     private class TestLifecycleOwner : LifecycleOwner {
         override val lifecycle = LifecycleRegistry(this)
-    }
-
-    private class MemoryStorage : RegzaAndroidStorage {
-        private val values = mutableMapOf<String, String>()
-        override fun value(key: String): Optional<String> = Optional.ofNullable(values[key])
-        override fun setValue(value: String, key: String) {
-            values[key] = value
-        }
     }
 
     private companion object {

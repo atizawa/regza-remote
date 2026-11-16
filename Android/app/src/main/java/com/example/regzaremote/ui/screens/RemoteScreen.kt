@@ -56,11 +56,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.remoteStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.BroadcastBand
 import com.example.regzaremote.core.NowPlayingKind
@@ -75,9 +73,7 @@ import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.ScreenHeader
-import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.components.verticalGradient
-import com.example.regzaremote.ui.preview.SamplePreview
 
 /**
  * リモコンの画面 (iOS 版の RemoteScreen と同じ並び・色)。
@@ -506,10 +502,4 @@ fun miniPlayerKey(kind: NowPlayingKind, isAdvancing: Boolean): RegzaKey? = when 
     NowPlayingKind.Discriminator.BROADCAST -> Keys.mute
     NowPlayingKind.Discriminator.STANDBY -> Keys.power
     NowPlayingKind.Discriminator.EXTERNAL, NowPlayingKind.Discriminator.UNKNOWN -> null
-}
-
-@Preview(name = "リモコン")
-@Composable
-private fun RemoteScreenPreview() = SamplePreview(setUp = { it(RemoteAction.refresh()) }) { app, send ->
-    rememberState(app) { app.remoteStates() }?.let { RemoteScreen(it, send) }
 }

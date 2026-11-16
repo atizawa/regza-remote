@@ -37,10 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.channelListStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.BroadcastBand
@@ -57,9 +55,7 @@ import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.RowDivider
 import com.example.regzaremote.ui.components.ScreenHeader
-import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.components.sectionRowShape
-import com.example.regzaremote.ui.preview.SamplePreview
 
 /**
  * テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える。
@@ -223,10 +219,4 @@ fun BandPicker(bands: Array<BroadcastBand>, band: BroadcastBand?, send: Send) {
             ) { Text(item.label) }
         }
     }
-}
-
-@Preview(name = "チャンネル一覧")
-@Composable
-private fun ChannelListScreenPreview() = SamplePreview(setUp = { it(ChannelListAction.appear()) }) { app, send ->
-    rememberState(app) { app.channelListStates() }?.let { ChannelListScreen(it, send) }
 }

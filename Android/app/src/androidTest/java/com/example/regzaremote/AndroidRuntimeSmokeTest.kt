@@ -8,8 +8,7 @@ import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppState
 import com.example.regzaremote.core.AppTab
 import com.example.regzaremote.core.RegzaAndroidApp
-import com.example.regzaremote.core.RegzaAndroidStorage
-import java.util.Optional
+import com.example.regzaremote.core.RegzaFakeApp
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
@@ -42,7 +41,7 @@ class AndroidRuntimeSmokeTest {
         val application = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
         assertTrue(application is RegzaApplication)
 
-        val app = RegzaAndroidApp.fake(MemoryStorage(), "").orElse(null)
+        val app = RegzaFakeApp.make("").orElse(null)
         assertNotNull(app)
         app ?: return@runBlocking
 
@@ -71,7 +70,7 @@ class AndroidRuntimeSmokeTest {
     /** 初回受信の直後に状態変更とキャンセルを重ねても、JNI 越しの Swift 待機を残さない。 */
     @Test
     fun earlyCancellationAndStateChangesReleaseWaits() = runBlocking {
-        val app = RegzaAndroidApp.fake(MemoryStorage(), "").get()
+        val app = RegzaFakeApp.make("").get()
         val send = AppSend(app)
         repeat(20) { index ->
             val received = CompletableDeferred<Unit>()
@@ -91,7 +90,7 @@ class AndroidRuntimeSmokeTest {
     /** 片方の購読を止めても、もう片方には Swift の変更通知が届く。 */
     @Test
     fun cancellingOneCollectorKeepsOtherCollectorActive() = runBlocking {
-        val app = RegzaAndroidApp.fake(MemoryStorage(), "").get()
+        val app = RegzaFakeApp.make("").get()
         val states = Channel<AppState>(Channel.UNLIMITED)
         val cancelled = launch(Dispatchers.Default) { app.appStates().collect {} }
         val active = launch(Dispatchers.Default) { app.appStates().filterNotNull().collect(states::send) }
@@ -120,15 +119,6 @@ class AndroidRuntimeSmokeTest {
     }
 
     /** テレビや録画サーバーへ接続しない見本の Swift ViewModel に渡す保存先。 */
-    private class MemoryStorage : RegzaAndroidStorage {
-        private val values = mutableMapOf<String, String>()
-
-        override fun value(key: String): Optional<String> = Optional.ofNullable(values[key])
-
-        override fun setValue(value: String, key: String) {
-            values[key] = value
-        }
-    }
 
     private companion object {
         const val TIMEOUT = 10_000L

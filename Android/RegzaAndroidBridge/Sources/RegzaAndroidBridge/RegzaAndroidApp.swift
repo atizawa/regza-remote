@@ -21,8 +21,8 @@ public final class RegzaAndroidApp {
 
     private let stateWaitRegistry: StateWaitRegistry
 
-    /// 組み立てた ViewModel から作る (テストでは、テレビにつながない見本の ViewModel を渡す)
-    init(appViewModel: AppViewModel) {
+    /// 組み立てた ViewModel から作る (プレビューやテストでは、偽物のテレビ・録画サーバーにつないだ ViewModel を渡す)
+    package init(appViewModel: AppViewModel) {
         self.appViewModel = appViewModel
         self.stateWaitRegistry = onMainActor {
             // 未登録なら、テレビの登録の画面から始める
@@ -97,7 +97,7 @@ public final class RegzaAndroidApp {
 
 /// MainActor で動かして結果を返す。アプリはメインスレッドから呼ぶのでそのまま動かし、
 /// JVM で動かすテストのようにほかのスレッドから呼ばれたときは、メインのキューで動き終わるのを待つ
-func onMainActor<Value>(_ body: @MainActor () -> Value) -> Value {
+package func onMainActor<Value>(_ body: @MainActor () -> Value) -> Value {
     // MainActor の処理はメインのキューで動く。Linux では、メインのキューがメインスレッド以外で動くこともあるので、
     // スレッドではなくキューで見分ける (メインのキューの上で main.sync を呼ぶと、libdispatch が止める)
     if Thread.isMainThread || DispatchQueue.getSpecific(key: mainQueueKey) == true { return MainActor.assumeIsolated(body) }

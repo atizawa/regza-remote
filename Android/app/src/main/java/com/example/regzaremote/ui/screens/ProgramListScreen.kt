@@ -22,19 +22,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.programListStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
-import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.ProgramListAction
 import com.example.regzaremote.core.ProgramListState
@@ -49,10 +43,7 @@ import com.example.regzaremote.ui.components.ReservedBadge
 import com.example.regzaremote.ui.components.RowDivider
 import com.example.regzaremote.ui.components.ScreenHeader
 import com.example.regzaremote.ui.components.SectionHeader
-import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.components.sectionRowShape
-import com.example.regzaremote.ui.preview.SAMPLE_CHANNEL
-import com.example.regzaremote.ui.preview.SamplePreview
 
 /** 1 チャンネルの番組表 (state と操作は ProgramListViewModel の ProgramListState・ProgramListAction)。日付ごとのまとまりに分けて並べる */
 @Composable
@@ -123,17 +114,4 @@ private fun ProgramRow(program: ProgramItem, send: Send) {
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-}
-
-// Swift の型 (画面の道など) は、SamplePreview が Swift のライブラリを読み込んでから作る
-
-@Preview(name = "1 局の番組表")
-@Composable
-private fun ProgramListScreenPreview() = SamplePreview(setUp = {
-    it(ChannelListAction.appear())
-    it(AppAction.push(AppRoute.channelPrograms(SAMPLE_CHANNEL)))
-    it(ProgramListAction.appear())
-}) { app, send ->
-    val route = remember { AppRoute.channelPrograms(SAMPLE_CHANNEL) }
-    rememberState(app) { app.programListStates(route) }?.let { ProgramListScreen(it, onBack = {}, send) }
 }

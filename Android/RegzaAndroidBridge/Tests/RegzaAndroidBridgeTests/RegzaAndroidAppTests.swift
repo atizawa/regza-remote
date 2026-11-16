@@ -1,4 +1,5 @@
 import Foundation
+import RegzaAndroidFakes
 import RegzaApp
 import Testing
 
@@ -124,11 +125,9 @@ struct RegzaAndroidAppTests {
 
     /// 偽物で組み立てると、偽物のテレビを登録し、チャンネル一覧を偽物から読む
     @Test func fakeRegistersAndReadsFakeTV() async throws {
-        let storage = MemoryStorage([:])
-        let bridge = try #require(RegzaAndroidApp.fake(storage: storage, scenario: ""))
+        let bridge = try #require(RegzaFakeApp.make(scenario: ""))
         #expect(await bridge.appState(route: nil)?.isShowingSettings == false)
-        // 保存先への書き込みはメインスレッドで後から行う
-        try await waitUntil { storage.values[AndroidStorageKey.host] == "192.0.2.10" }
+        #expect(RegzaFakeApp.make(scenario: "{") == nil)
 
         bridge.perform(AppAction.selectTab(.channels))
         bridge.perform(ChannelListAction.appear)

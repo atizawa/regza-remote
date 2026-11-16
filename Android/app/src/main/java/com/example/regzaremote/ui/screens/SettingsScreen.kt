@@ -48,11 +48,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.settingsStates
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppAppearance
 import com.example.regzaremote.core.ServerSetupAction
 import com.example.regzaremote.core.ServerSetupServer
@@ -70,9 +67,7 @@ import com.example.regzaremote.ui.components.LiveUpdateToggle
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RowDivider
 import com.example.regzaremote.ui.components.ScreenHeader
-import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.components.rememberSyncedText
-import com.example.regzaremote.ui.preview.SamplePreview
 
 /**
  * 設定 (state と操作は SettingsViewModel の SettingsState・SettingsAction)。
@@ -476,10 +471,4 @@ private fun FormTextField(
         ),
         modifier = modifier.fillMaxWidth(),
     )
-}
-
-@Preview(name = "設定")
-@Composable
-private fun SettingsScreenPreview() = SamplePreview(setUp = { it(AppAction.showSettings()) }) { app, send ->
-    rememberState(app) { app.settingsStates() }?.let { SettingsScreen(it, send) }
 }

@@ -45,7 +45,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -59,11 +58,9 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.livePlayerStates
 import com.example.regzaremote.bridge.streamURLString
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.ChannelItem
-import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.LivePlayerAction
 import com.example.regzaremote.core.LivePlayerPhase
 import com.example.regzaremote.core.LivePlayerState
@@ -75,9 +72,6 @@ import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.ProminentButton
 import com.example.regzaremote.ui.components.RowDivider
 import com.example.regzaremote.ui.components.ScreenHeader
-import com.example.regzaremote.ui.components.rememberState
-import com.example.regzaremote.ui.preview.SAMPLE_CHANNEL
-import com.example.regzaremote.ui.preview.SamplePreview
 import kotlinx.coroutines.delay
 
 /**
@@ -342,15 +336,4 @@ private fun ChannelRow(row: ChannelItem, onClick: () -> Unit) {
         }
         if (row.isNowPlaying) Icon(Icons.Filled.PlayArrow, contentDescription = AppStrings.playerNowPlaying, tint = AppTheme.accent)
     }
-}
-
-@Preview(name = "ライブ視聴")
-@Composable
-private fun LivePlayerScreenPreview() = SamplePreview(setUp = {
-    it(ChannelListAction.appear())
-    it(AppAction.play(SAMPLE_CHANNEL))
-    it(LivePlayerAction.appear())
-    it(LivePlayerAction.start())
-}) { app, send ->
-    rememberState(app) { app.livePlayerStates() }?.let { LivePlayerScreen(it, send) }
 }

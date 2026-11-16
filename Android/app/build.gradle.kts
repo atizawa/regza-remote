@@ -60,6 +60,8 @@ android {
         // 窓口 (RegzaAndroidApp と、その状態・操作の型) の Java のクラス
         "../.build/swift/regzabridge-java",
     )
+    // 偽物のテレビ・録画サーバーで組み立てる入口 (RegzaFakeApp) の Java のクラス。debug だけに入れる (本番の .so にもない)
+    sourceSets.getByName("debug").java.srcDirs("../.build/swift/regzafakes-java")
     // 画面が受け取る送り先 (Send) と、Swift の窓口に送る AppSend (Android/ScreenGlue の screen-glue が作る)
     sourceSets.getByName("main").kotlin.srcDirs("../.build/swift/screen-glue-kotlin")
 }
@@ -94,6 +96,7 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
                 "Sources/RegzaSharedJava/Generated/**",
                 "Sources/RegzaPresentationJava/Generated/**",
                 "Sources/RegzaAndroidBridgeJava/Generated/**",
+                "Sources/RegzaAndroidFakesJava/Generated/**",
                 // build-swift が共通の設定から書き出すもの
                 "Sources/RegzaAndroid/swift-java.config",
             )
@@ -107,11 +110,13 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     inputs.files(fileTree(androidDir.resolve("ScreenGlue")) { include("Package.swift", "Package.resolved", "Sources/**") })
     inputs.property("ndkVersion", android.ndkVersion)
     outputs.dir("src/main/jniLibs")
-    // テスト専用の .so (debug の APK にだけ入る)
+    // 本番の libRegzaAndroid.so と、偽物の入口とテスト専用の .so を足した debug のもの
+    outputs.dir("src/release/jniLibs")
     outputs.dir("src/debug/jniLibs")
     outputs.dir(androidDir.resolve(".build/swift/regzashared-java"))
     outputs.dir(androidDir.resolve(".build/swift/regzapresentation-java"))
     outputs.dir(androidDir.resolve(".build/swift/regzabridge-java"))
+    outputs.dir(androidDir.resolve(".build/swift/regzafakes-java"))
     outputs.dir(androidDir.resolve(".build/swift/screen-glue-kotlin"))
     outputs.dir(
         androidDir.resolve(".build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java"),
@@ -121,6 +126,7 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaSharedJava/Generated"))
     outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaPresentationJava/Generated"))
     outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated"))
+    outputs.dir(androidDir.resolve("RegzaAndroid/Sources/RegzaAndroidFakesJava/Generated"))
     outputs.file(androidDir.resolve("RegzaAndroid/Sources/RegzaAndroid/swift-java.config"))
 }
 tasks.named("preBuild") { dependsOn(buildSwift) }

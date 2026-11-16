@@ -6,7 +6,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // iOS 側の相手 (regza) と同じ約束事 (1 行ずつの命令と JSON) を話し、操作を送るところと state を受け取るところだけを、
 // アプリと同じ道 (Kotlin の Send と xxxStates → swift-java のつなぎ → 窓口 → 共有の ViewModel) で行う。
 // エミュレーターではなくホストの JVM で動かし、窓口とつなぎはホスト向けの共有ライブラリを読み込む。
-// 偽物のテレビ・録画サーバー (RegzaAndroidApp.fake) で組み立てるので、本物にはつながない
+// 偽物のテレビ・録画サーバー (RegzaFakeApp) で組み立てるので、本物にはつながない
 plugins {
     alias(libs.plugins.kotlin.jvm)
     // 振る舞いのテスト (BehaviorTests) の Android 側の相手 (ContractDriver) を、起動できる形にする
@@ -26,6 +26,7 @@ sourceSets.main {
         "../.build/swift/regzashared-java",
         "../.build/swift/regzapresentation-java",
         "../.build/swift/regzabridge-java",
+        "../.build/swift/regzafakes-java",
     )
     kotlin.srcDir("../.build/swift/screen-glue-kotlin")
 }

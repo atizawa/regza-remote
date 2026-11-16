@@ -24,8 +24,7 @@ import com.example.regzaremote.appservices.RegzaViewModel
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppTab
 import com.example.regzaremote.core.GuideSearchAction
-import com.example.regzaremote.core.RegzaAndroidApp
-import com.example.regzaremote.core.RegzaAndroidStorage
+import com.example.regzaremote.core.RegzaFakeApp
 import com.example.regzaremote.core.SettingsAction
 import com.example.regzaremote.core.TVSetupAction
 import java.util.Optional
@@ -143,7 +142,7 @@ class StateRestorationTest {
         fun viewModel(): RegzaViewModel {
             val factory = viewModelFactory {
                 initializer {
-                    RegzaViewModel(RegzaAndroidApp.fake(MemoryStorage(), "").get(), createSavedStateHandle())
+                    RegzaViewModel(RegzaFakeApp.make("").get(), createSavedStateHandle())
                 }
             }
             val extras = MutableCreationExtras().apply {
@@ -158,14 +157,6 @@ class StateRestorationTest {
         fun close() {
             lifecycle.currentState = Lifecycle.State.DESTROYED
             viewModelStore.clear()
-        }
-    }
-
-    private class MemoryStorage : RegzaAndroidStorage {
-        private val values = mutableMapOf<String, String>()
-        override fun value(key: String): Optional<String> = Optional.ofNullable(values[key])
-        override fun setValue(value: String, key: String) {
-            values[key] = value
         }
     }
 

@@ -35,11 +35,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.guideGridStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.GuideDayKind
@@ -56,8 +54,6 @@ import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.ProminentButton
 import com.example.regzaremote.ui.components.RecordIcon
 import com.example.regzaremote.ui.components.ScreenHeader
-import com.example.regzaremote.ui.components.rememberState
-import com.example.regzaremote.ui.preview.SamplePreview
 
 /** 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる (state と操作は GuideGridViewModel の GuideGridState・GuideGridAction) */
 @Composable
@@ -279,10 +275,4 @@ private fun genreColor(genre: Int): Color = when (genre) {
     9 -> Color(0xFF3F51B5)
     10 -> Color(0xFF26A69A)
     else -> Color.Gray
-}
-
-@Preview(name = "番組表")
-@Composable
-private fun GuideGridScreenPreview() = SamplePreview(setUp = { it(GuideGridAction.load()) }) { app, send ->
-    rememberState(app) { app.guideGridStates() }?.let { GuideGridScreen(it, send) }
 }

@@ -38,13 +38,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.programDetailStates
 import com.example.regzaremote.core.AppAction
-import com.example.regzaremote.core.AppRoute
-import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.ProgramDetailAction
 import com.example.regzaremote.core.ProgramDetailState
 import com.example.regzaremote.design.AppTheme
@@ -54,10 +50,6 @@ import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RecordIcon
 import com.example.regzaremote.ui.components.ScreenHeader
-import com.example.regzaremote.ui.components.rememberState
-import com.example.regzaremote.ui.preview.SAMPLE_CHANNEL
-import com.example.regzaremote.ui.preview.SAMPLE_PROGRAM
-import com.example.regzaremote.ui.preview.SamplePreview
 
 /** 番組の詳細 (state と操作は ProgramDetailViewModel の ProgramDetailState・ProgramDetailAction)。切り替えて見る・録画予約・最初から見る */
 @Composable
@@ -268,17 +260,4 @@ private fun RowScope.ActionButton(
             Text(title, fontWeight = FontWeight.SemiBold, color = foreground)
         }
     }
-}
-
-// Swift の型 (画面の道など) は、SamplePreview が Swift のライブラリを読み込んでから作る
-
-@Preview(name = "番組の詳細")
-@Composable
-private fun ProgramDetailScreenPreview() = SamplePreview(setUp = {
-    it(GuideGridAction.load())
-    it(AppAction.push(AppRoute.programDetail(SAMPLE_PROGRAM, SAMPLE_CHANNEL)))
-    it(ProgramDetailAction.appear())
-}) { app, send ->
-    val route = remember { AppRoute.programDetail(SAMPLE_PROGRAM, SAMPLE_CHANNEL) }
-    rememberState(app) { app.programDetailStates(route) }?.let { ProgramDetailScreen(it, onBack = {}, send) }
 }

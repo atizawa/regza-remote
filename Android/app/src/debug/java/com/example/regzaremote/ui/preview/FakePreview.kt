@@ -18,7 +18,7 @@ import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.design.AppTheme
 
 /**
- * 画面のプレビューの準備。プレビューそのものは、それぞれの画面のファイルの末尾に置く。振る舞いのテストと同じ偽物のテレビ・録画サーバー
+ * 画面のプレビューの準備 (debug だけ。プレビューそのものは ScreenPreviews.kt)。振る舞いのテストと同じ偽物のテレビ・録画サーバー
  * (RegzaFakeServers) で共有の ViewModel を組み立てて、本物の state を画面に渡す (本物にはつながない)。
  *
  * state は Swift の値なので、Swift のライブラリがないと作れない。
@@ -31,7 +31,7 @@ import com.example.regzaremote.design.AppTheme
  * @param setUp 組み立てたあとに送る操作 (一覧を読み込むなど)
  */
 @Composable
-fun SamplePreview(setUp: (Send) -> Unit = {}, content: @Composable (RegzaAndroidApp, Send) -> Unit) {
+fun FakePreview(setUp: (Send) -> Unit = {}, content: @Composable (RegzaAndroidApp, Send) -> Unit) {
     MaterialTheme(colorScheme = AppTheme.colorScheme) {
         Surface(modifier = Modifier.fillMaxSize(), color = AppTheme.background) {
             val inEditor = LocalInspectionMode.current
@@ -53,7 +53,7 @@ fun SamplePreview(setUp: (Send) -> Unit = {}, content: @Composable (RegzaAndroid
 }
 
 /** 偽物のチャンネル一覧の 1 局目 */
-const val SAMPLE_CHANNEL = "JP-G00000001"
+const val FAKE_CHANNEL = "JP-G00000001"
 
 /** 偽物の番組表の、1 局目の放送中の番組 */
-const val SAMPLE_PROGRAM = 100002L
+const val FAKE_PROGRAM = 100002L

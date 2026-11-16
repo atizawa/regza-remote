@@ -14,9 +14,12 @@ let package = Package(
     products: [
         // Android アプリが System.loadLibrary("RegzaAndroid") で読み込む共有ライブラリ
         .library(name: "RegzaAndroid", type: .dynamic, targets: ["RegzaAndroid"]),
+        // debug の APK が読み込む共有ライブラリ。本番のものに、偽物のテレビ・録画サーバーで組み立てる入口 (プレビュー・端末のテスト用) を足す。
+        // build-swift が libRegzaAndroid.so の名前で debug の置き場に入れる (本番の .so には偽物を入れない)
+        .library(name: "RegzaAndroidDebug", type: .dynamic, targets: ["RegzaAndroid", "RegzaAndroidFakesJava"]),
         // 窓口とつなぎを、ホストの JVM で動かす振る舞いのテスト (behavior-tests) から読み込むライブラリ。
         // Android 専用の部品 (Looper) は含めない
-        .library(name: "RegzaJVMHost", type: .dynamic, targets: ["RegzaAndroidBridgeJava"]),
+        .library(name: "RegzaJVMHost", type: .dynamic, targets: ["RegzaAndroidBridgeJava", "RegzaAndroidFakesJava"]),
         // テスト専用: APK の ICU の結果を確かめる。debug の APK にだけ入れる (本番の RegzaAndroid には入れない)
         .library(name: "RegzaFoundationCheck", type: .dynamic, targets: ["RegzaFoundationCheck"]),
     ],
@@ -63,7 +66,17 @@ let package = Package(
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        // Android のメインスレッドの Looper で MainActor を動かすための宣言 (NDK の Looper と libdispatch)
+        // 偽物で組み立てる入口 (RegzaAndroidBridge の RegzaAndroidFakes) の Java のつなぎ。debug の .so とホストの JVM 向けにだけ入れる
+        // (設定は RegzaAndroidFakes.swift-java.config)
+        .target(
+            name: "RegzaAndroidFakesJava",
+            dependencies: [
+                "RegzaAndroidBridgeJava",
+                .product(name: "RegzaAndroidFakes", package: "RegzaAndroidBridge"),
+                .product(name: "SwiftJava", package: "swift-java"),
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         .target(
             name: "RegzaFoundationCheck",
             dependencies: [
@@ -72,6 +85,7 @@ let package = Package(
             ],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // Android のメインスレッドの Looper で MainActor を動かすための宣言 (NDK の Looper と libdispatch)
         .target(
             name: "CAndroidMainLoop",
             linkerSettings: [.linkedLibrary("android")]
