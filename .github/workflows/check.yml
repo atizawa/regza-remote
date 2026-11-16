@@ -63,13 +63,14 @@ jobs:
       - run: mise run build-ios
 
   # Linux で Android のアプリをビルドし、ホスト向けの .so を使って両方の相手に振る舞いのテストを流す。
-  # 毎回 Swift を最初からビルドするので 30 分ほどかかる。いったん、手で動かしたときだけ流す (push と pull request では流さない)
+  # いったん、手で動かしたときだけ流す (push と pull request では流さない)
   android:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
       MISE_ENV: linux
+      SWIFT_BUILD_JOBS: 4
     steps:
       - uses: actions/checkout@v7
       # Android/mise.toml の道具 (swift.org の Swift・JDK・Android CLI) と、ルートの道具を入れる
@@ -92,5 +93,21 @@ jobs:
       - name: Swift SDK for Android を入れる (取っておいたものがあれば使う)
         working-directory: Android
         run: mise run install-android-swift-sdk
+      # 生成に使う道具 (swift-java のツールと ScreenGlue)
+      - uses: actions/cache@v6
+        with:
+          path: |
+            Android/.build/swift-tool
+            Android/.build/screen-glue
+          key: swift-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('toolchains.toml', 'Android/RegzaAndroid/Package.swift', 'Android/ScreenGlue/Package.swift') }}
+      # Android 向けの Swift のビルド。最新のものから差分だけをビルドする
+      - uses: actions/cache@v6
+        with:
+          path: |
+            Android/.build/swift
+            !Android/.build/swift/android-libs
+            !Android/.build/swift/icu-slim
+          key: swift-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('toolchains.toml', 'Android/RegzaAndroid/Package.swift') }}-${{ github.sha }}
+          restore-keys: swift-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('toolchains.toml', 'Android/RegzaAndroid/Package.swift') }}-
       - run: mise run build-android
       - run: mise run test-behavior

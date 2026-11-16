@@ -151,8 +151,16 @@ swift_java_config "RegzaAndroid/RegzaAndroid.swift-java.config" RegzaAndroid/Sou
 # Android 向けのビルドとはビルドの設定が違い、同じ置き場だと互いのキャッシュを捨て合うので、置き場を分ける
 begin_stage "生成ツールのビルド" "swift-java"
 swift_java_build=("$SWIFT_COMMAND" build --jobs "$swift_build_jobs" --package-path RegzaAndroid --scratch-path .build/swift-tool -c release --product swift-java)
-"${swift_java_build[@]}"
 swift_java=$("${swift_java_build[@]}" --show-bin-path)/swift-java
+# 変わっていなくても SwiftPM の確認に 10 秒以上かかるので、依存と Swift の版が前と同じなら飛ばす
+swift_java_stamp=.build/swift-tool/regza-tool.stamp
+swift_java_key() { { echo "$swift_version"; cat RegzaAndroid/Package.swift; cat RegzaAndroid/Package.resolved 2>/dev/null || true; } | shasum | cut -d' ' -f1; }
+if [ -x "$swift_java" ] && [ -f "$swift_java_stamp" ] && [ "$(cat "$swift_java_stamp")" = "$(swift_java_key)" ]; then
+  echo "swift-java のツールは前に作ったものを使います"
+else
+  "${swift_java_build[@]}"
+  swift_java_key > "$swift_java_stamp"
+fi
 
 shared_java=.build/swift/regzashared-java
 presentation_java=.build/swift/regzapresentation-java

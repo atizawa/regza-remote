@@ -95,7 +95,9 @@ Android SDK の場所は `ANDROID_HOME`、次に `ANDROID_SDK_ROOT` を優先し
 
 `mise run check` は iOS のビルドも含むため macOS 用。Linux では `lint`・`test-swift-shared`・`build-android`・`test-behavior` を個別に実行する。
 
-Swift の Android ビルド・ホスト向けビルド・振る舞いテスト用 CLI のビルドは、SwiftSyntax などの初回コンパイルでメモリを多く使うため、並列数を既定で 2 にする。`SWIFT_BUILD_JOBS=1 mise run build-android` のように変更できる。Gradle の JVM メモリは `Android/gradle.properties` で管理する。
+Swift の Android ビルド・ホスト向けビルド・振る舞いテスト用 CLI のビルドは、SwiftSyntax などの初回コンパイルでメモリを多く使うため、並列数を既定で 2 にする。`SWIFT_BUILD_JOBS=1 mise run build-android` のように変更できる。GitHub Actions の Android のジョブは 4 にしている。
+
+`build-swift.sh` は、swift-java のツールの依存と Swift の版が前と同じならツールのビルドを飛ばす。GitHub Actions の Android のジョブは Swift のビルドを取っておき、差分だけをビルドする。うまく動かないときは、Actions の Caches から `swift-tools-`・`swift-android-` で始まるものを消す。Gradle の JVM メモリは `Android/gradle.properties` で管理する。
 
 Linux のホスト JVM では、`HostSwiftRuntime` が専用スレッドで Swift のライブラリを読み込み、そのスレッドの終了まで待つ。これにより MainActor のキューを JVM の入力待ちや Future の待機から切り離す。振る舞いテストとエディタのプレビューで共通に使い、Android 端末では既存の Looper への接続を使う。
 
