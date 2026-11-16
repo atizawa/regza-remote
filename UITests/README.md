@@ -17,7 +17,7 @@ iOS のバンドル ID はビルドした Info.plist から取得するため、
 
 `run.sh` がローカルの `server.ts` を空いているポートで起動する。Maestro の起動引数 `UITestServer` には接続先だけを渡す。iOS は `ProcessInfo.arguments`、Android は Intent extras で読み、UserDefaults / SharedPreferences へフラグや接続先を保存しない。iOS は `UITEST_SERVER` 環境変数でも同じ設定を受け取れる（XCUITest の launchEnvironment など）。Maestro のフローでは公開されている起動引数 API を使用する。
 
-起動口は debug ビルドだけで有効。接続設定はプロセス内のメモリに置き、通信処理や応答データの差し替えはアプリ内で行わない。偽物のテレビ・録画サーバー（RegzaFakeServers）は使用しない。復元機能は本番と同じように有効にする。HTTP スタブが返す架空のテレビと番組だけを使い、実際のテレビ・録画サーバーには接続しない。
+起動口は debug ビルドだけで有効。接続設定はプロセス内のメモリに置き、通信処理や応答データの差し替えはアプリ内で行わない。偽物のテレビ・録画サーバー（RegzaFakeServers）は使用しない。復元機能は本番と同じように有効にする。HTTP スタブが返す架空のテレビと番組だけを使い、実際のテレビ・録画サーバーには接続しない。スタブが答える操作と返事の形は、`server.test.ts` が OpenAPI の定義（`../OpenAPI`）と照らし合わせる（`mise run check-ui-stub`。lint に含まれ、Maestro は要らない）。
 
 ## フロー
 

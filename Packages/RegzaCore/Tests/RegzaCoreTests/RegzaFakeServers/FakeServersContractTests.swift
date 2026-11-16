@@ -66,6 +66,43 @@ import Testing
         #expect(!connection.password.isEmpty)
     }
 
+    /// PIN の表示を取り消す
+    @Test func cancelPairing() async throws {
+        try await tv.request(RegzaStartPairingRequest(user: "02-00-00-00-00-01"))
+        try await tv.request(RegzaCancelPairingRequest(user: "02-00-00-00-00-01"))
+    }
+
+    /// テレビの API の定義 (OpenAPI/regza-tv.yaml) にある操作には、どれも偽物が答える (定義に足した操作を、偽物に足し忘れない)
+    @Test func tvAnswersEveryOperationInTheSpec() async throws {
+        let spec = try String(contentsOf: Self.repository.appending(path: "OpenAPI/regza-tv.yaml"), encoding: .utf8)
+        var operations: [(method: String, path: String)] = []
+        var path: String?
+        for line in spec.split(separator: "\n", omittingEmptySubsequences: false) {
+            if line.hasPrefix("  /"), line.hasSuffix(":") {
+                path = String(line.dropFirst(2).dropLast())
+            } else if let path, line.hasPrefix("    "), !line.hasPrefix("     "),
+                let method = ["get", "post", "put", "delete"].first(where: { line == "    \($0):" })
+            {
+                operations.append((method.uppercased(), path))
+            } else if !line.hasPrefix(" "), !line.isEmpty {
+                path = nil
+            }
+        }
+        // 定義の読み取りが壊れていないこと
+        #expect(operations.count >= 14)
+        for operation in operations {
+            // 標準の場面には、予約 (ID 1) が 1 件ある
+            let path = operation.path.replacingOccurrences(of: "{rsv_id}", with: "1")
+            let url = try #require(URL(string: "http://\(FakeServers.Host.tv)\(path)"))
+            let response = try await transport.send(HTTPRequest(method: operation.method, url: url, timeout: 3))
+            #expect(response.statusCode == 200, "\(operation.method) \(operation.path)")
+        }
+    }
+
+    static let repository = URL(filePath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+
     @Test func discoveryFindsOnlyTheTV() async {
         let device = await RegzaDiscovery.probe(host: FakeServers.Host.tv, transport: transport)
         #expect(device?.supportsPIN == true)

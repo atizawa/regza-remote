@@ -112,7 +112,7 @@ iOS は Xcode 付属の Apple Swift を使い、`swift.version` と major.minor 
 
 Repository・UseCase の単体テストは [Mockolo](https://github.com/uber/mockolo) で生成するモックを使用する。対象は Domain の `@mockable` を付けた protocol。生成結果は `Tests/RegzaCoreTests/Generated/DomainMocks.swift` に置き、protocol を変更したらリポジトリのルートで `mise run generate-mocks` を実行する。Mockolo は `Tools/GenerateMocks/Package.swift` で版を固定し、アプリの依存から分離しているため、通常のアプリビルドやテストで生成ツールをビルドする必要はない。
 
-`Tests/RegzaCoreTests/Support` は、入力値の `DataFixtures.swift`、生成モックの初期値を設定する `RepositoryMocks.swift`、HTTP・保存・本番 Factory をつなぐ `HTTPTestEnvironment.swift`、ViewModel の準備と待機を行う `ViewModelFixtures.swift` に分ける。単体テストの戻り値やエラーはモックの Handler に設定し、呼び出し回数・引数は生成された記録で確認する。通信を含むテストでは本物の Repository と偽の HTTP を使う。偽物のテレビ・録画サーバー（`RegzaFakeServers`）の返事は、`FakeServersContractTests` で本物の API クライアントで読めることを確かめる。
+`Tests/RegzaCoreTests/Support` は、入力値の `DataFixtures.swift`、生成モックの初期値を設定する `RepositoryMocks.swift`、HTTP・保存・本番 Factory をつなぐ `HTTPTestEnvironment.swift`、ViewModel の準備と待機を行う `ViewModelFixtures.swift` に分ける。単体テストの戻り値やエラーはモックの Handler に設定し、呼び出し回数・引数は生成された記録で確認する。通信を含むテストでは本物の Repository と偽の HTTP を使う。偽物のテレビ・録画サーバー（`RegzaFakeServers`）の返事は、`FakeServersContractTests` で本物の API クライアントで読めることと、テレビの API の定義（`OpenAPI/regza-tv.yaml`）にあるどの操作にも答えることを確かめる。
 
 ```sh
 mise run generate-mocks                  # Domain の protocol を変更したときにモックを再生成
@@ -447,4 +447,4 @@ App Intents で次の操作を出している（`RemoteIntents.swift`。言い�
 
 ### Maestro による UI テスト
 
-設定入力・画面遷移・入力復元の 3 フローを iOS / Android で実行する。通常の APIClient・通信をローカル HTTP スタブへ接続し、アプリに偽物を注入しない。導入と実行方法は [UITests/README.md](UITests/README.md)。`mise run test-ui-ios` / `mise run test-ui-android` は対象端末 ID を指定して明示的に実行する。
+設定入力・画面遷移・入力復元の 3 フローを iOS / Android で実行する。通常の APIClient・通信をローカル HTTP スタブへ接続し、アプリに偽物を注入しない。スタブの返事は OpenAPI の定義に合うことを `mise run check-ui-stub`（lint に含まれる）で確かめる。導入と実行方法は [UITests/README.md](UITests/README.md)。`mise run test-ui-ios` / `mise run test-ui-android` は対象端末 ID を指定して明示的に実行する。

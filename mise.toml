@@ -35,7 +35,7 @@ run = "bash scripts/check-toolchain.sh swift {{ vars.swift }}"
 
 [tasks.lint]
 description = "Swift・Kotlin の書き方と Android の依存方向を確かめる"
-depends = ["build-ktlint-rules", "check-design-tokens", "check-localizations"]
+depends = ["build-ktlint-rules", "check-design-tokens", "check-localizations", "check-ui-stub"]
 dir = "{{ config_root }}"
 shell = "bash -c"
 run = '''
@@ -87,6 +87,13 @@ run = "bun generate.ts"
 description = "String Catalogの変換と、両OSの生成結果の一致を確認する"
 dir = "{{ config_root }}/Localization"
 run = ["bun test", "bun generate.ts --check"]
+
+[tasks.check-ui-stub]
+description = "UI テストの HTTP スタブ (UITests/server.ts) の返事が、OpenAPI の定義に合うことを確認する"
+# UITests/mise.toml の道具 (Maestro・Java) を入れずに流せるよう、ルートの設定で動かしてから UITests に移る
+dir = "{{ config_root }}"
+shell = "bash -c"
+run = "cd UITests && bun install --frozen-lockfile && bun test"
 
 [tasks.check-design-tokens]
 description = "デザイントークンの JSON と両 OS の生成結果が一致することを確認する"
