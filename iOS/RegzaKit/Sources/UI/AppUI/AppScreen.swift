@@ -116,10 +116,6 @@ public struct AppScreen: View {
         .environment(appViewModel)
         .appEnvironment(navigator: appViewModel, remoteViewModel: appViewModel.remoteViewModel, liveActivity: liveActivity)
         .sensoryFeedback(.impact(weight: .light), trigger: remoteViewModel.state.tapCount)
-        .task {
-            // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
-            await appViewModel.cleanUpStreams()
-        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active {
                 remoteViewModel.send(.startPolling)

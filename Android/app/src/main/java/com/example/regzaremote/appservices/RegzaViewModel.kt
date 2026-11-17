@@ -18,6 +18,8 @@ class RegzaViewModel(val app: RegzaAndroidApp, savedStateHandle: SavedStateHandl
     val send: Send = SwiftSend(app)
 
     init {
+        // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める (画面を開いたときだけ。待たずに送るだけ)
+        app.cleanUpStreams()
         savedStateHandle.get<Bundle>(STATE_KEY)?.getString(SNAPSHOT_KEY)?.let(app::restoreState)
         // OS が保存するときに同期で取得する。Flow の受信待ちにより入力が古くならないようにする。
         savedStateHandle.setSavedStateProvider(STATE_KEY) {

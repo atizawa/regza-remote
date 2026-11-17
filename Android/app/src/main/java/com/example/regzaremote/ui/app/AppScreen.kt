@@ -21,6 +21,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
@@ -36,6 +37,7 @@ import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.RecordIcon
+import com.example.regzaremote.ui.components.SensoryFeedback
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.player.NowPlayingBar
 import com.example.regzaremote.ui.player.NowPlayingScreen
@@ -54,6 +56,8 @@ fun AppScreen(app: RegzaAndroidApp, state: AppState, send: Send) {
         send(RemoteAction.startPolling())
         onStopOrDispose { send(RemoteAction.stopPolling()) }
     }
+    // リモコンのボタンや選局のたびに、軽く震わせる (iOS と同じく、どのタブからの操作でも)
+    SensoryFeedback(HapticFeedbackType.VirtualKey, remote.tapCount)
     val tab = state.tab
     Scaffold(
         containerColor = AppTheme.background,

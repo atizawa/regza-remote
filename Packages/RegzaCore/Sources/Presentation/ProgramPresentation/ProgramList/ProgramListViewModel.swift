@@ -25,6 +25,7 @@ public final class ProgramListViewModel {
 
     private var programs: [ProgramItem]?
     private var loadError: RegzaError?
+    private var isLoading = false
     @ObservationIgnored private let work = Work()
 
     public var state: State {
@@ -32,6 +33,7 @@ public final class ProgramListViewModel {
             channelCode: channel.code,
             channelName: channel.name,
             days: programs.map { guideUseCase.days($0) },
+            isLoading: isLoading,
             loadErrorMessage: programs == nil ? loadError?.localizedDescription : nil
         )
     }
@@ -48,6 +50,8 @@ public final class ProgramListViewModel {
     }
 
     private func load() async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             programs = try await guideUseCase.programs(for: channel)
             loadError = nil

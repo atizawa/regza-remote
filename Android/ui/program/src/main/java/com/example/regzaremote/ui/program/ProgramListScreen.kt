@@ -41,6 +41,7 @@ import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
+import com.example.regzaremote.ui.components.RefreshBox
 import com.example.regzaremote.ui.components.ReservedBadge
 import com.example.regzaremote.ui.components.RowDivider
 import com.example.regzaremote.ui.components.ScreenHeader
@@ -62,25 +63,28 @@ fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Progr
         when {
             days != null && days.isEmpty() -> EmptyState(AppStrings.guideEmpty, AppStrings.guideChannelEmpty)
 
-            days != null -> LazyColumn(
-                contentPadding = PaddingValues(
-                    start = DesignDimensions.spacingOuter,
-                    top = DesignDimensions.spacingOuter,
-                    end = DesignDimensions.spacingOuter,
-                    bottom =
-                        DesignDimensions.spacingOuter + LocalMiniPlayerInset.current,
-                ),
-            ) {
-                days.forEach { day ->
-                    item(key = "day-${day.label}") { SectionHeader(day.label, Modifier.padding(top = 8.dp, bottom = 6.dp)) }
-                    val programs = day.programs.toList()
-                    itemsIndexed(programs, key = { _, program -> program.id }) { index, program ->
-                        Column(Modifier.background(AppTheme.surface, sectionRowShape(index, programs.size))) {
-                            ProgramRow(program, send)
-                            if (index < programs.size - 1) RowDivider()
+            days != null -> RefreshBox(isLoading = list.isLoading, onRefresh = { send(ProgramListAction.reload()) }) {
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = DesignDimensions.spacingOuter,
+                        top = DesignDimensions.spacingOuter,
+                        end = DesignDimensions.spacingOuter,
+                        bottom =
+                            DesignDimensions.spacingOuter + LocalMiniPlayerInset.current,
+                    ),
+                ) {
+                    days.forEach { day ->
+                        item(key = "day-${day.label}") { SectionHeader(day.label, Modifier.padding(top = 8.dp, bottom = 6.dp)) }
+                        val programs = day.programs.toList()
+                        itemsIndexed(programs, key = { _, program -> program.id }) { index, program ->
+                            Column(Modifier.background(AppTheme.surface, sectionRowShape(index, programs.size))) {
+                                ProgramRow(program, send)
+                                if (index < programs.size - 1) RowDivider()
+                            }
                         }
+                        item(key = "space-${day.label}") { Box(Modifier.padding(bottom = DesignDimensions.spacingItem)) }
                     }
-                    item(key = "space-${day.label}") { Box(Modifier.padding(bottom = DesignDimensions.spacingItem)) }
                 }
             }
 

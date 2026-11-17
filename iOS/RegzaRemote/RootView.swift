@@ -36,6 +36,11 @@ struct RootView: View {
     var body: some View {
         AppScreen(appViewModel: appViewModel, liveActivity: liveActivity, debugPlayerViewModel: debugPlayerViewModel)
             .preferredColorScheme(appViewModel.appearance.preferredColorScheme)
+            .task {
+                // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める。アプリの画面を開いたときだけ呼ぶ
+                // (AppContainer は Live Activity のボタンや Siri からも作られるので、作るときには呼ばない。Android も画面を開いたときに呼ぶ)
+                await appViewModel.cleanUpStreams()
+            }
             .onAppear {
                 appContainer.restoreUIState(savedStateJSON)
             }

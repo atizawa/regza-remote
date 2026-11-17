@@ -27,8 +27,6 @@ public final class RegzaAndroidApp {
         self.stateWaitRegistry = onMainActor {
             // 未登録なら、テレビの登録の画面から始める
             if !appViewModel.remoteViewModel.state.isConfigured { appViewModel.send(.showSettings) }
-            // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
-            Task { await appViewModel.cleanUpStreams() }
             return StateWaitRegistry()
         }
     }
@@ -70,6 +68,12 @@ public final class RegzaAndroidApp {
     }
 
     // MARK: 操作
+
+    /// 前回、強制終了などで止められずに残ったライブ視聴の配信を止める。アプリの画面を開いたときに呼ぶ
+    /// (窓口は通知のボタンや閉じている間の更新でも作られるので、作るときには呼ばない。iOS も画面を開いたときに呼ぶ)
+    public func cleanUpStreams() async {
+        await appViewModel.cleanUpStreams()
+    }
 
     /// Android の保存状態のコールバックは同期なので、メインスレッド上で最新の入力を取り出す。
     public func saveState() -> String {

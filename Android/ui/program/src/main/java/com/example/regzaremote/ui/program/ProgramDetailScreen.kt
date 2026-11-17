@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,6 +53,7 @@ import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RecordIcon
 import com.example.regzaremote.ui.components.ScreenHeader
+import com.example.regzaremote.ui.components.SensoryFeedback
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.preview.FAKE_CHANNEL
 import com.example.regzaremote.ui.preview.FAKE_PROGRAM
@@ -62,6 +64,8 @@ import com.example.regzaremote.ui.preview.FakePreview
 fun ProgramDetailScreen(detail: ProgramDetailState, onBack: (() -> Unit)?, send: ProgramSend) {
     val program = detail.program
     LaunchedEffect(program.id) { send(ProgramDetailAction.appear()) }
+    // 録画を予約できたら知らせる (iOS と同じ合図)
+    SensoryFeedback(HapticFeedbackType.Confirm, detail.reserveCount)
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(AppStrings.programDetails, onBack)
         Column(

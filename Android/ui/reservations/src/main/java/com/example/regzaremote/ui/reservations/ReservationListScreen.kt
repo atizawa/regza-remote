@@ -21,16 +21,13 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,14 +49,13 @@ import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RecordIcon
+import com.example.regzaremote.ui.components.RefreshBox
 import com.example.regzaremote.ui.components.RowDivider
 import com.example.regzaremote.ui.components.ScreenHeader
 import com.example.regzaremote.ui.components.SectionHeader
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.components.sectionRowShape
 import com.example.regzaremote.ui.preview.FakePreview
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 
 /**
  * テレビの録画予約の一覧 (state と操作は ReservationListViewModel の ReservationListState・ReservationListAction)。
@@ -71,17 +67,6 @@ fun ReservationListScreen(list: ReservationListState, send: ReservationsSend) {
     LaunchedEffect(Unit) { send(ReservationListAction.load()) }
     // 取り消すか確かめている予約
     var cancelling by remember { mutableStateOf<ReservationItem?>(null) }
-    // 引っ張って読み直している間。すぐに読み終わると読み込み中の状態が届かないこともあるので、
-    // 少し待ってから、読み込み中でなくなるのを待って止める
-    var isRefreshing by remember { mutableStateOf(false) }
-    val isLoading by rememberUpdatedState(list.isLoading)
-    LaunchedEffect(isRefreshing) {
-        if (!isRefreshing) return@LaunchedEffect
-        delay(300)
-        snapshotFlow { isLoading }.first { !it }
-        isRefreshing = false
-    }
-
     val scheduledTitle = AppStrings.reservationScheduled
     val waitingTitle = AppStrings.reservationWaitingSeries
     val waitingHelp = AppStrings.reservationWaitingHelp
@@ -95,14 +80,7 @@ fun ReservationListScreen(list: ReservationListState, send: ReservationsSend) {
 
             !list.isHasLoaded -> Loading()
 
-            else -> PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = {
-                    isRefreshing = true
-                    send(ReservationListAction.load())
-                },
-                modifier = Modifier.fillMaxSize(),
-            ) {
+            else -> RefreshBox(isLoading = list.isLoading, onRefresh = { send(ReservationListAction.load()) }) {
                 if (list.scheduled.isEmpty() && list.waiting.isEmpty()) {
                     EmptyState(AppStrings.reservationEmpty)
                 } else {
