@@ -248,8 +248,6 @@ public enum AppStrings {
         String.localizedStringWithFormat(NSLocalizedString("server_port_help", bundle: .module, comment: ""), Int64(value1))
     }
 
-    public static var serverPortInvalid: String { String(localized: "server_port_invalid", bundle: .module) }
-
     public static func serverSearch(_ value1: String) -> String {
         String.localizedStringWithFormat(NSLocalizedString("server_search", bundle: .module, comment: ""), value1)
     }

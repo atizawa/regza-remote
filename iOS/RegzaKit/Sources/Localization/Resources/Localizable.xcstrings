@@ -2905,18 +2905,6 @@
         }
       }
     },
-    "server_port_invalid": {
-      "extractionState": "manual",
-      "comment": "server / port / invalid",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ポートは 1〜65535 の数字で入れてください。"
-          }
-        }
-      }
-    },
     "server_search": {
       "extractionState": "manual",
       "comment": "server / search",

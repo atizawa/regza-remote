@@ -339,9 +339,6 @@ object AppStrings {
     @Composable
     fun serverPortHelp(value1: Int): String = stringResource(R.string.server_port_help, value1)
 
-    val serverPortInvalid: String
-        @Composable get() = stringResource(R.string.server_port_invalid)
-
     @Composable
     fun serverSearch(value1: String): String = stringResource(R.string.server_search, value1)
 

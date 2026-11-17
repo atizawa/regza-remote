@@ -76,7 +76,7 @@ fun ChannelListScreen(state: ChannelListState, send: ChannelsSend) {
                 TextButton(onClick = { send(ChannelListAction.reload()) }) { Text(AppStrings.commonRetry) }
             }
 
-            state.rows.isEmpty() -> Loading()
+            state.isHasNoChannels -> Loading()
 
             else -> {
                 BandPicker(state.bands, state.band.orElse(null), send)

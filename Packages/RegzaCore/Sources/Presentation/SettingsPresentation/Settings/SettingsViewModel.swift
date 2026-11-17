@@ -48,7 +48,6 @@ public final class SettingsViewModel {
         return State(
             appearance: appearance,
             path: path,
-            canClose: remoteViewModel.state.isConfigured,
             canSave: tv.canSave && servers.isValid,
             tv: tv,
             servers: servers

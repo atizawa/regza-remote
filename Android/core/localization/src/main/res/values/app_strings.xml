@@ -243,7 +243,6 @@
     <string name="server_host_placeholder" formatted="false">"IPアドレス (例: 192.168.0.2)"</string>
     <string name="server_port" formatted="false">"ポート"</string>
     <string name="server_port_help">"ポートは 1〜65535 の数字で入れてください。空のままなら %1$d を使います。"</string>
-    <string name="server_port_invalid" formatted="false">"ポートは 1〜65535 の数字で入れてください。"</string>
     <string name="server_search">"%1$s を探す"</string>
     <string name="server_searching">"%1$s を探しています…"</string>
     <string name="settings_guide_help" formatted="false">"Mirakurun を動かしている場合に設定すると、放送中の番組名と番組表を表示します。使わない場合は空のままにしてください。"</string>

@@ -38,13 +38,17 @@ public final class ServerSetupViewModel {
     public var state: State {
         State(
             guide: ServerState(
-                host: guideHost, defaultPort: ServerPort.mirakurun, hosts: guideHosts, isScanning: isScanningGuide,
+                host: guideHost, address: ServerAddress(guideHost).address, port: ServerAddress(guideHost).port,
+                isPortValid: ServerAddress(guideHost).isValid, defaultPort: ServerPort.mirakurun, hosts: guideHosts,
+                isScanning: isScanningGuide,
                 message: guideMessage, status: Self.status(guideHost), isLinked: !setupUseCase.linkedGuideHost.isEmpty,
                 unlinkTitle: CoreStrings.serverGuideUnlinkTitle,
                 unlinkMessage: CoreStrings.serverGuideUnlinkMessage
             ),
             stream: ServerState(
-                host: streamHost, defaultPort: ServerPort.epgStation, hosts: streamHosts, isScanning: isScanningStream,
+                host: streamHost, address: ServerAddress(streamHost).address, port: ServerAddress(streamHost).port,
+                isPortValid: ServerAddress(streamHost).isValid, defaultPort: ServerPort.epgStation, hosts: streamHosts,
+                isScanning: isScanningStream,
                 message: streamMessage, status: Self.status(streamHost), isLinked: !setupUseCase.linkedStreamHost.isEmpty,
                 unlinkTitle: CoreStrings.serverStreamUnlinkTitle,
                 unlinkMessage: CoreStrings.serverStreamUnlinkMessage
@@ -59,6 +63,10 @@ public final class ServerSetupViewModel {
         switch action {
         case .setHost(.guide, let host): guideHost = host
         case .setHost(.stream, let host): streamHost = host
+        case .setAddress(.guide, let address): guideHost = ServerAddress(address: address, port: ServerAddress(guideHost).port).combined
+        case .setAddress(.stream, let address): streamHost = ServerAddress(address: address, port: ServerAddress(streamHost).port).combined
+        case .setPort(.guide, let port): guideHost = ServerAddress(address: ServerAddress(guideHost).address, port: port).combined
+        case .setPort(.stream, let port): streamHost = ServerAddress(address: ServerAddress(streamHost).address, port: port).combined
         case .scan(.guide): work.run { await self.scanGuide() }
         case .scan(.stream): work.run { await self.scanStream() }
         case .suggestStreamHost: work.run { await self.suggestStreamHost() }
@@ -133,6 +141,8 @@ extension ServerSetupViewModel {
         let server = ServerSetupServer.allCases.map(\.rawValue).joined(separator: " | ")
         return [
             ActionDescription("setHost", "アドレスを入れる", parameters: ["server": server, "host": "192.0.2.2 か 192.0.2.2:40772"]),
+            ActionDescription("setAddress", "アドレスの欄を変える (ポートはそのまま)", parameters: ["server": server, "address": "192.0.2.2"]),
+            ActionDescription("setPort", "ポートの欄を変える (空なら標準のポート)", parameters: ["server": server, "port": "40772"]),
             ActionDescription("scan", "同じネットワークで探す", parameters: ["server": server]),
             ActionDescription("suggestStreamHost", "Mirakurun と同じサーバーの EPGStation を探す"),
             ActionDescription("unlink", "連携を解除する (番組表を外すとライブ視聴も外れる)", parameters: ["server": server]),
@@ -148,6 +158,8 @@ extension ServerSetupViewModel {
         }
         switch name {
         case "setHost": return .setHost(try server(), try arguments.string("host"))
+        case "setAddress": return .setAddress(try server(), try arguments.string("address"))
+        case "setPort": return .setPort(try server(), try arguments.string("port"))
         case "scan": return .scan(try server())
         case "suggestStreamHost": return .suggestStreamHost
         case "unlink": return .unlink(try server())

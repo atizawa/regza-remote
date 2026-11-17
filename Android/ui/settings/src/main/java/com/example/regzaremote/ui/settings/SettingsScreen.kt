@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -45,6 +46,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -93,24 +96,18 @@ private fun tv(action: TVSetupAction) = SettingsAction.tv(action)
 
 @Composable
 private fun SettingsTopPage(setup: SettingsState, send: SettingsSend) {
-    // 登録済みのテレビがあれば、戻るボタンでも閉じる
-    BackHandler(enabled = setup.isCanClose) { send(SettingsAction.close()) }
+    // 戻るボタンでも閉じる (iOS と同じく、テレビが未登録でも閉じられる。閉じれば、組み立てが登録の案内を出す)
+    BackHandler { send(SettingsAction.close()) }
     val servers = setup.servers
     SettingsFrame(
         header = {
             // キャンセルは左上の ×、保存は右上の ✓ (iOS 版と同じ)
             ScreenHeader(
                 AppStrings.settingsTitle,
-                leading = if (setup.isCanClose) {
-                    (
-                        {
-                            HeaderIconButton(Icons.Filled.Close, AppStrings.commonClose, modifier = Modifier.testTag("settings.close")) {
-                                send(SettingsAction.close())
-                            }
-                        }
-                        )
-                } else {
-                    null
+                leading = {
+                    HeaderIconButton(Icons.Filled.Close, AppStrings.commonClose, modifier = Modifier.testTag("settings.close")) {
+                        send(SettingsAction.close())
+                    }
                 },
             ) {
                 HeaderIconButton(Icons.Filled.Check, AppStrings.commonSave, enabled = setup.isCanSave, tint = AppTheme.accent) {
@@ -321,14 +318,27 @@ private fun ServerSettingsPage(page: ServerPage, state: ServerSetupServerState, 
 
     SettingsFrame(header = { ScreenHeader(page.title, onBack = { send(SettingsAction.back()) }) }) {
         FormSection(page.header, footer = page.footer) {
-            FormTextField(
-                state.host,
-                { host -> send(server { ServerSetupAction.setHost(it, host) }) },
-                AppStrings.serverHostPlaceholder,
-                keyboardType = KeyboardType.Uri,
-            )
-            if (!setup.servers.isValid) {
-                MessageRow(AppStrings.serverPortInvalid, color = AppTheme.red)
+            // アドレスとポートを別々に入れる。ポートは標準のポートを薄く出し、空なら標準のポートを使う
+            // (iOS と同じ形。分け方と正しさは state が持ち、ここでは計算しない)
+            val portLabel = AppStrings.serverPort
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FormTextField(
+                    state.address,
+                    { address -> send(server { ServerSetupAction.setAddress(it, address) }) },
+                    AppStrings.serverHostPlaceholder,
+                    modifier = Modifier.weight(1f),
+                    keyboardType = KeyboardType.Uri,
+                )
+                FormTextField(
+                    state.port,
+                    { port -> send(server { ServerSetupAction.setPort(it, port) }) },
+                    state.defaultPort.toString(),
+                    modifier = Modifier.width(96.dp).semantics { contentDescription = portLabel },
+                    keyboardType = KeyboardType.Number,
+                )
+            }
+            if (!state.isPortValid) {
+                MessageRow(AppStrings.serverPortHelp(state.defaultPort.toInt()), color = AppTheme.red)
             }
             state.hosts.forEach { host ->
                 RowDivider()

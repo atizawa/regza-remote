@@ -28,6 +28,26 @@ import Testing
         #expect(ServerAddress("192.0.2.2:").isValid)
     }
 
+    /// アドレスとポートの欄は別々に変えられ、分けたものと正しさを state で渡す (画面では計算しない)
+    @Test func serverAddressAndPortAreEditedSeparately() {
+        let live = HTTPTestEnvironment(transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(404) })
+        let serverSetupViewModel = ServerSetupViewModel(setupUseCase: live.appViewModel.setupUseCase)
+        serverSetupViewModel.send(.setPort(.guide, "40773"))
+        serverSetupViewModel.send(.setAddress(.guide, "192.0.2.2"))
+        #expect(serverSetupViewModel.state.guide.host == "192.0.2.2:40773")
+        #expect(serverSetupViewModel.state.guide.address == "192.0.2.2")
+        #expect(serverSetupViewModel.state.guide.port == "40773")
+        #expect(serverSetupViewModel.state.guide.isPortValid)
+
+        serverSetupViewModel.send(.setPort(.guide, "70000"))
+        #expect(!serverSetupViewModel.state.guide.isPortValid)
+        #expect(!serverSetupViewModel.state.isValid)
+        // ポートを空にすれば、標準のポートを使う
+        serverSetupViewModel.send(.setPort(.guide, ""))
+        #expect(serverSetupViewModel.state.guide.host == "192.0.2.2")
+        #expect(serverSetupViewModel.state.guide.isPortValid)
+    }
+
     @Test func tvStatusAsksForPIN() {
         let live = HTTPTestEnvironment(transport: FakeHTTPTransport { _ in FakeHTTPTransport.response(500) })
         let remoteViewModel = live.appViewModel.remoteViewModel

@@ -294,8 +294,9 @@ package struct SettingsScreen: View {
         let name = server == .guide ? "Mirakurun" : "EPGStation"
         return Section {
             ServerAddressField(
-                host: Binding(get: { state.host }, set: { settingsViewModel.send(.server(.setHost(server, $0))) }),
-                defaultPort: state.defaultPort
+                state: state,
+                setAddress: { settingsViewModel.send(.server(.setAddress(server, $0))) },
+                setPort: { settingsViewModel.send(.server(.setPort(server, $0))) }
             )
             ForEach(state.hosts, id: \.self) { host in
                 Button {
@@ -355,39 +356,29 @@ package struct SettingsScreen: View {
     }
 }
 
-/// アドレスとポートを別々に入れる欄。ポートが空なら標準のポートを使う
+/// アドレスとポートを別々に入れる欄。ポートが空なら標準のポートを使う (Android も同じ形)。
+/// 分け方と正しさは state が持ち、ここでは計算しない
 private struct ServerAddressField: View {
-    @Binding var host: String
-    let defaultPort: Int
-
-    private var address: Binding<String> {
-        Binding(
-            get: { ServerAddress(host).address },
-            set: { host = ServerAddress(address: $0, port: ServerAddress(host).port).combined })
-    }
-
-    private var port: Binding<String> {
-        Binding(
-            get: { ServerAddress(host).port },
-            set: { host = ServerAddress(address: ServerAddress(host).address, port: $0).combined })
-    }
+    let state: ServerSetupServerState
+    let setAddress: (String) -> Void
+    let setPort: (String) -> Void
 
     var body: some View {
         HStack {
-            TextField(AppStrings.serverHostPlaceholder, text: address)
+            TextField(AppStrings.serverHostPlaceholder, text: Binding(get: { state.address }, set: setAddress))
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
             Divider()
             // 標準のポートを薄く出し、空なら標準のポートを使う
-            TextField(String(defaultPort), text: port)
+            TextField(String(state.defaultPort), text: Binding(get: { state.port }, set: setPort))
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 72)
                 .accessibilityLabel(AppStrings.serverPort)
         }
-        if !ServerAddress(host).isValid {
-            Text(AppStrings.serverPortHelp(defaultPort))
+        if !state.isPortValid {
+            Text(AppStrings.serverPortHelp(state.defaultPort))
                 .font(.footnote)
                 .foregroundStyle(.red)
         }
