@@ -3,8 +3,8 @@ package com.example.regzaremote.appservices
 import android.os.Bundle
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.example.regzaremote.bridge.AppSend
 import com.example.regzaremote.bridge.Send
+import com.example.regzaremote.bridge.SwiftSend
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.RegzaAndroidApp
 
@@ -15,7 +15,7 @@ import com.example.regzaremote.core.RegzaAndroidApp
  */
 class RegzaViewModel(val app: RegzaAndroidApp, savedStateHandle: SavedStateHandle) : ViewModel() {
     /** 画面から操作を送る先 (Swift の窓口に送る) */
-    val send: Send = AppSend(app)
+    val send: Send = SwiftSend(app)
 
     init {
         savedStateHandle.get<Bundle>(STATE_KEY)?.getString(SNAPSHOT_KEY)?.let(app::restoreState)

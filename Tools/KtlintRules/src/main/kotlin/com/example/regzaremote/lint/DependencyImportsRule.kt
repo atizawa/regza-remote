@@ -45,7 +45,8 @@ class DependencyImportsRule :
                     target.within("$BASE.core.RegzaAndroidStorage") ||
                     target.within("$BASE.core.RegzaAndroid") ||
                     target.within("$BASE.core.RegzaAndroidBridge") ||
-                    target.within("$bridge.AppSend") ||
+                    target.within("$bridge.SwiftSend") ||
+                    target.within("$bridge.SwiftApp") ||
                     target.within("$BASE.BuildConfig") ||
                     target.within("org.swift.swiftkit") ||
                     target.within("android.content.SharedPreferences") ||

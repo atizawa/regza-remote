@@ -28,17 +28,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.programListStates
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
-import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.core.ProgramListAction
 import com.example.regzaremote.core.ProgramListState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.program.ProgramApp
+import com.example.regzaremote.presentation.program.ProgramSend
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
@@ -54,7 +52,7 @@ import com.example.regzaremote.ui.preview.FakePreview
 
 /** 1 チャンネルの番組表 (state と操作は ProgramListViewModel の ProgramListState・ProgramListAction)。日付ごとのまとまりに分けて並べる */
 @Composable
-fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Send) {
+fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: ProgramSend) {
     LaunchedEffect(list.channelCode) { send(ProgramListAction.appear()) }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(list.channelName, onBack)
@@ -96,11 +94,11 @@ fun ProgramListScreen(list: ProgramListState, onBack: (() -> Unit)?, send: Send)
 }
 
 @Composable
-private fun ProgramRow(program: ProgramItem, send: Send) {
+private fun ProgramRow(program: ProgramItem, send: ProgramSend) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable { send(AppAction.push(AppRoute.programDetail(program.id, program.channelCode))) }
+            .clickable { send.push(AppRoute.programDetail(program.id, program.channelCode)) }
             .padding(start = DesignDimensions.spacingOuter, end = 8.dp, top = 10.dp, bottom = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -125,11 +123,11 @@ private fun ProgramRow(program: ProgramItem, send: Send) {
 
 @Preview(name = "1 局の番組表")
 @Composable
-private fun ProgramListScreenPreview() = FakePreview(setUp = {
-    it(ChannelListAction.appear())
-    it(AppAction.push(AppRoute.channelPrograms(FAKE_CHANNEL)))
+private fun ProgramListScreenPreview() = FakePreview<ProgramApp>(setUp = {
+    it.prepareRoutes()
+    it.push(AppRoute.channelPrograms(FAKE_CHANNEL))
     it(ProgramListAction.appear())
-}) { app, send ->
+}) { app ->
     val route = remember { AppRoute.channelPrograms(FAKE_CHANNEL) }
-    rememberState(app) { app.programListStates(route) }?.let { ProgramListScreen(it, onBack = {}, send) }
+    rememberState(app) { app.programListStates(route) }?.let { ProgramListScreen(it, onBack = {}, app) }
 }

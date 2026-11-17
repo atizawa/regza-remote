@@ -36,9 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.channelListStates
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.ChannelItem
 import com.example.regzaremote.core.ChannelListAction
@@ -46,6 +43,8 @@ import com.example.regzaremote.core.ChannelListState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.channels.ChannelsApp
+import com.example.regzaremote.presentation.channels.ChannelsSend
 import com.example.regzaremote.ui.components.BandPicker
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.HeaderIconButton
@@ -63,7 +62,7 @@ import com.example.regzaremote.ui.preview.FakePreview
  * この画面の操作 (ChannelListAction) も、番組表を開くなどアプリ全体の操作 (AppAction) も send で送る
  */
 @Composable
-fun ChannelListScreen(state: ChannelListState, send: Send) {
+fun ChannelListScreen(state: ChannelListState, send: ChannelsSend) {
     LaunchedEffect(Unit) { send(ChannelListAction.appear()) }
     val tuningCode = state.tuningCode.orElse(null)
 
@@ -116,7 +115,7 @@ fun ChannelListScreen(state: ChannelListState, send: Send) {
 /** 押すとすぐ切り替わるので、切り替え以外は長押しのメニューにまとめる (iOS 版と同じ) */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean, send: Send) {
+private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean, send: ChannelsSend) {
     var isShowingMenu by remember { mutableStateOf(false) }
     Box {
         Row(
@@ -165,7 +164,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
                 )
             }
             if (row.isHasPrograms) {
-                IconButton(onClick = { send(AppAction.push(AppRoute.channelPrograms(row.code))) }) {
+                IconButton(onClick = { send.push(AppRoute.channelPrograms(row.code)) }) {
                     Icon(
                         Icons.Filled.DateRange,
                         contentDescription = AppStrings.channelGuideTitle(row.name),
@@ -182,7 +181,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
             if (canStream) {
                 DropdownMenuItem(text = { Text(AppStrings.playerWatch) }, onClick = {
                     isShowingMenu = false
-                    send(AppAction.play(row.code))
+                    send.play(row.code)
                 })
             }
             if (row.isCanStartOver) {
@@ -194,7 +193,7 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
             if (row.isHasPrograms) {
                 DropdownMenuItem(text = { Text(AppStrings.tabGuide) }, onClick = {
                     isShowingMenu = false
-                    send(AppAction.push(AppRoute.channelPrograms(row.code)))
+                    send.push(AppRoute.channelPrograms(row.code))
                 })
             }
         }
@@ -203,6 +202,6 @@ private fun ChannelRow(row: ChannelItem, tuningCode: String?, canStream: Boolean
 
 @Preview(name = "チャンネル一覧")
 @Composable
-private fun ChannelListScreenPreview() = FakePreview(setUp = { it(ChannelListAction.appear()) }) { app, send ->
-    rememberState(app) { app.channelListStates() }?.let { ChannelListScreen(it, send) }
+private fun ChannelListScreenPreview() = FakePreview<ChannelsApp>(setUp = { it(ChannelListAction.appear()) }) { app ->
+    rememberState(app) { app.channelListStates() }?.let { ChannelListScreen(it, app) }
 }

@@ -59,9 +59,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.remoteStates
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.BroadcastBand
 import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RemoteAction
@@ -71,6 +68,8 @@ import com.example.regzaremote.design.DesignColors
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.design.RemoteBody
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.core.CoreApp
+import com.example.regzaremote.presentation.core.CoreSend
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.RemoteKeys
@@ -86,7 +85,7 @@ import com.example.regzaremote.ui.preview.FakePreview
  * (再生と一時停止は同じ場所で入れ替える)。いま映っているものは、どのタブでも下のミニプレーヤーに出す
  */
 @Composable
-fun RemoteScreen(state: RemoteState, sendAction: Send) {
+fun RemoteScreen(state: RemoteState, sendAction: CoreSend) {
     val nowPlaying = state.nowPlaying.orElse(null)
     val press: (RegzaKey) -> Unit = { sendAction(RemoteAction.press(it)) }
     val band = state.nowPlayingBand.orElse(null)?.discriminator
@@ -97,7 +96,7 @@ fun RemoteScreen(state: RemoteState, sendAction: Send) {
         CompositionLocalProvider(LocalContentColor provides Color.Black) {
             ScreenHeader(AppStrings.tabRemote) {
                 HeaderIconButton(Icons.Filled.Settings, AppStrings.settingsTitle, modifier = Modifier.testTag("settings.open")) {
-                    sendAction(AppAction.showSettings())
+                    sendAction.showSettings()
                 }
             }
         }
@@ -451,6 +450,6 @@ private fun Arrow(key: RegzaKey, icon: ImageVector, press: (RegzaKey) -> Unit, m
 
 @Preview(name = "リモコン")
 @Composable
-private fun RemoteScreenPreview() = FakePreview(setUp = { it(RemoteAction.refresh()) }) { app, send ->
-    rememberState(app) { app.remoteStates() }?.let { RemoteScreen(it, send) }
+private fun RemoteScreenPreview() = FakePreview<CoreApp>(setUp = { it(RemoteAction.refresh()) }) { app ->
+    rememberState(app) { app.remoteStates() }?.let { RemoteScreen(it, app) }
 }

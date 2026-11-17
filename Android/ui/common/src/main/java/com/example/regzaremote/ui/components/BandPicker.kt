@@ -9,16 +9,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
 import com.example.regzaremote.core.BroadcastBand
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.presentation.core.CoreSend
 
 /**
  * 番組表とチャンネル一覧の見出しのすぐ下に置く、放送の種類の切り替え。番組表とチャンネルのタブで同じものを選ぶ
  */
 @Composable
-fun BandPicker(bands: Array<BroadcastBand>, band: BroadcastBand?, send: Send) {
+fun BandPicker(bands: Array<BroadcastBand>, band: BroadcastBand?, send: CoreSend) {
     if (bands.size <= 1) return
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = DesignDimensions.spacingOuter, vertical = 8.dp)) {
         bands.forEachIndexed { index, item ->

@@ -123,6 +123,8 @@ public final class AppViewModel {
                 livePlayerViewModel.send(.end)
                 self.livePlayerViewModel = nil
             }
+        case .prepareRoutes:
+            work.run { await self.prepareRoutes() }
         }
     }
 
@@ -295,6 +297,7 @@ extension AppViewModel: IntrospectableActions {
             ActionDescription("closeNowPlaying", "いま映っているものの詳細を閉じる"),
             ActionDescription("play", "アプリで見る (ライブ視聴)", parameters: ["channel": "チャンネルの code"]),
             ActionDescription("closePlayer", "ライブ視聴を閉じる"),
+            ActionDescription("prepareRoutes", "戻る道の画面に要るもの (チャンネルと番組表) を読み込む"),
         ]
     }
 
@@ -327,6 +330,7 @@ extension AppViewModel: IntrospectableActions {
             guard streamUseCase.canStream else { throw IntrospectionError.unavailable("ライブ視聴が設定されていません") }
             return .play(channelCode: channel.code)
         case "closePlayer": return .closePlayer
+        case "prepareRoutes": return .prepareRoutes
         default: throw IntrospectionError.unknownAction(name)
         }
     }

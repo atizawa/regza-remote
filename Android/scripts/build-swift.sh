@@ -184,7 +184,25 @@ extract_module RegzaPresentation "$(cd ../Packages/RegzaCore/Sources/Presentatio
 # (Android/ScreenGlue の screen-glue。Swift のソースを swift-syntax で読む)。
 # ScreenGlue/.build は swift test (Xcode の Swift) が使うので、置き場を分ける (同じ置き場だと、Swift が変わるたびに作り直す)
 begin_stage "画面の接続コードと型一覧の生成" "ScreenGlue"
+# 消した画面のファイルが残らないよう、Kotlin の置き場は作り直す
+rm -rf .build/swift/screen-glue-kotlin
 "$SWIFT_COMMAND" run --jobs "$swift_build_jobs" --package-path ScreenGlue --scratch-path .build/screen-glue -c release screen-glue
+
+# 画面の状態と操作の型の Java のクラスを、Swift のモジュールに合わせて Gradle のモジュール (:presentation:<名前>) ごとの置き場に分ける。
+# 機能の画面のモジュールは自分の機能の置き場のものだけを使うので、ほかの機能の型が見えない。
+# 型の一覧 (ScreenGlue が作る) にないもの (モジュールのクラスや Foundation の型のつなぎ) は共通 (core) に入れる。
+# Java のパッケージと JNI の名前は変えないので、Swift のつなぎはそのまま使える
+begin_stage "画面の型の Java のクラスをモジュールごとに分ける" "RegzaPresentation" ".build/swift/presentation-types.txt"
+presentation_split=.build/swift/presentation-java
+java_package_dir=com/example/regzaremote/core
+rm -rf "$presentation_split"
+for java in "$presentation_java/$java_package_dir"/*.java; do
+  type=$(basename "$java" .java)
+  presentation_module=$(awk -v type="$type" '$1 == type { print $2 }' .build/swift/presentation-types.txt)
+  mkdir -p "$presentation_split/${presentation_module:-core}/$java_package_dir"
+  cp "$java" "$presentation_split/${presentation_module:-core}/$java_package_dir/"
+done
+printf '[build-swift] 出力: %s\n' "$(cd "$presentation_split" && ls | tr '\n' ' ')"
 
 # 窓口 (RegzaAndroidBridge の RegzaAndroidApp と、その状態・操作の型)。Mac の swift test で確かめられるよう別のパッケージにしてある
 extract_module RegzaAndroidBridge RegzaAndroidBridge/Sources/RegzaAndroidBridge \

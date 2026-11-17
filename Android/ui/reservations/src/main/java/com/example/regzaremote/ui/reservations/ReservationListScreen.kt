@@ -39,14 +39,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.reservationListStates
 import com.example.regzaremote.core.ReservationItem
 import com.example.regzaremote.core.ReservationListAction
 import com.example.regzaremote.core.ReservationListState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.reservations.ReservationsApp
+import com.example.regzaremote.presentation.reservations.ReservationsSend
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.Loading
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
@@ -67,7 +67,7 @@ import kotlinx.coroutines.flow.first
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReservationListScreen(list: ReservationListState, send: Send) {
+fun ReservationListScreen(list: ReservationListState, send: ReservationsSend) {
     LaunchedEffect(Unit) { send(ReservationListAction.load()) }
     // 取り消すか確かめている予約
     var cancelling by remember { mutableStateOf<ReservationItem?>(null) }
@@ -229,6 +229,6 @@ private fun ReservationRow(item: ReservationItem) {
 
 @Preview(name = "録画予約")
 @Composable
-private fun ReservationListScreenPreview() = FakePreview(setUp = { it(ReservationListAction.load()) }) { app, send ->
-    rememberState(app) { app.reservationListStates() }?.let { ReservationListScreen(it, send) }
+private fun ReservationListScreenPreview() = FakePreview<ReservationsApp>(setUp = { it(ReservationListAction.load()) }) { app ->
+    rememberState(app) { app.reservationListStates() }?.let { ReservationListScreen(it, app) }
 }

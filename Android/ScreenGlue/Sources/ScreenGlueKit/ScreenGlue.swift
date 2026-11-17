@@ -11,9 +11,16 @@ import Foundation
 ///   あわせて画面の ViewModel (「typealias State = 型」) ごとに、state を返す関数 (<State の型 (先頭は小文字)>(route:)) と、
 ///   変わるまで待って返す関数 (next<State の型>(route:after:waitID:)) を作る。
 ///   Kotlin の Flow が終わったら waitID を endStateWait に渡し、待っている Swift の Task も終わらせる
-/// - .build/swift/screen-glue-kotlin/ScreenGlue.kt
-///   画面が受け取る送り先 (Send)。どの操作も send(...) で送れるよう型ごとの invoke を並べ、Swift の窓口に送る AppSend も作る。
+/// - .build/swift/screen-glue-kotlin/<モジュール>/<接頭辞>Screens.kt (Gradle の :presentation:<モジュール> に入る)
+///   プレゼンテーションのモジュールごとの、画面が受け取る送り先 (<接頭辞>Send。その機能の操作を型ごとの invoke で送る。
+///   共通の CoreSend を受け継ぎ、リモコンの操作と画面の移り変わり (AppNavigator) も送れる) と、
+///   プレビューが受け取るアプリ (<接頭辞>App。送り先と、その機能の画面の state の購読)。
+///   機能の画面は自分の機能のものだけを使うので、ほかの機能の型は見えない
+/// - .build/swift/screen-glue-kotlin/bridge/ScreenGlue.kt (Gradle の :core:bridge に入る)
+///   すべての送り先をまとめた Send と、Swift の窓口に送る SwiftSend、プレビューに渡す SwiftApp。
 ///   state は型ごとに Flow にする (<State の型 (先頭は小文字)>s(route))。ビルドのたびに作るので保存しない
+/// - .build/swift/presentation-types.txt
+///   State/ と Action/ の型ごとの Gradle のモジュール (「型 モジュール」の行)。build-swift が、型の Java のクラスをモジュールに分ける
 /// - swift-java の設定の、ほかのモジュールの型の一覧 (importedModuleStubs の行)
 ///   RegzaPresentation.swift-java.config と RegzaAndroidBridge.swift-java.config の "RegzaSharedModels" の行に
 ///   RegzaSharedModels の型を、RegzaAndroidBridge.swift-java.config の "RegzaPresentation" の行に State/ と Action/ の型を書く
@@ -27,7 +34,9 @@ public struct ScreenGlue {
     static let actionsPath = "RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift"
     static let presentationConfigPath = "RegzaAndroid/RegzaPresentation.swift-java.config"
     static let bridgeConfigPath = "RegzaAndroid/RegzaAndroidBridge.swift-java.config"
-    static let kotlinPath = ".build/swift/screen-glue-kotlin/ScreenGlue.kt"
+    static let kotlinDirectory = ".build/swift/screen-glue-kotlin"
+    static let kotlinPath = "\(kotlinDirectory)/bridge/ScreenGlue.kt"
+    static let typesPath = ".build/swift/presentation-types.txt"
     static let header = "// ScreenGlue (Android/ScreenGlue の screen-glue) が作る (手で直さない)"
 
     /// - Parameter android: Android/ のフォルダ
@@ -40,22 +49,28 @@ public struct ScreenGlue {
         let presentationConfig = try String(contentsOf: android.appending(path: Self.presentationConfigPath), encoding: .utf8)
         let bridgeConfig = try String(contentsOf: android.appending(path: Self.bridgeConfigPath), encoding: .utf8)
         let shared = sources.sharedStubs.map(\.text)
-        files = [
-            (Self.actionsPath, Self.swiftActions(sources.screens)),
-            (
-                Self.presentationConfigPath,
-                try Self.replacingStubs(
-                    in: presentationConfig, module: "RegzaSharedModels", with: shared, path: Self.presentationConfigPath)
-            ),
-            (
-                Self.bridgeConfigPath,
-                try Self.replacingStubs(
-                    in: try Self.replacingStubs(in: bridgeConfig, module: "RegzaSharedModels", with: shared, path: Self.bridgeConfigPath),
-                    module: "RegzaPresentation", with: sources.presentationStubs.map(\.text), path: Self.bridgeConfigPath
-                )
-            ),
-            (Self.kotlinPath, Self.kotlin(sources.screens)),
-        ]
+        files =
+            [
+                (Self.actionsPath, Self.swiftActions(sources.screens)),
+                (
+                    Self.presentationConfigPath,
+                    try Self.replacingStubs(
+                        in: presentationConfig, module: "RegzaSharedModels", with: shared, path: Self.presentationConfigPath)
+                ),
+                (
+                    Self.bridgeConfigPath,
+                    try Self.replacingStubs(
+                        in: try Self.replacingStubs(
+                            in: bridgeConfig, module: "RegzaSharedModels", with: shared, path: Self.bridgeConfigPath),
+                        module: "RegzaPresentation", with: sources.presentationStubs.map(\.text), path: Self.bridgeConfigPath
+                    )
+                ),
+                (Self.kotlinPath, Self.kotlin(sources.screens)),
+                (Self.typesPath, sources.typeModules.map { "\($0.type) \($0.module)\n" }.joined()),
+            ]
+            + Self.modules(of: sources.screens).map { module in
+                ("\(Self.kotlinDirectory)/\(module)/\(Self.prefix(module))Screens.kt", Self.moduleKotlin(module, sources.screens))
+            }
         checkedPaths = [Self.actionsPath, Self.presentationConfigPath, Self.bridgeConfigPath]
     }
 
@@ -167,10 +182,79 @@ public struct ScreenGlue {
 
     // MARK: - Kotlin
 
-    static func kotlin(_ screens: [Screen]) -> String {
-        let imports = screens.map { "import com.example.regzaremote.core.\($0.action)\nimport com.example.regzaremote.core.\($0.state)\n" }
+    /// 画面のあるモジュール (共通の core が先、アプリ全体の app が後、ほかは名前の順)
+    static func modules(of screens: [Screen]) -> [String] {
+        let names = Set(screens.map(\.module))
+        return names.sorted { a, b in
+            let order = { (name: String) in name == "core" ? 0 : name == "app" ? 2 : 1 }
+            return (order(a), a) < (order(b), b)
+        }
+    }
+
+    /// モジュールの送り先などの名前の接頭辞 (core なら Core、guide なら Guide)
+    static func prefix(_ module: String) -> String {
+        module.prefix(1).uppercased() + module.dropFirst()
+    }
+
+    /// プレビューが受け取るアプリ (<接頭辞>App) を作るか (アプリ全体のモジュールは組み立てだけが使うので作らない)
+    static func hasPreviewApp(_ module: String) -> Bool { module != "app" }
+
+    /// プレゼンテーションのモジュールごとの、画面が受け取る送り先と、プレビューが受け取るアプリ
+    static func moduleKotlin(_ module: String, _ allScreens: [Screen]) -> String {
+        let screens = allScreens.filter { $0.module == module }
+        let name = prefix(module)
+        let isCore = module == "core"
+        let previewApp = hasPreviewApp(module)
+        var imports = screens.flatMap { ["com.example.regzaremote.core.\($0.action)", "com.example.regzaremote.core.\($0.state)"] }
+        if previewApp { imports += ["com.example.regzaremote.core.AppRoute", "kotlinx.coroutines.flow.Flow"] }
+        if !isCore {
+            imports.append("com.example.regzaremote.presentation.core.CoreSend")
+            if previewApp { imports.append("com.example.regzaremote.presentation.core.CoreApp") }
+        }
         let invokes = screens.map { "\n    /** \($0.viewModel) に送る */\n    operator fun invoke(action: \($0.action))\n" }
+        let flows = screens.map {
+            "\n    /** \($0.viewModel) の state を、変わるたびに流す (route を渡せばその画面の ViewModel の。開いていなければ null) */"
+                + "\n    fun \(stateFunction($0.state))s(route: AppRoute? = null): Flow<\($0.state)?>\n"
+        }
+        let send = """
+            /**
+             * \(isCore ? "共通の送り先。リモコンの操作と、画面の移り変わり (AppNavigator) を送る" : "\(name) の画面から送る先。この機能の画面の操作を送る。共通の送り先 (CoreSend) を受け継ぎ、リモコンの操作と画面の移り変わりも送れる")
+             */
+            interface \(name)Send : \(isCore ? "AppNavigator" : "CoreSend") {\(invokes.joined())}
+
+            """
+        let app =
+            !previewApp
+            ? ""
+            : """
+
+            /** \(isCore ? "画面のプレビューが受け取るアプリの共通の部分。送り先と、共通" : "\(name) の画面のプレビューが受け取るアプリ。送り先と、この機能")の画面の state の購読 */
+            interface \(name)App : \(name)Send\(isCore ? "" : ", CoreApp") {\(flows.joined())}
+
+            """
+        return """
+            \(header)
+            package com.example.regzaremote.presentation.\(module)
+
+            \(imports.sorted().map { "import \($0)\n" }.joined())
+            \(send)\(app)
+            """
+    }
+
+    /// :core:bridge に入れるもの: すべての送り先をまとめた Send、Swift の窓口に送る SwiftSend、state の Flow、プレビューに渡す SwiftApp
+    static func kotlin(_ screens: [Screen]) -> String {
+        let modules = modules(of: screens)
+        let imports = screens.map { "import com.example.regzaremote.core.\($0.action)\nimport com.example.regzaremote.core.\($0.state)\n" }
+        let moduleImports = modules.flatMap { module in
+            ["import com.example.regzaremote.presentation.\(module).\(prefix(module))Send\n"]
+                + (hasPreviewApp(module) ? ["import com.example.regzaremote.presentation.\(module).\(prefix(module))App\n"] : [])
+        }
         let overrides = screens.map { "\n    override fun invoke(action: \($0.action)) = app.send\($0.action)(action)" }
+        let appFlows = screens.filter { hasPreviewApp($0.module) }.map {
+            "\n    override fun \(stateFunction($0.state))s(route: AppRoute?) = app.\(stateFunction($0.state))s(route)"
+        }
+        let sends = modules.map { "\(prefix($0))Send" }.joined(separator: ", ")
+        let apps = modules.filter(hasPreviewApp).map { "\(prefix($0))App" }.joined(separator: ", ")
         let flows = screens.map { screen in
             let state = screen.state
             return """
@@ -199,7 +283,7 @@ public struct ScreenGlue {
             \(header)
             package com.example.regzaremote.bridge
 
-            \(imports.joined())import com.example.regzaremote.core.AppRoute
+            \(imports.joined())\(moduleImports.joined())import com.example.regzaremote.core.AppRoute
             import com.example.regzaremote.core.RegzaAndroidApp
             import java.util.Optional
             import java.util.concurrent.CompletableFuture
@@ -228,16 +312,23 @@ public struct ScreenGlue {
                 }
             }
 
-            /** 画面から操作を送る先。アプリ全体の操作も、画面ごとの操作も send(...) で送る */
-            interface Send {\(invokes.joined())}
+            /**
+             * 画面から操作を送る先。すべての画面の操作を send(...) で送る (アプリの組み立てが使う)。
+             * 機能の画面は、それぞれの機能の送り先 (<機能>Send) として受け取る
+             */
+            interface Send : \(sends)
 
-            /** Swift の窓口 (RegzaAndroidApp) に送る */
-            class AppSend(private val app: RegzaAndroidApp) : Send {\(overrides.joined())
+            /** Swift の窓口 (RegzaAndroidApp) に送る。画面の移り変わりは、アプリ全体の操作にして送る (AppActionNavigator) */
+            class SwiftSend(private val app: RegzaAndroidApp) : Send, AppActionNavigator {\(overrides.joined())
             }
             \(flows.joined())
+            /** 偽物で組み立てたアプリを、画面のプレビューに渡す (どの機能のプレビューが受け取るアプリ (<機能>App) としても使える) */
+            class SwiftApp(val app: RegzaAndroidApp) : Send by SwiftSend(app), \(apps) {\(appFlows.joined())
+            }
+
             /** 振る舞いのテストの Android 側の相手: 道の ViewModel の型ごとに、約束事の操作をアプリと同じ道 (send) で送る。送れなければ false */
             suspend fun RegzaAndroidApp.contractSend(type: String, path: String, action: String, arguments: String): Boolean {
-                val send = AppSend(this)
+                val send = SwiftSend(this)
                 when (type) {\(contractSends.joined())
                     else -> return false
                 }

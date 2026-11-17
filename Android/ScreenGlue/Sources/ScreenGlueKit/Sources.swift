@@ -28,6 +28,8 @@ struct Screen: Equatable {
     var viewModel: String
     var action: String
     var state: String
+    /// 置いてあるプレゼンテーションのモジュールの、Android の Gradle のモジュールの名前 (:presentation:<名前>)
+    var module: String = ""
     /// 約束事 (CLI と振る舞いのテスト) の操作を Action にできる (IntrospectableActions)
     var isIntrospectable: Bool
 }
@@ -40,28 +42,46 @@ struct Sources {
     var sharedStubs: [TypeStub] = []
     /// Action/ のパスの順
     var screens: [Screen] = []
+    /// State/ と Action/ の型ごとの、Android の Gradle のモジュールの名前 (型の Java のクラスを、そのモジュールに分けて入れる)
+    var typeModules: [(type: String, module: String)] = []
 
     /// - Parameters:
     ///   - viewModels: プレゼンテーション層のソース (Sources/Presentation。モジュール/画面/State・Action)
     ///   - sharedModels: RegzaSharedModels のソース
     init(viewModels: URL, sharedModels: URL) throws {
         let files = try Self.swiftFiles(in: viewModels)
+        // 一時フォルダなどはシンボリックリンクをたどった場所で列挙されることがあるので、どちらもたどってから比べる
+        let root = viewModels.resolvingSymlinksInPath().pathComponents.count
+        /// ファイルを置いたモジュール (いちばん上のフォルダ) の、Gradle のモジュールの名前
+        func module(of file: URL) -> String { Self.gradleModule(file.resolvingSymlinksInPath().pathComponents[root]) }
         for file in files where file.pathComponents.contains("State") {
             let source = try SwiftFile(file)
             try source.requireTypedProperties()
-            presentationStubs.append(try source.onlyType(kinds: ["struct", "enum"]))
+            let type = try source.onlyType(kinds: ["struct", "enum"])
+            presentationStubs.append(type)
+            typeModules.append((type.name, module(of: file)))
         }
         for file in files where file.pathComponents.contains("Action") {
             let source = try SwiftFile(file)
             let action = try source.onlyType(kinds: ["enum"])
             presentationStubs.append(action)
-            if let screen = try Self.screen(for: action.name, file: file) {
+            typeModules.append((action.name, module(of: file)))
+            if var screen = try Self.screen(for: action.name, file: file) {
+                screen.module = module(of: file)
                 screens.append(screen)
             }
         }
         for file in try Self.swiftFiles(in: sharedModels) {
             sharedStubs += try SwiftFile(file).publicTypes(kinds: ["struct", "enum"])
         }
+    }
+
+    /// Swift のプレゼンテーションのモジュールの名前から、Android の Gradle のモジュールの名前を決める
+    /// (共通の PresentationCore は core、<機能>Presentation は <機能> の先頭を小文字にしたもの)
+    static func gradleModule(_ swiftModule: String) -> String {
+        if swiftModule == "PresentationCore" { return "core" }
+        let name = swiftModule.hasSuffix("Presentation") ? String(swiftModule.dropLast("Presentation".count)) : swiftModule
+        return name.prefix(1).lowercased() + name.dropFirst()
     }
 
     /// フォルダの下の .swift (パスの順)

@@ -58,18 +58,16 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.livePlayerStates
-import com.example.regzaremote.bridge.streamURLString
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.ChannelItem
-import com.example.regzaremote.core.ChannelListAction
 import com.example.regzaremote.core.LivePlayerAction
 import com.example.regzaremote.core.LivePlayerPhase
 import com.example.regzaremote.core.LivePlayerState
+import com.example.regzaremote.core.RegzaSharedModels
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.player.PlayerApp
+import com.example.regzaremote.presentation.player.PlayerSend
 import com.example.regzaremote.ui.components.BandPicker
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.Note
@@ -87,16 +85,16 @@ import kotlinx.coroutines.delay
  * 閉じたり局を切り替えたりしたら、前の配信を止めてチューナーを空ける (LivePlayerViewModel)
  */
 @Composable
-fun LivePlayerScreen(player: LivePlayerState, send: Send) {
+fun LivePlayerScreen(player: LivePlayerState, send: PlayerSend) {
     // 画面を出したら、局名と番組を読み、配信を頼む
     LaunchedEffect(Unit) {
         send(LivePlayerAction.appear())
         send(LivePlayerAction.start())
     }
-    BackHandler { send(AppAction.closePlayer()) }
+    BackHandler { send.closePlayer() }
     // 画面が消えたりほかのアプリに移ったりしたら、閉じて配信を止める。裏で見ていると知らせ続けると、
     // 見ていないのにチューナーを使い続けてしまう (Android ではピクチャインピクチャや裏での再生をしない)
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { send(AppAction.closePlayer()) }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { send.closePlayer() }
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     FullScreenWhile(isLandscape)
 
@@ -108,7 +106,7 @@ fun LivePlayerScreen(player: LivePlayerState, send: Send) {
                 // 閉じるだけの画面なので、左上の × で閉じる (映像の上には重ねない)
                 ScreenHeader(
                     AppStrings.liveTitle,
-                    leading = { HeaderIconButton(Icons.Filled.Close, AppStrings.commonClose) { send(AppAction.closePlayer()) } },
+                    leading = { HeaderIconButton(Icons.Filled.Close, AppStrings.commonClose) { send.closePlayer() } },
                 )
                 Video(player, send, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
                 Column(
@@ -139,11 +137,11 @@ private fun FullScreenWhile(isFullScreen: Boolean) {
 
 /** 映像の場所。準備中・再生・失敗を出し分ける */
 @Composable
-private fun Video(player: LivePlayerState, send: Send, modifier: Modifier) {
+private fun Video(player: LivePlayerState, send: PlayerSend, modifier: Modifier) {
     Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
         val phase = player.phase
         when (phase.discriminator) {
-            LivePlayerPhase.Discriminator.READY -> HlsPlayer(streamURLString(phase.asReady.get().url))
+            LivePlayerPhase.Discriminator.READY -> HlsPlayer(RegzaSharedModels.urlString(phase.asReady.get().url))
 
             LivePlayerPhase.Discriminator.FAILED -> Column(
                 Modifier.padding(DesignDimensions.spacingOuter).verticalScroll(rememberScrollState()),
@@ -311,7 +309,7 @@ private fun ProgramInfo(player: LivePlayerState) {
 
 /** 見られる局の一覧。押すとその局に切り替える */
 @Composable
-private fun ChannelPicker(player: LivePlayerState, send: Send) {
+private fun ChannelPicker(player: LivePlayerState, send: PlayerSend) {
     Column {
         BandPicker(player.bands, player.band.orElse(null), send)
         player.channels.forEach { row ->
@@ -347,11 +345,11 @@ private fun ChannelRow(row: ChannelItem, onClick: () -> Unit) {
 
 @Preview(name = "ライブ視聴")
 @Composable
-private fun LivePlayerScreenPreview() = FakePreview(setUp = {
-    it(ChannelListAction.appear())
-    it(AppAction.play(FAKE_CHANNEL))
+private fun LivePlayerScreenPreview() = FakePreview<PlayerApp>(setUp = {
+    it.prepareRoutes()
+    it.play(FAKE_CHANNEL)
     it(LivePlayerAction.appear())
     it(LivePlayerAction.start())
-}) { app, send ->
-    rememberState(app) { app.livePlayerStates() }?.let { LivePlayerScreen(it, send) }
+}) { app ->
+    rememberState(app) { app.livePlayerStates() }?.let { LivePlayerScreen(it, app) }
 }

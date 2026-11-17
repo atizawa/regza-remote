@@ -2,7 +2,7 @@ package com.example.regzaremote
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.example.regzaremote.bridge.AppSend
+import com.example.regzaremote.bridge.SwiftSend
 import com.example.regzaremote.bridge.appStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppState
@@ -52,7 +52,7 @@ class AndroidRuntimeSmokeTest {
         }
         withTimeout(TIMEOUT) { states.receive() }
         waitForPendingStateWaits(app, 1)
-        AppSend(app)(AppAction.selectTab(AppTab.guide()))
+        SwiftSend(app)(AppAction.selectTab(AppTab.guide()))
         val changed = withTimeout(TIMEOUT) { states.receive() }
         assertEquals(AppTab.guide().rawValue, changed.tab.rawValue)
         withTimeout(TIMEOUT) { collector.join() }
@@ -71,7 +71,7 @@ class AndroidRuntimeSmokeTest {
     @Test
     fun earlyCancellationAndStateChangesReleaseWaits() = runBlocking {
         val app = RegzaFakeApp.make("").get()
-        val send = AppSend(app)
+        val send = SwiftSend(app)
         repeat(20) { index ->
             val received = CompletableDeferred<Unit>()
             val collector = launch(Dispatchers.Default) {
@@ -100,7 +100,7 @@ class AndroidRuntimeSmokeTest {
             withTimeout(TIMEOUT) { cancelled.cancelAndJoin() }
             waitForPendingStateWaits(app, 1)
 
-            AppSend(app)(AppAction.selectTab(AppTab.guide()))
+            SwiftSend(app)(AppAction.selectTab(AppTab.guide()))
 
             assertEquals(AppTab.guide().rawValue, withTimeout(TIMEOUT) { states.receive() }.tab.rawValue)
         } finally {

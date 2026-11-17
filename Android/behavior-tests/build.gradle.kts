@@ -28,7 +28,12 @@ sourceSets.main {
         "../.build/swift/regzabridge-java",
         "../.build/swift/regzafakes-java",
     )
-    kotlin.srcDir("../.build/swift/screen-glue-kotlin")
+    // 窓口の送り先が使う、画面の移り変わりの窓口と、それをアプリ全体の操作にして送るもの
+    kotlin.srcDirs(
+        "../.build/swift/screen-glue-kotlin",
+        "../presentation/core/src/main/java",
+        "../core/bridge/src/main/java",
+    )
 }
 
 dependencies {

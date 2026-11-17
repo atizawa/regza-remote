@@ -1,7 +1,10 @@
 // Swift の窓口とつなぎ。アプリと共有の Swift (Packages/RegzaCore) を Android から使うための部品をまとめる:
 // - Swift の .so (mise run build-swift が作る。共通のものは main、本番の libRegzaAndroid.so は release、
 //   偽物の入口とテスト専用の .so を足したものは debug の jniLibs)
-// - swift-java が作る Java のクラス (com.example.regzaremote.core)・画面の送り先と state の Flow (screen-glue が作る bridge)
+// - swift-java が作る窓口の Java のクラス (com.example.regzaremote.core の RegzaAndroidApp など)・すべての送り先をまとめた Send と
+//   state の Flow (screen-glue が作る bridge)
+// 画面の状態と操作の型は presentation/<名前> に分けて置き、このモジュールはそのすべてに依存する。
+// 機能の画面のモジュールはこのモジュールを読み込まず、自分の機能の presentation だけを使う。
 // 画面やアプリの組み立ては app に置き、このモジュールは画面を知らない
 plugins {
     id("regza.android.library")
@@ -20,17 +23,13 @@ android {
     // swift-java が RegzaAndroid の Swift から作った Java のクラス (buildSwift で作られる)
     sourceSets.getByName("main").java.srcDirs(
         "../../.build/swift/plugins/outputs/regzaandroid/RegzaAndroid/destination/JExtractSwiftPlugin/src/generated/java",
-        // iOS と共有の型 (RegzaSharedModels) の Java のクラス
-        "../../.build/swift/regzashared-java",
-        // 画面の状態と操作の型 (RegzaPresentation の State/・Action/ に置いた型) の Java のクラス
-        "../../.build/swift/regzapresentation-java",
         // 窓口 (RegzaAndroidApp と、その状態・操作の型) の Java のクラス
         "../../.build/swift/regzabridge-java",
     )
     // 偽物のテレビ・録画サーバーで組み立てる入口 (RegzaFakeApp) の Java のクラス。debug だけに入れる (本番の .so にもない)
     sourceSets.getByName("debug").java.srcDirs("../../.build/swift/regzafakes-java")
     // 画面が受け取る送り先 (Send) と、Swift の窓口に送る AppSend (Android/ScreenGlue の screen-glue が作る)
-    sourceSets.getByName("main").kotlin.srcDirs("../../.build/swift/screen-glue-kotlin")
+    sourceSets.getByName("main").kotlin.srcDirs("../../.build/swift/screen-glue-kotlin/bridge")
 }
 
 // Swift の .so と、swift-java が作る Java のクラスを作る (mise run build-swift)。
@@ -82,6 +81,8 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
     outputs.dir("src/debug/jniLibs")
     outputs.dir(androidDir.resolve(".build/swift/regzashared-java"))
     outputs.dir(androidDir.resolve(".build/swift/regzapresentation-java"))
+    outputs.dir(androidDir.resolve(".build/swift/presentation-java"))
+    outputs.file(androidDir.resolve(".build/swift/presentation-types.txt"))
     outputs.dir(androidDir.resolve(".build/swift/regzabridge-java"))
     outputs.dir(androidDir.resolve(".build/swift/regzafakes-java"))
     outputs.dir(androidDir.resolve(".build/swift/screen-glue-kotlin"))
@@ -99,6 +100,8 @@ val buildSwift = tasks.register<Exec>("buildSwift") {
 tasks.named("preBuild") { dependsOn(buildSwift) }
 
 dependencies {
+    // 画面の状態と操作の型と、モジュールごとの送り先。窓口の関数が使うので、使う側 (アプリの組み立て) にも見せる
+    rootProject.subprojects.filter { it.path.startsWith(":presentation:") }.forEach { api(project(it.path)) }
     // swift-java が作ったクラスが使う Java 側。つなぎの型の一部なので、使う側にも見せる
     api(project(":swiftkit-core"))
     // 画面の state の Flow (screen-glue が作る) が使う

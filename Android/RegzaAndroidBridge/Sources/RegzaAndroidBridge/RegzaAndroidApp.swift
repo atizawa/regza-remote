@@ -110,7 +110,3 @@ private let mainQueueKey: DispatchSpecificKey<Bool> = {
     DispatchQueue.main.setSpecific(key: key, value: true)
     return key
 }()
-
-/// URL を文字列にする (ライブ視聴の LivePlayerPhase.ready の URL を ExoPlayer に渡す)。
-/// swift-java は enum の値にしか使っていない型の Java のクラスを作らないので、ここで URL を使って作らせる役目もある
-public func regzaURLString(_ url: URL) -> String { url.absoluteString }

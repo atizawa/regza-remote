@@ -13,8 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
 import com.example.regzaremote.appservices.preview.PreviewAppFactory
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.design.AppTheme
 
 /**
@@ -27,22 +25,26 @@ import com.example.regzaremote.design.AppTheme
  *   ホスト向けのライブラリを、debug のソースの FakeApps が読み込む。読み込めなければ、その理由を出す
  * - 偽物は debug にだけあるので、release のビルドの種類ではプレビューを出せない (debug に切り替えるよう出す)
  *
- * Swift の型 (画面の道や操作) は、ライブラリを読み込んだあとでないと作れないので、setUp と content の中で作る
+ * Swift の型 (画面の道や操作) は、ライブラリを読み込んだあとでないと作れないので、setUp と content の中で作る。
+ *
+ * 画面は、その機能のプレビューが受け取るアプリ (<機能>App。送り先と state の購読) を型で選んで受け取る
+ * (例: FakePreview<<機能>App> { app -> ... })。どの機能の型にもなれるものを渡すので、ほかの機能の型を読み込まずに済む
  *
  * @param setUp 組み立てたあとに送る操作 (一覧を読み込むなど)
  */
+@Suppress("UNCHECKED_CAST")
 @Composable
-fun FakePreview(setUp: (Send) -> Unit = {}, content: @Composable (RegzaAndroidApp, Send) -> Unit) {
+fun <App> FakePreview(setUp: (App) -> Unit = {}, content: @Composable (App) -> Unit) {
     MaterialTheme(colorScheme = AppTheme.colorScheme) {
         Surface(modifier = Modifier.fillMaxSize(), color = AppTheme.background) {
             val inEditor = LocalInspectionMode.current
             val sample = remember {
                 runCatching {
-                    PreviewAppFactory.makeApp(inEditor, setUp)
+                    PreviewAppFactory.makeApp(inEditor) { setUp(it as App) } as App
                 }
             }
             sample.fold(
-                onSuccess = { (app, send) -> content(app, send) },
+                onSuccess = { app -> content(app) },
                 onFailure = { error ->
                     val message = if (error is ClassNotFoundException) {
                         "プレビューは debug のビルドの種類でだけ出せます (偽物のテレビ・録画サーバーは debug にだけ入れている)。" +

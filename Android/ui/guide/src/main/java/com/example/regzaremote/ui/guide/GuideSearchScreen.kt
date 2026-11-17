@@ -36,9 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.guideSearchStates
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.GuideSearchAction
@@ -48,6 +45,8 @@ import com.example.regzaremote.core.SearchResultItem
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.guide.GuideApp
+import com.example.regzaremote.presentation.guide.GuideSend
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
@@ -62,7 +61,7 @@ import com.example.regzaremote.ui.preview.FakePreview
  * 打った言葉から日付・時間帯・ジャンルを読み取り、残りの言葉で全部の番組から探す
  */
 @Composable
-fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Send) {
+fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: GuideSend) {
     // 開いたらすぐ打てるようにする (前に探した言葉が残っていれば結果を見せる)
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { if (search.text.isEmpty()) focus.requestFocus() }
@@ -121,7 +120,7 @@ fun GuideSearchScreen(search: GuideSearchState, onBack: (() -> Unit)?, send: Sen
 
 /** 読み取った条件。押すと外す */
 @Composable
-private fun ConditionChips(conditions: Array<GuideSearchConditionChip>, send: Send) {
+private fun ConditionChips(conditions: Array<GuideSearchConditionChip>, send: GuideSend) {
     Row(
         Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = DesignDimensions.spacingOuter),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -156,13 +155,13 @@ private fun ConditionChips(conditions: Array<GuideSearchConditionChip>, send: Se
 
 /** 時刻順に並べ、なぜ見つかったか (「〇〇 が出演」など) を添える */
 @Composable
-private fun SearchResultRow(row: SearchResultItem, send: Send) {
+private fun SearchResultRow(row: SearchResultItem, send: GuideSend) {
     val program = row.program
     Column(
         Modifier
             .fillMaxWidth()
             .testTag("search.result.${program.id}")
-            .clickable { send(AppAction.push(AppRoute.programDetail(program.id, program.channelCode))) }
+            .clickable { send.push(AppRoute.programDetail(program.id, program.channelCode)) }
             .padding(horizontal = DesignDimensions.spacingOuter, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
@@ -190,10 +189,10 @@ private fun SearchResultRow(row: SearchResultItem, send: Send) {
 
 @Preview(name = "番組を探す")
 @Composable
-private fun GuideSearchScreenPreview() = FakePreview(setUp = {
+private fun GuideSearchScreenPreview() = FakePreview<GuideApp>(setUp = {
     it(GuideGridAction.load())
-    it(AppAction.push(AppRoute.search()))
-}) { app, send ->
+    it.push(AppRoute.search())
+}) { app ->
     val route = remember { AppRoute.search() }
-    rememberState(app) { app.guideSearchStates(route) }?.let { GuideSearchScreen(it, onBack = {}, send) }
+    rememberState(app) { app.guideSearchStates(route) }?.let { GuideSearchScreen(it, onBack = {}, app) }
 }

@@ -38,9 +38,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.guideGridStates
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
 import com.example.regzaremote.core.GuideDayKind
 import com.example.regzaremote.core.GuideGridAction
@@ -49,6 +46,8 @@ import com.example.regzaremote.core.ProgramItem
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.guide.GuideApp
+import com.example.regzaremote.presentation.guide.GuideSend
 import com.example.regzaremote.ui.components.BandPicker
 import com.example.regzaremote.ui.components.EmptyState
 import com.example.regzaremote.ui.components.HeaderIconButton
@@ -62,7 +61,7 @@ import com.example.regzaremote.ui.preview.FakePreview
 
 /** 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる (state と操作は GuideGridViewModel の GuideGridState・GuideGridAction) */
 @Composable
-fun GuideGridScreen(guide: GuideGridState, send: Send) {
+fun GuideGridScreen(guide: GuideGridState, send: GuideSend) {
     // 開いたら読み込む (予約した番組に印を付けるため、予約も読む)
     LaunchedEffect(Unit) { send(GuideGridAction.load()) }
     Column(Modifier.fillMaxSize()) {
@@ -70,7 +69,7 @@ fun GuideGridScreen(guide: GuideGridState, send: Send) {
             // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く (iOS 版と同じ)
             if (guide.isCanSearch) {
                 HeaderIconButton(Icons.Filled.Search, AppStrings.searchTitle, modifier = Modifier.testTag("guide.search")) {
-                    send(AppAction.push(AppRoute.search()))
+                    send.push(AppRoute.search())
                 }
             }
         }
@@ -79,7 +78,7 @@ fun GuideGridScreen(guide: GuideGridState, send: Send) {
             !guide.isHasGuide -> EmptyState(
                 AppStrings.guideSetupTitle,
                 AppStrings.guideSetupHelp,
-            ) { ProminentButton(AppStrings.commonOpenSettings) { send(AppAction.showSettings()) } }
+            ) { ProminentButton(AppStrings.commonOpenSettings) { send.showSettings() } }
 
             !guide.isHasLoaded -> Loading()
 
@@ -98,7 +97,7 @@ fun GuideGridScreen(guide: GuideGridState, send: Send) {
 
 /** 日付の選択。今日・明日・9(月) … を横に並べ、土曜は青、日曜は赤にする (テレビ欄と同じ) */
 @Composable
-private fun DayPicker(guide: GuideGridState, send: Send) {
+private fun DayPicker(guide: GuideGridState, send: GuideSend) {
     Row(
         Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = DesignDimensions.spacingOuter).padding(bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -149,7 +148,7 @@ private val dpPerMinute = 2.4.dp
 
 /** 縦横にスクロールする表。局名の行は横に、時刻の列は縦に、表と一緒に動かす */
 @Composable
-private fun GuideGrid(guide: GuideGridState, send: Send) {
+private fun GuideGrid(guide: GuideGridState, send: GuideSend) {
     val columns = remember(guide) {
         guide.columns.map { column -> GridColumn(column.channelName, column.programs.map { it.toCell() }) }
     }
@@ -198,7 +197,7 @@ private fun GuideGrid(guide: GuideGridState, send: Send) {
                                         .offset(y = dpPerMinute * top.toFloat())
                                         .height(dpPerMinute * (bottom - top).toFloat())
                                         .fillMaxWidth()
-                                        .clickable { send(AppAction.push(AppRoute.programDetail(cell.id, cell.channelCode))) },
+                                        .clickable { send.push(AppRoute.programDetail(cell.id, cell.channelCode)) },
                                 )
                             }
                         }
@@ -284,6 +283,6 @@ private fun genreColor(genre: Int): Color = when (genre) {
 
 @Preview(name = "番組表")
 @Composable
-private fun GuideGridScreenPreview() = FakePreview(setUp = { it(GuideGridAction.load()) }) { app, send ->
-    rememberState(app) { app.guideGridStates() }?.let { GuideGridScreen(it, send) }
+private fun GuideGridScreenPreview() = FakePreview<GuideApp>(setUp = { it(GuideGridAction.load()) }) { app ->
+    rememberState(app) { app.guideGridStates() }?.let { GuideGridScreen(it, app) }
 }

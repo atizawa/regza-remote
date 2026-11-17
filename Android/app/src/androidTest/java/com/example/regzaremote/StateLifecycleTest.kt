@@ -11,7 +11,7 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.example.regzaremote.bridge.AppSend
+import com.example.regzaremote.bridge.SwiftSend
 import com.example.regzaremote.bridge.appStates
 import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppTab
@@ -58,7 +58,7 @@ class StateLifecycleTest {
 
             instrumentation.runOnMainSync { owner.lifecycle.currentState = Lifecycle.State.CREATED }
             awaitWaitCount(app, 0)
-            AppSend(app)(AppAction.selectTab(AppTab.guide()))
+            SwiftSend(app)(AppAction.selectTab(AppTab.guide()))
             withTimeout(TIMEOUT) {
                 while (app.appState(Optional.empty()).await().get().tab.rawValue != AppTab.guide().rawValue) delay(10)
             }

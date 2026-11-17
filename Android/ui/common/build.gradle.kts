@@ -26,8 +26,10 @@ android {
 }
 
 dependencies {
-    // Swift のつなぎ (state の型と購読)・色と余白・文言は、画面を作るときにいつも一緒に使うので、使う側にも見せる
-    api(project(":core:bridge"))
+    // 共通の型と送り先 (共通の presentation)・色と余白・文言は、画面を作るときにいつも一緒に使うので、使う側にも見せる。
+    // Swift の窓口 (core:bridge) はプレビューの準備だけが使い、機能の画面には見せない (機能の画面は自分の機能の presentation だけを使う)
+    api(project(":presentation:core"))
+    implementation(project(":core:bridge"))
     api(project(":core:design"))
     api(project(":core:localization"))
     implementation(libs.androidx.activity.compose)

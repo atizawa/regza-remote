@@ -18,4 +18,6 @@ public enum AppAction: Sendable {
     /// アプリで見る (ライブ視聴)
     case play(channelCode: String)
     case closePlayer
+    /// 戻る道の画面 (1 局の番組表・番組の詳細) を作るのに要るもの (チャンネルと番組表) を読み込む (プレビュー・画面の復元)
+    case prepareRoutes
 }

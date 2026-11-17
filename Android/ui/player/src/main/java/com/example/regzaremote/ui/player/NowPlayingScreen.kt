@@ -39,8 +39,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.NowPlayingAction
 import com.example.regzaremote.core.NowPlayingItem
 import com.example.regzaremote.core.NowPlayingKind
@@ -51,6 +49,7 @@ import com.example.regzaremote.core.RemoteState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.player.PlayerSend
 import com.example.regzaremote.ui.components.FormSection
 import com.example.regzaremote.ui.components.LiveUpdateToggle
 import com.example.regzaremote.ui.components.Note
@@ -64,7 +63,7 @@ import java.time.format.DateTimeFormatter
  * 押すと、いま映っているものの詳細を開く
  */
 @Composable
-fun NowPlayingBar(state: RemoteState, send: Send, modifier: Modifier = Modifier) {
+fun NowPlayingBar(state: RemoteState, send: PlayerSend, modifier: Modifier = Modifier) {
     val nowPlaying = state.nowPlaying.orElse(null)
     val hasError = state.errorMessage.isPresent
     // 文言は iOS と同じ NowPlayingItem.captionText・headlineText
@@ -86,7 +85,7 @@ fun NowPlayingBar(state: RemoteState, send: Send, modifier: Modifier = Modifier)
             .shadow(8.dp, RoundedCornerShape(50))
             .background(AppTheme.surface, RoundedCornerShape(50))
             .border(0.5.dp, AppTheme.separator, RoundedCornerShape(50))
-            .clickable { send(AppAction.showNowPlaying()) }
+            .clickable { send.showNowPlaying() }
             .padding(horizontal = DesignDimensions.spacingOuter),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -150,10 +149,10 @@ private fun ProgressRing(progress: Float?) {
 /** ミニプレーヤーを押したときの詳細 (state と操作は NowPlayingViewModel の NowPlayingState・NowPlayingAction)。録画ならシークもできる */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NowPlayingScreen(state: RemoteState, detail: NowPlayingState, send: Send) {
+fun NowPlayingScreen(state: RemoteState, detail: NowPlayingState, send: PlayerSend) {
     // 開いたら、最初から見られるかと、いま映っている局を読む
     LaunchedEffect(Unit) { send(NowPlayingAction.appear()) }
-    ModalBottomSheet(onDismissRequest = { send(AppAction.closeNowPlaying()) }, containerColor = AppTheme.background) {
+    ModalBottomSheet(onDismissRequest = { send.closeNowPlaying() }, containerColor = AppTheme.background) {
         Column(
             Modifier.verticalScroll(
                 rememberScrollState(),
@@ -179,8 +178,8 @@ fun NowPlayingScreen(state: RemoteState, detail: NowPlayingState, send: Send) {
             detail.playableChannelCode.orElse(null)?.let { code ->
                 SheetButton(AppStrings.playerWatch) {
                     // シートを閉じてから、全画面で再生する
-                    send(AppAction.closeNowPlaying())
-                    send(AppAction.play(code))
+                    send.closeNowPlaying()
+                    send.play(code)
                 }
             }
             if (detail.isCanStartOver) SheetButton(AppStrings.playerProgramFromStart) { send(NowPlayingAction.startOver()) }
@@ -205,7 +204,7 @@ private fun SheetButton(title: String, onClick: () -> Unit) {
 
 /** テレビから取得した視聴状況 (iOS 版の NowPlayingCard)。録画再生中はシークできる */
 @Composable
-private fun NowPlayingCard(state: RemoteState, send: Send) {
+private fun NowPlayingCard(state: RemoteState, send: PlayerSend) {
     val nowPlaying = state.nowPlaying.orElse(null)
     val error = state.errorMessage.orElse(null)
     Column(
@@ -276,7 +275,7 @@ private fun Broadcast(nowPlaying: NowPlayingItem) {
 }
 
 @Composable
-private fun Playback(nowPlaying: NowPlayingItem, send: Send) {
+private fun Playback(nowPlaying: NowPlayingItem, send: PlayerSend) {
     SourceLabel(if (nowPlaying.channelName.isEmpty()) AppStrings.recordingTitle else AppStrings.recordingChannel(nowPlaying.channelName))
     Text(nowPlaying.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2)
     if (nowPlaying.chapterName.isNotEmpty()) Note(nowPlaying.chapterName)

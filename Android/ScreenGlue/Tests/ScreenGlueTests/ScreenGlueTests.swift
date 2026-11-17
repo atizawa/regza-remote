@@ -20,8 +20,17 @@ import Testing
         let kotlin = try #require(glue.files.first { $0.path == ScreenGlue.kotlinPath }?.contents)
         #expect(swift.contains("public func sendChannelListAction(_ action: ChannelListAction)"))
         #expect(swift.contains("public func nextChannelListState(route: AppRoute?, after: ChannelListState?, waitID: Int64)"))
-        #expect(kotlin.contains("operator fun invoke(action: ChannelListAction)"))
+        #expect(kotlin.contains("override fun invoke(action: ChannelListAction) = app.sendChannelListAction(action)"))
         #expect(kotlin.contains("fun RegzaAndroidApp.channelListStates(route: AppRoute? = null): Flow<ChannelListState?>"))
+        // 機能の送り先とプレビューのアプリは、その機能のモジュールに置き、ほかの機能の型を使わない
+        let channels = try #require(glue.files.first { $0.path == "\(ScreenGlue.kotlinDirectory)/channels/ChannelsScreens.kt" }?.contents)
+        #expect(channels.contains("interface ChannelsSend : CoreSend {"))
+        #expect(channels.contains("operator fun invoke(action: ChannelListAction)"))
+        #expect(channels.contains("fun channelListStates(route: AppRoute? = null): Flow<ChannelListState?>"))
+        #expect(!channels.contains("GuideGrid"))
+        let types = try #require(glue.files.first { $0.path == ScreenGlue.typesPath }?.contents)
+        #expect(types.contains("ChannelListState channels\n"))
+        #expect(types.contains("RemoteState core\n"))
         // 部品の操作 (SettingsAction.tv の TVSetupAction) には、送る関数を作らない
         #expect(!swift.contains("sendTVSetupAction"))
     }

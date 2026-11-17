@@ -28,5 +28,9 @@ include(
 
 // 画面のモジュール (共通の部品 ui:common と、機能ごとの ui:<機能>) は、ui/ の下のフォルダから読む
 // (機能を足すときは、フォルダを作るだけでよい)
+// 画面の状態と操作の型 (共有の Swift のプレゼンテーションのモジュールと 1 対 1)
+rootDir.resolve("presentation").listFiles { file -> file.resolve("build.gradle.kts").isFile }.orEmpty().sortedBy { it.name }
+    .forEach { include(":presentation:${it.name}") }
+
 rootDir.resolve("ui").listFiles { file -> file.resolve("build.gradle.kts").isFile }.orEmpty().sortedBy { it.name }
     .forEach { include(":ui:${it.name}") }

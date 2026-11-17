@@ -40,16 +40,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.programDetailStates
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppRoute
-import com.example.regzaremote.core.GuideGridAction
 import com.example.regzaremote.core.ProgramDetailAction
 import com.example.regzaremote.core.ProgramDetailState
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.program.ProgramApp
+import com.example.regzaremote.presentation.program.ProgramSend
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RecordIcon
@@ -61,7 +59,7 @@ import com.example.regzaremote.ui.preview.FakePreview
 
 /** 番組の詳細 (state と操作は ProgramDetailViewModel の ProgramDetailState・ProgramDetailAction)。切り替えて見る・録画予約・最初から見る */
 @Composable
-fun ProgramDetailScreen(detail: ProgramDetailState, onBack: (() -> Unit)?, send: Send) {
+fun ProgramDetailScreen(detail: ProgramDetailState, onBack: (() -> Unit)?, send: ProgramSend) {
     val program = detail.program
     LaunchedEffect(program.id) { send(ProgramDetailAction.appear()) }
     Column(Modifier.fillMaxSize()) {
@@ -141,7 +139,7 @@ private fun DetailHeader(detail: ProgramDetailState) {
 
 /** 主な操作。見る・切り替えは緑、録画は赤で塗る */
 @Composable
-private fun DetailActions(detail: ProgramDetailState, send: Send) {
+private fun DetailActions(detail: ProgramDetailState, send: ProgramSend) {
     Column(verticalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
         Row(horizontalArrangement = Arrangement.spacedBy(DesignDimensions.spacingItem)) {
             if (detail.isCanTune) {
@@ -160,7 +158,7 @@ private fun DetailActions(detail: ProgramDetailState, send: Send) {
         if (detail.isCanStream) {
             Row {
                 ActionButton(AppStrings.playerWatch, AppTheme.surface, foreground = MaterialTheme.colorScheme.onSurface) {
-                    send(AppAction.play(detail.program.channelCode))
+                    send.play(detail.program.channelCode)
                 }
             }
         }
@@ -181,7 +179,7 @@ private fun DetailActions(detail: ProgramDetailState, send: Send) {
 
 /** 「録画予約」を押すと、この回だけか連ドラ予約かを選ぶ。予約済みならメニューから取り消す */
 @Composable
-private fun RowScope.ReserveMenu(detail: ProgramDetailState, send: Send) {
+private fun RowScope.ReserveMenu(detail: ProgramDetailState, send: ProgramSend) {
     // 予約・取り消しの途中
     val isReserving = detail.reserving.isPresent
     var isShowingMenu by remember { mutableStateOf(false) }
@@ -272,11 +270,11 @@ private fun RowScope.ActionButton(
 
 @Preview(name = "番組の詳細")
 @Composable
-private fun ProgramDetailScreenPreview() = FakePreview(setUp = {
-    it(GuideGridAction.load())
-    it(AppAction.push(AppRoute.programDetail(FAKE_PROGRAM, FAKE_CHANNEL)))
+private fun ProgramDetailScreenPreview() = FakePreview<ProgramApp>(setUp = {
+    it.prepareRoutes()
+    it.push(AppRoute.programDetail(FAKE_PROGRAM, FAKE_CHANNEL))
     it(ProgramDetailAction.appear())
-}) { app, send ->
+}) { app ->
     val route = remember { AppRoute.programDetail(FAKE_PROGRAM, FAKE_CHANNEL) }
-    rememberState(app) { app.programDetailStates(route) }?.let { ProgramDetailScreen(it, onBack = {}, send) }
+    rememberState(app) { app.programDetailStates(route) }?.let { ProgramDetailScreen(it, onBack = {}, app) }
 }

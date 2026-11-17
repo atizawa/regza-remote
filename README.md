@@ -55,9 +55,10 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   core/design/                 色・余白・テーマの Gradle モジュール（デザイントークンから生成した値）
   core/localization/           文言の Gradle モジュール（String Catalog から生成した AppStrings と文字列リソース）
   ui/common/                   機能の画面が共通に使う部品とプレビューの準備の Gradle モジュール（debug だけに偽物での組み立て。Live Updates のスイッチは受け口だけを置き、アプリが実装を渡す）
-  core/bridge/                 Swift の窓口とつなぎの Gradle モジュール（Swift の .so・swift-java が作る Java のクラス・画面の送り先と state の Flow・Swift をビルドする buildSwift）。画面は知らない
+  core/bridge/                 Swift の窓口とつなぎの Gradle モジュール（Swift の .so・窓口 RegzaAndroidApp の Java のクラス・すべての送り先をまとめた Send と state の Flow・Swift をビルドする buildSwift）。画面は知らず、機能の画面からは読み込まない
+  presentation/<名前>/         画面の状態と操作の型の Gradle モジュール（共有の Swift の PresentationCore・<機能>Presentation・AppPresentation と 1 対 1 の core・<機能>・app）。型の Java のクラスと、画面が受け取る送り先（<接頭辞>Send）・プレビューが受け取るアプリ（<接頭辞>App）を入れる。core 以外は core だけに依存する
   build-logic/                 Android のモジュールが共通に使うビルドの決まり（convention plugin）
-  ui/<機能>/                   機能ごとの画面の Gradle モジュール（remote・player・guide・program・channels・reservations・settings）。ui:common だけを使い、ほかの機能を読み込まない
+  ui/<機能>/                   機能ごとの画面の Gradle モジュール（remote・player・guide・program・channels・reservations・settings）。ui:common と同じ名前の presentation（remote は共通の presentation:core）だけを使い、ほかの機能を読み込まない
   app/                        Kotlin・Compose のアプリ（ui/app/ に組み立て、liveupdate/ にロック画面と通知の表示）
   mise.toml                   共通設定の Swift ツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
 ```
@@ -272,21 +273,24 @@ swift run --package-path ScreenGlue --scratch-path .build/screen-glue -c release
 
 - 窓口の送る関数（`sendChannelListAction`）と state を返す関数（`channelListState(route:)`・`nextChannelListState(route:after:waitID:)`）: `RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift`。Kotlin の Flow が終わると `endStateWait` で Swift 側の待機も終える
 - swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）。どのモジュールにも共通の設定（Java のパッケージなど）は `RegzaAndroid/swift-java.common.config` に 1 回だけ書き、ビルドのときにモジュールごとの設定と重ねる
-- Kotlin の送り先 `Send`（`send(ChannelListAction.tune(code))` のように、どの Action も `send` で送れる）と、state の `Flow`（`app.channelListStates(route)`）: ビルドのたびに `.build/swift/screen-glue-kotlin/` に作る
+- Kotlin の送り先と state の `Flow`: ビルドのたびに `.build/swift/screen-glue-kotlin/` に作る
+  - `<モジュール>/<接頭辞>Screens.kt`（`:presentation:<モジュール>` に入る）: その機能の画面が受け取る送り先 `<接頭辞>Send`（`send(ChannelListAction.tune(code))` のように、その機能の Action を `send` で送る。共通の `CoreSend` を受け継ぎ、リモコンの操作と画面の移り変わり（`send.push(route)` など。`AppNavigator`）も送れる）と、プレビューが受け取るアプリ `<接頭辞>App`（送り先と `app.channelListStates(route)` などの state の購読）
+  - `bridge/ScreenGlue.kt`（`:core:bridge` に入る）: すべての送り先をまとめた `Send`、Swift の窓口に送る `SwiftSend`（画面の移り変わりはアプリ全体の操作にして送る）、`RegzaAndroidApp` の state の `Flow`、プレビューに渡す `SwiftApp`
+- State/・Action/ の型ごとの Gradle のモジュールの一覧（`.build/swift/presentation-types.txt`）。`build-swift.sh` が、型の Java のクラスを `.build/swift/presentation-java/<モジュール>/` に分ける
 
-Kotlin の画面は、iOS と同じ機能の分け方の Gradle モジュール `Android/ui/<機能>` の package `com.example.regzaremote.ui.<機能>` に `<画面>Screen.kt` として `fun <画面>Screen(` を置き（`ui/channels/src/main/java/com/example/regzaremote/ui/channels/ChannelListScreen.kt`）、自分の ViewModel の state を受け取って描き、操作を `send` で送る。ファイルの末尾にはプレビューを置く（iOS の画面も同じく、ファイルの末尾の `#if DEBUG` の中に置く）。タブの最初の画面なら `ui/app/AppRoutes.kt` の `TabRoot`、タブの中で開く画面なら同じファイルの `RouteScreen` に足す。
+Kotlin の画面は、iOS と同じ機能の分け方の Gradle モジュール `Android/ui/<機能>` の package `com.example.regzaremote.ui.<機能>` に `<画面>Screen.kt` として `fun <画面>Screen(` を置き（`ui/channels/src/main/java/com/example/regzaremote/ui/channels/ChannelListScreen.kt`）、自分の ViewModel の state と、その機能の送り先（`<機能>Send`）を受け取って描き、操作を `send` で送る。ほかの画面を開く・アプリで見るなどの画面の移り変わりは、`send.push(route)` のように送り先の `AppNavigator` の関数で頼む（アプリ全体の操作の型 `AppAction` は機能の画面から見えない）。プレビューは `FakePreview<<機能>App>(setUp = { ... }) { app -> ... }` のように、その機能のアプリの型を選んで受け取る。ファイルの末尾にはプレビューを置く（iOS の画面も同じく、ファイルの末尾の `#if DEBUG` の中に置く）。タブの最初の画面なら `ui/app/AppRoutes.kt` の `TabRoot`、タブの中で開く画面なら同じファイルの `RouteScreen` に足す。
 
 iOS の `<機能>UI` と Android の `ui/<機能>`（package は `ui.<機能>`）に画面を置き、いくつもの機能で使う補助 View はそれぞれ `UICommon`・`ui/components` に置く。色・余白などは iOS の `Design`、Android の `design` が担当する。
 
 Android のルートパッケージには起動用の `MainActivity.kt`・`RegzaApplication.kt` を置く。`appservices/AppFactory.kt` が保存先を Swift の Factory に渡し、組み立てた App を Android の ViewModel に注入する。`appservices/RegzaViewModel.kt` は App の保持と終了時の処理、`appservices/storage` は Android Keystore・SharedPreferences を担当する。
 
-UI は `ui.<機能>`（機能ごとの画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui/app`（組み立て。いちばん外側の画面 `AppRoot`・タブの戻る道と表示先。`MainActivity` もここを通して画面を出す）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは、Swift の窓口とつなぎ（`:core:bridge`）・色と余白（`:core:design`）・文言（`:core:localization`）・共通の部品とプレビューの準備（`:ui:common`）・機能ごとの画面（`:ui:<機能>`）・アプリ（`:app`。組み立て・起動・ウィジェット・Live Updates など）に分ける。機能を足すときは `Android/ui/<機能>` に `build.gradle.kts`（`plugins { id("regza.android.ui") }` だけでよい）を置き、組み立て（`ui/app`）からつなぐ。`settings.gradle.kts` が `ui/` の下を読んで足し、`app` は足したすべての画面のモジュールに依存する。SDK の版・Java の版・Compose・機能に共通の依存などは `Android/build-logic` の決まり（`regza.android.library`・`regza.android.compose`・`regza.android.ui`）にまとめ、SDK の版は `gradle/libs.versions.toml` に 1 か所だけ書く。依存のないモジュールは同時にビルドする（`org.gradle.parallel`）。機能の画面のモジュールは `:ui:common` だけに依存するので、ほかの機能を読み込めない（ktlint の規則でも禁止している）。
+UI は `ui.<機能>`（機能ごとの画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui/app`（組み立て。いちばん外側の画面 `AppRoot`・タブの戻る道と表示先。`MainActivity` もここを通して画面を出す）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは、Swift の窓口とつなぎ（`:core:bridge`）・色と余白（`:core:design`）・文言（`:core:localization`）・共通の部品とプレビューの準備（`:ui:common`）・機能ごとの画面（`:ui:<機能>`）・アプリ（`:app`。組み立て・起動・ウィジェット・Live Updates など）に分ける。画面の状態と操作の型は、共有の Swift のプレゼンテーションのモジュールと 1 対 1 の `:presentation:<名前>`（`core`・機能ごと・`app`）に分ける。機能を足すときは、共有の Swift に `<機能>Presentation` を足したうえで、`Android/presentation/<機能>` と `Android/ui/<機能>` に `build.gradle.kts`（それぞれ `plugins { id("regza.android.presentation") }`・`plugins { id("regza.android.ui") }` だけでよい）を置き、組み立て（`ui/app`）からつなぐ。`settings.gradle.kts` が `presentation/`・`ui/` の下を読んで足し、`app` は足したすべての画面のモジュールに、`:core:bridge` はすべての `:presentation:<名前>` に依存する。SDK の版・Java の版・Compose・機能に共通の依存などは `Android/build-logic` の決まり（`regza.android.library`・`regza.android.compose`・`regza.android.presentation`・`regza.android.ui`）にまとめ、SDK の版は `gradle/libs.versions.toml` に 1 か所だけ書く。依存のないモジュールは同時にビルドする（`org.gradle.parallel`）。機能の画面のモジュールは `:ui:common`（共通の `:presentation:core` を見せる）と自分の機能の `:presentation:<機能>` だけに依存し、Swift の窓口（`:core:bridge`）にも依存しないので、ほかの機能の画面も型もコンパイルの段階で読み込めない（画面の読み込みは ktlint の規則でも禁止している）。
 
-Swift の接続コードは、生成する Kotlin の `com.example.regzaremote.bridge`（`Send`・`AppSend`・state の Flow）と、Java の `com.example.regzaremote.core` に分ける。生成結果は `.build/` に置く。変更するときは `ScreenGlue` や swift-java の設定を更新し、生成結果を直接編集しない。
+Swift の接続コードは、生成する Kotlin の `com.example.regzaremote.presentation.<モジュール>`（`<接頭辞>Send`・`<接頭辞>App`）と `com.example.regzaremote.bridge`（`Send`・`SwiftSend`・`SwiftApp`・state の Flow）、Java の `com.example.regzaremote.core` に分ける。Java のパッケージはどのモジュールでも同じで（JNI の名前を変えないため）、Gradle のモジュールへの分け方だけを変える。生成結果は `.build/` に置く。変更するときは `ScreenGlue` や swift-java の設定を更新し、生成結果を直接編集しない。
 
 Android の Kotlin の依存方向は、`Tools/KtlintRules` の ktlint カスタムルール `regza:dependency-imports` で検査する。`mise run lint` と `mise run format` はルールのテスト・JAR のビルド後に読み込むため、push・PR の Linux CI でも実行される。既存の Gradle wrapper を使い、Android SDK・Swift の生成済みコードは不要。ktlint の版はルートの `mise.toml` からビルドに渡す。
 
-- `ui` から appservices、保存インターフェース、native の生成・変換ユーティリティ、AppSend、BuildConfig、Swift 実行環境、SharedPreferences・DataStore・暗号化保存への import を禁止する。表示用の core の型・Send・state の購読は利用できる。
+- `ui` から appservices、保存インターフェース、native の生成・変換ユーティリティ、SwiftSend・SwiftApp、BuildConfig、Swift 実行環境、SharedPreferences・DataStore・暗号化保存への import を禁止する。表示用の core の型・Send・state の購読は利用できる。
 - appservices・bridge から UI への import、design から UI・appservices・bridge・core への import を禁止する。
 - 機能の画面（`ui.<機能>`。`ui` の下の、共通の部品 `ui.components`・プレビューの準備 `ui.preview`・組み立て `ui.app` 以外）を import できるのは、その機能自身と組み立て（`ui.app`）だけ（共通部品・プレビューの準備・`MainActivity` などからも禁止）。機能から組み立てへの import も禁止する。
 - プレビューの生成は `ui/common` の `appservices/preview/PreviewAppFactory.kt`、偽物での組み立てとホスト向けライブラリの読み込みは `ui/common` の debug のソースの `appservices/preview/FakeApps.kt` に置く。`ui/preview` からはこの Factory のみ利用でき、通常の画面からは参照できない。`FakePreview.kt` は準備済み App の表示とエラー表示を担当する。
@@ -334,8 +338,8 @@ GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が
 | 段階 | 入力・設定 | 出力 |
 | --- | --- | --- |
 | 共有モデルの Java 生成 | `../Packages/RegzaCore/Sources/RegzaSharedModels`、swift-java の共通設定 | `.build/swift/regzashared-java/`、`RegzaAndroid/Sources/RegzaSharedJava/Generated/` |
-| 画面の型の Java 生成 | `Sources/Presentation` の State/・Action/（`RegzaPresentation` の型としてまとめて作る）、`RegzaAndroid/RegzaPresentation.swift-java.config` | `.build/swift/regzapresentation-java/`、`RegzaAndroid/Sources/RegzaPresentationJava/Generated/` |
-| 画面の接続コード生成 | `ScreenGlue` が共有の State/・Action/・ViewModel を読む | `Generated/ScreenActions.swift`、`.build/swift/screen-glue-kotlin/`、設定内の型一覧 |
+| 画面の型の Java 生成 | `Sources/Presentation` の State/・Action/（`RegzaPresentation` の型としてまとめて作る）、`RegzaAndroid/RegzaPresentation.swift-java.config` | `.build/swift/regzapresentation-java/`（Gradle のモジュールごとに分けたものは `.build/swift/presentation-java/<モジュール>/`）、`RegzaAndroid/Sources/RegzaPresentationJava/Generated/` |
+| 画面の接続コード生成 | `ScreenGlue` が共有の State/・Action/・ViewModel を読む | `Generated/ScreenActions.swift`、`.build/swift/screen-glue-kotlin/`、`.build/swift/presentation-types.txt`、設定内の型一覧 |
 | アプリ窓口の Java 生成 | `RegzaAndroidBridge/Sources/RegzaAndroidBridge`、`RegzaAndroid/RegzaAndroidBridge.swift-java.config` | `.build/swift/regzabridge-java/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/` |
 | Kotlin へのコールバック生成 | 生成した `RegzaAndroidStorage.java`・`RegzaAndroidHTTPClient.java` と通信の引数の型 | `.build/swift/bridge-callbacks/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/JavaCallbacks.swift` |
 | native ビルド・梱包 | 接続コード、Swift SDK、NDK | `core/bridge/src/{main,release,debug}/jniLibs/arm64-v8a/` |
@@ -349,9 +353,9 @@ Kotlin が実装する保存先・HTTP のコールバックと通信の引数�
 swift-java（301e3da）には次の制約がある。どれも、守れなければビルドかテストで止まるようにしている。
 
 - 型を書いていないプロパティ（`public var count = 0`）を、警告だけ出して Java にしない。State/ と Action/ の public なプロパティには型を書く（`public var count: Int = 0`）。書いていなければ `screen-glue` が止まる
-- Foundation の型（`URL`・`Date`・`Data`・`UUID`）を enum の値（`case ready(url: URL)`）でしか使っていないと、その型の Java のクラスを作らず、javac が失敗する。`URL` は窓口の `regzaURLString` が使うので作られる。ほかの型を enum の値だけで使うときは、窓口などで一度使う
+- Foundation の型（`URL`・`Date`・`Data`・`UUID`）を enum の値（`case ready(url: URL)`）でしか使っていないと、その型の Java のクラスを作らず、javac が失敗する。`URL` は共有の UI の型の `urlString` が使うので作られる。ほかの型を enum の値だけで使うときは、共有の UI の型（`RegzaSharedModels`）で一度使う（あとのモジュールの Foundation の型のつなぎは、共有の UI の型のものを使って消すため、ほかのモジュールで作ると消せずに止まる）
 - Foundation の型の Java のクラスを、使うモジュールごとに作る。3 つのモジュール（`RegzaSharedModels`・`RegzaPresentation`・`RegzaAndroidBridge`）は同じ Java のパッケージに出しているので、そのままでは同じ名前の JNI の関数がぶつかってリンクできない。`mise run build-swift` が、前のモジュールにもある型のつなぎを消す（消せない混ざり方なら止まる）。モジュールごとにパッケージを分けると、ぶつからない代わりに `Date` がモジュールごとに別の型になり、モジュールをまたいで渡せなくなる
-- 同じ名前で引数の型だけ違う関数を並べられない。窓口の送る関数を `sendChannelListAction` のように型ごとの名前にしているのはこのため（Kotlin からは `Send` を通してどれも `send` で送れる）
+- 同じ名前で引数の型だけ違う関数を並べられない。窓口の送る関数を `sendChannelListAction` のように型ごとの名前にしているのはこのため（Kotlin からは `<機能>Send`・`Send` を通してどれも `send` で送れる）
 - swift-java が何か宣言を Java にできなかったときは、`mise run build-swift` が止まる（`Failed to import`）
 - jextract の入力は絶対 file URL に統一する。相対パスを URL として渡すと Linux で同じ extension が重複収集され、Java のメソッド名や定義が重複するため、`build-swift.sh` がパスの解決と URL エンコードを行う。
 - Future のキャンセルが Swift Task に伝わらない制約（[swift-java #947](https://github.com/swiftlang/swift-java/issues/947)）に対し、Flow の finally から endStateWait を呼ぶ。StateWaitRegistry は Swift Task のキャンセルでも continuation を起こすが、遅れて届く終了通知を扱うため、waitID と完了記録は維持する。対応版へ更新するときも、開始前・待機中・状態変更との競合を端末テストで確認してから回避策を簡略化する。

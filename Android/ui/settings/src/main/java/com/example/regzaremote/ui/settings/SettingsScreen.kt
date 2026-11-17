@@ -50,9 +50,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.regzaremote.bridge.Send
-import com.example.regzaremote.bridge.settingsStates
-import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.AppAppearance
 import com.example.regzaremote.core.ServerSetupAction
 import com.example.regzaremote.core.ServerSetupServer
@@ -64,6 +61,8 @@ import com.example.regzaremote.core.TVSetupAction
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.DesignDimensions
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.presentation.settings.SettingsApp
+import com.example.regzaremote.presentation.settings.SettingsSend
 import com.example.regzaremote.ui.components.FormSection
 import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.LiveUpdateToggle
@@ -80,7 +79,7 @@ import com.example.regzaremote.ui.preview.FakePreview
  * (テレビが未設定なら、SettingsViewModel がテレビの設定の画面から開く)
  */
 @Composable
-fun SettingsScreen(setup: SettingsState, send: Send) {
+fun SettingsScreen(setup: SettingsState, send: SettingsSend) {
     when (setup.path.lastOrNull()?.discriminator) {
         SettingsPage.Discriminator.TV -> TVSettingsPage(setup, send)
         SettingsPage.Discriminator.GUIDE -> ServerSettingsPage(guidePage, setup.servers.guide, setup, send)
@@ -93,7 +92,7 @@ fun SettingsScreen(setup: SettingsState, send: Send) {
 private fun tv(action: TVSetupAction) = SettingsAction.tv(action)
 
 @Composable
-private fun SettingsTopPage(setup: SettingsState, send: Send) {
+private fun SettingsTopPage(setup: SettingsState, send: SettingsSend) {
     // 登録済みのテレビがあれば、戻るボタンでも閉じる
     BackHandler(enabled = setup.isCanClose) { send(SettingsAction.close()) }
     val servers = setup.servers
@@ -148,7 +147,7 @@ private fun SettingsTopPage(setup: SettingsState, send: Send) {
 }
 
 @Composable
-private fun AppearancePicker(setup: SettingsState, send: Send) {
+private fun AppearancePicker(setup: SettingsState, send: SettingsSend) {
     var expanded by remember { mutableStateOf(false) }
     val choices = remember { listOf(AppAppearance.system(), AppAppearance.light(), AppAppearance.dark()) }
 
@@ -179,7 +178,7 @@ private fun AppearancePicker(setup: SettingsState, send: Send) {
 
 /** テレビを探す・PIN で登録する・ユーザー名とパスワード・接続テスト */
 @Composable
-private fun TVSettingsPage(setup: SettingsState, send: Send) {
+private fun TVSettingsPage(setup: SettingsState, send: SettingsSend) {
     val state = setup.tv
     BackHandler { send(SettingsAction.back()) }
     // 未設定なら開いたときに探し始める
@@ -315,7 +314,7 @@ private val streamPage: ServerPage
 
 /** 録画サーバーの設定の画面。保存済みなら、連携を解除するボタンも出す */
 @Composable
-private fun ServerSettingsPage(page: ServerPage, state: ServerSetupServerState, setup: SettingsState, send: Send) {
+private fun ServerSettingsPage(page: ServerPage, state: ServerSetupServerState, setup: SettingsState, send: SettingsSend) {
     fun server(action: (ServerSetupServer) -> ServerSetupAction) = SettingsAction.server(action(page.server()))
     BackHandler { send(SettingsAction.back()) }
     var isConfirmingUnlink by remember { mutableStateOf(false) }
@@ -480,6 +479,6 @@ private fun FormTextField(
 
 @Preview(name = "設定")
 @Composable
-private fun SettingsScreenPreview() = FakePreview(setUp = { it(AppAction.showSettings()) }) { app, send ->
-    rememberState(app) { app.settingsStates() }?.let { SettingsScreen(it, send) }
+private fun SettingsScreenPreview() = FakePreview<SettingsApp>(setUp = { it.showSettings() }) { app ->
+    rememberState(app) { app.settingsStates() }?.let { SettingsScreen(it, app) }
 }
