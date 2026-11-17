@@ -2,13 +2,16 @@ package com.example.regzaremote.ui.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.NavigationBar
@@ -35,8 +38,12 @@ import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.ui.components.EmptyState
+import com.example.regzaremote.ui.components.HeaderIconButton
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
+import com.example.regzaremote.ui.components.ProminentButton
 import com.example.regzaremote.ui.components.RecordIcon
+import com.example.regzaremote.ui.components.ScreenHeader
 import com.example.regzaremote.ui.components.SensoryFeedback
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.player.NowPlayingBar
@@ -58,6 +65,11 @@ fun AppScreen(app: RegzaAndroidApp, state: AppState, send: Send) {
     }
     // リモコンのボタンや選局のたびに、軽く震わせる (iOS と同じく、どのタブからの操作でも)
     SensoryFeedback(HapticFeedbackType.VirtualKey, remote.tapCount)
+    // テレビが未登録なら、iOS と同じく、設定を開く案内だけを出す (タブは出さない。設定は自動では開かない)
+    if (!remote.isConfigured) {
+        UnconfiguredScreen(send)
+        return
+    }
     val tab = state.tab
     Scaffold(
         containerColor = AppTheme.background,
@@ -100,4 +112,21 @@ private fun RowScope.TabItem(tab: AppTab, label: String, icon: @Composable () ->
             indicatorColor = Color.Transparent,
         ),
     )
+}
+
+/** テレビが未登録のときの案内。設定を開くボタンと、右上の設定のボタンを出す (iOS と同じ) */
+@Composable
+private fun UnconfiguredScreen(send: Send) {
+    Scaffold(containerColor = AppTheme.background) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            ScreenHeader("") {
+                HeaderIconButton(Icons.Filled.Settings, AppStrings.settingsTitle, modifier = Modifier.testTag("settings.open")) {
+                    send(AppAction.showSettings())
+                }
+            }
+            EmptyState(AppStrings.remoteUnconfigured, AppStrings.remoteSetupHelp) {
+                ProminentButton(AppStrings.commonConfigure) { send(AppAction.showSettings()) }
+            }
+        }
+    }
 }

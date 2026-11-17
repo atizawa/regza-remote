@@ -24,11 +24,8 @@ public final class RegzaAndroidApp {
     /// 組み立てた ViewModel から作る (プレビューやテストでは、偽物のテレビ・録画サーバーにつないだ ViewModel を渡す)
     package init(appViewModel: AppViewModel) {
         self.appViewModel = appViewModel
-        self.stateWaitRegistry = onMainActor {
-            // 未登録なら、テレビの登録の画面から始める
-            if !appViewModel.remoteViewModel.state.isConfigured { appViewModel.send(.showSettings) }
-            return StateWaitRegistry()
-        }
+        // 未登録でも設定は開かない (iOS と同じく、組み立てが設定を開く案内を出す。窓口は通知などからも作られる)
+        self.stateWaitRegistry = onMainActor { StateWaitRegistry() }
     }
 
     // MARK: state

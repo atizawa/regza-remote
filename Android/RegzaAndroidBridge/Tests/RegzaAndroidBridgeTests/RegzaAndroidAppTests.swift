@@ -57,10 +57,11 @@ struct RegzaAndroidAppTests {
 
     // MARK: - アプリ全体の状態
 
-    @Test func startsFromTVSettingsWhenNotConfigured() async throws {
+    /// 未登録でも、窓口を作るだけでは設定を開かない (組み立てが設定を開く案内を出す。iOS と同じ)
+    @Test func doesNotOpenSettingsWhenNotConfigured() async throws {
         let fixture = try await make(host: "")
-        #expect(await fixture.bridge.appState(route: nil)?.isShowingSettings == true)
-        #expect(await fixture.bridge.settingsState(route: nil)?.path == [.tv])
+        #expect(await fixture.bridge.remoteState(route: nil)?.isConfigured == false)
+        #expect(await fixture.bridge.appState(route: nil)?.isShowingSettings == false)
     }
 
     // MARK: - 保存先
