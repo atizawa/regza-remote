@@ -34,7 +34,6 @@ package com.example.regzaremote.localization
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
-import com.example.regzaremote.R
 
 object AppStrings {
 ${entries.map(entry => {
@@ -72,7 +71,6 @@ ${core.map(entry => {
 const coreKotlin = `${header}
 package com.example.regzaremote.localization
 
-import com.example.regzaremote.R
 
 /** 共有の Swift (RegzaCore) が画面に出す文言のキーと、その Android の文字列リソース。起動時に Swift へまとめて渡す */
 object CoreStringResources {
@@ -83,19 +81,19 @@ ${core.map(entry => `        "${entry.key}" to R.string.${entry.key},`).join("\n
 `;
 const outputs = new Map([
   ["../Packages/RegzaCore/Sources/RegzaStrings/Generated/CoreStrings.swift", coreSwift],
-  ["../Android/app/src/main/java/com/example/regzaremote/localization/Generated/CoreStringResources.kt", coreKotlin],
+  ["../Android/core/localization/src/main/java/com/example/regzaremote/localization/Generated/CoreStringResources.kt", coreKotlin],
   ["../iOS/RegzaKit/Sources/Localization/Generated/AppStrings.swift", swift],
-  ["../Android/app/src/main/java/com/example/regzaremote/localization/Generated/AppStrings.kt", kotlin],
+  ["../Android/core/localization/src/main/java/com/example/regzaremote/localization/Generated/AppStrings.kt", kotlin],
 ]);
 for (const locale of new Set(all.flatMap(entry => [...entry.translations.keys()]))) {
   const canonical = Intl.getCanonicalLocales(locale.replaceAll("_", "-"))[0];
   const directory = locale === catalog.sourceLanguage ? "values" : `values-b+${canonical.replaceAll("-", "+")}`;
-  const path = `../Android/app/src/main/res/${directory}/app_strings.xml`;
+  const path = `../Android/core/localization/src/main/res/${directory}/app_strings.xml`;
   if (outputs.has(path)) throw new Error(`言語の出力先が重複しています: ${locale}`);
   outputs.set(path, androidXML(all, locale));
 }
 // 言語を削除した場合も、今回の専用生成ファイルだけを除去する。
-const res = "../Android/app/src/main/res";
+const res = "../Android/core/localization/src/main/res";
 for (const directory of await readdir(res)) {
   const path = join(res, directory, "app_strings.xml");
   if (directory.startsWith("values") && !outputs.has(path) && await readFile(path).then(() => true, () => false)) {

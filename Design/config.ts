@@ -25,7 +25,7 @@ export default {
     android: {
       transforms: ["name/camel", "size/compose/dp"],
       files: [{
-        destination: "../Android/app/src/main/java/com/example/regzaremote/design/Generated/DesignDimensions.kt",
+        destination: "../Android/core/design/src/main/java/com/example/regzaremote/design/Generated/DesignDimensions.kt",
         format: "compose/object",
         options: { ...options, packageName: "com.example.regzaremote.design", import: ["androidx.compose.ui.unit.dp"] },
       }],
@@ -42,7 +42,7 @@ export function colors(mode: "light" | "dark"): Config {
       android: {
         transforms: ["name/snake", "color/hex8android"],
         files: [{
-          destination: `../Android/app/src/main/res/values${mode === "dark" ? "-night" : ""}/design_colors.xml`,
+          destination: `../Android/core/design/src/main/res/values${mode === "dark" ? "-night" : ""}/design_colors.xml`,
           format: "android/colors",
           options: { fileHeader: () => header },
         }],
@@ -56,7 +56,7 @@ export function colors(mode: "light" | "dark"): Config {
         compose: {
           transforms: ["name/camel"],
           files: [{
-            destination: "../Android/app/src/main/java/com/example/regzaremote/design/Generated/DesignColors.kt",
+            destination: "../Android/core/design/src/main/java/com/example/regzaremote/design/Generated/DesignColors.kt",
             format: "native/compose-colors",
           }],
         },

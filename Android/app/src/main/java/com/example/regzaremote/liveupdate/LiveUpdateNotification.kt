@@ -14,6 +14,7 @@ import com.example.regzaremote.core.Date
 import com.example.regzaremote.core.LiveHeadline
 import com.example.regzaremote.core.LiveStatus
 import com.example.regzaremote.core.RegzaKey
+import com.example.regzaremote.localization.R as StringsR
 
 /**
  * 共有の LiveStatus から通知を組み立てる。Android 16 以上では Live Updates (ステータスバーのチップ・ロック画面) に昇格を頼み、
@@ -32,11 +33,11 @@ object LiveUpdateNotification {
     fun createChannel(context: Context) {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            context.getString(R.string.live_update_channel_name),
+            context.getString(StringsR.string.live_update_channel_name),
             // 音を鳴らさずに出し続ける (最低の重要度だと昇格できない)
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = context.getString(R.string.live_update_channel_description)
+            description = context.getString(StringsR.string.live_update_channel_description)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             setShowBadge(false)
         }
@@ -83,19 +84,19 @@ object LiveUpdateNotification {
     private fun headline(context: Context, status: LiveStatus): String = when (status.headline.discriminator) {
         LiveHeadline.Discriminator.PROGRAM -> status.title
         LiveHeadline.Discriminator.CHANNEL -> status.channelName
-        LiveHeadline.Discriminator.EXTERNAL -> context.getString(R.string.live_status_external)
-        LiveHeadline.Discriminator.STANDBY -> context.getString(R.string.live_status_standby)
-        LiveHeadline.Discriminator.DISCONNECTED -> context.getString(R.string.live_status_disconnected)
-        LiveHeadline.Discriminator.SENTCOMMAND -> context.getString(R.string.live_status_sent_command, status.lastCommand.orElse(""))
-        LiveHeadline.Discriminator.REMOTE -> context.getString(R.string.live_status_remote)
+        LiveHeadline.Discriminator.EXTERNAL -> context.getString(StringsR.string.live_status_external)
+        LiveHeadline.Discriminator.STANDBY -> context.getString(StringsR.string.live_status_standby)
+        LiveHeadline.Discriminator.DISCONNECTED -> context.getString(StringsR.string.live_status_disconnected)
+        LiveHeadline.Discriminator.SENTCOMMAND -> context.getString(StringsR.string.live_status_sent_command, status.lastCommand.orElse(""))
+        LiveHeadline.Discriminator.REMOTE -> context.getString(StringsR.string.live_status_remote)
     }
 
     /** 見出しの下の行。番組が終わったこと・つながらないこと・チャプター・ジャンルの順に、1 つだけ出す */
     private fun detail(context: Context, status: LiveStatus, hasEnded: Boolean): String? = when {
-        hasEnded -> context.getString(R.string.live_status_program_ended)
+        hasEnded -> context.getString(StringsR.string.live_status_program_ended)
 
         // 直前の情報を出しているときは、つながっていないことを添える
-        !status.isConnected && status.isHasInfoHeadline -> context.getString(R.string.live_status_disconnected)
+        !status.isConnected && status.isHasInfoHeadline -> context.getString(StringsR.string.live_status_disconnected)
 
         status.headline.discriminator == LiveHeadline.Discriminator.PROGRAM -> status.chapterName.ifEmpty { null }
 
@@ -107,7 +108,7 @@ object LiveUpdateNotification {
 
     /** ステータスバーのチップに出す短い文字。録画は「録画」、放送は短い局名 */
     private fun chip(context: Context, status: LiveStatus): String? = when {
-        status.isRecordingPlayback -> context.getString(R.string.live_status_recording)
+        status.isRecordingPlayback -> context.getString(StringsR.string.live_status_recording)
         status.shortChannel.isNotEmpty() -> status.shortChannel
         else -> null
     }
@@ -129,7 +130,7 @@ object LiveUpdateNotification {
 
     private fun action(context: Context, key: RegzaKey): Notification.Action {
         // 待機中に出す唯一のボタンなので、何をするか文字で添える
-        val label = if (key.discriminator == RegzaKey.Discriminator.POWER) context.getString(R.string.remote_power_on) else key.label
+        val label = if (key.discriminator == RegzaKey.Discriminator.POWER) context.getString(StringsR.string.remote_power_on) else key.label
         return Notification.Action.Builder(Icon.createWithResource(context, icon(key)), label, LiveUpdateReceiver.press(context, key))
             .build()
     }

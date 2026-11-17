@@ -29,7 +29,6 @@ package com.example.regzaremote.design
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
-import com.example.regzaremote.R
 
 object DesignColors {
 ${declarations.join("\n\n")}

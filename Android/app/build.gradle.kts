@@ -21,9 +21,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Swift の .so は arm64 だけ作っている (buildSwift)
         ndk { abiFilters += "arm64-v8a" }
-        // エディタの横のプレビュー (ホストの JVM) が読み込む Swift のライブラリの場所 (SamplePreview)。
-        // 手元のフォルダの場所なので、配るアプリ (release) には入れず、debug のビルドでだけ入れる
-        buildConfigField("String", "HOST_SWIFT_LIBRARIES", "\"\"")
     }
 
     buildFeatures {
@@ -32,10 +29,6 @@ android {
     }
 
     buildTypes {
-        debug {
-            // 振る舞いのテストと同じもの (behavior-tests の buildJvmHost が作る)。エディタの中でしか使わない
-            buildConfigField("String", "HOST_SWIFT_LIBRARIES", "\"${rootDir.resolve(".build/jvm-host/libs").path}\"")
-        }
         release {
             // Java のコードを縮める (Compose などのライブラリのうち、使っていない部分を外す)
             isMinifyEnabled = true
@@ -94,6 +87,12 @@ dependencies {
     androidTestImplementation(libs.okhttp.mockwebserver)
     // Swift の窓口とつなぎ (Swift の .so・swift-java が作る Java のクラス・画面の送り先と state の Flow)
     implementation(project(":core:bridge"))
+    // 色・余白・テーマ
+    implementation(project(":core:design"))
+    // 文言 (String Catalog から生成)
+    implementation(project(":core:localization"))
+    // 機能の画面が共通に使う部品と、画面のプレビューの準備
+    implementation(project(":core:ui"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

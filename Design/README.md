@@ -21,12 +21,12 @@ mise run check-design-tokens
 JSON と生成結果を一緒に Git に含める。主な生成物は以下のとおり。
 
 - `iOS/RegzaKit/Sources/Design/Generated/DesignDimensions.swift`
-- `Android/app/src/main/java/com/example/regzaremote/design/Generated/DesignDimensions.kt`
+- `Android/core/design/src/main/java/com/example/regzaremote/design/Generated/DesignDimensions.kt`
 - `iOS/RegzaKit/Sources/Design/Generated/DesignColors.swift`
-- `Android/app/src/main/java/com/example/regzaremote/design/Generated/DesignColors.kt`
+- `Android/core/design/src/main/java/com/example/regzaremote/design/Generated/DesignColors.kt`
 - `iOS/RegzaKit/Sources/Design/Generated/DesignColors.xcassets`: 各色のAny・Darkを含むColor Asset。
-- `Android/app/src/main/res/values/design_colors.xml`: ライト用の標準色リソース。
-- `Android/app/src/main/res/values-night/design_colors.xml`: ダーク用の標準色リソース。
+- `Android/core/design/src/main/res/values/design_colors.xml`: ライト用の標準色リソース。
+- `Android/core/design/src/main/res/values-night/design_colors.xml`: ダーク用の標準色リソース。
 
 Android XMLはStyle Dictionary標準の `android/colors` で生成する。
 Color Assetへの配置は `generate.ts`・`color-assets.ts`、Swift・Kotlinのリソース参照は `formats.ts` の小さな専用処理で生成する。

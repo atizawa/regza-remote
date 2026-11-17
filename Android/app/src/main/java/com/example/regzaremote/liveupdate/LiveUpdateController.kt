@@ -9,6 +9,7 @@ import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
+import com.example.regzaremote.ui.components.LiveUpdates
 import java.util.Optional
 import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
@@ -26,14 +27,14 @@ import kotlinx.coroutines.launch
  * 画面と同じくリモコンの state を読み、変わったら通知と、閉じている間に起こしてもらう時刻を更新する。
  * 出しているかどうかは、通知が残っているかで決める (スワイプで消されたらオフにする)
  */
-object LiveUpdateController {
+object LiveUpdateController : LiveUpdates {
     /** 通知の更新と受け取ったブロードキャストの処理は、Swift の MainActor と同じメインスレッドで順に動かす */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val on = MutableStateFlow(false)
 
     /** 通知を出しているか (設定の画面のスイッチが読む) */
-    val isOn: StateFlow<Boolean> = on.asStateFlow()
+    override val isOn: StateFlow<Boolean> = on.asStateFlow()
 
     private var observing: Job? = null
 
@@ -57,7 +58,7 @@ object LiveUpdateController {
     }
 
     /** 設定の画面のスイッチから。通知の権限は、呼ぶ前に画面が求めておく */
-    suspend fun setEnabled(context: Context, enabled: Boolean) {
+    override suspend fun setEnabled(context: Context, enabled: Boolean) {
         if (!enabled) {
             stop(context)
             context.getSystemService(NotificationManager::class.java).cancel(LiveUpdateNotification.NOTIFICATION_ID)

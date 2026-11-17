@@ -21,9 +21,9 @@ Xcodeから翻訳を追加する場合は、元言語を含めて使う文字列
 生成結果は以下のとおり。元ファイルと生成結果を一緒にGitへ含め、生成結果は直接編集しない。
 
 - `iOS/RegzaKit/Sources/Localization/Generated/AppStrings.swift`
-- `Android/app/src/main/java/com/example/regzaremote/localization/Generated/AppStrings.kt`
-- `Android/app/src/main/res/values/app_strings.xml`（元言語・未翻訳時のフォールバック）
-- `Android/app/src/main/res/values-b+…/app_strings.xml`（追加した言語）
+- `Android/core/localization/src/main/java/com/example/regzaremote/localization/Generated/AppStrings.kt`
+- `Android/core/localization/src/main/res/values/app_strings.xml`（元言語・未翻訳時のフォールバック）
+- `Android/core/localization/src/main/res/values-b+…/app_strings.xml`（追加した言語）
 
 画面は `AppStrings.settingsTitle`、引数付きの文言は `AppStrings.serverSearching(name)` のように参照する。
 iOSはLocalizationパッケージのBundle、Composeは `stringResource`・`pluralStringResource` を使用する。
@@ -45,7 +45,7 @@ Androidでは非Composableの処理やLazyListの構築コールバックへ入�
 生成は次の2つ。`core_` のキーはOSの画面の `AppStrings` には出さない。
 
 - `Packages/RegzaCore/Sources/RegzaStrings/Generated/CoreStrings.swift`（共有のSwiftが `CoreStrings.keyPower` のように引く。元言語の文言も持つ）
-- `Android/app/src/main/java/com/example/regzaremote/localization/Generated/CoreStringResources.kt`（キーとAndroidの文字列リソースの対応）
+- `Android/core/localization/src/main/java/com/example/regzaremote/localization/Generated/CoreStringResources.kt`（キーとAndroidの文字列リソースの対応）
 
 共有のSwiftはAndroidでも動き、アプリに入れた翻訳を自分では読めないので、OSが選ばれている言語の文言をまとめて入れる（`CoreStringTable.install`）。
 iOSはアプリ（`AppContainer`）とウィジェットの拡張（WidgetBundle）がプロセスごとに `CoreStringsSetup.install()` を呼び、`Bundle` から入れる。

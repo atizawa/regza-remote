@@ -5,9 +5,9 @@ import android.widget.Toast
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
-import com.example.regzaremote.R
 import com.example.regzaremote.appservices.AppFactory
 import com.example.regzaremote.core.RegzaKey
+import com.example.regzaremote.localization.R as StringsR
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,7 +22,7 @@ class SendRemoteKeyAction : ActionCallback {
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
-            context.getString(R.string.widget_send_failed)
+            context.getString(StringsR.string.widget_send_failed)
         }
         if (error != null) {
             withContext(Dispatchers.Main) {
