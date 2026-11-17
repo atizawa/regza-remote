@@ -1,4 +1,6 @@
 pluginManagement {
+    // Android のモジュールが共通に使うビルドの決まり (regza.android.*)
+    includeBuild("build-logic")
     repositories {
         google()
         mavenCentral()
@@ -21,13 +23,10 @@ include(
     ":core:design",
     ":core:localization",
     ":core:ui",
-    ":feature:remote",
-    ":feature:player",
-    ":feature:guide",
-    ":feature:program",
-    ":feature:channels",
-    ":feature:reservations",
-    ":feature:settings",
     ":swiftkit-core",
     ":behavior-tests",
 )
+
+// 機能の画面のモジュールは、feature/ の下のフォルダから読む (機能を足すときは、フォルダを作るだけでよい)
+rootDir.resolve("feature").listFiles { file -> file.resolve("build.gradle.kts").isFile }.orEmpty().sortedBy { it.name }
+    .forEach { include(":feature:${it.name}") }

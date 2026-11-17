@@ -52,6 +52,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   core/localization/           文言の Gradle モジュール（String Catalog から生成した AppStrings と文字列リソース）
   core/ui/                     機能の画面が共通に使う部品とプレビューの準備の Gradle モジュール（debug だけに偽物での組み立て。Live Updates のスイッチは受け口だけを置き、アプリが実装を渡す）
   core/bridge/                 Swift の窓口とつなぎの Gradle モジュール（Swift の .so・swift-java が作る Java のクラス・画面の送り先と state の Flow・Swift をビルドする buildSwift）。画面は知らない
+  build-logic/                 Android のモジュールが共通に使うビルドの決まり（convention plugin）
   feature/<機能>/              機能ごとの画面の Gradle モジュール（remote・player・guide・program・channels・reservations・settings）。core:ui だけを使い、ほかの機能を読み込まない
   app/                        Kotlin・Compose のアプリ（ui/app/ に組み立て、liveupdate/ にロック画面と通知の表示）
   mise.toml                   共通設定の Swift ツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
@@ -272,7 +273,7 @@ iOS の `<機能>Feature` と Android の `feature/<機能>`（package は `ui.f
 
 Android のルートパッケージには起動用の `MainActivity.kt`・`RegzaApplication.kt` を置く。`appservices/AppFactory.kt` が保存先を Swift の Factory に渡し、組み立てた App を Android の ViewModel に注入する。`appservices/RegzaViewModel.kt` は App の保持と終了時の処理、`appservices/storage` は Android Keystore・SharedPreferences を担当する。
 
-UI は `ui/feature/<機能>`（機能ごとの画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui/app`（組み立て。いちばん外側の画面 `AppRoot`・タブの戻る道と表示先。`MainActivity` もここを通して画面を出す）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは、Swift の窓口とつなぎ（`:core:bridge`）・色と余白（`:core:design`）・文言（`:core:localization`）・共通の部品とプレビューの準備（`:core:ui`）・機能ごとの画面（`:feature:<機能>`）・アプリ（`:app`。組み立て・起動・ウィジェット・Live Updates など）に分ける。機能を足すときは `Android/feature/<機能>` を作り、`settings.gradle.kts` と `app/build.gradle.kts` の一覧に足して、組み立て（`ui/app`）からつなぐ。機能のモジュールは `:core:ui` だけに依存するので、ほかの機能を読み込めない（ktlint の規則でも禁止している）。
+UI は `ui/feature/<機能>`（機能ごとの画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui/app`（組み立て。いちばん外側の画面 `AppRoot`・タブの戻る道と表示先。`MainActivity` もここを通して画面を出す）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは、Swift の窓口とつなぎ（`:core:bridge`）・色と余白（`:core:design`）・文言（`:core:localization`）・共通の部品とプレビューの準備（`:core:ui`）・機能ごとの画面（`:feature:<機能>`）・アプリ（`:app`。組み立て・起動・ウィジェット・Live Updates など）に分ける。機能を足すときは `Android/feature/<機能>` に `build.gradle.kts`（`plugins { id("regza.android.feature") }` だけでよい）を置き、組み立て（`ui/app`）からつなぐ。`settings.gradle.kts` が `feature/` の下を読んで足し、`app` は足したすべての機能に依存する。SDK の版・Java の版・Compose・機能に共通の依存などは `Android/build-logic` の決まり（`regza.android.library`・`regza.android.compose`・`regza.android.feature`）にまとめ、SDK の版は `gradle/libs.versions.toml` に 1 か所だけ書く。依存のないモジュールは同時にビルドする（`org.gradle.parallel`）。機能のモジュールは `:core:ui` だけに依存するので、ほかの機能を読み込めない（ktlint の規則でも禁止している）。
 
 Swift の接続コードは、生成する Kotlin の `com.example.regzaremote.bridge`（`Send`・`AppSend`・state の Flow）と、Java の `com.example.regzaremote.core` に分ける。生成結果は `.build/` に置く。変更するときは `ScreenGlue` や swift-java の設定を更新し、生成結果を直接編集しない。
 

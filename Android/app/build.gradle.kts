@@ -7,15 +7,15 @@ plugins {
 
 android {
     namespace = "com.example.regzaremote"
-    compileSdk = 37
+    compileSdk = libs.versions.androidCompileSdk.get().toInt()
     // APK に入れる Swift の .so のシンボルを落とすときに使う NDK (core:bridge の Swift のビルドと同じ版)。
     // 指定がないと落とせずに、手元のフォルダの場所などが残ったまま入る
     ndkVersion = libs.versions.ndk.get()
 
     defaultConfig {
         applicationId = "com.example.regzaremote"
-        minSdk = 28
-        targetSdk = 37
+        minSdk = libs.versions.androidMinSdk.get().toInt()
+        targetSdk = libs.versions.androidTargetSdk.get().toInt()
         versionCode = 1
         versionName = "0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -93,10 +93,8 @@ dependencies {
     implementation(project(":core:localization"))
     // 機能の画面が共通に使う部品と、画面のプレビューの準備
     implementation(project(":core:ui"))
-    // 機能の画面。組み立て (ui.app) がつなぐ
-    listOf("remote", "player", "guide", "program", "channels", "reservations", "settings").forEach {
-        implementation(project(":feature:$it"))
-    }
+    // 機能の画面 (settings.gradle.kts が feature/ の下から読んだもの)。組み立て (ui.app) がつなぐ
+    rootProject.subprojects.filter { it.path.startsWith(":feature:") }.forEach { implementation(project(it.path)) }
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

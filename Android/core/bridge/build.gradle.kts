@@ -4,25 +4,17 @@
 // - swift-java が作る Java のクラス (com.example.regzaremote.core)・画面の送り先と state の Flow (screen-glue が作る bridge)
 // 画面やアプリの組み立ては app に置き、このモジュールは画面を知らない
 plugins {
-    alias(libs.plugins.android.library)
+    id("regza.android.library")
 }
 
 android {
     namespace = "com.example.regzaremote.bridge"
-    compileSdk = 37
     // NDK の版 (libs.versions.toml)。Swift の .so のビルド (buildSwift) に渡し、Android SDK の ndk/<版> になければ build-swift が入れる
     ndkVersion = libs.versions.ndk.get()
 
     defaultConfig {
-        minSdk = 28
         // swift-java が作ったクラスと SwiftKitCore を、アプリの縮小で消さない決まり
         consumerProguardFiles("consumer-rules.pro")
-    }
-
-    // swift-java が作る Java のコードは Java 17 の書き方を使う (RegzaAndroid/swift-java.common.config の javaSourceLevel)
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 
     // swift-java が RegzaAndroid の Swift から作った Java のクラス (buildSwift で作られる)
