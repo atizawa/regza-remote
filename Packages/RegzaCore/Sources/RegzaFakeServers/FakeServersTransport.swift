@@ -1,3 +1,4 @@
+#if !REGZA_FAKES_DISABLED
 import Foundation
 import RegzaDomain
 import RegzaInfrastructure
@@ -27,3 +28,4 @@ public struct FakeServersTransport: HTTPTransport {
         return response
     }
 }
+#endif

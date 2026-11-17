@@ -2,6 +2,27 @@
 import PackageDescription
 
 // iOS 固有の組み立て・画面・システム連携。共有の Domain・UseCase・ViewModel は RegzaCore に置く。
+
+/// 画面のモジュールの設定 (ほかのモジュールの型の操作は、そのモジュールを読み込んだファイルでだけ使える)
+let screenSettings: [SwiftSetting] = [.enableUpcomingFeature("MemberImportVisibility")]
+/// 画面のファイルの末尾のプレビュー (`#if DEBUG`) だけが使う、偽物のテレビ・録画サーバー。
+/// iOS のリリースのビルドでは中身のないモジュールになるので (RegzaCore の Package.swift)、リリース版のアプリには入らない
+let fakeForPreviews: Target.Dependency = .product(name: "RegzaFakeServers", package: "RegzaCore")
+/// 機能のモジュール (Sources/Features/<機能>Feature)。画面の ViewModel の state と Action・共通の部品だけを使い、ほかの機能を読み込まない
+func feature(_ name: String) -> Target {
+    .target(
+        name: name,
+        dependencies: [
+            .product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "Localization", "UICommon", fakeForPreviews,
+        ],
+        path: "Sources/Features/\(name)",
+        swiftSettings: screenSettings)
+}
+let features = [
+    "RemoteFeature", "PlayerFeature", "GuideFeature", "ProgramFeature", "ChannelsFeature", "ReservationsFeature",
+    "SettingsFeature",
+]
+
 let package = Package(
     name: "RegzaKit",
     defaultLocalization: "ja",
@@ -13,9 +34,8 @@ let package = Package(
         .library(name: "SystemActions", targets: ["SystemActions"]),
         .library(name: "Shortcuts", targets: ["Shortcuts"]),
         .library(name: "Widgets", targets: ["Widgets"]),
-        // プレビューを Xcode で開くためのスキーム用。アプリにも Widget にもリンクしない
-        .library(name: "UIPreviews", targets: ["UIPreviews"]),
-    ],
+        // 機能ごとのスキーム (Xcode が作る) でプレビューすると、その機能と依存だけをビルドする。アプリは UI だけを読み込む
+    ] + features.map { .library(name: $0, targets: [$0]) },
     dependencies: [.package(path: "../../Packages/RegzaCore")],
     targets: [
         // アプリ・Widget で共有する色やサイズ。
@@ -54,23 +74,25 @@ let package = Package(
                 "LiveActivity", "SystemActions", "Design", "Localization",
             ]),
         // 画面は ViewModel の state と Action を使い、DI・Domain・通信を扱わない。
-        // RootView は Xcode のアプリターゲットに置き、このモジュールへ依存を渡す。
+        // 機能ごとのモジュールが共通に使う部品・画面の移り先の受け取り口・プレビューの準備
+        .target(
+            name: "UICommon",
+            dependencies: [
+                .product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity", "Localization", fakeForPreviews,
+            ],
+            swiftSettings: screenSettings),
+        // 画面の組み立て (タブ・タブの中で開く画面)。機能のモジュールをつなぐ。
+        // RootView は Xcode のアプリターゲットに置き、このモジュールへ依存を渡す。アプリはこのモジュールだけを読み込む
         .target(
             name: "UI",
-            dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity", "Localization"],
-            swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
-        // 画面のプレビュー。偽物のテレビ・録画サーバー (RegzaFakeServers) で組み立てた本物の AppViewModel を、アプリと同じ AppScreen で描く。
-        // アプリにも Widget にもリンクしない
-        .target(
-            name: "UIPreviews",
             dependencies: [
-                "UI", "LiveActivity",
-                .product(name: "RegzaPresentation", package: "RegzaCore"),
-                .product(name: "RegzaFakeServers", package: "RegzaCore"),
-            ],
-            swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
+                .product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity", "Localization", "UICommon",
+                fakeForPreviews,
+            ] + features.map { .target(name: $0) },
+            swiftSettings: screenSettings),
+    ] + features.map(feature) + [
         .testTarget(
             name: "RegzaKitTests",
-            dependencies: ["AppServices", "Localization", .product(name: "RegzaInfrastructure", package: "RegzaCore")]),
+            dependencies: ["AppServices", "Localization", .product(name: "RegzaInfrastructure", package: "RegzaCore")])
     ]
 )

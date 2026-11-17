@@ -1,3 +1,4 @@
+#if !REGZA_FAKES_DISABLED
 import Foundation
 import RegzaDomain
 import RegzaInfrastructure
@@ -89,3 +90,4 @@ enum FakeResponse {
 
     static let notFound = empty(status: 404)
 }
+#endif

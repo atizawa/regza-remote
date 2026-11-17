@@ -1,3 +1,4 @@
+#if !REGZA_FAKES_DISABLED
 import Foundation
 import MirakurunAPI
 import OpenAPIRuntime
@@ -39,3 +40,4 @@ struct FakeMirakurun {
             startAt: Int(program.start.timeIntervalSince1970 * 1000))
     }
 }
+#endif

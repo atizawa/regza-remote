@@ -1,3 +1,4 @@
+#if !REGZA_FAKES_DISABLED
 import Foundation
 import RegzaApp
 import RegzaDomain
@@ -34,3 +35,4 @@ public enum FakeApp {
             transport: FakeServersTransport(scenario: scenario))
     }
 }
+#endif

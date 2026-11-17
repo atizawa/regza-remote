@@ -15,18 +15,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.regzaremote.appservices.AppFactory
 import com.example.regzaremote.appservices.RegzaViewModel
 import com.example.regzaremote.bridge.appStates
-import com.example.regzaremote.bridge.livePlayerStates
-import com.example.regzaremote.bridge.settingsStates
-import com.example.regzaremote.core.AppAppearance
 import com.example.regzaremote.design.AppTheme
-import com.example.regzaremote.design.AppearanceTheme
+import com.example.regzaremote.ui.app.AppRoot
 import com.example.regzaremote.ui.components.LocalNetworkGate
 import com.example.regzaremote.ui.components.rememberState
-import com.example.regzaremote.ui.screens.AppScreen
-import com.example.regzaremote.ui.screens.LivePlayerScreen
-import com.example.regzaremote.ui.screens.SettingsScreen
 
-/** 設定を開いていれば設定の画面、そうでなければタブの画面 */
+/** アプリの入口。ローカルネットワークの許可を待ってから、組み立て (ui.app の AppRoot) に画面を任せる */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,32 +36,10 @@ class MainActivity : ComponentActivity() {
                         val regzaViewModel: RegzaViewModel = viewModel(factory = appViewModelFactory)
                         val app = regzaViewModel.app
                         val state = rememberState(app) { app.appStates() } ?: return@LocalNetworkGate
-                        AppearanceTheme(state.appearance.isDark) {
-                            Surface(modifier = Modifier.fillMaxSize(), color = AppTheme.background) {
-                                // 設定は開いている間だけ state が届く
-                                val settings = rememberState(app) { app.settingsStates() }
-                                if (settings !=
-                                    null
-                                ) {
-                                    SettingsScreen(settings, regzaViewModel.send)
-                                } else {
-                                    AppScreen(app, state, regzaViewModel.send)
-                                }
-                                // アプリで見る (ライブ視聴) は、どの画面の上にも全画面で重ねる
-                                rememberState(app) { app.livePlayerStates() }?.let { LivePlayerScreen(it, regzaViewModel.send) }
-                            }
-                        }
+                        AppRoot(app, state, regzaViewModel.send)
                     }
                 }
             }
         }
     }
 }
-
-/** 外観の選択を、AppearanceTheme に渡す形にする (null はシステムに合わせる) */
-private val AppAppearance.isDark: Boolean?
-    get() = when (discriminator) {
-        AppAppearance.Discriminator.LIGHT -> false
-        AppAppearance.Discriminator.DARK -> true
-        AppAppearance.Discriminator.SYSTEM -> null
-    }

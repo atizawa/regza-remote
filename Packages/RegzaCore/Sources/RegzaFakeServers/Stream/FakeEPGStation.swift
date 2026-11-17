@@ -1,3 +1,4 @@
+#if !REGZA_FAKES_DISABLED
 import EPGStationAPI
 import Foundation
 import RegzaInfrastructure
@@ -38,3 +39,4 @@ struct FakeEPGStation {
         }
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if !REGZA_FAKES_DISABLED
 import Foundation
 import RegzaInfrastructure
 import RegzaTVAPI
@@ -167,3 +168,4 @@ struct FakeTV {
             show_setting: station.isRepresentative ? "SHOW_REPRESENT" : "SHOW")
     }
 }
+#endif

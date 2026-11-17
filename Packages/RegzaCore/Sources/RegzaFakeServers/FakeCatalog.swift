@@ -1,3 +1,4 @@
+#if !REGZA_FAKES_DISABLED
 import Foundation
 import RegzaDomain
 
@@ -94,3 +95,4 @@ public struct FakeCatalog: Sendable {
         return FakeCatalog(stations: stations, programs: programs, recording: recording)
     }
 }
+#endif

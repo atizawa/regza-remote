@@ -186,3 +186,21 @@ import Testing
 private func tvClient(_ scenario: FakeScenario) -> RegzaAPIClient {
     RegzaAPIClient(connection: FakeScenario.connection, transport: FakeServersTransport(scenario: scenario))
 }
+
+/// 偽物のどのファイルも、iOS のリリースのビルドで中身がなくなるよう `#if !REGZA_FAKES_DISABLED` で囲んである
+/// (iOS の画面のモジュールはプレビューのために偽物に依存するので、囲み忘れたファイルはリリース版のアプリに入る)
+@Suite struct FakeServersReleaseGuardTests {
+    @Test func everyFileIsGuarded() throws {
+        let sources = FakeServersContractTests.repository.appending(path: "Packages/RegzaCore/Sources/RegzaFakeServers")
+        let paths = try FileManager.default.subpathsOfDirectory(atPath: sources.path(percentEncoded: false))
+            .filter { $0.hasSuffix(".swift") }
+        #expect(!paths.isEmpty)
+        for path in paths {
+            let source = try String(contentsOf: sources.appending(path: path), encoding: .utf8)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            #expect(
+                source.hasPrefix("#if !REGZA_FAKES_DISABLED\n") && source.hasSuffix("#endif"),
+                "\(path) を #if !REGZA_FAKES_DISABLED で囲んでください")
+        }
+    }
+}

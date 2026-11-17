@@ -125,8 +125,43 @@ depends = ["check-apple-toolchain"]
 shell = "bash -c"
 run = '''
 set -euo pipefail
-xcodebuild -project iOS/RegzaRemote.xcodeproj -scheme RegzaRemote -destination 'generic/platform=iOS Simulator' \
-  -quiet CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project iOS/RegzaRemote.xcodeproj -scheme RegzaRemote -configuration Debug -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath iOS/.build/derived -quiet CODE_SIGNING_ALLOWED=NO build
+'''
+
+[tasks.check-ios-release]
+description = "iOS のアプリを Release でもビルドし、リリース版に偽物のテレビ・録画サーバーとプレビューが入っていないことを確かめる (CI で流す)"
+dir = "{{ config_root }}"
+depends = ["build-ios"]
+shell = "bash -c"
+run = '''
+set -euo pipefail
+xcodebuild -project iOS/RegzaRemote.xcodeproj -scheme RegzaRemote -configuration Release -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath iOS/.build/derived -quiet CODE_SIGNING_ALLOWED=NO build
+# 画面のモジュールはプレビュー (Debug) のために偽物に依存し、偽物は iOS のリリースのビルドで中身をなくす。
+# 配るときと同じくシンボルを落としたリリース版に偽物の型がないこと、Debug 版にはあること (確かめ方が効いていること) を確かめる
+products=iOS/.build/derived/Build/Products
+fake='FakeServersTransport|FakeCatalog|FakePreview'
+stripped=$(mktemp)
+trap 'rm -f "$stripped"' EXIT
+# 本体だけでなく、アプリの中のフレームワーク・ウィジェットなど、すべての実行ファイルを調べる
+checked=0
+while IFS= read -r -d '' binary; do
+  file -b "$binary" | grep -q 'Mach-O' || continue
+  xcrun strip -S -x -o "$stripped" "$binary"
+  checked=$((checked + 1))
+  if grep -aqE "$fake" "$stripped"; then
+    echo "リリース版のアプリの ${binary#"$products/"} に偽物かプレビューが入っています" >&2
+    exit 1
+  fi
+done < <(find "$products/Release-iphonesimulator/RegzaRemote.app" -type f -print0)
+[ "$checked" -gt 0 ] || { echo "リリース版のアプリに実行ファイルが見つかりません" >&2; exit 1; }
+# Debug 版のコードは、設定 (ENABLE_DEBUG_DYLIB) によって RegzaRemote.debug.dylib か本体などに入るので、アプリ全体を探す
+debug_app="$products/Debug-iphonesimulator/RegzaRemote.app"
+grep -raqE "$fake" "$debug_app" || {
+  echo "Debug 版のアプリに偽物が見つかりません (確かめ方が古くなっています)" >&2
+  exit 1
+}
 '''
 
 [tasks.build-android]
@@ -161,7 +196,7 @@ dir = "{{ config_root }}"
 shell = "bash -c"
 run = '''
 set -euo pipefail
-for task in lint test-swift build-ios build-android test-behavior; do
+for task in lint test-swift check-ios-release build-android test-behavior; do
   echo "==== $task"
   mise run "$task"
 done

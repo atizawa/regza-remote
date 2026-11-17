@@ -103,7 +103,10 @@ let package = Package(
                 "MirakurunAPI",
                 "EPGStationAPI",
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
-            ]),
+            ],
+            // iOS のリリースのビルドでは中身をなくす。iOS の画面のモジュールはプレビュー (Debug) のために偽物に依存するので、
+            // リリース版のアプリに偽物が入らないようにする (Android・CLI・テストは、リリースのビルドでも偽物を使う)
+            swiftSettings: [.define("REGZA_FAKES_DISABLED", .when(platforms: [.iOS], configuration: .release))]),
         .executableTarget(name: "RegzaCLI", dependencies: ["RegzaApp", "RegzaFakeServers"]),
         .testTarget(
             name: "RegzaCoreTests",

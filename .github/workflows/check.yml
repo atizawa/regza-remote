@@ -60,7 +60,8 @@ jobs:
       - uses: jdx/mise-action@v5
       - run: mise run select-ci-xcode
       - run: mise run test-swift-apple
-      - run: mise run build-ios
+      # Debug のビルド (build-ios) と、リリース版に偽物が入っていないことの確認
+      - run: mise run check-ios-release
 
   # Linux で Android のアプリをビルドし、ホスト向けの .so を使って両方の相手に振る舞いのテストを流す。
   # いったん、手で動かしたときだけ流す (push と pull request では流さない)

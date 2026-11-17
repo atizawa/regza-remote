@@ -1,3 +1,4 @@
+#if !REGZA_FAKES_DISABLED
 import Foundation
 import RegzaPresentation
 
@@ -96,3 +97,4 @@ public struct FakeScenario: Sendable {
         var unreachable: [String]?
     }
 }
+#endif

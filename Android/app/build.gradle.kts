@@ -134,25 +134,31 @@ tasks.named("preBuild") { dependsOn(buildSwift) }
 // ビルドの設定やソースの #filePath などから入ると、開発している人のユーザー名やフォルダの構成が配られてしまう。
 // release のビルドのたびに、APK の中のすべてのファイル (Java のクラス・Swift の .so・リソース) を調べる
 val checkReleaseApk = tasks.register("checkReleaseApk") {
-    description = "release の APK に、手元のフォルダの場所が入っていないことを確かめる"
+    description = "release の APK に、手元のフォルダの場所と、偽物・プレビューの準備が入っていないことを確かめる"
     val apks = layout.buildDirectory.dir("outputs/apk/release")
     val home = System.getProperty("user.home")
     // /root.res のような ICU のリソース名を、/root のホームパスと誤認しない。
     val homePath = Regex("${Regex.escape(home)}(?![\\p{L}\\p{N}_.-])")
+    // 偽物 (Swift の RegzaFakeServers・RegzaAndroidFakes、Java の RegzaFakeApp) と、プレビューが名前で探す debug の FakeApps。
+    // 本番の .so は build-swift が、プレビューの関数は縮小が取り除く。取り除かれていることをここで確かめる
+    val fakeMarker = Regex("RegzaFakeServers|RegzaAndroidFakes|RegzaFakeApp|appservices\\.preview\\.FakeApps")
     inputs.dir(apks)
     doLast {
         val files = apks.get().asFile.listFiles { file -> file.extension == "apk" }.orEmpty()
         check(files.isNotEmpty()) { "release の APK が見つかりません: ${apks.get().asFile}" }
         for (apk in files) {
             ZipFile(apk).use { zip ->
-                // バイト列のまま探すため、1 バイトを 1 文字にする ISO-8859-1 で読む (ホームのフォルダの名前は ASCII)
-                val found = zip.entries().asSequence()
-                    .filter { entry ->
-                        homePath.containsMatchIn(String(zip.getInputStream(entry).use { it.readBytes() }, Charsets.ISO_8859_1))
-                    }
-                    .map { it.name }
-                    .toList()
+                val found = mutableListOf<String>()
+                val fakes = mutableListOf<String>()
+                // 1 つずつ読んで調べる (大きな .so をまとめて持たない)。バイト列のまま探すため、1 バイトを 1 文字にする
+                // ISO-8859-1 で読む (ホームのフォルダの名前と偽物の名前は ASCII)
+                for (entry in zip.entries()) {
+                    val content = String(zip.getInputStream(entry).use { it.readBytes() }, Charsets.ISO_8859_1)
+                    if (homePath.containsMatchIn(content)) found += entry.name
+                    if (fakeMarker.containsMatchIn(content)) fakes += entry.name
+                }
                 check(found.isEmpty()) { "${apk.name} に手元のフォルダの場所 ($home) が入っています: $found" }
+                check(fakes.isEmpty()) { "${apk.name} に偽物かプレビューの準備が入っています: $fakes" }
             }
         }
     }
@@ -171,7 +177,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.ui)
-    // 画面のプレビュー (それぞれの画面のファイルの末尾)。Swift の state を使うので、「Run Preview」でエミュレーターに出す。
+    // 画面のプレビュー (それぞれの画面のファイルの末尾)。Swift の state を使うので、「Run Preview」でエミュレーターに出す
+    // (偽物は debug にだけあり、プレビューの関数は release の縮小で取り除かれる)。
     // ui-tooling はエミュレーターでプレビューを出す PreviewActivity を含むので、debug にだけ入れる
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
