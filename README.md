@@ -27,7 +27,11 @@ Packages/RegzaCore/           iOS と Android で共有する Swift Package（RE
   RegzaSharedModels           画面に出す UI の型とリモコンのキー（RegzaKey）
   RegzaDomain                 Data・Repository の約束・UseCase・SharedModel への変換
   RegzaInfrastructure         テレビ・Mirakurun・EPGStation の通信（キーコード / Digest 認証 / HTTP クライアント / status.htm 解析）
-  RegzaPresentation           iOS と Android で共有する ViewModel（ViewModels/<画面>/ に ViewModel・State/・Action/）
+  Presentation/               iOS と Android で共有する ViewModel（<モジュール>/<画面>/ に ViewModel・State/・Action/）
+    PresentationCore          共通（処理中の数え方・CLI 向けの約束事・テレビとのつながり RemoteViewModel・画面の移り変わりの窓口 AppNavigator）
+    <機能>Presentation        機能ごとの ViewModel（Player・Guide・Program・Channels・Reservations・Settings）。共通だけを使い、ほかの機能を読み込まない
+    AppPresentation           アプリ全体の ViewModel（AppViewModel。機能の ViewModel を持ち、タブ・戻る道・復元をまとめる）
+  RegzaPresentation           プレゼンテーション層をまとめて読み込み直すだけのモジュール（Android の窓口・組み立て・CLI・テスト用）
   RegzaApp                    組み立て（どの Repository を使うかを決めて ViewModel を作る）
   RegzaFakeServers            偽物のテレビ・Mirakurun・EPGStation と場面（プレビュー・振る舞いのテスト・CLI 用）
   RegzaCLI                    ViewModel を動かして確かめる CLI（regza）
@@ -220,14 +224,14 @@ DEVELOPMENT_TEAM = ABCDE12345
 
 ## 画面を足す手順
 
-画面の状態と操作は、iOS と Android で同じ ViewModel（`RegzaPresentation`）が持つ。ViewModel は Elm 風で、画面に出すものを `state`、画面からの操作を `send(Action)` で受ける。Android は ViewModel の State と Action の型を swift-java でそのまま Java のクラスにして使い、間の窓口（`Android/RegzaAndroidBridge`）は、道具（`Android/ScreenGlue` の `screen-glue`）が State/ と Action/ のフォルダから作る。画面を足すときに窓口を手で書くことはない。
+画面の状態と操作は、iOS と Android で同じ ViewModel（`Packages/RegzaCore/Sources/Presentation`）が持つ。ViewModel は Elm 風で、画面に出すものを `state`、画面からの操作を `send(Action)` で受ける。Android は ViewModel の State と Action の型を swift-java でそのまま Java のクラスにして使い、間の窓口（`Android/RegzaAndroidBridge`）は、道具（`Android/ScreenGlue` の `screen-glue`）が State/ と Action/ のフォルダから作る。画面を足すときに窓口を手で書くことはない。
 
 ### 1. 共有の ViewModel を作る
 
-`Packages/RegzaCore/Sources/RegzaPresentation/ViewModels/<画面>/` に置く。例はチャンネル一覧（`ChannelList/`）。
+`Packages/RegzaCore/Sources/Presentation/<機能>Presentation/<画面>/` に置く。例はチャンネル一覧（`ChannelsPresentation/ChannelList/`）。新しい機能なら、`<機能>Presentation/` を作って `Package.swift` の `presentationFeatures` に足し、`AppPresentation` の `AppViewModel` から作る。
 
 ```
-ViewModels/ChannelList/
+ChannelsPresentation/ChannelList/
 ├── ChannelListViewModel.swift      ViewModel
 ├── State/ChannelListState.swift    画面に出すもの
 └── Action/ChannelListAction.swift  画面からの操作
@@ -239,6 +243,7 @@ ViewModels/ChannelList/
 - 表示の判断（ボタンを出すか、押せるか、保存できるかなど）は State に入れ、画面に式を書かない。画面に置いた判断はテストでも CLI（`regza`）でも確かめられず、iOS と Android にそれぞれ書くことになる
 - 1 つの画面に Action は 1 つにする。部品に分けた ViewModel（設定のテレビの登録など）の操作は、親の Action の case に入れて送る（`SettingsAction.tv(TVSetupAction)`）。部品の ViewModel には `typealias Action` を書かない（書くと Android から直接送れてしまう）
 - CLI と振る舞いのテストから動かせるよう `IntrospectableActions` にし、名前と引数の操作を Action にする `action(_:_:)` を書く（CLI も Android 側の相手もこれを使うので、置き換えは 1 か所だけ）。state を要約したり伏せたりするときは `introspectionJSON(of:)` に書く。Action のどの case も `action(_:_:)` で作れるようにする（アプリの画面から送れる操作は、どれも約束事からも送れる。`ContractCoverageTests` が漏れを確かめる）
+- 機能のモジュールは共通（`PresentationCore`）だけを使い、ほかの機能のモジュールを読み込まない。ほかの機能や `AppViewModel` から使う関数などは `package` にする。画面の復元に保存するもの（`<画面>RestorationState`）も機能に置き、`AppViewModel` がまとめて保存する
 - テストを `Tests/RegzaCoreTests/RegzaPresentation/ViewModels/` に足す
 
 ### 2. AppViewModel から開けるようにする
@@ -248,7 +253,7 @@ ViewModels/ChannelList/
 
 ### 3. iOS の画面を作る
 
-画面は機能の画面のモジュール `iOS/RegzaKit/Sources/UI/<機能>UI/<画面>Screen.swift` に `package struct <画面>Screen` として置き（`UI/ChannelsUI/ChannelListScreen.swift`）、`viewModel.state` を見て `viewModel.send(...)` で送る。組み立て（`AppUI` の `AppScreen`・`AppRoutes`）から使うので `package` にする。`RegzaDomain` とほかの機能のモジュールは import しない（`LayerTests` が確かめる）。ほかの機能の画面を開くときは `AppViewModel` に `.push(...)` などを送り、実際の画面は組み立てが環境値（`routeDestination`）で渡す。いくつもの機能で使う部品は `UICommon` に置く。
+画面は機能の画面のモジュール `iOS/RegzaKit/Sources/UI/<機能>UI/<画面>Screen.swift` に `package struct <画面>Screen` として置き（`UI/ChannelsUI/ChannelListScreen.swift`）、`viewModel.state` を見て `viewModel.send(...)` で送る。組み立て（`AppUI` の `AppScreen`・`AppRoutes`）から使うので `package` にする。`RegzaDomain` とほかの機能のモジュールは import しない（`LayerTests` が確かめる）。機能の画面のモジュールが読み込むのは、共通（`PresentationCore`）と自分の機能のプレゼンテーション（`<機能>Presentation`。リモコンは共通の `RemoteViewModel`）だけで、`AppPresentation` は画面の末尾のプレビュー（`#if DEBUG`）の中でだけ読み込む（`LayerTests` と、リリースのビルドで確かめる）。ほかの画面を開く・アプリで見るなどの画面の移り変わりは、環境値の窓口（`appNavigator`。`AppViewModel` が実装する `AppNavigator`）に頼み、実際の画面は組み立てが環境値（`routeDestination`）で渡す。ほかの機能の ViewModel が要るときは、組み立てが引数で渡す。いくつもの機能で使う部品は `UICommon` に置く。
 
 機能を足すときは、`Sources/UI/<機能>UI/` を作り、`Package.swift` の `features` に足して、`AppUI` の組み立てから使う（`LayerTests` はフォルダから機能を読み、`Package.swift` と一致することを確かめる）。機能の画面はそれぞれライブラリのプロダクトにしてあり、Xcode が機能ごとのスキーム（`GuideUI` など）を作る。
 
@@ -329,7 +334,7 @@ GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が
 | 段階 | 入力・設定 | 出力 |
 | --- | --- | --- |
 | 共有モデルの Java 生成 | `../Packages/RegzaCore/Sources/RegzaSharedModels`、swift-java の共通設定 | `.build/swift/regzashared-java/`、`RegzaAndroid/Sources/RegzaSharedJava/Generated/` |
-| 画面の型の Java 生成 | `RegzaPresentation` の State/・Action/、`RegzaAndroid/RegzaPresentation.swift-java.config` | `.build/swift/regzapresentation-java/`、`RegzaAndroid/Sources/RegzaPresentationJava/Generated/` |
+| 画面の型の Java 生成 | `Sources/Presentation` の State/・Action/（`RegzaPresentation` の型としてまとめて作る）、`RegzaAndroid/RegzaPresentation.swift-java.config` | `.build/swift/regzapresentation-java/`、`RegzaAndroid/Sources/RegzaPresentationJava/Generated/` |
 | 画面の接続コード生成 | `ScreenGlue` が共有の State/・Action/・ViewModel を読む | `Generated/ScreenActions.swift`、`.build/swift/screen-glue-kotlin/`、設定内の型一覧 |
 | アプリ窓口の Java 生成 | `RegzaAndroidBridge/Sources/RegzaAndroidBridge`、`RegzaAndroid/RegzaAndroidBridge.swift-java.config` | `.build/swift/regzabridge-java/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/` |
 | Kotlin へのコールバック生成 | 生成した `RegzaAndroidStorage.java`・`RegzaAndroidHTTPClient.java` と通信の引数の型 | `.build/swift/bridge-callbacks/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/JavaCallbacks.swift` |

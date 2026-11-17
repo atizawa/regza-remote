@@ -1,9 +1,13 @@
 #if os(iOS)
 import Localization
 import Design
-import RegzaPresentation
+import PresentationCore
+import ProgramPresentation
 import SwiftUI
 import UICommon
+#if DEBUG
+import AppPresentation
+#endif
 
 /// 1 チャンネルの番組表 (Mirakurun)。放送中の番組から日ごとに並べる
 package struct ProgramListScreen: View {
@@ -37,7 +41,7 @@ package struct ProgramListScreen: View {
                         Section {
                             ForEach(group.programs) { program in
                                 NavigationLink(
-                                    value: AppViewModel.Route.programDetail(programID: program.id, channelCode: state.channelCode)
+                                    value: AppRoute.programDetail(programID: program.id, channelCode: state.channelCode)
                                 ) {
                                     ProgramRow(program: program)
                                 }
@@ -112,7 +116,7 @@ private struct ProgramRow: View {
 #if DEBUG
 #Preview("1 局の番組表") {
     FakePreview(
-        setUp: { $0.channelListViewModel.send(.appear) },
+        setUp: { await $0.prepareRoutes() },
         content: { app in
             if let viewModel = app.programList(channelCode: FakeProgram.channelCode) {
                 NavigationStack { ProgramListScreen(viewModel: viewModel) }

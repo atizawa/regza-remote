@@ -64,6 +64,16 @@ extension RegzaAndroidApp {
         route { ($0 as? NowPlayingViewModel)?.send(action) != nil }
     }
 
+    /// RemoteViewModel に送る
+    public func sendRemoteAction(_ action: RemoteAction) {
+        Task { @MainActor in self.perform(action) }
+    }
+
+    /// RemoteViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
+    @MainActor func perform(_ action: RemoteAction) {
+        route { ($0 as? RemoteViewModel)?.send(action) != nil }
+    }
+
     /// ProgramDetailViewModel に送る
     public func sendProgramDetailAction(_ action: ProgramDetailAction) {
         Task { @MainActor in self.perform(action) }
@@ -82,16 +92,6 @@ extension RegzaAndroidApp {
     /// ProgramListViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
     @MainActor func perform(_ action: ProgramListAction) {
         route { ($0 as? ProgramListViewModel)?.send(action) != nil }
-    }
-
-    /// RemoteViewModel に送る
-    public func sendRemoteAction(_ action: RemoteAction) {
-        Task { @MainActor in self.perform(action) }
-    }
-
-    /// RemoteViewModel に送る (テストからは、送った順を待たずに直接呼ぶ)
-    @MainActor func perform(_ action: RemoteAction) {
-        route { ($0 as? RemoteViewModel)?.send(action) != nil }
     }
 
     /// ReservationListViewModel に送る
@@ -178,6 +178,16 @@ extension RegzaAndroidApp {
         await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? NowPlayingViewModel)?.state }
     }
 
+    /// RemoteViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
+    public func remoteState(route: AppRoute?) async -> RemoteState? {
+        await MainActor.run { self.state(route: route) { ($0 as? RemoteViewModel)?.state } }
+    }
+
+    /// RemoteViewModel の state が after から変わるまで待って返す
+    public func nextRemoteState(route: AppRoute?, after: RemoteState?, waitID: Int64) async -> RemoteState? {
+        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? RemoteViewModel)?.state }
+    }
+
     /// ProgramDetailViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
     public func programDetailState(route: AppRoute?) async -> ProgramDetailState? {
         await MainActor.run { self.state(route: route) { ($0 as? ProgramDetailViewModel)?.state } }
@@ -196,16 +206,6 @@ extension RegzaAndroidApp {
     /// ProgramListViewModel の state が after から変わるまで待って返す
     public func nextProgramListState(route: AppRoute?, after: ProgramListState?, waitID: Int64) async -> ProgramListState? {
         await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? ProgramListViewModel)?.state }
-    }
-
-    /// RemoteViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
-    public func remoteState(route: AppRoute?) async -> RemoteState? {
-        await MainActor.run { self.state(route: route) { ($0 as? RemoteViewModel)?.state } }
-    }
-
-    /// RemoteViewModel の state が after から変わるまで待って返す
-    public func nextRemoteState(route: AppRoute?, after: RemoteState?, waitID: Int64) async -> RemoteState? {
-        await nextState(route: route, after: after, waitID: waitID) { @MainActor in ($0 as? RemoteViewModel)?.state }
     }
 
     /// ReservationListViewModel の state。route を渡せばその画面の ViewModel の、nil なら開いているものの state。開いていなければ nil
@@ -292,6 +292,16 @@ extension RegzaAndroidApp {
         state.map { NowPlayingViewModel.introspectionJSON(of: $0) }?.json ?? "null"
     }
 
+    /// 振る舞いのテストの Android 側の相手: 約束事の操作を RemoteAction にする (アプリと同じ道で送るため)。できなければ nil
+    public func contractRemoteAction(path: String, action: String, arguments: String) async -> RemoteAction? {
+        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? RemoteAction }
+    }
+
+    /// 振る舞いのテストの Android 側の相手: RemoteState を regza と同じ JSON にする (RemoteViewModel の見せ方を使う)
+    public func contractRemoteStateJSON(_ state: RemoteState?) -> String {
+        state.map { RemoteViewModel.introspectionJSON(of: $0) }?.json ?? "null"
+    }
+
     /// 振る舞いのテストの Android 側の相手: 約束事の操作を ProgramDetailAction にする (アプリと同じ道で送るため)。できなければ nil
     public func contractProgramDetailAction(path: String, action: String, arguments: String) async -> ProgramDetailAction? {
         await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? ProgramDetailAction }
@@ -310,16 +320,6 @@ extension RegzaAndroidApp {
     /// 振る舞いのテストの Android 側の相手: ProgramListState を regza と同じ JSON にする (ProgramListViewModel の見せ方を使う)
     public func contractProgramListStateJSON(_ state: ProgramListState?) -> String {
         state.map { ProgramListViewModel.introspectionJSON(of: $0) }?.json ?? "null"
-    }
-
-    /// 振る舞いのテストの Android 側の相手: 約束事の操作を RemoteAction にする (アプリと同じ道で送るため)。できなければ nil
-    public func contractRemoteAction(path: String, action: String, arguments: String) async -> RemoteAction? {
-        await MainActor.run { (try? contractAction(path: path, action: action, arguments: arguments)) as? RemoteAction }
-    }
-
-    /// 振る舞いのテストの Android 側の相手: RemoteState を regza と同じ JSON にする (RemoteViewModel の見せ方を使う)
-    public func contractRemoteStateJSON(_ state: RemoteState?) -> String {
-        state.map { RemoteViewModel.introspectionJSON(of: $0) }?.json ?? "null"
     }
 
     /// 振る舞いのテストの Android 側の相手: 約束事の操作を ReservationListAction にする (アプリと同じ道で送るため)。できなければ nil

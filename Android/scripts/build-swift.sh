@@ -173,10 +173,11 @@ fakes_java=.build/swift/regzafakes-java
 extract_module RegzaSharedModels ../Packages/RegzaCore/Sources/RegzaSharedModels \
   RegzaAndroid/Sources/RegzaSharedJava/Generated "$shared_java"
 
-# 画面の状態と操作の型 (RegzaPresentation の State/・Action/ に置いた型)。ViewModel は Java にできない (MainActor) ので、
-# 画面ごとのフォルダの State/ と Action/ に置いた型だけを Java のクラスにする。
+# 画面の状態と操作の型 (プレゼンテーション層の State/・Action/ に置いた型)。ViewModel は Java にできない (MainActor) ので、
+# 画面ごとのフォルダの State/ と Action/ に置いた型だけを Java のクラスにする。型は機能ごとのモジュールにあるが、
+# RegzaPresentation がすべてを読み込み直しているので、Java のつなぎは RegzaPresentation の型として 1 つにまとめて作る。
 # 絞り込みは入力のフォルダからのパスで比べるので、入力は絶対パスで渡す (相対パスだと、どのファイルも外れる)
-extract_module RegzaPresentation "$(cd ../Packages/RegzaCore/Sources/RegzaPresentation && pwd)" \
+extract_module RegzaPresentation "$(cd ../Packages/RegzaCore/Sources/Presentation && pwd)" \
   RegzaAndroid/Sources/RegzaPresentationJava/Generated "$presentation_java" "$shared_java"
 
 # 画面ごとの操作を送る窓口の send と、窓口の設定に書く画面の状態と操作の型を、State/ と Action/ から作り直す

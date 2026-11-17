@@ -1,9 +1,16 @@
 import Foundation
 
+@testable import AppPresentation
+@testable import ChannelsPresentation
+@testable import GuidePresentation
+@testable import PlayerPresentation
+@testable import PresentationCore
+@testable import ProgramPresentation
 @testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaPresentation
+@testable import ReservationsPresentation
+@testable import SettingsPresentation
 
 /// ViewModel のテストで使う、テレビの応答の見本と、画面の ViewModel の組み立て
 @MainActor

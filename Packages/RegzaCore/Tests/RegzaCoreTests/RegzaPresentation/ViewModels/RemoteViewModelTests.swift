@@ -1,10 +1,17 @@
 import Foundation
 import Testing
 
+@testable import AppPresentation
+@testable import ChannelsPresentation
+@testable import GuidePresentation
+@testable import PlayerPresentation
+@testable import PresentationCore
+@testable import ProgramPresentation
 @testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaPresentation
+@testable import ReservationsPresentation
+@testable import SettingsPresentation
 
 /// リモコンの ViewModel を、偽の通信と保存先で確かめる (iOS と Android で同じふるまいになることの確認)
 @MainActor

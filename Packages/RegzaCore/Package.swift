@@ -6,12 +6,29 @@ import PackageDescription
 // Clean Architecture の層ごとにモジュールを分け、依存の向き (Presentation → Domain ← Infrastructure) をコンパイラに守らせる。
 // iOS だけのものは iOS/RegzaKit、Android だけのものは Android/RegzaAndroid に置く。
 // regza は Mac で ViewModel を動かす CLI (CLI や AI のエージェントが、画面を通さずに状態を読んで操作する)
+/// プレゼンテーション層 (共有の ViewModel と、画面の状態・操作の型) のモジュールの設定。
+/// Domain は internal で読み込み、画面 (iOS・Android) には UI の型 (SharedModels) だけを見せる
+let presentationSettings: [SwiftSetting] = [.enableUpcomingFeature("InternalImportsByDefault")]
+/// 機能ごとのプレゼンテーション (Sources/Presentation/<機能>Presentation)。共通 (PresentationCore) だけを使い、ほかの機能を読み込まない
+let presentationFeatures = [
+    "PlayerPresentation", "GuidePresentation", "ProgramPresentation", "ChannelsPresentation", "ReservationsPresentation",
+    "SettingsPresentation",
+]
+func presentation(_ name: String, _ dependencies: [Target.Dependency]) -> Target {
+    .target(
+        name: name, dependencies: ["RegzaDomain", "RegzaStrings"] + dependencies, path: "Sources/Presentation/\(name)",
+        swiftSettings: presentationSettings)
+}
+
 let package = Package(
     name: "RegzaCore",
     platforms: [.iOS("26.0"), .macOS(.v14)],
     products: [
         .library(name: "RegzaInfrastructure", targets: ["RegzaInfrastructure"]),
+        // プレゼンテーション層をまとめて見せる (Android の窓口・組み立て・CLI・テスト)。画面のモジュールは機能ごとのものを使う
         .library(name: "RegzaPresentation", targets: ["RegzaPresentation"]),
+        .library(name: "PresentationCore", targets: ["PresentationCore"]),
+        .library(name: "AppPresentation", targets: ["AppPresentation"]),
         // UI の型だけ (Android で、これらの型の Java のつなぎを作るのに使う)
         .library(name: "RegzaSharedModels", targets: ["RegzaSharedModels"]),
         // 共有の Swift が画面に出す文言 (OS が起動時に、自分の文言を入れる)
@@ -21,7 +38,7 @@ let package = Package(
         // つながない見本の組み立て (iOS の開発用の見本・テスト)
         .library(name: "RegzaFakeServers", targets: ["RegzaFakeServers"]),
         .executable(name: "regza", targets: ["RegzaCLI"]),
-    ],
+    ] + presentationFeatures.map { .library(name: $0, targets: [$0]) },
     dependencies: [
         .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.14.4"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.13.4"),
@@ -81,13 +98,16 @@ let package = Package(
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "HTTPTypes", package: "swift-http-types"),
             ]),
-        // Presentation: iOS と Android で共有する ViewModel。Domain の UseCase だけを使う (Repository や通信は知らない)
-        // 画面 (iOS・Android) には UI の型 (SharedModels) だけを見せる。Domain は internal で読み込み、公開する部分に
-        // Domain の型を出せないようにする (Domain を使う初期化などは、同じパッケージの組み立てだけが使える package にする)
+        // Presentation: iOS と Android で共有する ViewModel と、画面の状態・操作の型。Domain の UseCase だけを使う (Repository や通信は知らない)。
+        // 共通 (処理中の数え方・CLI 向けの約束事・テレビとのつながり・画面の移り変わりの窓口)、機能ごと、アプリ全体に分ける。
+        // 機能どうしは読み込まず、アプリ全体が機能をまとめる。Domain を使う初期化などは、同じパッケージの組み立てだけが使える package にする
+        presentation("PresentationCore", ["RegzaSharedModels"]),
+        presentation("AppPresentation", ["PresentationCore"] + presentationFeatures.map { .target(name: $0) }),
+        // プレゼンテーション層をまとめて読み込むためのモジュール (中身は読み込み直しだけ)
         .target(
             name: "RegzaPresentation",
-            dependencies: ["RegzaDomain", "RegzaStrings"],
-            swiftSettings: [.enableUpcomingFeature("InternalImportsByDefault")]
+            dependencies: ["PresentationCore", "AppPresentation"] + presentationFeatures.map { .target(name: $0) },
+            swiftSettings: presentationSettings
         ),
         // 組み立てる場所 (Composition Root): どの Repository の実装を使うかを決めて AppViewModel を作る
         .target(name: "RegzaApp", dependencies: ["RegzaPresentation", "RegzaInfrastructure"]),
@@ -112,7 +132,7 @@ let package = Package(
             name: "RegzaCoreTests",
             dependencies: [
                 "RegzaApp", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels", "RegzaStrings",
-                "RegzaFakeServers",
-            ]),
-    ]
+                "RegzaFakeServers", "PresentationCore", "AppPresentation",
+            ] + presentationFeatures.map { .target(name: $0) }),
+    ] + presentationFeatures.map { presentation($0, ["PresentationCore"]) }
 )

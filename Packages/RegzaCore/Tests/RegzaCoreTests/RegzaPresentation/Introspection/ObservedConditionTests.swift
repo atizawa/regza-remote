@@ -2,7 +2,14 @@ import Foundation
 import Observation
 import Testing
 
-@testable import RegzaPresentation
+@testable import AppPresentation
+@testable import ChannelsPresentation
+@testable import GuidePresentation
+@testable import PlayerPresentation
+@testable import PresentationCore
+@testable import ProgramPresentation
+@testable import ReservationsPresentation
+@testable import SettingsPresentation
 
 /// 見回らずに、値が変わったときだけ確かめ直して待つこと
 @MainActor

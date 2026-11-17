@@ -1,7 +1,7 @@
 #if os(iOS)
 import Design
 import Localization
-import RegzaPresentation
+import PresentationCore
 import SwiftUI
 
 // いくつもの画面で使うボタンの見た目・面の色・放送の種類の切り替え

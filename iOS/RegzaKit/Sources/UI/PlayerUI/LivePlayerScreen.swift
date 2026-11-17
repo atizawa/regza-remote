@@ -1,10 +1,14 @@
 #if os(iOS)
 import Localization
 import AVKit
-import RegzaPresentation
+import PresentationCore
+import PlayerPresentation
 import Design
 import SwiftUI
 import UICommon
+#if DEBUG
+import AppPresentation
+#endif
 
 /// EPGStation のライブ配信をアプリで見る画面 (ライブ視聴)。
 /// 縦向きでは映像の下に今の番組の情報と局の一覧を出し、局を押すとその局の配信に切り替える。横向きでは映像だけを出す。

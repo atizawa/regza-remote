@@ -2,13 +2,13 @@ import Foundation
 import Testing
 
 /// 画面の名前が、iOS・Android・共有の ViewModel でそろっていることを確かめる。
-/// 共有の ViewModel のフォルダ (RegzaPresentation/ViewModels/<名前>/) ごとに、iOS は `<名前>Screen.swift` に `struct <名前>Screen`、
+/// 共有の ViewModel のフォルダ (Presentation/<モジュール>/<名前>/ の <名前>ViewModel.swift) ごとに、iOS は `<名前>Screen.swift` に `struct <名前>Screen`、
 /// Android は `<名前>Screen.kt` に `fun <名前>Screen(` を置く (1 画面 1 ファイル。iOS は画面のモジュール (Sources/UI の下)、
 /// Android は画面のモジュール (ui/<機能>) か組み立て (app) の ui/ の下)。画面でないものには Screen を付けない
 @Suite struct ScreenNamingTests {
     static let repository = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().appendingPathComponent("../../../..").standardized
-    static let viewModels = repository.appendingPathComponent("Packages/RegzaCore/Sources/RegzaPresentation/ViewModels")
+    static let viewModels = repository.appendingPathComponent("Packages/RegzaCore/Sources/Presentation")
     /// iOS の画面を置くモジュール (機能のモジュールと組み立て)
     static let iOSSources = repository.appendingPathComponent("iOS/RegzaKit/Sources")
     /// Android の画面を置くモジュール (画面のモジュール ui/<機能> と、組み立ての app)
@@ -45,12 +45,15 @@ import Testing
         return files
     }
 
-    /// 共有の ViewModel の名前 (ViewModels/ の下のフォルダ)
+    /// 共有の ViewModel の名前 (プレゼンテーション層のモジュールの下の、<名前>ViewModel.swift のあるフォルダ)
     static func screenNames() throws -> [String] {
-        try FileManager.default.contentsOfDirectory(at: viewModels, includingPropertiesForKeys: [.isDirectoryKey])
-            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-            .map(\.lastPathComponent)
-            .sorted()
+        let manager = FileManager.default
+        return try manager.contentsOfDirectory(atPath: viewModels.path).flatMap { module in
+            let moduleURL = viewModels.appendingPathComponent(module)
+            let folders = (try? manager.contentsOfDirectory(atPath: moduleURL.path)) ?? []
+            return folders.filter { manager.fileExists(atPath: moduleURL.appendingPathComponent("\($0)/\($0)ViewModel.swift").path) }
+        }
+        .sorted()
     }
 
     @Test func everyViewModelHasScreenWithSameNameOnBothPlatforms() throws {

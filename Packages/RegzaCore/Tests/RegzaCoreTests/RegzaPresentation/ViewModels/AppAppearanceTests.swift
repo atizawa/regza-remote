@@ -1,9 +1,16 @@
 import Testing
 
+@testable import AppPresentation
+@testable import ChannelsPresentation
+@testable import GuidePresentation
+@testable import PlayerPresentation
+@testable import PresentationCore
+@testable import ProgramPresentation
 @testable import RegzaApp
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
-@testable import RegzaPresentation
+@testable import ReservationsPresentation
+@testable import SettingsPresentation
 
 @MainActor
 @Suite struct AppAppearanceTests {

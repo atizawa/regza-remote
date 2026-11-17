@@ -1,17 +1,28 @@
 #if os(iOS)
 import Localization
-import RegzaPresentation
+import PresentationCore
+import PlayerPresentation
 import Design
 import SwiftUI
+import UICommon
 
 /// タブバーの上に出すミニプレーヤー。どのタブでもテレビで映っているものが分かる。
 /// iPhone で再生しているものと間違えないよう、テレビのアイコンとチャンネル名を添える
 package struct NowPlayingAccessory: View {
     @Environment(RemoteViewModel.self) private var remoteViewModel
-    @Environment(AppViewModel.self) private var appViewModel
+    @Environment(\.appNavigator) private var navigator
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
 
-    package init() {}
+    private let nowPlayingViewModel: NowPlayingViewModel
+    private let livePlayer: @MainActor () -> LivePlayerViewModel?
+
+    /// - Parameters:
+    ///   - nowPlaying: 押したときに出す詳細の ViewModel
+    ///   - livePlayer: アプリで見る画面の ViewModel (見始めてから作られるので、出すときに受け取る)
+    package init(nowPlaying: NowPlayingViewModel, livePlayer: @escaping @MainActor () -> LivePlayerViewModel?) {
+        nowPlayingViewModel = nowPlaying
+        self.livePlayer = livePlayer
+    }
 
     package var body: some View {
         HStack(spacing: 12) {
@@ -44,13 +55,13 @@ package struct NowPlayingAccessory: View {
         }
         .padding(.horizontal, DesignDimensions.spacingOuter)
         .contentShape(Rectangle())
-        .onTapGesture { appViewModel.send(.showNowPlaying) }
+        .onTapGesture { navigator.showNowPlaying() }
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(AppStrings.programOpenDetails)
         .sheet(
-            isPresented: Binding(get: { appViewModel.state.isShowingNowPlaying }, set: { if !$0 { appViewModel.send(.closeNowPlaying) } })
+            isPresented: Binding(get: { navigator.isShowingNowPlaying }, set: { if !$0 { navigator.closeNowPlaying() } })
         ) {
-            NowPlayingScreen()
+            NowPlayingScreen(viewModel: nowPlayingViewModel, livePlayer: livePlayer)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }

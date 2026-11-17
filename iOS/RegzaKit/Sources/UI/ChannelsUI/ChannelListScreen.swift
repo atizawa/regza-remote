@@ -1,17 +1,19 @@
 #if os(iOS)
 import Localization
-import RegzaPresentation
+import PresentationCore
+import ChannelsPresentation
 import Design
 import SwiftUI
 import UICommon
 #if DEBUG
+import AppPresentation
 import RegzaFakeServers
 #endif
 
 /// テレビに登録されているチャンネルを放送の種類ごとに並べ、押すとそのチャンネルに切り替える
 package struct ChannelListScreen: View {
     @State private var viewModel: ChannelListViewModel
-    @Environment(AppViewModel.self) private var appViewModel
+    @Environment(\.appNavigator) private var navigator
 
     package init(viewModel: ChannelListViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -19,7 +21,7 @@ package struct ChannelListScreen: View {
 
     package var body: some View {
         let state = viewModel.state
-        NavigationStack(path: appViewModel.path(of: .channels)) {
+        NavigationStack(path: navigator.path(of: .channels)) {
             content(state)
                 .navigationTitle(AppStrings.tabChannels)
                 // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
@@ -117,7 +119,7 @@ package struct ChannelListScreen: View {
             .disabled(state.tuningCode != nil)
             if row.hasPrograms {
                 Button {
-                    appViewModel.send(.push(.channelPrograms(channelCode: row.code)))
+                    navigator.push(.channelPrograms(channelCode: row.code))
                 } label: {
                     Image(systemName: "calendar")
                         // ボタンの色 (緑) が混ざらないよう、灰色に固定する
@@ -140,7 +142,7 @@ package struct ChannelListScreen: View {
         }
         if state.canStream {
             Button(AppStrings.playerWatch, systemImage: "play.tv") {
-                appViewModel.send(.play(channelCode: row.code))
+                navigator.play(channelCode: row.code)
             }
         }
         if row.canStartOver {
@@ -150,7 +152,7 @@ package struct ChannelListScreen: View {
         }
         if row.hasPrograms {
             Button(AppStrings.tabGuide, systemImage: "calendar") {
-                appViewModel.send(.push(.channelPrograms(channelCode: row.code)))
+                navigator.push(.channelPrograms(channelCode: row.code))
             }
         }
     }

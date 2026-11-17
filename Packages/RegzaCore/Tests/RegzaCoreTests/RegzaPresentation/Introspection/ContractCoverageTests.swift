@@ -2,11 +2,11 @@ import Foundation
 import Testing
 
 /// 約束事 (CLI と振る舞いのテストの操作) に漏れがないことを確かめる。
-/// 画面の Action (ViewModels/<画面>/Action/) のどの case も、操作を Action にする処理 (画面の ViewModel の action(_:_:)、
+/// 画面の Action (Presentation/<モジュール>/<画面>/Action/) のどの case も、操作を Action にする処理 (画面の ViewModel の action(_:_:)、
 /// 部品の ViewModel の introspectionAction(_:_:)) で作られていること (アプリの画面から送れる操作は、どれも約束事からも送れる)
 @Suite struct ContractCoverageTests {
     static let viewModels = URL(filePath: #filePath)
-        .deletingLastPathComponent().appending(path: "../../../../Sources/RegzaPresentation/ViewModels").standardized
+        .deletingLastPathComponent().appending(path: "../../../../Sources/Presentation").standardized
 
     /// Action の型の case
     struct ActionType {

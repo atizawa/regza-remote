@@ -42,7 +42,7 @@ struct Sources {
     var screens: [Screen] = []
 
     /// - Parameters:
-    ///   - viewModels: RegzaPresentation/ViewModels
+    ///   - viewModels: プレゼンテーション層のソース (Sources/Presentation。モジュール/画面/State・Action)
     ///   - sharedModels: RegzaSharedModels のソース
     init(viewModels: URL, sharedModels: URL) throws {
         let files = try Self.swiftFiles(in: viewModels)

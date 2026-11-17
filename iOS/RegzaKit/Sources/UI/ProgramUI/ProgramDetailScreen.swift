@@ -1,13 +1,17 @@
 #if os(iOS)
 import Localization
 import Design
-import RegzaPresentation
+import PresentationCore
+import ProgramPresentation
 import SwiftUI
 import UICommon
+#if DEBUG
+import AppPresentation
+#endif
 
 package struct ProgramDetailScreen: View {
     @State private var viewModel: ProgramDetailViewModel
-    @Environment(AppViewModel.self) private var appViewModel
+    @Environment(\.appNavigator) private var navigator
 
     package init(viewModel: ProgramDetailViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -96,7 +100,7 @@ package struct ProgramDetailScreen: View {
             }
             if state.canStream {
                 Button {
-                    appViewModel.send(.play(channelCode: state.channelCode))
+                    navigator.play(channelCode: state.channelCode)
                 } label: {
                     actionLabel(AppStrings.playerWatch, systemImage: "play.tv", isBusy: false)
                 }
@@ -198,7 +202,7 @@ private struct FilledActionStyle: ButtonStyle {
 #if DEBUG
 #Preview("番組の詳細") {
     FakePreview(
-        setUp: { $0.guideGridViewModel.send(.load) },
+        setUp: { await $0.prepareRoutes() },
         content: { app in
             if let viewModel = app.programDetail(programID: FakeProgram.onAirID, channelCode: FakeProgram.channelCode) {
                 NavigationStack { ProgramDetailScreen(viewModel: viewModel) }

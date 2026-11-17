@@ -8,13 +8,20 @@ let screenSettings: [SwiftSetting] = [.enableUpcomingFeature("MemberImportVisibi
 /// 画面のファイルの末尾のプレビュー (`#if DEBUG`) だけが使う、偽物のテレビ・録画サーバー。
 /// iOS のリリースのビルドでは中身のないモジュールになるので (RegzaCore の Package.swift)、リリース版のアプリには入らない
 let fakeForPreviews: Target.Dependency = .product(name: "RegzaFakeServers", package: "RegzaCore")
-/// 機能の画面のモジュール (Sources/UI/<機能>UI)。画面の ViewModel の state と Action・共通の部品だけを使い、ほかの機能を読み込まない
+/// 機能の画面のモジュール (Sources/UI/<機能>UI)。その機能のプレゼンテーションと共通の部品だけを使い、ほかの機能を読み込まない。
+/// ほかの画面へ移るときは、共通の窓口 (AppNavigator) に頼む
+/// 機能の画面がプレビューの準備に使う、アプリ全体の ViewModel (プレビューの `#if DEBUG` の中だけで読み込む。LayerTests が確かめる)
+let appForPreviews: Target.Dependency = .product(name: "AppPresentation", package: "RegzaCore")
+/// 機能の画面のモジュールが使う、その機能のプレゼンテーション (<機能>Presentation)。リモコンは共通 (PresentationCore) のものを使う
+func presentation(of feature: String) -> [Target.Dependency] {
+    let name = String(feature.dropLast("UI".count)) + "Presentation"
+    return [.product(name: "PresentationCore", package: "RegzaCore")]
+        + (feature == "RemoteUI" ? [] : [.product(name: name, package: "RegzaCore")])
+}
 func feature(_ name: String) -> Target {
     .target(
         name: name,
-        dependencies: [
-            .product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "Localization", "UICommon", fakeForPreviews,
-        ],
+        dependencies: presentation(of: name) + ["Design", "Localization", "UICommon", fakeForPreviews, appForPreviews],
         path: "Sources/UI/\(name)",
         swiftSettings: screenSettings)
 }
@@ -77,7 +84,8 @@ let package = Package(
         .target(
             name: "UICommon",
             dependencies: [
-                .product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity", "Localization", fakeForPreviews,
+                .product(name: "PresentationCore", package: "RegzaCore"), "Design", "LiveActivity", "Localization", fakeForPreviews,
+                appForPreviews,
             ],
             path: "Sources/UI/UICommon",
             swiftSettings: screenSettings),

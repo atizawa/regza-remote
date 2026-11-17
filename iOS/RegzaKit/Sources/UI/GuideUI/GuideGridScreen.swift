@@ -1,15 +1,18 @@
 #if os(iOS)
 import Localization
-import RegzaPresentation
+import PresentationCore
+import GuidePresentation
 import Design
 import SwiftUI
 import UICommon
+#if DEBUG
+import AppPresentation
+#endif
 
 /// 新聞のテレビ欄のような番組表。横に局、縦に時刻を並べる
 package struct GuideGridScreen: View {
     @State private var viewModel: GuideGridViewModel
-    @Environment(AppViewModel.self) private var appViewModel
-    @Environment(\.showSettings) private var showSettings
+    @Environment(\.appNavigator) private var navigator
     /// 表の左上がスクロールでどれだけずれたか (固定する局名の行と時刻の列を合わせる)
     @State private var scrollOrigin = ScrollOrigin()
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -24,7 +27,7 @@ package struct GuideGridScreen: View {
     private var metrics: GuideMetrics { GuideMetrics(dynamicTypeSize: min(dynamicTypeSize, Self.maximumDynamicTypeSize)) }
 
     package var body: some View {
-        NavigationStack(path: appViewModel.path(of: .guide)) {
+        NavigationStack(path: navigator.path(of: .guide)) {
             content
                 .navigationTitle(AppStrings.tabGuide)
                 .navigationBarTitleDisplayMode(.inline)
@@ -32,7 +35,7 @@ package struct GuideGridScreen: View {
                     // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
                     if viewModel.state.canSearch {
                         ToolbarItem(placement: .topBarTrailing) {
-                            Button(AppStrings.searchTitle, systemImage: "magnifyingglass") { appViewModel.send(.push(.search)) }
+                            Button(AppStrings.searchTitle, systemImage: "magnifyingglass") { navigator.push(.search) }
                                 .accessibilityIdentifier("guide.search")
                         }
                     }
@@ -53,7 +56,7 @@ package struct GuideGridScreen: View {
                 Text(
                     AppStrings.guideSetupHelp)
             } actions: {
-                Button(AppStrings.commonOpenSettings) { showSettings() }
+                Button(AppStrings.commonOpenSettings) { navigator.showSettings() }
                     .buttonStyle(.borderedProminent)
             }
         } else if !state.hasLoaded {
@@ -95,7 +98,7 @@ package struct GuideGridScreen: View {
             HStack(alignment: .top, spacing: 0) {
                 ForEach(columns) { column in
                     ProgramColumn(column: column, window: window, metrics: metrics) { program in
-                        appViewModel.send(.push(.programDetail(programID: program.id, channelCode: column.channelCode)))
+                        navigator.push(.programDetail(programID: program.id, channelCode: column.channelCode))
                     }
                 }
             }

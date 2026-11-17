@@ -1,8 +1,12 @@
 #if os(iOS)
 import Localization
-import RegzaPresentation
+import PresentationCore
+import ReservationsPresentation
 import SwiftUI
 import UICommon
+#if DEBUG
+import AppPresentation
+#endif
 
 /// テレビの録画予約の一覧
 package struct ReservationListScreen: View {

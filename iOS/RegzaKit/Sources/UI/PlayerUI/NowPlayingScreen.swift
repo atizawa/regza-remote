@@ -1,17 +1,23 @@
 #if os(iOS)
 import Localization
 import Design
-import RegzaPresentation
+import PresentationCore
+import PlayerPresentation
 import SwiftUI
 import UICommon
+#if DEBUG
+import AppPresentation
+#endif
 
 /// ミニプレーヤーを押したときの詳細。録画ならシークもできる
 struct NowPlayingScreen: View {
-    @Environment(AppViewModel.self) private var appViewModel
+    let viewModel: NowPlayingViewModel
+    /// アプリで見る画面の ViewModel (見始めてから作られるので、出すときに組み立てから受け取る)
+    let livePlayer: @MainActor () -> LivePlayerViewModel?
+    @Environment(\.appNavigator) private var navigator
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        let viewModel = appViewModel.nowPlayingViewModel
         let state = viewModel.state
         NavigationStack {
             ScrollView {
@@ -27,7 +33,7 @@ struct NowPlayingScreen: View {
                         actionButton(AppStrings.remotePowerOn, systemImage: "power") { viewModel.send(.powerOn) }
                     }
                     if let code = state.playableChannelCode {
-                        actionButton(AppStrings.playerWatch, systemImage: "play.tv") { appViewModel.send(.play(channelCode: code)) }
+                        actionButton(AppStrings.playerWatch, systemImage: "play.tv") { navigator.play(channelCode: code) }
                     }
                     if state.canStartOver {
                         actionButton(AppStrings.playerProgramFromStart, systemImage: "backward.end.alt") { viewModel.send(.startOver) }
@@ -52,11 +58,11 @@ struct NowPlayingScreen: View {
             // このシートを開いている間は、アプリで見る画面をシートの上から出す
             .fullScreenCover(
                 isPresented: Binding(
-                    get: { appViewModel.state.playingChannelCode != nil },
-                    set: { if !$0 { appViewModel.send(.closePlayer) } }
+                    get: { navigator.isPlaying },
+                    set: { if !$0 { navigator.closePlayer() } }
                 )
             ) {
-                if let livePlayerViewModel = appViewModel.livePlayerViewModel {
+                if let livePlayerViewModel = livePlayer() {
                     LivePlayerScreen(viewModel: livePlayerViewModel)
                 }
             }
@@ -81,8 +87,8 @@ struct NowPlayingScreen: View {
             await app.settle()
             app.send(.showNowPlaying)
         },
-        content: { _ in
-            NowPlayingScreen()
+        content: { app in
+            NowPlayingScreen(viewModel: app.nowPlayingViewModel, livePlayer: { app.livePlayerViewModel })
         })
 }
 #endif

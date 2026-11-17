@@ -66,7 +66,7 @@ public struct AppScreen: View {
                 }
                 // どのタブでも、テレビで映っているものをミニプレーヤーで出す
                 .tabViewBottomAccessory {
-                    NowPlayingAccessory()
+                    NowPlayingAccessory(nowPlaying: appViewModel.nowPlayingViewModel, livePlayer: { appViewModel.livePlayerViewModel })
                 }
                 // 番組表や一覧を広く見せるため、下へスクロールしたらタブバーを小さくする
                 .tabBarMinimizeBehavior(.onScrollDown)
@@ -107,7 +107,11 @@ public struct AppScreen: View {
             }
         }
         // タブの中で開く画面は、機能の画面のモジュールどうしが知らなくて済むよう、組み立てが環境値で渡す
-        .appEnvironment(appViewModel, liveActivity: liveActivity, routeDestination: RouteDestination { AnyView(RouteView(route: $0)) })
+        .environment(appViewModel)
+        .appEnvironment(
+            navigator: appViewModel, remoteViewModel: appViewModel.remoteViewModel, liveActivity: liveActivity,
+            routeDestination: RouteDestination { AnyView(RouteView(route: $0)) }
+        )
         .sensoryFeedback(.impact(weight: .light), trigger: remoteViewModel.state.tapCount)
         .task {
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める

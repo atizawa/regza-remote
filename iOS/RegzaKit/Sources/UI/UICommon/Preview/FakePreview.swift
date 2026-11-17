@@ -1,7 +1,8 @@
 #if os(iOS) && DEBUG
 import LiveActivity
+import AppPresentation
+import PresentationCore
 import RegzaFakeServers
-import RegzaPresentation
 import SwiftUI
 
 /// 画面のプレビューの準備 (Debug のビルドだけ。偽物は iOS のリリースのビルドでは中身がなくなるので、リリース版には入らない)。
@@ -33,9 +34,10 @@ package struct FakePreview<Content: View>: View {
     package var body: some View {
         if isReady {
             content(appViewModel)
+                .environment(appViewModel)
                 // ほかの機能の画面は機能の画面のモジュールから見えないので、開いた先は道の名前だけを出す (アプリ全体のプレビューでは本物の画面)
                 .appEnvironment(
-                    appViewModel, liveActivity: liveActivity,
+                    navigator: appViewModel, remoteViewModel: appViewModel.remoteViewModel, liveActivity: liveActivity,
                     routeDestination: RouteDestination { route in AnyView(Text(route.id).foregroundStyle(.secondary)) })
         } else {
             ProgressView()

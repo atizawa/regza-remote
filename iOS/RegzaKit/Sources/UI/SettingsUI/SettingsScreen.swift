@@ -1,8 +1,12 @@
 #if os(iOS)
 import Localization
-import RegzaPresentation
+import PresentationCore
+import SettingsPresentation
 import SwiftUI
 import UICommon
+#if DEBUG
+import AppPresentation
+#endif
 
 package struct SettingsScreen: View {
     @State private var settingsViewModel: SettingsViewModel

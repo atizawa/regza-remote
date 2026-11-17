@@ -1,6 +1,6 @@
 #if os(iOS)
 import Localization
-import RegzaPresentation
+import PresentationCore
 import Design
 import SwiftUI
 import UICommon

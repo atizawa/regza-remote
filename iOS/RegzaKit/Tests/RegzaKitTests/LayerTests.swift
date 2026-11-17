@@ -1,20 +1,27 @@
 import Foundation
 import Testing
 
-/// 画面 (機能のモジュール・共通の部品・組み立て) と Live Activity (LiveActivity) が、ViewModel と UI の型 (RegzaPresentation) より
+/// 画面 (機能のモジュール・共通の部品・組み立て) と Live Activity (LiveActivity) が、プレゼンテーション層 (ViewModel と UI の型) より
 /// 下の層 (Domain・通信・組み立て) を使っていないことを確かめる。どれも ViewModel の state を読み、Action を送るだけにする。
-/// 機能の画面のモジュール (<機能>UI) は、ほかの機能を読み込まない (ほかの機能の画面は、組み立て (AppUI) が環境値で渡す)。
-/// RegzaPresentation は Domain を外に見せないが、SwiftPM は依存の先のモジュールを import すること自体は止めないので、
-/// import を見て止める。画面のプレビュー (`#if DEBUG` の中) だけは、偽物のテレビ・録画サーバーを使ってよい
+/// 機能の画面のモジュール (<機能>UI) は、共通 (PresentationCore) と自分の機能のプレゼンテーション (<機能>Presentation) だけを読み込み、
+/// ほかの機能とアプリ全体 (AppPresentation) を読み込まない (ほかの画面へ移るときは共通の窓口 AppNavigator に頼み、
+/// ほかの機能の画面は組み立て (AppUI) が環境値で渡す)。
+/// SwiftPM は依存の先のモジュールを import すること自体は止めないので、import を見て止める。
+/// 画面のプレビュー (`#if DEBUG` の中) だけは、偽物のテレビ・録画サーバーと、それで組み立てたアプリ全体の ViewModel を使ってよい
 @Suite struct LayerTests {
     /// プレビューの中でだけ読み込んでよいモジュール
-    static let previewImports: Set<String> = ["RegzaFakeServers"]
+    static let previewImports: Set<String> = ["RegzaFakeServers", "AppPresentation"]
 
-    /// 画面が読み込んでよいモジュール (Apple のものと、ViewModel・UI の型・色・文言・Live Activity のスイッチ)
+    /// 画面が読み込んでよいモジュール (Apple のものと、共通のプレゼンテーション・色・文言・Live Activity のスイッチ)
     static let viewImports: Set<String> = [
         "SwiftUI", "Foundation", "Observation", "AVKit", "UIKit",
-        "RegzaPresentation", "Design", "Localization", "LiveActivity",
+        "PresentationCore", "Design", "Localization", "LiveActivity",
     ]
+
+    /// 機能の画面のモジュールが使う、その機能のプレゼンテーション (リモコンは共通のものだけを使う)
+    static func presentation(of feature: String) -> Set<String> {
+        feature == "RemoteUI" ? [] : [feature.replacingOccurrences(of: "UI", with: "Presentation")]
+    }
 
     /// Live Activity が読み込んでよいモジュール (Apple のものと、ViewModel・UI の型・文言)
     static let liveActivityImports: Set<String> = [
@@ -38,11 +45,11 @@ import Testing
 
     @Test(arguments: features)
     func featuresImportOnlyPresentationAndCommonParts(feature: String) throws {
-        try Self.check("UI/\(feature)", allowed: Self.viewImports.union(["UICommon"]))
+        try Self.check("UI/\(feature)", allowed: Self.viewImports.union(["UICommon"]).union(Self.presentation(of: feature)))
     }
 
     @Test func compositionImportsFeatures() throws {
-        try Self.check("UI/AppUI", allowed: Self.viewImports.union(["UICommon"]).union(Self.features))
+        try Self.check("UI/AppUI", allowed: Self.viewImports.union(["UICommon", "RegzaPresentation"]).union(Self.features))
     }
 
     /// Sources/UI の機能のフォルダと、Package.swift の機能の一覧 (features) が同じこと (フォルダだけ足しても、モジュールにならない)

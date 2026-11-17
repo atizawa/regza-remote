@@ -1,8 +1,15 @@
 import Foundation
 import Testing
 
-@testable import RegzaPresentation
+@testable import AppPresentation
+@testable import ChannelsPresentation
+@testable import GuidePresentation
+@testable import PlayerPresentation
+@testable import PresentationCore
+@testable import ProgramPresentation
 @testable import RegzaSharedModels
+@testable import ReservationsPresentation
+@testable import SettingsPresentation
 
 /// ロック画面や通知に出すもの (iOS の Live Activity と Android の Live Updates で同じになることの確認)
 @Suite struct LiveStatusTests {

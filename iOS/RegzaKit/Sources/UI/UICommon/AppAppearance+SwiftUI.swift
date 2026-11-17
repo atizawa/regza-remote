@@ -1,5 +1,5 @@
 #if os(iOS)
-import RegzaPresentation
+import PresentationCore
 import SwiftUI
 
 extension AppAppearance {

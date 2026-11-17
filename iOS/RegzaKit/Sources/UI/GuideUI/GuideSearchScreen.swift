@@ -1,9 +1,13 @@
 #if os(iOS)
 import Localization
-import RegzaPresentation
+import PresentationCore
+import GuidePresentation
 import Design
 import SwiftUI
 import UICommon
+#if DEBUG
+import AppPresentation
+#endif
 
 /// 番組を探す画面。番組表のナビゲーションバーの虫眼鏡から開く
 package struct GuideSearchScreen: View {

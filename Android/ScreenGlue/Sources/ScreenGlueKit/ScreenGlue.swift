@@ -34,7 +34,7 @@ public struct ScreenGlue {
     public init(android: URL) throws {
         let core = android.appending(path: "../Packages/RegzaCore/Sources")
         let sources = try Sources(
-            viewModels: core.appending(path: "RegzaPresentation/ViewModels"),
+            viewModels: core.appending(path: "Presentation"),
             sharedModels: core.appending(path: "RegzaSharedModels")
         )
         let presentationConfig = try String(contentsOf: android.appending(path: Self.presentationConfigPath), encoding: .utf8)

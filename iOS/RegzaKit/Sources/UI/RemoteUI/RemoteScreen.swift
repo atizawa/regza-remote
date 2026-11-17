@@ -1,10 +1,11 @@
 #if os(iOS)
 import Localization
 import Design
-import RegzaPresentation
+import PresentationCore
 import SwiftUI
 import UICommon
 #if DEBUG
+import AppPresentation
 import RegzaFakeServers
 #endif
 
