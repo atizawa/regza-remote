@@ -2,10 +2,10 @@
 import RegzaApp
 import AppServices
 import LiveActivity
-import UI
+import AppUI
 import SwiftUI
 
-/// アプリの入口。アプリのプロセスに 1 つだけある ViewModel (AppContainer) を、画面 (UI の AppScreen) に渡す。
+/// アプリの入口。アプリのプロセスに 1 つだけある ViewModel (AppContainer) を、画面 (AppUI の AppScreen) に渡す。
 /// アプリの終了通知は AppServices へ渡す。
 struct RootView: View {
     @State private var appViewModel: AppViewModel

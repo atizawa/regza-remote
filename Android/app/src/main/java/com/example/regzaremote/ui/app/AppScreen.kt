@@ -37,9 +37,9 @@ import com.example.regzaremote.localization.AppStrings
 import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.RecordIcon
 import com.example.regzaremote.ui.components.rememberState
-import com.example.regzaremote.ui.feature.player.NowPlayingBar
-import com.example.regzaremote.ui.feature.player.NowPlayingScreen
-import com.example.regzaremote.ui.feature.player.miniPlayerHeight
+import com.example.regzaremote.ui.player.NowPlayingBar
+import com.example.regzaremote.ui.player.NowPlayingScreen
+import com.example.regzaremote.ui.player.miniPlayerHeight
 
 /**
  * 登録したあとの画面。iOS 版と同じく、下のタブで画面を切り替え (タブと戻る道も AppViewModel が持つ)、

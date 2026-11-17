@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		AA0000000000000000000030 /* RegzaRemoteWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000005 /* RegzaRemoteWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		AA0000000000000000000060 /* UI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000070 /* UI */; };
+		AA0000000000000000000060 /* AppUI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000070 /* AppUI */; };
 		AA0000000000000000000061 /* LiveActivity in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000071 /* LiveActivity */; };
 		AA0000000000000000000062 /* Widgets in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000072 /* Widgets */; };
 		AA0000000000000000000063 /* SystemActions in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000073 /* SystemActions */; };
@@ -66,7 +66,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA0000000000000000000060 /* UI in Frameworks */,
+				AA0000000000000000000060 /* AppUI in Frameworks */,
 				AA0000000000000000000061 /* LiveActivity in Frameworks */,
 				AA0000000000000000000063 /* SystemActions in Frameworks */,
 				AA0000000000000000000064 /* Shortcuts in Frameworks */,
@@ -128,7 +128,7 @@
 			);
 			name = RegzaRemote;
 			packageProductDependencies = (
-				AA0000000000000000000070 /* UI */,
+				AA0000000000000000000070 /* AppUI */,
 				AA0000000000000000000071 /* LiveActivity */,
 				AA0000000000000000000073 /* SystemActions */,
 				AA0000000000000000000074 /* Shortcuts */,
@@ -436,10 +436,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		AA0000000000000000000070 /* UI */ = {
+		AA0000000000000000000070 /* AppUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AA0000000000000000000080 /* XCLocalSwiftPackageReference "RegzaKit" */;
-			productName = UI;
+			productName = AppUI;
 		};
 		AA0000000000000000000071 /* LiveActivity */ = {
 			isa = XCSwiftPackageProductDependency;

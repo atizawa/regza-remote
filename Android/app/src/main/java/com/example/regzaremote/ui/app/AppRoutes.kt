@@ -23,14 +23,14 @@ import com.example.regzaremote.core.AppTab
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RemoteState
 import com.example.regzaremote.design.AppTheme
+import com.example.regzaremote.ui.channels.ChannelListScreen
 import com.example.regzaremote.ui.components.rememberState
-import com.example.regzaremote.ui.feature.channels.ChannelListScreen
-import com.example.regzaremote.ui.feature.guide.GuideGridScreen
-import com.example.regzaremote.ui.feature.guide.GuideSearchScreen
-import com.example.regzaremote.ui.feature.program.ProgramDetailScreen
-import com.example.regzaremote.ui.feature.program.ProgramListScreen
-import com.example.regzaremote.ui.feature.remote.RemoteScreen
-import com.example.regzaremote.ui.feature.reservations.ReservationListScreen
+import com.example.regzaremote.ui.guide.GuideGridScreen
+import com.example.regzaremote.ui.guide.GuideSearchScreen
+import com.example.regzaremote.ui.program.ProgramDetailScreen
+import com.example.regzaremote.ui.program.ProgramListScreen
+import com.example.regzaremote.ui.remote.RemoteScreen
+import com.example.regzaremote.ui.reservations.ReservationListScreen
 
 /**
  * いまのタブの画面。共有の AppViewModel が持つタブの path を、Navigation 3 の back stack として渡す

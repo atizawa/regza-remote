@@ -1,10 +1,10 @@
 import AppIntents
 import AppServices
+import AppUI
 import LiveActivity
 import Shortcuts
 import SwiftUI
 import SystemActions
-import UI
 
 @main
 struct RegzaRemoteApp: App {

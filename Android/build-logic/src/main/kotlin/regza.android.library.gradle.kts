@@ -1,4 +1,4 @@
-// Android のライブラリのモジュール (core・feature) の共通の決まり: SDK と Java の版
+// Android のライブラリのモジュール (core・ui) の共通の決まり: SDK と Java の版
 import com.android.build.api.dsl.LibraryExtension
 
 plugins {

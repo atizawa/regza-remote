@@ -16,8 +16,8 @@ import com.example.regzaremote.design.AppearanceTheme
 import com.example.regzaremote.liveupdate.LiveUpdateController
 import com.example.regzaremote.ui.components.LocalLiveUpdates
 import com.example.regzaremote.ui.components.rememberState
-import com.example.regzaremote.ui.feature.player.LivePlayerScreen
-import com.example.regzaremote.ui.feature.settings.SettingsScreen
+import com.example.regzaremote.ui.player.LivePlayerScreen
+import com.example.regzaremote.ui.settings.SettingsScreen
 
 /** アプリのいちばん外側の画面。設定を開いていれば設定の画面、そうでなければタブの画面。ライブ視聴はどの画面の上にも重ねる */
 @Composable

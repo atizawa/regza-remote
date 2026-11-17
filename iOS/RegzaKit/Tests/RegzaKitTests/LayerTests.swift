@@ -3,7 +3,7 @@ import Testing
 
 /// 画面 (機能のモジュール・共通の部品・組み立て) と Live Activity (LiveActivity) が、ViewModel と UI の型 (RegzaPresentation) より
 /// 下の層 (Domain・通信・組み立て) を使っていないことを確かめる。どれも ViewModel の state を読み、Action を送るだけにする。
-/// 機能のモジュール (<機能>Feature) は、ほかの機能を読み込まない (ほかの機能の画面は、組み立て (UI) が環境値で渡す)。
+/// 機能の画面のモジュール (<機能>UI) は、ほかの機能を読み込まない (ほかの機能の画面は、組み立て (AppUI) が環境値で渡す)。
 /// RegzaPresentation は Domain を外に見せないが、SwiftPM は依存の先のモジュールを import すること自体は止めないので、
 /// import を見て止める。画面のプレビュー (`#if DEBUG` の中) だけは、偽物のテレビ・録画サーバーを使ってよい
 @Suite struct LayerTests {
@@ -25,26 +25,27 @@ import Testing
     static let package = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 
-    /// 機能のモジュール (Sources/Features の下のフォルダ)
+    /// 機能の画面のモジュール (Sources/UI の下の、共通 (UICommon) と組み立て (AppUI) 以外のフォルダ)
     static let features: [String] = {
-        let directory = package.appendingPathComponent("Sources/Features").path
-        return ((try? FileManager.default.contentsOfDirectory(atPath: directory)) ?? []).filter { !$0.hasPrefix(".") }.sorted()
+        let directory = package.appendingPathComponent("Sources/UI").path
+        return ((try? FileManager.default.contentsOfDirectory(atPath: directory)) ?? [])
+            .filter { !$0.hasPrefix(".") && !["UICommon", "AppUI"].contains($0) }.sorted()
     }()
 
     @Test func commonPartsImportOnlyPresentation() throws {
-        try Self.check("UICommon", allowed: Self.viewImports)
+        try Self.check("UI/UICommon", allowed: Self.viewImports)
     }
 
     @Test(arguments: features)
     func featuresImportOnlyPresentationAndCommonParts(feature: String) throws {
-        try Self.check("Features/\(feature)", allowed: Self.viewImports.union(["UICommon"]))
+        try Self.check("UI/\(feature)", allowed: Self.viewImports.union(["UICommon"]))
     }
 
     @Test func compositionImportsFeatures() throws {
-        try Self.check("UI", allowed: Self.viewImports.union(["UICommon"]).union(Self.features))
+        try Self.check("UI/AppUI", allowed: Self.viewImports.union(["UICommon"]).union(Self.features))
     }
 
-    /// Sources/Features のフォルダと、Package.swift の機能の一覧 (features) が同じこと (フォルダだけ足しても、モジュールにならない)
+    /// Sources/UI の機能のフォルダと、Package.swift の機能の一覧 (features) が同じこと (フォルダだけ足しても、モジュールにならない)
     @Test func featureFoldersMatchPackage() throws {
         let manifest = try String(contentsOf: Self.package.appendingPathComponent("Package.swift"), encoding: .utf8)
         let list = try #require(manifest.range(of: #"let features = \[[^\]]*\]"#, options: .regularExpression))

@@ -1,0 +1,234 @@
+package com.example.regzaremote.ui.reservations
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.example.regzaremote.bridge.Send
+import com.example.regzaremote.bridge.reservationListStates
+import com.example.regzaremote.core.ReservationItem
+import com.example.regzaremote.core.ReservationListAction
+import com.example.regzaremote.core.ReservationListState
+import com.example.regzaremote.design.AppTheme
+import com.example.regzaremote.design.DesignDimensions
+import com.example.regzaremote.localization.AppStrings
+import com.example.regzaremote.ui.components.EmptyState
+import com.example.regzaremote.ui.components.Loading
+import com.example.regzaremote.ui.components.LocalMiniPlayerInset
+import com.example.regzaremote.ui.components.Note
+import com.example.regzaremote.ui.components.RecordIcon
+import com.example.regzaremote.ui.components.RowDivider
+import com.example.regzaremote.ui.components.ScreenHeader
+import com.example.regzaremote.ui.components.SectionHeader
+import com.example.regzaremote.ui.components.rememberState
+import com.example.regzaremote.ui.components.sectionRowShape
+import com.example.regzaremote.ui.preview.FakePreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+
+/**
+ * テレビの録画予約の一覧 (state と操作は ReservationListViewModel の ReservationListState・ReservationListAction)。
+ * 引っ張ると読み直し、左へスワイプすると取り消す (取り消しは確かめてから送る)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReservationListScreen(list: ReservationListState, send: Send) {
+    LaunchedEffect(Unit) { send(ReservationListAction.load()) }
+    // 取り消すか確かめている予約
+    var cancelling by remember { mutableStateOf<ReservationItem?>(null) }
+    // 引っ張って読み直している間。すぐに読み終わると読み込み中の状態が届かないこともあるので、
+    // 少し待ってから、読み込み中でなくなるのを待って止める
+    var isRefreshing by remember { mutableStateOf(false) }
+    val isLoading by rememberUpdatedState(list.isLoading)
+    LaunchedEffect(isRefreshing) {
+        if (!isRefreshing) return@LaunchedEffect
+        delay(300)
+        snapshotFlow { isLoading }.first { !it }
+        isRefreshing = false
+    }
+
+    val scheduledTitle = AppStrings.reservationScheduled
+    val waitingTitle = AppStrings.reservationWaitingSeries
+    val waitingHelp = AppStrings.reservationWaitingHelp
+    Column(Modifier.fillMaxSize()) {
+        ScreenHeader(AppStrings.tabReservations)
+        val message = list.loadErrorMessage.orElse(null)
+        when {
+            message != null -> EmptyState(AppStrings.reservationLoadFailed, message) {
+                TextButton(onClick = { send(ReservationListAction.load()) }) { Text(AppStrings.commonRetry) }
+            }
+
+            !list.isHasLoaded -> Loading()
+
+            else -> PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    send(ReservationListAction.load())
+                },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                if (list.scheduled.isEmpty() && list.waiting.isEmpty()) {
+                    EmptyState(AppStrings.reservationEmpty)
+                } else {
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = DesignDimensions.spacingOuter,
+                            top = DesignDimensions.spacingOuter,
+                            end = DesignDimensions.spacingOuter,
+                            bottom =
+                                DesignDimensions.spacingOuter + LocalMiniPlayerInset.current,
+                        ),
+                    ) {
+                        list.cancelError.orElse(null)?.let { error ->
+                            item {
+                                Text(
+                                    error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppTheme.red,
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                )
+                            }
+                        }
+                        section(scheduledTitle, null, list.scheduled.toList()) { cancelling = it }
+                        section(
+                            waitingTitle,
+                            waitingHelp,
+                            list.waiting.toList(),
+                        ) { cancelling = it }
+                    }
+                }
+            }
+        }
+    }
+
+    cancelling?.let { reservation ->
+        AlertDialog(
+            onDismissRequest = { cancelling = null },
+            title = { Text(AppStrings.reservationCancelConfirmation(reservation.title)) },
+            text = { if (reservation.isSeries) Text(AppStrings.reservationCancelSeriesHelp) },
+            confirmButton = {
+                TextButton(onClick = {
+                    send(ReservationListAction.cancel(reservation.id))
+                    cancelling = null
+                }) {
+                    Text(
+                        if (reservation.isSeries) AppStrings.reservationCancelSeries else AppStrings.reservationCancel,
+                        color = AppTheme.red,
+                    )
+                }
+            },
+            dismissButton = { TextButton(onClick = { cancelling = null }) { Text(AppStrings.commonCancel) } },
+        )
+    }
+}
+
+/** 見出しと補足の付いた、角の丸いまとまり */
+private fun LazyListScope.section(header: String, footer: String?, items: List<ReservationItem>, onCancel: (ReservationItem) -> Unit) {
+    if (items.isEmpty()) return
+    item(key = "header-$header") { SectionHeader(header, Modifier.padding(top = 8.dp, bottom = 6.dp)) }
+    itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+        val shape = sectionRowShape(index, items.size)
+        Column(Modifier.clip(shape)) {
+            SwipeToCancel(item, onCancel)
+            if (index < items.size - 1) Box(Modifier.background(AppTheme.surface)) { RowDivider() }
+        }
+    }
+    footer?.let { item(key = "footer-$header") { Note(it, Modifier.padding(horizontal = DesignDimensions.spacingOuter, vertical = 6.dp)) } }
+    item(key = "space-$header") { Box(Modifier.padding(bottom = DesignDimensions.spacingGroup)) }
+}
+
+/** 左へスワイプすると、取り消すか確かめる */
+@Composable
+private fun SwipeToCancel(item: ReservationItem, onCancel: (ReservationItem) -> Unit) {
+    val state = rememberSwipeToDismissBoxState()
+    // 確かめる間は行を元の位置に戻しておく
+    LaunchedEffect(state.currentValue) {
+        if (state.currentValue == SwipeToDismissBoxValue.EndToStart) {
+            onCancel(item)
+            state.reset()
+        }
+    }
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                Modifier.fillMaxSize().background(AppTheme.red).padding(horizontal = DesignDimensions.spacingOuter),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Text(AppStrings.reservationCancelAction, color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+        },
+    ) {
+        ReservationRow(item)
+    }
+}
+
+@Composable
+private fun ReservationRow(item: ReservationItem) {
+    Column(
+        Modifier.fillMaxWidth().background(AppTheme.surface).padding(horizontal = DesignDimensions.spacingOuter, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            item.title,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color = if (item.isScheduled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (item.isRecording) {
+                RecordIcon(Modifier.size(11.dp))
+                Text(AppStrings.reservationRecording, style = MaterialTheme.typography.bodySmall, color = AppTheme.red)
+            }
+            Note(item.timeText)
+            item.repeatLabel.orElse(null)?.let {
+                Note(it, Modifier.background(AppTheme.fill, CircleShape).padding(horizontal = 6.dp))
+            }
+        }
+        item.channelName.orElse(null)?.let { Note(it) }
+    }
+}
+
+@Preview(name = "録画予約")
+@Composable
+private fun ReservationListScreenPreview() = FakePreview(setUp = { it(ReservationListAction.load()) }) { app, send ->
+    rememberState(app) { app.reservationListStates() }?.let { ReservationListScreen(it, send) }
+}

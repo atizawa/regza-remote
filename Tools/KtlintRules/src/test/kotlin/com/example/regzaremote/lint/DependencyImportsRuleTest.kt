@@ -22,13 +22,13 @@ class DependencyImportsRuleTest {
             "android.content.SharedPreferences",
             "androidx.datastore.preferences.core.Preferences",
             "androidx.security.crypto.EncryptedSharedPreferences",
-        ).forEach { rejects("$base.ui.feature.guide", it) }
+        ).forEach { rejects("$base.ui.guide", it) }
     }
 
     @Test
     fun `only preview UI may import the preview factory`() {
         allows("$base.ui.preview", "$base.appservices.preview.PreviewAppFactory")
-        rejects("$base.ui.feature.guide", "$base.appservices.preview.PreviewAppFactory")
+        rejects("$base.ui.guide", "$base.appservices.preview.PreviewAppFactory")
         rejects("$base.ui.preview", "$base.appservices.AppFactory")
         rejects("$base.ui.preview", "$base.appservices.preview.*")
         rejects("$base.ui.preview", "$base.appservices.preview.PreviewAppFactory.makeApp")
@@ -36,30 +36,30 @@ class DependencyImportsRuleTest {
 
     @Test
     fun `features reject other features and the composition`() {
-        rejects("$base.ui.feature.guide", "$base.ui.feature.program.ProgramDetailScreen")
-        rejects("$base.ui.feature.guide", "$base.ui.feature.program.*")
-        rejects("$base.ui.feature.guide.parts", "$base.ui.feature.channels.ChannelListScreen")
-        rejects("$base.ui.feature.guide", "$base.ui.app.AppScreen")
-        allows("$base.ui.feature.guide.parts", "$base.ui.feature.guide.GuideGridScreen")
-        allows("$base.ui.feature.guide", "$base.ui.components.BandPicker")
-        allows("$base.ui.feature.guide", "$base.ui.preview.FakePreview")
-        allows("$base.ui.app", "$base.ui.feature.guide.GuideGridScreen")
+        rejects("$base.ui.guide", "$base.ui.program.ProgramDetailScreen")
+        rejects("$base.ui.guide", "$base.ui.program.*")
+        rejects("$base.ui.guide.parts", "$base.ui.channels.ChannelListScreen")
+        rejects("$base.ui.guide", "$base.ui.app.AppScreen")
+        allows("$base.ui.guide.parts", "$base.ui.guide.GuideGridScreen")
+        allows("$base.ui.guide", "$base.ui.components.BandPicker")
+        allows("$base.ui.guide", "$base.ui.preview.FakePreview")
+        allows("$base.ui.app", "$base.ui.guide.GuideGridScreen")
     }
 
     @Test
     fun `only the composition imports features from shared UI`() {
-        rejects("$base.ui.components", "$base.ui.feature.program.ProgramDetailScreen")
-        rejects("$base.ui.preview", "$base.ui.feature.guide.GuideGridScreen")
+        rejects("$base.ui.components", "$base.ui.program.ProgramDetailScreen")
+        rejects("$base.ui.preview", "$base.ui.guide.GuideGridScreen")
         // 機能の名前のない package は、どの機能でもないので読み込めない
-        rejects("$base.ui.feature", "$base.ui.feature.guide.GuideGridScreen")
+        rejects("$base.ui", "$base.ui.guide.GuideGridScreen")
         // UI の外 (起動の Activity など) も、組み立てを通して使う
-        rejects(base, "$base.ui.feature.player.LivePlayerScreen")
+        rejects(base, "$base.ui.player.LivePlayerScreen")
         allows(base, "$base.ui.app.AppRoot")
     }
 
     @Test
     fun `services and bridge reject dependencies on UI`() {
-        rejects("$base.appservices", "$base.ui.feature.guide.GuideGridScreen")
+        rejects("$base.appservices", "$base.ui.guide.GuideGridScreen")
         rejects("$base.appservices.storage", "$base.ui.components.Note")
         rejects("$base.bridge", "$base.ui.components.Note")
     }
@@ -73,14 +73,14 @@ class DependencyImportsRuleTest {
     @Test
     fun `normal dependencies and application composition are allowed`() {
         listOf(
-            "$base.ui.feature.guide" to "$base.core.AppState",
-            "$base.ui.feature.guide" to "$base.core.RegzaAndroidApp",
-            "$base.ui.feature.guide" to "$base.bridge.Send",
-            "$base.ui.feature.guide" to "$base.design.Design",
-            "$base.ui.feature.guide" to "$base.ui.components.Note",
-            "$base.ui.feature.guide" to "androidx.compose.runtime.Composable",
-            "$base.ui.feature.guide" to "androidx.media3.exoplayer.ExoPlayer",
-            "$base.ui.feature.guide" to "$base.appservicesOther.Example",
+            "$base.ui.guide" to "$base.core.AppState",
+            "$base.ui.guide" to "$base.core.RegzaAndroidApp",
+            "$base.ui.guide" to "$base.bridge.Send",
+            "$base.ui.guide" to "$base.design.Design",
+            "$base.ui.guide" to "$base.ui.components.Note",
+            "$base.ui.guide" to "androidx.compose.runtime.Composable",
+            "$base.ui.guide" to "androidx.media3.exoplayer.ExoPlayer",
+            "$base.ui.guide" to "$base.appservicesOther.Example",
             "$base.design" to "androidx.compose.ui.Modifier",
             "$base.appservices" to "$base.core.RegzaAndroid",
             "$base.appservices.storage" to "$base.core.RegzaAndroidStorage",
@@ -94,7 +94,7 @@ class DependencyImportsRuleTest {
     fun `comments and strings are not imports`() {
         rule(
             """
-            package $base.ui.feature.guide
+            package $base.ui.guide
 
             // import $base.appservices.AppFactory
             /* import $base.appservices.storage.AndroidStorage */

@@ -29,15 +29,12 @@ class DependencyImportsRule :
         val design = "$BASE.design"
         val bridge = "$BASE.bridge"
         val previewFactory = "$services.preview.PreviewAppFactory"
-        // 機能の画面 (ui.feature.<機能>) を読み込めるのは、その機能自身と組み立て (ui.app) だけ。
+        // 機能の画面 (ui.<機能>) を読み込めるのは、その機能自身と組み立て (ui.app) だけ。
         // 機能は組み立ても読み込まない (ほかの機能の画面は組み立てが渡す)
-        val features = "$ui.feature"
         val composition = "$ui.app"
-        // 機能の名前の付いた package (ui.feature.<機能> とその下) だけを機能として扱う
-        val sourceFeature = source.removePrefix("$features.").takeIf { source.startsWith("$features.") }
-            ?.let { "$features.${it.substringBefore('.')}" }
-        val crossFeature = target.within(features) && !source.within(composition) &&
-            (sourceFeature == null || !target.within(sourceFeature))
+        val sourceFeature = featureOf(source)
+        val targetFeature = featureOf(target)
+        val crossFeature = targetFeature != null && !source.within(composition) && targetFeature != sourceFeature
         val toComposition = sourceFeature != null && target.within(composition)
         val forbidden = when {
             source.within(ui) -> {
@@ -61,14 +58,25 @@ class DependencyImportsRule :
             source.within(design) -> listOf(ui, services, bridge, "$BASE.core").any { target.within(it) }
 
             // 起動の Activity など UI の外も、機能の画面は組み立て (ui.app) を通して使う
-            else -> target.within(features)
+            else -> targetFeature != null
         }
         if (forbidden) emit(node.startOffset, "Dependency from $source to $target is forbidden", false)
     }
 
     private fun String.within(prefix: String): Boolean = this == prefix || startsWith("$prefix.")
 
+    /** 機能の画面の package (ui.<機能>)。ui の下の、共通の部品・プレビューの準備・組み立て以外。機能の画面でなければ null */
+    private fun featureOf(name: String): String? {
+        val ui = "$BASE.ui"
+        if (!name.startsWith("$ui.")) return null
+        val first = name.removePrefix("$ui.").substringBefore('.')
+        return if (first in NON_FEATURE_UI) null else "$ui.$first"
+    }
+
     private companion object {
         const val BASE = "com.example.regzaremote"
+
+        /** ui の下で、機能の画面ではない package (共通の部品・プレビューの準備・組み立て) */
+        val NON_FEATURE_UI = setOf("components", "preview", "app")
     }
 }

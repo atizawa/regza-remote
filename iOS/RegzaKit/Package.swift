@@ -8,19 +8,18 @@ let screenSettings: [SwiftSetting] = [.enableUpcomingFeature("MemberImportVisibi
 /// 画面のファイルの末尾のプレビュー (`#if DEBUG`) だけが使う、偽物のテレビ・録画サーバー。
 /// iOS のリリースのビルドでは中身のないモジュールになるので (RegzaCore の Package.swift)、リリース版のアプリには入らない
 let fakeForPreviews: Target.Dependency = .product(name: "RegzaFakeServers", package: "RegzaCore")
-/// 機能のモジュール (Sources/Features/<機能>Feature)。画面の ViewModel の state と Action・共通の部品だけを使い、ほかの機能を読み込まない
+/// 機能の画面のモジュール (Sources/UI/<機能>UI)。画面の ViewModel の state と Action・共通の部品だけを使い、ほかの機能を読み込まない
 func feature(_ name: String) -> Target {
     .target(
         name: name,
         dependencies: [
             .product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "Localization", "UICommon", fakeForPreviews,
         ],
-        path: "Sources/Features/\(name)",
+        path: "Sources/UI/\(name)",
         swiftSettings: screenSettings)
 }
 let features = [
-    "RemoteFeature", "PlayerFeature", "GuideFeature", "ProgramFeature", "ChannelsFeature", "ReservationsFeature",
-    "SettingsFeature",
+    "RemoteUI", "PlayerUI", "GuideUI", "ProgramUI", "ChannelsUI", "ReservationsUI", "SettingsUI",
 ]
 
 let package = Package(
@@ -29,7 +28,7 @@ let package = Package(
     platforms: [.iOS("26.0"), .macOS(.v14)],
     products: [
         .library(name: "AppServices", targets: ["AppServices"]),
-        .library(name: "UI", targets: ["UI"]),
+        .library(name: "AppUI", targets: ["AppUI"]),
         .library(name: "LiveActivity", targets: ["LiveActivity"]),
         .library(name: "SystemActions", targets: ["SystemActions"]),
         .library(name: "Shortcuts", targets: ["Shortcuts"]),
@@ -80,15 +79,17 @@ let package = Package(
             dependencies: [
                 .product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity", "Localization", fakeForPreviews,
             ],
+            path: "Sources/UI/UICommon",
             swiftSettings: screenSettings),
-        // 画面の組み立て (タブ・タブの中で開く画面)。機能のモジュールをつなぐ。
+        // 画面の組み立て (タブ・タブの中で開く画面)。機能の画面のモジュール (<機能>UI) をつなぐ。
         // RootView は Xcode のアプリターゲットに置き、このモジュールへ依存を渡す。アプリはこのモジュールだけを読み込む
         .target(
-            name: "UI",
+            name: "AppUI",
             dependencies: [
                 .product(name: "RegzaPresentation", package: "RegzaCore"), "Design", "LiveActivity", "Localization", "UICommon",
                 fakeForPreviews,
             ] + features.map { .target(name: $0) },
+            path: "Sources/UI/AppUI",
             swiftSettings: screenSettings),
     ] + features.map(feature) + [
         .testTarget(

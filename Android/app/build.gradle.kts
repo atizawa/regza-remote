@@ -91,10 +91,8 @@ dependencies {
     implementation(project(":core:design"))
     // 文言 (String Catalog から生成)
     implementation(project(":core:localization"))
-    // 機能の画面が共通に使う部品と、画面のプレビューの準備
-    implementation(project(":core:ui"))
-    // 機能の画面 (settings.gradle.kts が feature/ の下から読んだもの)。組み立て (ui.app) がつなぐ
-    rootProject.subprojects.filter { it.path.startsWith(":feature:") }.forEach { implementation(project(it.path)) }
+    // 画面のモジュール (settings.gradle.kts が ui/ の下から読んだ、共通の部品と機能ごとの画面)。組み立て (ui.app) がつなぐ
+    rootProject.subprojects.filter { it.path.startsWith(":ui:") }.forEach { implementation(project(it.path)) }
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

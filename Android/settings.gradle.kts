@@ -22,11 +22,11 @@ include(
     ":core:bridge",
     ":core:design",
     ":core:localization",
-    ":core:ui",
     ":swiftkit-core",
     ":behavior-tests",
 )
 
-// 機能の画面のモジュールは、feature/ の下のフォルダから読む (機能を足すときは、フォルダを作るだけでよい)
-rootDir.resolve("feature").listFiles { file -> file.resolve("build.gradle.kts").isFile }.orEmpty().sortedBy { it.name }
-    .forEach { include(":feature:${it.name}") }
+// 画面のモジュール (共通の部品 ui:common と、機能ごとの ui:<機能>) は、ui/ の下のフォルダから読む
+// (機能を足すときは、フォルダを作るだけでよい)
+rootDir.resolve("ui").listFiles { file -> file.resolve("build.gradle.kts").isFile }.orEmpty().sortedBy { it.name }
+    .forEach { include(":ui:${it.name}") }

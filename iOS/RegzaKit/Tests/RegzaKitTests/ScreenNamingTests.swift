@@ -3,15 +3,15 @@ import Testing
 
 /// 画面の名前が、iOS・Android・共有の ViewModel でそろっていることを確かめる。
 /// 共有の ViewModel のフォルダ (RegzaPresentation/ViewModels/<名前>/) ごとに、iOS は `<名前>Screen.swift` に `struct <名前>Screen`、
-/// Android は `<名前>Screen.kt` に `fun <名前>Screen(` を置く (1 画面 1 ファイル。iOS は機能のモジュール (Sources/Features) か組み立て (Sources/UI)、
-/// Android は機能のモジュール (feature/<機能>) か組み立て (app) の ui/ の下)。画面でないものには Screen を付けない
+/// Android は `<名前>Screen.kt` に `fun <名前>Screen(` を置く (1 画面 1 ファイル。iOS は画面のモジュール (Sources/UI の下)、
+/// Android は画面のモジュール (ui/<機能>) か組み立て (app) の ui/ の下)。画面でないものには Screen を付けない
 @Suite struct ScreenNamingTests {
     static let repository = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().appendingPathComponent("../../../..").standardized
     static let viewModels = repository.appendingPathComponent("Packages/RegzaCore/Sources/RegzaPresentation/ViewModels")
     /// iOS の画面を置くモジュール (機能のモジュールと組み立て)
     static let iOSSources = repository.appendingPathComponent("iOS/RegzaKit/Sources")
-    /// Android の画面を置くモジュール (機能のモジュール feature/<機能> と、組み立ての app)
+    /// Android の画面を置くモジュール (画面のモジュール ui/<機能> と、組み立ての app)
     static let android = repository.appendingPathComponent("Android")
 
     /// 名前が Screen で終わるファイル (拡張子なし) と、その場所 (同じ名前が 2 つあれば、どちらも返す)
@@ -29,13 +29,13 @@ import Testing
     }
 
     static func iOSScreenFiles() throws -> [String: [URL]] {
-        try screenFiles(under: iOSSources, extension: "swift") { $0 == "UI" || $0 == "Features" }
+        try screenFiles(under: iOSSources, extension: "swift") { $0 == "UI" }
     }
 
     static func androidScreenFiles() throws -> [String: [URL]] {
         let modules =
             ["app"]
-            + (try FileManager.default.contentsOfDirectory(atPath: android.appendingPathComponent("feature").path)).map { "feature/\($0)" }
+            + (try FileManager.default.contentsOfDirectory(atPath: android.appendingPathComponent("ui").path)).map { "ui/\($0)" }
         var files: [String: [URL]] = [:]
         for module in modules {
             let ui = android.appendingPathComponent("\(module)/src/main/java/com/example/regzaremote/ui")
