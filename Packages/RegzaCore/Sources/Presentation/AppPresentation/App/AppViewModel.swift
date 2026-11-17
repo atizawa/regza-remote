@@ -153,8 +153,8 @@ public final class AppViewModel {
         return viewModel
     }
 
-    /// 戻る道の画面 (1 局の番組表・番組の詳細) を作るのに要るもの (チャンネルと番組表) を読み込む (画面の復元・プレビュー)
-    public func prepareRoutes() async {
+    /// 戻る道の画面 (1 局の番組表・番組の詳細) を作るのに要るもの (チャンネルと番組表) を読み込む (画面の復元・プレビューの準備)
+    private func prepareRoutes() async {
         await guideGridViewModel.load()
     }
 

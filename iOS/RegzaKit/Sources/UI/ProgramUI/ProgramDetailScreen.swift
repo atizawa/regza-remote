@@ -202,7 +202,7 @@ private struct FilledActionStyle: ButtonStyle {
 #if DEBUG
 #Preview("番組の詳細") {
     FakePreview(
-        setUp: { await $0.prepareRoutes() },
+        prepareRoutes: true,
         content: { app in
             if let viewModel = app.programDetail(programID: FakeProgram.onAirID, channelCode: FakeProgram.channelCode) {
                 NavigationStack { ProgramDetailScreen(viewModel: viewModel) }

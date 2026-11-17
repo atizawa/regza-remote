@@ -1,6 +1,7 @@
 package com.example.regzaremote.appservices.preview
 
 import com.example.regzaremote.bridge.SwiftApp
+import com.example.regzaremote.core.AppAction
 import com.example.regzaremote.core.RegzaAndroidApp
 import java.lang.reflect.InvocationTargetException
 
@@ -14,7 +15,7 @@ object PreviewAppFactory {
     /**
      * @return 画面のプレビューに渡すアプリ (どの機能のプレビューが受け取るアプリ (<機能>App) としても使える)
      */
-    fun makeApp(inEditor: Boolean, setUp: (Any) -> Unit): Any {
+    fun makeApp(inEditor: Boolean, prepareRoutes: Boolean, setUp: (Any) -> Unit): Any {
         val make = Class.forName(FAKE_APPS).getMethod("make", Boolean::class.javaPrimitiveType)
         // 名前で呼ぶと中の失敗が包まれるので、本当の理由 (ライブラリが読み込めないなど) を投げ直してプレビューに出す
         val app = try {
@@ -23,6 +24,7 @@ object PreviewAppFactory {
             throw error.targetException
         }
         val previewApp = SwiftApp(app)
+        if (prepareRoutes) previewApp(AppAction.prepareRoutes())
         setUp(previewApp)
         if (inEditor) app.contractWaitUntilIdle().get()
         return previewApp

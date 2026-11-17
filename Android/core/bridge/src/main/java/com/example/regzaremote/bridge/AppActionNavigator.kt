@@ -20,6 +20,4 @@ interface AppActionNavigator :
     override fun closeNowPlaying() = invoke(AppAction.closeNowPlaying())
 
     override fun showSettings() = invoke(AppAction.showSettings())
-
-    override fun prepareRoutes() = invoke(AppAction.prepareRoutes())
 }

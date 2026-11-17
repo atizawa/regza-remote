@@ -123,8 +123,7 @@ private fun ProgramRow(program: ProgramItem, send: ProgramSend) {
 
 @Preview(name = "1 局の番組表")
 @Composable
-private fun ProgramListScreenPreview() = FakePreview<ProgramApp>(setUp = {
-    it.prepareRoutes()
+private fun ProgramListScreenPreview() = FakePreview<ProgramApp>(prepareRoutes = true, setUp = {
     it.push(AppRoute.channelPrograms(FAKE_CHANNEL))
     it(ProgramListAction.appear())
 }) { app ->

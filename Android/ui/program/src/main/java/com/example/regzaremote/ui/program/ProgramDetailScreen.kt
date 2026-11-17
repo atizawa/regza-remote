@@ -270,8 +270,7 @@ private fun RowScope.ActionButton(
 
 @Preview(name = "番組の詳細")
 @Composable
-private fun ProgramDetailScreenPreview() = FakePreview<ProgramApp>(setUp = {
-    it.prepareRoutes()
+private fun ProgramDetailScreenPreview() = FakePreview<ProgramApp>(prepareRoutes = true, setUp = {
     it.push(AppRoute.programDetail(FAKE_PROGRAM, FAKE_CHANNEL))
     it(ProgramDetailAction.appear())
 }) { app ->

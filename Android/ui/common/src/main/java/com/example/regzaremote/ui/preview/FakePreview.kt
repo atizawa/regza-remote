@@ -30,17 +30,18 @@ import com.example.regzaremote.design.AppTheme
  * 画面は、その機能のプレビューが受け取るアプリ (<機能>App。送り先と state の購読) を型で選んで受け取る
  * (例: FakePreview<<機能>App> { app -> ... })。どの機能の型にもなれるものを渡すので、ほかの機能の型を読み込まずに済む
  *
+ * @param prepareRoutes 戻る道の画面 (1 局の番組表・番組の詳細など) を作るのに要るもの (チャンネルと番組表) を、setUp の前に読み込む
  * @param setUp 組み立てたあとに送る操作 (一覧を読み込むなど)
  */
 @Suppress("UNCHECKED_CAST")
 @Composable
-fun <App> FakePreview(setUp: (App) -> Unit = {}, content: @Composable (App) -> Unit) {
+fun <App> FakePreview(prepareRoutes: Boolean = false, setUp: (App) -> Unit = {}, content: @Composable (App) -> Unit) {
     MaterialTheme(colorScheme = AppTheme.colorScheme) {
         Surface(modifier = Modifier.fillMaxSize(), color = AppTheme.background) {
             val inEditor = LocalInspectionMode.current
             val sample = remember {
                 runCatching {
-                    PreviewAppFactory.makeApp(inEditor) { setUp(it as App) } as App
+                    PreviewAppFactory.makeApp(inEditor, prepareRoutes) { setUp(it as App) } as App
                 }
             }
             sample.fold(

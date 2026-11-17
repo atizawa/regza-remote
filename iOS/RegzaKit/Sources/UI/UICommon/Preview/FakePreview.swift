@@ -12,21 +12,25 @@ package struct FakePreview<Content: View>: View {
     @State private var appViewModel: AppViewModel
     @State private var liveActivity: LiveActivityModel
     @State private var isReady = false
+    private let prepareRoutes: Bool
     private let setUp: @MainActor (AppViewModel) async -> Void
     private let content: @MainActor (AppViewModel) -> Content
 
     /// - Parameters:
     ///   - scenario: 偽物の場面
+    ///   - prepareRoutes: 戻る道の画面 (1 局の番組表・番組の詳細など) を作るのに要るもの (チャンネルと番組表) を、setUp の前に読み込む
     ///   - setUp: 描く前に送る操作 (読み込む・画面の ViewModel を作るなど)。送ったあとは、通信などが終わるまで待ってから描く
     ///   - content: 描く画面
     package init(
         _ scenario: FakeScenario.Name = .standard,
+        prepareRoutes: Bool = false,
         setUp: @escaping @MainActor (AppViewModel) async -> Void = { _ in },
         @ViewBuilder content: @escaping @MainActor (AppViewModel) -> Content
     ) {
         let appViewModel = FakeApp.makeAppViewModel(scenario: FakeScenario(scenario))
         _appViewModel = State(initialValue: appViewModel)
         _liveActivity = State(initialValue: LiveActivityModel(remoteViewModel: appViewModel.remoteViewModel))
+        self.prepareRoutes = prepareRoutes
         self.setUp = setUp
         self.content = content
     }
@@ -42,6 +46,7 @@ package struct FakePreview<Content: View>: View {
         } else {
             ProgressView()
                 .task {
+                    if prepareRoutes { appViewModel.send(.prepareRoutes) }
                     await setUp(appViewModel)
                     await appViewModel.settle()
                     isReady = true

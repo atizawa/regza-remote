@@ -345,8 +345,7 @@ private fun ChannelRow(row: ChannelItem, onClick: () -> Unit) {
 
 @Preview(name = "ライブ視聴")
 @Composable
-private fun LivePlayerScreenPreview() = FakePreview<PlayerApp>(setUp = {
-    it.prepareRoutes()
+private fun LivePlayerScreenPreview() = FakePreview<PlayerApp>(prepareRoutes = true, setUp = {
     it.play(FAKE_CHANNEL)
     it(LivePlayerAction.appear())
     it(LivePlayerAction.start())

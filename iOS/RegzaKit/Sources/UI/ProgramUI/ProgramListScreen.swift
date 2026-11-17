@@ -116,7 +116,7 @@ private struct ProgramRow: View {
 #if DEBUG
 #Preview("1 局の番組表") {
     FakePreview(
-        setUp: { await $0.prepareRoutes() },
+        prepareRoutes: true,
         content: { app in
             if let viewModel = app.programList(channelCode: FakeProgram.channelCode) {
                 NavigationStack { ProgramListScreen(viewModel: viewModel) }
