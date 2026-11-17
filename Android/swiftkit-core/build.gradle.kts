@@ -12,11 +12,11 @@ sourceSets.main {
     resources.srcDir("$swiftJava/resources")
 }
 
-// ソースとリソースは app の buildSwift (mise run build-swift) が SwiftPM で取ってくる
-tasks.named("processResources") { dependsOn(":app:buildSwift") }
+// ソースとリソースは core:bridge の buildSwift (mise run build-swift) が SwiftPM で取ってくる
+tasks.named("processResources") { dependsOn(":core:bridge:buildSwift") }
 
 tasks.withType<JavaCompile>().configureEach {
-    dependsOn(":app:buildSwift")
+    dependsOn(":core:bridge:buildSwift")
     // swift-java の設定と同じく Java 11 で使えるようにする。JDK は決め打ちせず、Gradle を動かしている JDK を使う
     // (コマンドラインでは mise の JDK 21、Android Studio では付いてくる JDK)
     options.release.set(11)

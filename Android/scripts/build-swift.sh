@@ -56,7 +56,8 @@ fi
 
 triple=aarch64-unknown-linux-android28
 sdk=swift-$swift_version-RELEASE_android
-out=app/src/main/jniLibs/arm64-v8a
+# Swift の .so は core:bridge のモジュールに置く (共通のものは main、本番と debug の libRegzaAndroid.so は release と debug)
+out=core/bridge/src/main/jniLibs/arm64-v8a
 # Swift の実行に要る .so は SDK に入っているもの (場所は SwiftPM に聞く)、libc++_shared.so は NDK のもの
 resources=$("$SWIFT_COMMAND" sdk configure --show-configuration "$sdk" "$triple" | sed -n 's/^swiftResourcesPath: //p')
 runtime="$resources/android"
@@ -276,8 +277,8 @@ fi
 # Java から名前で読み込むもの (RegzaAndroid・SwiftJava・swiftCore) から始めて、各 .so が使う (NEEDED) ものをたどる。
 # 本番と debug の .so はどちらも libRegzaAndroid.so の名前で読み込まれるので、たどったあとで release と debug の置き場に分ける
 readelf=$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin/llvm-readelf | head -1)
-release_out=app/src/release/jniLibs/arm64-v8a
-debug_out=app/src/debug/jniLibs/arm64-v8a
+release_out=core/bridge/src/release/jniLibs/arm64-v8a
+debug_out=core/bridge/src/debug/jniLibs/arm64-v8a
 rm -rf "$out" "$release_out" "$debug_out" && mkdir -p "$out" "$release_out" "$debug_out"
 cp "$candidates"/libRegzaAndroid.so "$candidates"/libRegzaAndroidDebug.so "$candidates"/libSwiftJava.so "$candidates"/libswiftCore.so "$out/"
 while :; do

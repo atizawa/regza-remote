@@ -45,9 +45,9 @@ kotlin {
     compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
 }
 
-// 作られるソースは app の buildSwift (mise run build-swift) が作る
-tasks.named("compileJava") { dependsOn(":app:buildSwift") }
-tasks.named("compileKotlin") { dependsOn(":app:buildSwift") }
+// 作られるソースは core:bridge の buildSwift (mise run build-swift) が作る
+tasks.named("compileJava") { dependsOn(":core:bridge:buildSwift") }
+tasks.named("compileKotlin") { dependsOn(":core:bridge:buildSwift") }
 
 // 窓口とつなぎをホスト向けにビルドし、Java が読み込む名前 (RegzaAndroid・SwiftJava) で置く。
 // System.mapLibraryName は macOS なら .dylib、Linux なら .so を返す。
@@ -60,9 +60,9 @@ val hostLibraries = mapOf(
 )
 val buildJvmHost = tasks.register<Exec>("buildJvmHost") {
     description = "窓口とつなぎを、ホストの JVM から読み込む共有ライブラリにする"
-    dependsOn(":app:buildSwift")
+    dependsOn(":core:bridge:buildSwift")
     workingDir = androidDir
-    // Android 向け (app の buildSwift) と同じく、mise で固定した Swift を PATH の並びにかかわらず使う (scripts/swift-toolchain.sh)
+    // Android 向け (core:bridge の buildSwift) と同じく、mise で固定した Swift を PATH の並びにかかわらず使う (scripts/swift-toolchain.sh)
     val mise = rootProject.extra["mise"] as String
     commandLine(mise, "run", "build-jvm-host")
     environment("MISE_EXECUTABLE", mise)

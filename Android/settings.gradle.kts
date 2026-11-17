@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "RegzaRemote"
-include(":app", ":swiftkit-core", ":behavior-tests")
+include(":app", ":core:bridge", ":swiftkit-core", ":behavior-tests")
