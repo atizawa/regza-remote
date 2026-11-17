@@ -52,7 +52,8 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   core/localization/           文言の Gradle モジュール（String Catalog から生成した AppStrings と文字列リソース）
   core/ui/                     機能の画面が共通に使う部品とプレビューの準備の Gradle モジュール（debug だけに偽物での組み立て。Live Updates のスイッチは受け口だけを置き、アプリが実装を渡す）
   core/bridge/                 Swift の窓口とつなぎの Gradle モジュール（Swift の .so・swift-java が作る Java のクラス・画面の送り先と state の Flow・Swift をビルドする buildSwift）。画面は知らない
-  app/                        Kotlin・Compose のアプリ（ui/feature/<機能>/ に機能ごとの画面、ui/app/ に組み立て、liveupdate/ にロック画面と通知の表示）
+  feature/<機能>/              機能ごとの画面の Gradle モジュール（remote・player・guide・program・channels・reservations・settings）。core:ui だけを使い、ほかの機能を読み込まない
+  app/                        Kotlin・Compose のアプリ（ui/app/ に組み立て、liveupdate/ にロック画面と通知の表示）
   mise.toml                   共通設定の Swift ツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
 ```
 
@@ -265,13 +266,13 @@ swift run --package-path ScreenGlue --scratch-path .build/screen-glue -c release
 - swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）。どのモジュールにも共通の設定（Java のパッケージなど）は `RegzaAndroid/swift-java.common.config` に 1 回だけ書き、ビルドのときにモジュールごとの設定と重ねる
 - Kotlin の送り先 `Send`（`send(ChannelListAction.tune(code))` のように、どの Action も `send` で送れる）と、state の `Flow`（`app.channelListStates(route)`）: ビルドのたびに `.build/swift/screen-glue-kotlin/` に作る
 
-Kotlin の画面は、iOS と同じ機能の分け方の package `app/src/main/java/com/example/regzaremote/ui/feature/<機能>/<画面>Screen.kt` に `fun <画面>Screen(` を置き（`ui/feature/channels/ChannelListScreen.kt`）、自分の ViewModel の state を受け取って描き、操作を `send` で送る。ファイルの末尾にはプレビューを置く（iOS の画面も同じく、ファイルの末尾の `#if DEBUG` の中に置く）。タブの最初の画面なら `ui/app/AppRoutes.kt` の `TabRoot`、タブの中で開く画面なら同じファイルの `RouteScreen` に足す。
+Kotlin の画面は、iOS と同じ機能の分け方の Gradle モジュール `Android/feature/<機能>` の package `com.example.regzaremote.ui.feature.<機能>` に `<画面>Screen.kt` として `fun <画面>Screen(` を置き（`feature/channels/src/main/java/com/example/regzaremote/ui/feature/channels/ChannelListScreen.kt`）、自分の ViewModel の state を受け取って描き、操作を `send` で送る。ファイルの末尾にはプレビューを置く（iOS の画面も同じく、ファイルの末尾の `#if DEBUG` の中に置く）。タブの最初の画面なら `ui/app/AppRoutes.kt` の `TabRoot`、タブの中で開く画面なら同じファイルの `RouteScreen` に足す。
 
-iOS の `<機能>Feature` と Android の `ui/feature/<機能>` に画面を置き、いくつもの機能で使う補助 View はそれぞれ `UICommon`・`ui/components` に置く。色・余白などは iOS の `Design`、Android の `design` が担当する。
+iOS の `<機能>Feature` と Android の `feature/<機能>`（package は `ui.feature.<機能>`）に画面を置き、いくつもの機能で使う補助 View はそれぞれ `UICommon`・`ui/components` に置く。色・余白などは iOS の `Design`、Android の `design` が担当する。
 
 Android のルートパッケージには起動用の `MainActivity.kt`・`RegzaApplication.kt` を置く。`appservices/AppFactory.kt` が保存先を Swift の Factory に渡し、組み立てた App を Android の ViewModel に注入する。`appservices/RegzaViewModel.kt` は App の保持と終了時の処理、`appservices/storage` は Android Keystore・SharedPreferences を担当する。
 
-UI は `ui/feature/<機能>`（機能ごとの画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui/app`（組み立て。いちばん外側の画面 `AppRoot`・タブの戻る道と表示先。`MainActivity` もここを通して画面を出す）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは、Swift の窓口とつなぎ（`:core:bridge`）・色と余白（`:core:design`）・文言（`:core:localization`）・共通の部品とプレビューの準備（`:core:ui`）・アプリ（`:app`）に分け、画面の機能はまだ package で区別する（機能の package どうしの import は ktlint で禁止しているので、ビルドの時間が気になってきたら、機能の package をそのまま Gradle モジュールに切り出せる）。
+UI は `ui/feature/<機能>`（機能ごとの画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui/app`（組み立て。いちばん外側の画面 `AppRoot`・タブの戻る道と表示先。`MainActivity` もここを通して画面を出す）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは、Swift の窓口とつなぎ（`:core:bridge`）・色と余白（`:core:design`）・文言（`:core:localization`）・共通の部品とプレビューの準備（`:core:ui`）・機能ごとの画面（`:feature:<機能>`）・アプリ（`:app`。組み立て・起動・ウィジェット・Live Updates など）に分ける。機能を足すときは `Android/feature/<機能>` を作り、`settings.gradle.kts` と `app/build.gradle.kts` の一覧に足して、組み立て（`ui/app`）からつなぐ。機能のモジュールは `:core:ui` だけに依存するので、ほかの機能を読み込めない（ktlint の規則でも禁止している）。
 
 Swift の接続コードは、生成する Kotlin の `com.example.regzaremote.bridge`（`Send`・`AppSend`・state の Flow）と、Java の `com.example.regzaremote.core` に分ける。生成結果は `.build/` に置く。変更するときは `ScreenGlue` や swift-java の設定を更新し、生成結果を直接編集しない。
 

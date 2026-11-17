@@ -93,6 +93,10 @@ dependencies {
     implementation(project(":core:localization"))
     // 機能の画面が共通に使う部品と、画面のプレビューの準備
     implementation(project(":core:ui"))
+    // 機能の画面。組み立て (ui.app) がつなぐ
+    listOf("remote", "player", "guide", "program", "channels", "reservations", "settings").forEach {
+        implementation(project(":feature:$it"))
+    }
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -105,10 +109,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    // ライブ視聴: EPGStation の HLS の配信を再生する
-    implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.exoplayer.hls)
-    implementation(libs.androidx.media3.ui)
     // タブの中の画面の移り変わり: 共有の AppViewModel が持つ path を back stack として渡す
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)

@@ -4,14 +4,15 @@ import Testing
 /// 画面の名前が、iOS・Android・共有の ViewModel でそろっていることを確かめる。
 /// 共有の ViewModel のフォルダ (RegzaPresentation/ViewModels/<名前>/) ごとに、iOS は `<名前>Screen.swift` に `struct <名前>Screen`、
 /// Android は `<名前>Screen.kt` に `fun <名前>Screen(` を置く (1 画面 1 ファイル。iOS は機能のモジュール (Sources/Features) か組み立て (Sources/UI)、
-/// Android は ui/ の下のどこか)。画面でないものには Screen を付けない
+/// Android は機能のモジュール (feature/<機能>) か組み立て (app) の ui/ の下)。画面でないものには Screen を付けない
 @Suite struct ScreenNamingTests {
     static let repository = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().appendingPathComponent("../../../..").standardized
     static let viewModels = repository.appendingPathComponent("Packages/RegzaCore/Sources/RegzaPresentation/ViewModels")
     /// iOS の画面を置くモジュール (機能のモジュールと組み立て)
     static let iOSSources = repository.appendingPathComponent("iOS/RegzaKit/Sources")
-    static let androidUI = repository.appendingPathComponent("Android/app/src/main/java/com/example/regzaremote/ui")
+    /// Android の画面を置くモジュール (機能のモジュール feature/<機能> と、組み立ての app)
+    static let android = repository.appendingPathComponent("Android")
 
     /// 名前が Screen で終わるファイル (拡張子なし) と、その場所 (同じ名前が 2 つあれば、どちらも返す)
     static func screenFiles(under directory: URL, extension: String, in modules: (String) -> Bool = { _ in true }) throws
@@ -32,7 +33,16 @@ import Testing
     }
 
     static func androidScreenFiles() throws -> [String: [URL]] {
-        try screenFiles(under: androidUI, extension: "kt")
+        let modules =
+            ["app"]
+            + (try FileManager.default.contentsOfDirectory(atPath: android.appendingPathComponent("feature").path)).map { "feature/\($0)" }
+        var files: [String: [URL]] = [:]
+        for module in modules {
+            let ui = android.appendingPathComponent("\(module)/src/main/java/com/example/regzaremote/ui")
+            guard FileManager.default.fileExists(atPath: ui.path) else { continue }
+            files.merge(try screenFiles(under: ui, extension: "kt")) { $0 + $1 }
+        }
+        return files
     }
 
     /// 共有の ViewModel の名前 (ViewModels/ の下のフォルダ)
