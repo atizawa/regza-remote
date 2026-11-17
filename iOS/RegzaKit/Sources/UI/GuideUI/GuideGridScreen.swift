@@ -27,22 +27,19 @@ package struct GuideGridScreen: View {
     private var metrics: GuideMetrics { GuideMetrics(dynamicTypeSize: min(dynamicTypeSize, Self.maximumDynamicTypeSize)) }
 
     package var body: some View {
-        NavigationStack(path: navigator.path(of: .guide)) {
-            content
-                .navigationTitle(AppStrings.tabGuide)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
-                    if viewModel.state.canSearch {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button(AppStrings.searchTitle, systemImage: "magnifyingglass") { navigator.push(.search) }
-                                .accessibilityIdentifier("guide.search")
-                        }
+        content
+            .navigationTitle(AppStrings.tabGuide)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // 番組表を広く使うため、検索欄は置かずにボタンから別の画面で開く
+                if viewModel.state.canSearch {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(AppStrings.searchTitle, systemImage: "magnifyingglass") { navigator.push(.search) }
+                            .accessibilityIdentifier("guide.search")
                     }
                 }
-                .appRoutes()
-                .task { await load() }
-        }
+            }
+            .task { await load() }
     }
 
     @ViewBuilder
@@ -416,7 +413,7 @@ private struct DayPicker: View {
     FakePreview(
         setUp: { $0.guideGridViewModel.send(.load) },
         content: { app in
-            GuideGridScreen(viewModel: app.guideGridViewModel)
+            NavigationStack { GuideGridScreen(viewModel: app.guideGridViewModel) }
         })
 }
 #endif

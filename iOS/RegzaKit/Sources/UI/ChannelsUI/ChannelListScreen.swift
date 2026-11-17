@@ -21,25 +21,22 @@ package struct ChannelListScreen: View {
 
     package var body: some View {
         let state = viewModel.state
-        NavigationStack(path: navigator.path(of: .channels)) {
-            content(state)
-                .navigationTitle(AppStrings.tabChannels)
-                // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            viewModel.send(.reload)
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .accessibilityLabel(AppStrings.commonReload)
-                        .disabled(state.isLoading)
+        content(state)
+            .navigationTitle(AppStrings.tabChannels)
+            // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        viewModel.send(.reload)
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
                     }
+                    .accessibilityLabel(AppStrings.commonReload)
+                    .disabled(state.isLoading)
                 }
-                .appRoutes()
-                .task { viewModel.send(.appear) }
-        }
+            }
+            .task { viewModel.send(.appear) }
     }
 
     @ViewBuilder
@@ -161,13 +158,13 @@ package struct ChannelListScreen: View {
 #if DEBUG
 #Preview("チャンネル一覧") {
     FakePreview { app in
-        ChannelListScreen(viewModel: app.channelListViewModel)
+        NavigationStack { ChannelListScreen(viewModel: app.channelListViewModel) }
     }
 }
 
 #Preview("チャンネル一覧 (登録がない)") {
     FakePreview(.emptyChannels) { app in
-        ChannelListScreen(viewModel: app.channelListViewModel)
+        NavigationStack { ChannelListScreen(viewModel: app.channelListViewModel) }
     }
 }
 #endif

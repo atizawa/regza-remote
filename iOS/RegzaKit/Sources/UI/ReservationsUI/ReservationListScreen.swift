@@ -19,30 +19,28 @@ package struct ReservationListScreen: View {
     }
 
     package var body: some View {
-        NavigationStack {
-            content
-                .navigationTitle(AppStrings.tabReservations)
-                // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
-                .navigationBarTitleDisplayMode(.inline)
-                .task { viewModel.send(.load) }
-                .refreshable {
-                    await viewModel.sendAndWait(.load)
+        content
+            .navigationTitle(AppStrings.tabReservations)
+            // ほかのタブ (リモコン・番組表) と同じく小さい見出しにそろえる
+            .navigationBarTitleDisplayMode(.inline)
+            .task { viewModel.send(.load) }
+            .refreshable {
+                await viewModel.sendAndWait(.load)
+            }
+            .confirmationDialog(
+                canceling.map { AppStrings.reservationCancelConfirmation($0.title) } ?? "",
+                isPresented: Binding(get: { canceling != nil }, set: { if !$0 { canceling = nil } }),
+                titleVisibility: .visible,
+                presenting: canceling
+            ) { reservation in
+                Button(reservation.isSeries ? AppStrings.reservationCancelSeries : AppStrings.reservationCancel, role: .destructive) {
+                    viewModel.send(.cancel(reservation.id))
                 }
-                .confirmationDialog(
-                    canceling.map { AppStrings.reservationCancelConfirmation($0.title) } ?? "",
-                    isPresented: Binding(get: { canceling != nil }, set: { if !$0 { canceling = nil } }),
-                    titleVisibility: .visible,
-                    presenting: canceling
-                ) { reservation in
-                    Button(reservation.isSeries ? AppStrings.reservationCancelSeries : AppStrings.reservationCancel, role: .destructive) {
-                        viewModel.send(.cancel(reservation.id))
-                    }
-                } message: { reservation in
-                    if reservation.isSeries {
-                        Text(AppStrings.reservationCancelSeriesHelp)
-                    }
+            } message: { reservation in
+                if reservation.isSeries {
+                    Text(AppStrings.reservationCancelSeriesHelp)
                 }
-        }
+            }
     }
 
     @ViewBuilder
@@ -124,7 +122,7 @@ package struct ReservationListScreen: View {
 #if DEBUG
 #Preview("録画予約") {
     FakePreview { app in
-        ReservationListScreen(viewModel: app.reservationListViewModel)
+        NavigationStack { ReservationListScreen(viewModel: app.reservationListViewModel) }
     }
 }
 #endif

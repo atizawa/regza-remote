@@ -13,16 +13,7 @@ package struct NowPlayingAccessory: View {
     @Environment(\.appNavigator) private var navigator
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
 
-    private let nowPlayingViewModel: NowPlayingViewModel
-    private let livePlayer: @MainActor () -> LivePlayerViewModel?
-
-    /// - Parameters:
-    ///   - nowPlaying: 押したときに出す詳細の ViewModel
-    ///   - livePlayer: アプリで見る画面の ViewModel (見始めてから作られるので、出すときに受け取る)
-    package init(nowPlaying: NowPlayingViewModel, livePlayer: @escaping @MainActor () -> LivePlayerViewModel?) {
-        nowPlayingViewModel = nowPlaying
-        self.livePlayer = livePlayer
-    }
+    package init() {}
 
     package var body: some View {
         HStack(spacing: 12) {
@@ -55,16 +46,10 @@ package struct NowPlayingAccessory: View {
         }
         .padding(.horizontal, DesignDimensions.spacingOuter)
         .contentShape(Rectangle())
+        // 詳細の画面 (NowPlayingScreen) は、組み立てがシートで出す
         .onTapGesture { navigator.showNowPlaying() }
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(AppStrings.programOpenDetails)
-        .sheet(
-            isPresented: Binding(get: { navigator.isShowingNowPlaying }, set: { if !$0 { navigator.closeNowPlaying() } })
-        ) {
-            NowPlayingScreen(viewModel: nowPlayingViewModel, livePlayer: livePlayer)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
     }
 
     // MARK: - 表示する内容

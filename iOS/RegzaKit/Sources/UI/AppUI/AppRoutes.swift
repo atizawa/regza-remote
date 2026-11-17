@@ -5,7 +5,7 @@ import ProgramUI
 import RegzaPresentation
 import SwiftUI
 
-/// タブの中で開く画面。どの画面を開くかは AppViewModel の戻る道が決める (機能の画面には、環境値 routeDestination で渡す)
+/// タブの中で開く画面。どの画面を開くかは AppViewModel の戻る道が決める (組み立てのタブの NavigationStack が出す)
 struct RouteView: View {
     @Environment(AppViewModel.self) private var appViewModel
     let route: AppViewModel.Route

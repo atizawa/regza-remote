@@ -364,13 +364,9 @@ extension AppViewModel: IntrospectableActions {
 // MARK: - 機能の画面からの移り変わり
 
 extension AppViewModel: AppNavigator {
-    public func routes(of tab: AppTab) -> [AppRoute] { state.path(of: tab) }
-    public func setRoutes(_ routes: [AppRoute], of tab: AppTab) { send(.setPath(tab, routes)) }
     public func push(_ route: AppRoute) { send(.push(route)) }
     public func play(channelCode: String) { send(.play(channelCode: channelCode)) }
-    public var isPlaying: Bool { state.playingChannelCode != nil }
     public func closePlayer() { send(.closePlayer) }
-    public var isShowingNowPlaying: Bool { state.isShowingNowPlaying }
     public func showNowPlaying() { send(.showNowPlaying) }
     public func closeNowPlaying() { send(.closeNowPlaying) }
     public func showSettings() { send(.showSettings) }

@@ -50,15 +50,15 @@ public struct AppScreen: View {
                     .tabItem { Label(AppStrings.tabRemote, systemImage: "appletvremote.gen4.fill").accessibilityIdentifier("tab.remote") }
                     .tag(AppViewModel.Tab.remote)
 
-                    GuideGridScreen(viewModel: appViewModel.guideGridViewModel)
+                    tabStack(.guide) { GuideGridScreen(viewModel: appViewModel.guideGridViewModel) }
                         .tabItem { Label(AppStrings.tabGuide, systemImage: "calendar").accessibilityIdentifier("tab.guide") }
                         .tag(AppViewModel.Tab.guide)
 
-                    ChannelListScreen(viewModel: appViewModel.channelListViewModel)
+                    tabStack(.channels) { ChannelListScreen(viewModel: appViewModel.channelListViewModel) }
                         .tabItem { Label(AppStrings.tabChannels, systemImage: "list.bullet").accessibilityIdentifier("tab.channels") }
                         .tag(AppViewModel.Tab.channels)
 
-                    ReservationListScreen(viewModel: appViewModel.reservationListViewModel)
+                    tabStack(.reservations) { ReservationListScreen(viewModel: appViewModel.reservationListViewModel) }
                         .tabItem {
                             Label(AppStrings.tabReservations, systemImage: "record.circle").accessibilityIdentifier("tab.reservations")
                         }
@@ -66,7 +66,18 @@ public struct AppScreen: View {
                 }
                 // どのタブでも、テレビで映っているものをミニプレーヤーで出す
                 .tabViewBottomAccessory {
-                    NowPlayingAccessory(nowPlaying: appViewModel.nowPlayingViewModel, livePlayer: { appViewModel.livePlayerViewModel })
+                    NowPlayingAccessory()
+                }
+                // ミニプレーヤーを押したときの詳細
+                .sheet(
+                    isPresented: Binding(
+                        get: { appViewModel.state.isShowingNowPlaying }, set: { if !$0 { appViewModel.send(.closeNowPlaying) } })
+                ) {
+                    NowPlayingScreen(viewModel: appViewModel.nowPlayingViewModel)
+                        .presentationDetents([.medium, .large])
+                        .presentationDragIndicator(.visible)
+                        // このシートを開いている間は、アプリで見る画面をシートの上から出す
+                        .fullScreenCover(isPresented: playerBinding) { livePlayer }
                 }
                 // 番組表や一覧を広く見せるため、下へスクロールしたらタブバーを小さくする
                 .tabBarMinimizeBehavior(.onScrollDown)
@@ -95,23 +106,15 @@ public struct AppScreen: View {
                 get: { appViewModel.state.playingChannelCode != nil && !appViewModel.state.isShowingNowPlaying },
                 set: { if !$0 { appViewModel.send(.closePlayer) } }
             )
-        ) {
-            if let livePlayerViewModel = appViewModel.livePlayerViewModel {
-                LivePlayerScreen(viewModel: livePlayerViewModel)
-            }
-        }
+        ) { livePlayer }
         // 開発用: 起動引数で指定したライブ視聴を、すぐ開く
         .fullScreenCover(isPresented: .constant(debugPlayerViewModel != nil)) {
             if let debugPlayerViewModel {
                 LivePlayerScreen(viewModel: debugPlayerViewModel)
             }
         }
-        // タブの中で開く画面は、機能の画面のモジュールどうしが知らなくて済むよう、組み立てが環境値で渡す
         .environment(appViewModel)
-        .appEnvironment(
-            navigator: appViewModel, remoteViewModel: appViewModel.remoteViewModel, liveActivity: liveActivity,
-            routeDestination: RouteDestination { AnyView(RouteView(route: $0)) }
-        )
+        .appEnvironment(navigator: appViewModel, remoteViewModel: appViewModel.remoteViewModel, liveActivity: liveActivity)
         .sensoryFeedback(.impact(weight: .light), trigger: remoteViewModel.state.tapCount)
         .task {
             // 前回、強制終了などで止められずに残ったライブ視聴の配信を止める
@@ -125,6 +128,29 @@ public struct AppScreen: View {
                 // 閉じている間も Live Activity を更新できるよう、iOS に起こしてもらう時刻を予約する
                 if phase == .background { liveActivity.scheduleBackgroundRefresh() }
             }
+        }
+    }
+
+    /// タブの画面と、タブの中で開く画面 (戻る道)。画面の移り変わりは組み立てが持ち、機能の画面は窓口 (AppNavigator) に頼むだけにする。
+    /// 開いた先の画面は、機能の画面のモジュールどうしが知らなくて済むよう、組み立てが決める (RouteView)
+    private func tabStack(_ tab: AppTab, @ViewBuilder root: () -> some View) -> some View {
+        NavigationStack(
+            // 戻るボタンやスワイプで戻ったときも AppViewModel に伝える
+            path: Binding(get: { appViewModel.state.path(of: tab) }, set: { appViewModel.send(.setPath(tab, $0)) })
+        ) {
+            root().navigationDestination(for: AppRoute.self) { RouteView(route: $0) }
+        }
+    }
+
+    /// アプリで見ている
+    private var playerBinding: Binding<Bool> {
+        Binding(get: { appViewModel.state.playingChannelCode != nil }, set: { if !$0 { appViewModel.send(.closePlayer) } })
+    }
+
+    /// アプリで見る画面 (ライブ視聴)
+    @ViewBuilder private var livePlayer: some View {
+        if let livePlayerViewModel = appViewModel.livePlayerViewModel {
+            LivePlayerScreen(viewModel: livePlayerViewModel)
         }
     }
 

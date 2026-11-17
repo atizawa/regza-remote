@@ -9,15 +9,17 @@ import UICommon
 import AppPresentation
 #endif
 
-/// ミニプレーヤーを押したときの詳細。録画ならシークもできる
-struct NowPlayingScreen: View {
+/// ミニプレーヤーを押したときの詳細。録画ならシークもできる (組み立てがシートで出す)
+package struct NowPlayingScreen: View {
     let viewModel: NowPlayingViewModel
-    /// アプリで見る画面の ViewModel (見始めてから作られるので、出すときに組み立てから受け取る)
-    let livePlayer: @MainActor () -> LivePlayerViewModel?
     @Environment(\.appNavigator) private var navigator
     @Environment(\.dismiss) private var dismiss
 
-    var body: some View {
+    package init(viewModel: NowPlayingViewModel) {
+        self.viewModel = viewModel
+    }
+
+    package var body: some View {
         let state = viewModel.state
         NavigationStack {
             ScrollView {
@@ -55,17 +57,6 @@ struct NowPlayingScreen: View {
                 }
             }
             .onAppear { viewModel.send(.appear) }
-            // このシートを開いている間は、アプリで見る画面をシートの上から出す
-            .fullScreenCover(
-                isPresented: Binding(
-                    get: { navigator.isPlaying },
-                    set: { if !$0 { navigator.closePlayer() } }
-                )
-            ) {
-                if let livePlayerViewModel = livePlayer() {
-                    LivePlayerScreen(viewModel: livePlayerViewModel)
-                }
-            }
         }
     }
 
@@ -88,7 +79,7 @@ struct NowPlayingScreen: View {
             app.send(.showNowPlaying)
         },
         content: { app in
-            NowPlayingScreen(viewModel: app.nowPlayingViewModel, livePlayer: { app.livePlayerViewModel })
+            NowPlayingScreen(viewModel: app.nowPlayingViewModel)
         })
 }
 #endif
