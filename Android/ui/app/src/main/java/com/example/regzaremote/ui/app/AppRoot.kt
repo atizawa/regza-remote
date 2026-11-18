@@ -13,7 +13,7 @@ import com.example.regzaremote.core.AppState
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.AppearanceTheme
-import com.example.regzaremote.ui.components.LiveUpdates
+import com.example.regzaremote.liveupdate.LiveUpdates
 import com.example.regzaremote.ui.components.LocalLiveUpdates
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.player.LivePlayerScreen

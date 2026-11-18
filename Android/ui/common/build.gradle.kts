@@ -29,6 +29,8 @@ dependencies {
     // 共通の型と送り先 (共通の presentation)・色と余白・文言は、画面を作るときにいつも一緒に使うので、使う側にも見せる。
     // Swift の窓口 (core:bridge) はプレビューの準備だけが使い、機能の画面には見せない (機能の画面は自分の機能の presentation だけを使う)
     api(project(":presentation:core"))
+    // ロック画面と通知の表示 (Live Updates) のオン・オフの型。設定の画面のスイッチが使う (iOS の UICommon が LiveActivity を読み込むのと同じ向き)
+    api(project(":platform:liveupdate"))
     implementation(project(":core:bridge"))
     api(project(":core:design"))
     api(project(":core:localization"))

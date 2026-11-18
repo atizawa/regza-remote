@@ -8,12 +8,11 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
-import com.example.regzaremote.MainActivity
-import com.example.regzaremote.R
 import com.example.regzaremote.core.Date
 import com.example.regzaremote.core.LiveHeadline
 import com.example.regzaremote.core.LiveStatus
 import com.example.regzaremote.core.RegzaKey
+import com.example.regzaremote.design.R as DesignR
 import com.example.regzaremote.localization.R as StringsR
 
 /**
@@ -136,19 +135,21 @@ object LiveUpdateNotification {
     }
 
     private fun icon(key: RegzaKey): Int = when (key.discriminator) {
-        RegzaKey.Discriminator.POWER -> R.drawable.widget_key_power
-        RegzaKey.Discriminator.MUTE -> R.drawable.widget_key_mute
-        RegzaKey.Discriminator.PLAY -> R.drawable.widget_key_play
-        RegzaKey.Discriminator.PAUSE -> R.drawable.widget_key_pause
-        RegzaKey.Discriminator.SKIPBACKWARD -> R.drawable.widget_key_replay
-        RegzaKey.Discriminator.SKIPFORWARD -> R.drawable.widget_key_forward
+        RegzaKey.Discriminator.POWER -> DesignR.drawable.widget_key_power
+        RegzaKey.Discriminator.MUTE -> DesignR.drawable.widget_key_mute
+        RegzaKey.Discriminator.PLAY -> DesignR.drawable.widget_key_play
+        RegzaKey.Discriminator.PAUSE -> DesignR.drawable.widget_key_pause
+        RegzaKey.Discriminator.SKIPBACKWARD -> DesignR.drawable.widget_key_replay
+        RegzaKey.Discriminator.SKIPFORWARD -> DesignR.drawable.widget_key_forward
         else -> R.drawable.ic_live_update
     }
 
+    /** アプリを開く。起動の画面はアプリ本体にあるので、OS に登録した起動の入口 (ランチャーから開くのと同じもの) を使う */
     private fun openApp(context: Context): PendingIntent = PendingIntent.getActivity(
         context,
         0,
-        Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        checkNotNull(context.packageManager.getLaunchIntentForPackage(context.packageName))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 

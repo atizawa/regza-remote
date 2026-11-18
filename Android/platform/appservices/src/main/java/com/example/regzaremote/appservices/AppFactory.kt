@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.regzaremote.BuildConfig
 import com.example.regzaremote.appservices.network.OkHttpTransport
 import com.example.regzaremote.appservices.storage.AndroidStorage
 import com.example.regzaremote.core.RegzaAndroidApp
@@ -17,8 +16,8 @@ import java.util.Optional
 object AppFactory {
     private val httpClient by lazy { OkHttpTransport() }
 
-    fun makeRemoteControlService(context: Context): RemoteControlService =
-        RemoteControlService(context.applicationContext, RegzaAndroidAppFactory.`init`(httpClient))
+    /** アプリと同じ通信を持つ Swift の Factory (画面のない入口がキーを送るときにも使う) */
+    fun makeAppFactory(): RegzaAndroidAppFactory = RegzaAndroidAppFactory.`init`(httpClient)
 
     fun makeApp(context: Context): RegzaAndroidApp =
         RegzaAndroidAppFactory.`init`(httpClient).makeApp(AndroidStorage(context.applicationContext))

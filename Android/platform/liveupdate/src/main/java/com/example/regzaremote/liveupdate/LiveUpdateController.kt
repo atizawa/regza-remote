@@ -3,13 +3,11 @@ package com.example.regzaremote.liveupdate
 import android.app.AlarmManager
 import android.app.NotificationManager
 import android.content.Context
-import com.example.regzaremote.appservices.AppContainer
 import com.example.regzaremote.bridge.remoteStates
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.core.RemoteAction
 import com.example.regzaremote.core.RemoteState
-import com.example.regzaremote.ui.components.LiveUpdates
 import java.util.Optional
 import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +36,9 @@ object LiveUpdateController : LiveUpdates {
 
     private var observing: Job? = null
 
+    /** プロセスに 1 つの Swift の窓口を返すもの (アプリの起動時に install で渡す) */
+    private var appProvider: ((Context) -> RegzaAndroidApp)? = null
+
     /** 起こしてもらう時刻を予約したときの番組の終了時刻 (ミリ秒。放送でなければ null)。変わったら予約し直す */
     private var scheduledProgramEnd: Long? = null
     private var hasSchedule = false
@@ -50,6 +51,18 @@ object LiveUpdateController : LiveUpdates {
 
     /** 放送でないときに取り直す間隔 */
     private const val IDLE_REFRESH_MILLIS = 15 * 60_000L
+
+    /**
+     * プロセスに 1 つの Swift の窓口の返し方を渡す。アプリの起動時 (Application.onCreate) に呼ぶ。
+     * 通知のボタンや閉じている間の更新でプロセスが起こされたときも、窓口を作ってから使う
+     * (Live Updates はアプリの組み立てを読み込まない。iOS で AppContainer が LiveActivityModel に ViewModel を渡すのと同じ向き)
+     */
+    fun install(app: (Context) -> RegzaAndroidApp) {
+        appProvider = app
+    }
+
+    private fun app(context: Context): RegzaAndroidApp =
+        checkNotNull(appProvider) { "LiveUpdateController.install をアプリの起動時に呼んでください" }(context)
 
     /** プロセスを起こしたときに呼ぶ (AppContainer)。通知が残っていれば、見張り直す */
     fun resume(context: Context, app: RegzaAndroidApp) {
@@ -67,7 +80,7 @@ object LiveUpdateController : LiveUpdates {
         val manager = context.getSystemService(NotificationManager::class.java)
         if (!manager.areNotificationsEnabled()) return
         LiveUpdateNotification.createChannel(context)
-        val app = AppContainer.app(context)
+        val app = app(context)
         // つながっていないのに「接続済み」で始めないよう、先に取り直す
         app.sendRemoteActionAndWait(RemoteAction.refresh()).await()
         on.value = true
@@ -77,7 +90,7 @@ object LiveUpdateController : LiveUpdates {
 
     /** 通知のボタン。送り終えて表示に反映するまで待つ */
     suspend fun press(context: Context, key: RegzaKey) {
-        val app = AppContainer.app(context)
+        val app = app(context)
         app.sendRemoteActionAndWait(RemoteAction.press(key)).await()
         if (on.value) currentState(app)?.let { show(context, it) }
     }
@@ -85,7 +98,7 @@ object LiveUpdateController : LiveUpdates {
     /** 閉じている間に起こされたとき。取り直して通知を更新し、次を予約する */
     suspend fun refreshInBackground(context: Context) {
         hasSchedule = false
-        val app = AppContainer.app(context)
+        val app = app(context)
         if (!on.value) return
         app.sendRemoteActionAndWait(RemoteAction.refresh()).await()
         currentState(app)?.let { show(context, it) }

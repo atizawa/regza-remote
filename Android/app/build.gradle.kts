@@ -82,9 +82,12 @@ tasks.matching { it.name == "assembleRelease" }.configureEach { finalizedBy(chec
 // ホスト向けライブラリは mise run prepare-android-preview で別途作る。APK のビルドには不要。
 
 dependencies {
-    implementation(libs.androidx.glance.appwidget)
-    implementation(libs.okhttp)
+    // OS の機能とつなぐ部分 (iOS の AppServices・LiveActivity・SystemActions・Widgets)。
+    // アプリ本体は起動 (MainActivity・RegzaApplication) だけを持ち、これらをまとめて APK に入れる
+    rootProject.subprojects.filter { it.path.startsWith(":platform:") }.forEach { implementation(project(it.path)) }
+    androidTestImplementation(libs.okhttp)
     androidTestImplementation(libs.okhttp.mockwebserver)
+    androidTestImplementation(libs.androidx.glance.appwidget)
     // Swift の窓口とつなぎ (Swift の .so・swift-java が作る Java のクラス・画面の送り先と state の Flow)
     implementation(project(":core:bridge"))
     // 色・余白・テーマ

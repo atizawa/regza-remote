@@ -11,7 +11,7 @@ iOS 26 以上が対象。iOS・Androidとも設定の「外観」から「シス
 
 AndroidにもiOSと同じ中・大のリモコンウィジェットがある。先にアプリでテレビを登録し、Android 17以降ではローカルネットワークへのアクセスを許可してから、ホーム画面のウィジェット一覧で「リモコン（中）」または「リモコン（大）」を追加する。中は電源・入力切替・消音・チャンネル・音量の7ボタン、大は放送切替・数字・黒い音量／チャンネル操作帯・再生キーを備える。サイズ変更でも選んだ種類とボタンの並びは変わらず、背景は配置領域全体に広げ、ボタンは縦横比を保って中央に配置する。ボタン以外の余白を押すとアプリを開き、ボタンはアプリ画面を開かずに送信する。未設定・認証失敗・通信失敗はメッセージで知らせる。
 
-ウィジェットはJetpack Glanceで描画し、番組取得や定期通信は行わない。`widgets/`のアクションから`AppFactory`で作る`RemoteControlService`を呼び、保存済みの設定と既存のSwift UseCase・Repository・Digest認証・OkHttpでキーだけを送る。画面用の`RegzaAndroidApp`を作らないため、stateの購読やライブ視聴の配信の後片づけは開始しない。配色は共通トークンのリモコン用リソースを使う。
+ウィジェットはJetpack Glanceで描画し、番組取得や定期通信は行わない。ウィジェット（`:platform:widgets`）のボタンは、画面のない入口（`:platform:systemactions`）の`SendRemoteKeyAction`から`RemoteControlService`を呼び、保存済みの設定と既存のSwift UseCase・Repository・Digest認証・OkHttpでキーだけを送る。画面用の`RegzaAndroidApp`を作らないため、stateの購読やライブ視聴の配信の後片づけは開始しない。配色は共通トークンのリモコン用リソースを使う。
 
 Androidでも、設定の「表示」または再生中の画面の「ロック画面と通知に表示」をオンにすると、iOSのLive Activityと同じ内容（番組名・チャンネル・進み具合・リモコンのボタン）を常駐の通知に出す。Android 16以降はLive Updatesとしてステータスバーのチップ（短い局名、録画中は「録画」）とロック画面の上にも出す。通知のボタンは3つまでなので、放送中はCH−・CH＋・消音を出す（録画は再生操作、待機中は電源）。残り時間（放送）と経過時間（録画）はシステムが進める時計で出し、進捗のバーはアプリが通知を更新したときに進む。通知をスワイプで消すとオフになる。オンにするときに通知の権限を求め、通知やライブアップデートがオフにされていれば設定を開く案内を出す。
 
@@ -60,7 +60,11 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   build-logic/                 Android のモジュールが共通に使うビルドの決まり（convention plugin）
   ui/<機能>/                   機能ごとの画面の Gradle モジュール（remote・player・guide・program・channels・reservations・settings）。ui:common と同じ名前の presentation（remote は共通の presentation:core）だけを使い、ほかの機能を読み込まない
   ui/app/                      画面の組み立ての Gradle モジュール（iOS の AppUI に対応。いちばん外側の画面・タブ・タブの中の画面の移り変わり）。機能の画面と Swift の窓口に依存し、アプリ本体は読み込まない
-  app/                        アプリ本体（起動・appservices/ に組み立てと保存先・widgets/ にウィジェット・liveupdate/ にロック画面と通知の表示）。画面は :ui:app だけを読み込む
+  platform/appservices/        アプリの組み立て（iOS の AppServices に対応。プロセスに 1 つの Swift の窓口・画面の ViewModel の入れ物・保存先・通信）。画面と画面のない入口は読み込まない
+  platform/liveupdate/         ロック画面と通知の表示（Live Updates。iOS の LiveActivity に対応）。Swift の窓口は起動時に渡してもらい、アプリの組み立ては読み込まない
+  platform/systemactions/      画面のない入口（ウィジェットのボタン）からキーを送る（iOS の SystemActions に対応）
+  platform/widgets/            ホーム画面のウィジェット（iOS の Widgets に対応）。ボタンの操作は systemactions に任せる
+  app/                        アプリ本体（起動の MainActivity・RegzaApplication だけ）。画面は :ui:app だけを読み込み、platform/ の下をまとめて APK に入れる
   mise.toml                   共通設定の Swift ツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
 ```
 
@@ -259,7 +263,7 @@ ChannelsPresentation/ChannelList/
 
 機能を足すときは、`Sources/UI/<機能>UI/` を作り、`Package.swift` の `features` に足して、`AppUI` の組み立てから使う（`LayerTests` はフォルダから機能を読み、`Package.swift` と一致することを確かめる）。機能の画面はそれぞれライブラリのプロダクトにしてあり、Xcode が機能ごとのスキーム（`GuideUI` など）を作る。
 
-モジュールの名前は「機能名＋層」にそろえる。共有の Swift のロジックは `<機能>Presentation`、iOS の画面は `<機能>UI`、Android の画面は `:ui:<機能>`。組み立ては `AppUI`（iOS）・`:ui:app`（Android）、アプリ本体は `RegzaRemote` のターゲット（iOS）・`:app`（Android）、共通の部品は `UICommon`（iOS）・`:ui:common`（Android）。
+モジュールの名前は「機能名＋層」にそろえる。共有の Swift のロジックは `<機能>Presentation`、iOS の画面は `<機能>UI`、Android の画面は `:ui:<機能>`。組み立ては `AppUI`（iOS）・`:ui:app`（Android）、OS の機能とつなぐ部分は `AppServices`・`LiveActivity`・`SystemActions`・`Widgets`（iOS）・`:platform:appservices`・`:platform:liveupdate`・`:platform:systemactions`・`:platform:widgets`（Android）、アプリ本体は `RegzaRemote` のターゲット（iOS）・`:app`（Android）、共通の部品は `UICommon`（iOS）・`:ui:common`（Android）。
 
 画面の名前は、iOS も Android も共有の ViewModel のフォルダの名前に `Screen` を付けたものにそろえ、1 画面 1 ファイルにする。`Screen` は画面全体にだけ付け、部品（`KeyButton`・`NowPlayingCard` など）には付けない。そろっていることは `RegzaKitTests` の `ScreenNamingTests` が確かめる。
 
@@ -285,9 +289,9 @@ Kotlin の画面は、iOS と同じ機能の分け方の Gradle モジュール 
 
 iOS の `<機能>UI` と Android の `ui/<機能>`（package は `ui.<機能>`）に画面を置き、いくつもの機能で使う補助 View はそれぞれ `UICommon`・`ui/components` に置く。色・余白などは iOS の `Design`、Android の `design` が担当する。
 
-Android のルートパッケージには起動用の `MainActivity.kt`・`RegzaApplication.kt` を置く。`appservices/AppFactory.kt` が保存先を Swift の Factory に渡し、組み立てた App を Android の ViewModel に注入する。`appservices/RegzaViewModel.kt` は App の保持と終了時の処理、`appservices/storage` は Android Keystore・SharedPreferences を担当する。
+Android のアプリ本体（`:app`）には起動用の `MainActivity.kt`・`RegzaApplication.kt` だけを置く。`RegzaApplication` は起動時に、共有の Swift の文言を入れ、Live Updates に Swift の窓口の返し方を渡す（`LiveUpdateController.install`）。アプリの組み立て（`:platform:appservices`）の `appservices/AppFactory.kt` が保存先を Swift の Factory に渡し、組み立てた App を Android の ViewModel に注入する。`appservices/RegzaViewModel.kt` は App の保持と終了時の処理、`appservices/storage` は Android Keystore・SharedPreferences を担当する。
 
-UI は `ui.<機能>`（機能ごとの画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui.app`（組み立て。Gradle の `:ui:app`。いちばん外側の画面 `AppRoot`・タブの戻る道と表示先。`MainActivity` もここを通して画面を出し、Live Updates の実装などアプリ本体にあるものを渡す）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは、Swift の窓口とつなぎ（`:core:bridge`）・色と余白（`:core:design`）・文言（`:core:localization`）・共通の部品とプレビューの準備（`:ui:common`）・機能ごとの画面（`:ui:<機能>`）・画面の組み立て（`:ui:app`）・アプリ本体（`:app`。起動・ウィジェット・Live Updates など）に分ける。`:app` は画面を `:ui:app` からだけ読み込み、`:ui:app` は `:app` を読み込まない（iOS のアプリが `AppUI` だけを読み込み、`AppUI` がアプリのターゲットを知らないのと同じ）。画面の状態と操作の型は、共有の Swift のプレゼンテーションのモジュールと 1 対 1 の `:presentation:<名前>`（`core`・機能ごと・`app`）に分ける。機能を足すときは、共有の Swift に `<機能>Presentation` を足したうえで、`Android/presentation/<機能>` と `Android/ui/<機能>` に `build.gradle.kts`（それぞれ `plugins { id("regza.android.presentation") }`・`plugins { id("regza.android.ui") }` だけでよい）を置き、組み立て（`ui/app`）からつなぐ。`settings.gradle.kts` が `presentation/`・`ui/` の下を読んで足し、`app` は足したすべての画面のモジュールに、`:core:bridge` はすべての `:presentation:<名前>` に依存する。SDK の版・Java の版・Compose・機能に共通の依存などは `Android/build-logic` の決まり（`regza.android.library`・`regza.android.compose`・`regza.android.presentation`・`regza.android.ui`）にまとめ、SDK の版は `gradle/libs.versions.toml` に 1 か所だけ書く。依存のないモジュールは同時にビルドする（`org.gradle.parallel`）。機能の画面のモジュールは `:ui:common`（共通の `:presentation:core` を見せる）と自分の機能の `:presentation:<機能>` だけに依存し、Swift の窓口（`:core:bridge`）にも依存しないので、ほかの機能の画面も型もコンパイルの段階で読み込めない（画面の読み込みは ktlint の規則でも禁止している）。
+UI は `ui.<機能>`（機能ごとの画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui.app`（組み立て。Gradle の `:ui:app`。いちばん外側の画面 `AppRoot`・タブの戻る道と表示先。`MainActivity` もここを通して画面を出し、Live Updates の実装などアプリ本体にあるものを渡す）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは、Swift の窓口とつなぎ（`:core:bridge`）・色と余白（`:core:design`）・文言（`:core:localization`）・共通の部品とプレビューの準備（`:ui:common`）・機能ごとの画面（`:ui:<機能>`）・画面の組み立て（`:ui:app`）・OS の機能とつなぐ部分（`:platform:<名前>`。アプリの組み立て `appservices`・Live Updates `liveupdate`・画面のない入口 `systemactions`・ウィジェット `widgets`。iOS の `AppServices`・`LiveActivity`・`SystemActions`・`Widgets` と 1 対 1）・アプリ本体（`:app`。起動だけ）に分ける。依存の向きも iOS と同じにする：`appservices` は `liveupdate` を使い、`systemactions` は `appservices` を、`widgets` は `systemactions` を使う。`liveupdate` はアプリの組み立てを読み込まず、Swift の窓口は起動時に渡してもらう。共通の部品（`:ui:common`）は Live Updates のオン・オフの型を `liveupdate` から読み込む（iOS の `UICommon` が `LiveActivity` を読み込むのと同じ）。通知とウィジェットで共通のキーのアイコンは `:core:design` に置く。`:app` は画面を `:ui:app` からだけ読み込み、`:ui:app` は `:app` を読み込まない（iOS のアプリが `AppUI` だけを読み込み、`AppUI` がアプリのターゲットを知らないのと同じ）。画面の状態と操作の型は、共有の Swift のプレゼンテーションのモジュールと 1 対 1 の `:presentation:<名前>`（`core`・機能ごと・`app`）に分ける。機能を足すときは、共有の Swift に `<機能>Presentation` を足したうえで、`Android/presentation/<機能>` と `Android/ui/<機能>` に `build.gradle.kts`（それぞれ `plugins { id("regza.android.presentation") }`・`plugins { id("regza.android.ui") }` だけでよい）を置き、組み立て（`ui/app`）からつなぐ。`settings.gradle.kts` が `presentation/`・`ui/` の下を読んで足し、`app` は足したすべての画面のモジュールに、`:core:bridge` はすべての `:presentation:<名前>` に依存する。SDK の版・Java の版・Compose・機能に共通の依存などは `Android/build-logic` の決まり（`regza.android.library`・`regza.android.compose`・`regza.android.presentation`・`regza.android.ui`）にまとめ、SDK の版は `gradle/libs.versions.toml` に 1 か所だけ書く。依存のないモジュールは同時にビルドする（`org.gradle.parallel`）。機能の画面のモジュールは `:ui:common`（共通の `:presentation:core` を見せる）と自分の機能の `:presentation:<機能>` だけに依存し、Swift の窓口（`:core:bridge`）にも依存しないので、ほかの機能の画面も型もコンパイルの段階で読み込めない（画面の読み込みは ktlint の規則でも禁止している）。
 
 Swift の接続コードは、生成する Kotlin の `com.example.regzaremote.presentation.<モジュール>`（`<接頭辞>Send`・`<接頭辞>App`）と `com.example.regzaremote.bridge`（`Send`・`SwiftSend`・`SwiftApp`・state の Flow）、Java の `com.example.regzaremote.core` に分ける。Java のパッケージはどのモジュールでも同じで（JNI の名前を変えないため）、Gradle のモジュールへの分け方だけを変える。生成結果は `.build/` に置く。変更するときは `ScreenGlue` や swift-java の設定を更新し、生成結果を直接編集しない。
 

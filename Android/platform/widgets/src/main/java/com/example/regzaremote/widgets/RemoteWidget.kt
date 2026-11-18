@@ -1,5 +1,6 @@
 package com.example.regzaremote.widgets
 
+import android.content.ComponentName
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -11,6 +12,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
@@ -38,9 +40,9 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import com.example.regzaremote.MainActivity
-import com.example.regzaremote.R
 import com.example.regzaremote.core.RegzaKey
+import com.example.regzaremote.design.R as DesignR
+import com.example.regzaremote.systemactions.SendRemoteKeyAction
 
 /** iOSと同じ中・大のリモコン。サイズ変更ではボタンの種類や並びを変えない。 */
 abstract class RemoteWidget(private val large: Boolean) : GlanceAppWidget() {
@@ -73,7 +75,8 @@ private fun RemoteWidgetContent(large: Boolean) {
         Box(
             GlanceModifier.fillMaxSize()
                 .background(ImageProvider(R.drawable.widget_remote_background))
-                .clickable(actionStartActivity<MainActivity>()),
+                // 押したらアプリを開く。起動の画面はアプリ本体にあるので、OS に登録した起動の入口 (ランチャーから開くのと同じもの) を使う
+                .clickable(actionStartActivity(launcherActivity(LocalContext.current))),
             contentAlignment = Alignment.Center,
         ) {
             RemoteWidgetBody(large, bodyModifier.padding((6 * LocalWidgetScale.current).dp))
@@ -174,15 +177,15 @@ private fun WidgetKey(
         contentAlignment = Alignment.Center,
     ) {
         val icon = when (kind) {
-            RegzaKey.Discriminator.POWER -> R.drawable.widget_key_power
-            RegzaKey.Discriminator.INPUT -> R.drawable.widget_key_input
-            RegzaKey.Discriminator.MUTE -> R.drawable.widget_key_mute
-            RegzaKey.Discriminator.VOLUMEDOWN -> R.drawable.widget_key_volume_down
-            RegzaKey.Discriminator.VOLUMEUP -> R.drawable.widget_key_volume_up
-            RegzaKey.Discriminator.SKIPBACKWARD -> R.drawable.widget_key_replay
-            RegzaKey.Discriminator.SKIPFORWARD -> R.drawable.widget_key_forward
-            RegzaKey.Discriminator.PLAY -> R.drawable.widget_key_play
-            RegzaKey.Discriminator.PAUSE -> R.drawable.widget_key_pause
+            RegzaKey.Discriminator.POWER -> DesignR.drawable.widget_key_power
+            RegzaKey.Discriminator.INPUT -> DesignR.drawable.widget_key_input
+            RegzaKey.Discriminator.MUTE -> DesignR.drawable.widget_key_mute
+            RegzaKey.Discriminator.VOLUMEDOWN -> DesignR.drawable.widget_key_volume_down
+            RegzaKey.Discriminator.VOLUMEUP -> DesignR.drawable.widget_key_volume_up
+            RegzaKey.Discriminator.SKIPBACKWARD -> DesignR.drawable.widget_key_replay
+            RegzaKey.Discriminator.SKIPFORWARD -> DesignR.drawable.widget_key_forward
+            RegzaKey.Discriminator.PLAY -> DesignR.drawable.widget_key_play
+            RegzaKey.Discriminator.PAUSE -> DesignR.drawable.widget_key_pause
             else -> null
         }
         if (icon != null) {
@@ -234,3 +237,7 @@ private val numberKeys = listOf(
     RegzaKey.num1(), RegzaKey.num2(), RegzaKey.num3(), RegzaKey.num4(), RegzaKey.num5(), RegzaKey.num6(),
     RegzaKey.num7(), RegzaKey.num8(), RegzaKey.num9(), RegzaKey.num10(), RegzaKey.num11(), RegzaKey.num12(),
 )
+
+/** OS に登録した起動の画面 (ランチャーから開くのと同じもの) */
+private fun launcherActivity(context: Context): ComponentName =
+    checkNotNull(context.packageManager.getLaunchIntentForPackage(context.packageName)?.component)

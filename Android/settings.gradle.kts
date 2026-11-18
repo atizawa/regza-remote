@@ -32,5 +32,9 @@ include(
 rootDir.resolve("presentation").listFiles { file -> file.resolve("build.gradle.kts").isFile }.orEmpty().sortedBy { it.name }
     .forEach { include(":presentation:${it.name}") }
 
+// OS の機能とつなぐ部分 (アプリの組み立て・Live Updates・画面のない入口・ウィジェット。iOS の AppServices・LiveActivity・SystemActions・Widgets)
+rootDir.resolve("platform").listFiles { file -> file.resolve("build.gradle.kts").isFile }.orEmpty().sortedBy { it.name }
+    .forEach { include(":platform:${it.name}") }
+
 rootDir.resolve("ui").listFiles { file -> file.resolve("build.gradle.kts").isFile }.orEmpty().sortedBy { it.name }
     .forEach { include(":ui:${it.name}") }

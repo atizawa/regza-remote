@@ -1,11 +1,10 @@
-package com.example.regzaremote.widgets
+package com.example.regzaremote.systemactions
 
 import android.content.Context
 import android.widget.Toast
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
-import com.example.regzaremote.appservices.AppFactory
 import com.example.regzaremote.core.RegzaKey
 import com.example.regzaremote.localization.R as StringsR
 import kotlinx.coroutines.CancellationException
@@ -18,7 +17,7 @@ class SendRemoteKeyAction : ActionCallback {
         val name = parameters[KEY] ?: return
         val key = RegzaKey.`init`(name).orElse(null) ?: return
         val error = try {
-            AppFactory.makeRemoteControlService(context).send(key)
+            RemoteControlService.make(context).send(key)
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
