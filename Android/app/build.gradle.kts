@@ -96,7 +96,7 @@ dependencies {
     implementation(project(":core:localization"))
     // 画面の組み立て (iOS の AppUI に対応)。機能の画面はここから読み込み、アプリ本体は直接読み込まない (iOS のアプリも AppUI だけを読み込む)
     implementation(project(":ui:app"))
-    // 共通の部品 (ローカルネットワークの許可の案内・state の購読・Live Updates の受け口)
+    // 共通の部品 (ローカルネットワークの許可の案内・state の購読)
     implementation(project(":ui:common"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

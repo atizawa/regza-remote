@@ -9,6 +9,8 @@ android {
 
 dependencies {
     implementation(project(":platform:appservices"))
+    // キーを送る Swift の窓口の Factory とキーの型
+    implementation(project(":core:bridge"))
     implementation(project(":core:localization"))
     // ウィジェットのボタンから呼ばれる操作 (ActionCallback)
     api(libs.androidx.glance.appwidget)

@@ -20,6 +20,10 @@ import Testing
         "PresentationCore", "Design", "Localization", "LiveActivity",
     ]
 
+    /// 機能の画面のモジュールが読み込んでよいモジュール。Live Activity のスイッチは共通の部品が持つので、機能の画面は Live Activity を読み込まない
+    /// (Android の機能の画面からも Live Updates は見えない)
+    static let featureImports = viewImports.subtracting(["LiveActivity"])
+
     /// 機能の画面のモジュールが使う、その機能のプレゼンテーション (リモコンは共通のものだけを使う)
     static func presentation(of feature: String) -> Set<String> {
         feature == "RemoteUI" ? [] : [feature.replacingOccurrences(of: "UI", with: "Presentation")]
@@ -67,7 +71,7 @@ import Testing
 
     @Test(arguments: features)
     func featuresImportOnlyPresentationAndCommonParts(feature: String) throws {
-        try Self.check("UI/\(feature)", allowed: Self.viewImports.union(["UICommon"]).union(Self.presentation(of: feature)))
+        try Self.check("UI/\(feature)", allowed: Self.featureImports.union(["UICommon"]).union(Self.presentation(of: feature)))
     }
 
     @Test func compositionImportsFeatures() throws {

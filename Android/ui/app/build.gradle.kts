@@ -8,6 +8,8 @@ plugins {
 dependencies {
     // Swift の窓口 (state の購読とすべての送り先)。組み立てだけが使う
     implementation(project(":core:bridge"))
+    // ロック画面と通知の表示のオン・オフの型 (実装はアプリ本体から受け取り、共通の部品に渡す)
+    implementation(project(":platform:liveupdate"))
     // 機能の画面のモジュール (settings.gradle.kts が ui/ の下から読んだもの。共通の部品と組み立て自身を除く)
     rootProject.subprojects
         .filter { it.path.startsWith(":ui:") && it.path != ":ui:common" && it.path != project.path }
