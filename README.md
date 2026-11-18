@@ -1,373 +1,76 @@
 # REGZA リモコン
 
-両 OS 共通の余白・サイズ・ブランド色・リモコン配色は [デザイントークン](Design/README.md) の JSON から Swift・Kotlin へ生成する。
+REGZA の HTTP リモコン API（[参考](https://misomayo.info/on/2012/04/10)）を使う iOS・Android のアプリ。
+テレビの操作・いま映っているものの表示・チャンネル一覧と選局・録画予約に加え、録画サーバー（Mirakurun・EPGStation）と連携すると番組表とライブ視聴が使える。
+対象は iOS 26 以上と Android 9（API 28）以上。
 
-画面の固定文言と、共有のSwiftが画面に出す文言（キー名・エラー・状態など）は [共通の文字列](Localization/README.md) のString Catalogで管理し、Android XMLと両OSの参照コードを生成する。共有のSwiftの文言は、OSが起動時に選ばれている言語の文言を入れる。
-
-REGZA の HTTP リモコン API（[参考](https://misomayo.info/on/2012/04/10)）を使う iOS アプリ。
-録画番組の再生中は、番組名・再生位置を Dynamic Island / ロック画面の Live Activity に表示し、そこから音量・チャンネル・再生操作もできる。
-
-iOS 26 以上が対象。iOS・Androidとも設定の「外観」から「システムに合わせる」「ライト」「ダーク」を選べる。初期値はOSへの追従で、選択は即座に反映・端末へ保存する（テレビ接続設定の保存・キャンセルとは独立）。共通のカラートークンから、iOSのColor AssetとAndroidの標準色リソースを生成する。リモコン本体は実物を模した配色を両外観で共通にする。
-
-AndroidにもiOSと同じ中・大のリモコンウィジェットがある。先にアプリでテレビを登録し、Android 17以降ではローカルネットワークへのアクセスを許可してから、ホーム画面のウィジェット一覧で「リモコン（中）」または「リモコン（大）」を追加する。中は電源・入力切替・消音・チャンネル・音量の7ボタン、大は放送切替・数字・黒い音量／チャンネル操作帯・再生キーを備える。サイズ変更でも選んだ種類とボタンの並びは変わらず、背景は配置領域全体に広げ、ボタンは縦横比を保って中央に配置する。ボタン以外の余白を押すとアプリを開き、ボタンはアプリ画面を開かずに送信する。未設定・認証失敗・通信失敗はメッセージで知らせる。
-
-ウィジェットはJetpack Glanceで描画し、番組取得や定期通信は行わない。ウィジェット（`:platform:widgets`）のボタンは、画面のない入口（`:platform:systemactions`）の`SendRemoteKeyAction`から`RemoteControlService`を呼び、保存済みの設定と既存のSwift UseCase・Repository・Digest認証・OkHttpでキーだけを送る。画面用の`RegzaAndroidApp`を作らないため、stateの購読やライブ視聴の配信の後片づけは開始しない。配色は共通トークンのリモコン用リソースを使う。
-
-Androidでも、設定の「表示」または再生中の画面の「ロック画面と通知に表示」をオンにすると、iOSのLive Activityと同じ内容（番組名・チャンネル・進み具合・リモコンのボタン）を常駐の通知に出す。Android 16以降はLive Updatesとしてステータスバーのチップ（短い局名、録画中は「録画」）とロック画面の上にも出す。通知のボタンは3つまでなので、放送中はCH−・CH＋・消音を出す（録画は再生操作、待機中は電源）。残り時間（放送）と経過時間（録画）はシステムが進める時計で出し、進捗のバーはアプリが通知を更新したときに進む。通知をスワイプで消すとオフになる。オンにするときに通知の権限を求め、通知やライブアップデートがオフにされていれば設定を開く案内を出す。
-
-画面は「リモコン」（テレビを操作するボタン）と、見るための「番組表」「チャンネル」「録画予約」のタブに分けている。テレビで映っているものは、どのタブでもタブバーの上のミニプレーヤー（`tabViewBottomAccessory`）に出し、押すと番組の詳細（録画ならシーク）を開く。色は REGZA の公式サイトで使われている深い緑（`#00442D`）を基調にしている（`AppTheme`。ライトでは `#006B4F`、ダークでは暗い背景でも見える明るめの `#1D866F` を使う）。ロゴはまねしない。
-
-REGZA だけでもリモコン・Live Activity・Siri・チャンネル一覧と選局・録画予約の一覧・最初から見るが使える。Mirakurun（番組名・番組表・番組表からの予約）と EPGStation（ライブ視聴）は、設定画面の「録画サーバーとの連携」で設定した人だけが使う。番組表のタブは未設定でも消さず（タブを出したり消したりしない HIG に合わせる）、何ができるかと設定のしかたを案内する。連携は、それぞれの設定画面の「連携を解除」でやめられる。アドレスとポートは別々の欄で入れ、ポートが空なら標準のポート（Mirakurun 40772・EPGStation 8888）を使う。保存は `192.168.0.2:40780` のような 1 つの文字列。「探す」と同じサーバーの EPGStation の候補は、標準のポートだけを確かめる。EPGStation は Mirakurun から放送を受け取るので、ライブ視聴は Mirakurun を設定してから設定できるようにし（EPGStation だけでは番組名も出ず、見られない局も一覧に混ざる）、Mirakurun と同じサーバーで EPGStation が動いていれば候補として出す。Mirakurun の連携を解除すると EPGStation の連携も解除する。
-
-## 構成
-
-```
-toolchains.toml              Swift・Android SDK・Xcode の共通バージョン設定
-Packages/RegzaCore/           iOS と Android で共有する Swift Package（REGZA の OpenAPI 生成クライアントも共有）
-  RegzaSharedModels           画面に出す UI の型とリモコンのキー（RegzaKey）
-  RegzaDomain                 Data・Repository の約束・UseCase・SharedModel への変換
-  RegzaInfrastructure         テレビ・Mirakurun・EPGStation の通信（キーコード / Digest 認証 / HTTP クライアント / status.htm 解析）
-  Presentation/               iOS と Android で共有する ViewModel（<モジュール>/<画面>/ に ViewModel・State/・Action/）
-    PresentationCore          共通（処理中の数え方・CLI 向けの約束事・テレビとのつながり RemoteViewModel・画面の移り変わりの窓口 AppNavigator）
-    <機能>Presentation        機能ごとの ViewModel（Player・Guide・Program・Channels・Reservations・Settings）。共通だけを使い、ほかの機能を読み込まない
-    AppPresentation           アプリ全体の ViewModel（AppViewModel。機能の ViewModel を持ち、タブ・戻る道・復元をまとめる）
-  RegzaPresentation           プレゼンテーション層をまとめて読み込み直すだけのモジュール（Android の窓口・組み立て・CLI・テスト用）
-  RegzaApp                    組み立て（どの Repository を使うかを決めて ViewModel を作る）
-  RegzaFakeServers            偽物のテレビ・Mirakurun・EPGStation と場面（プレビュー・振る舞いのテスト・CLI 用）
-  RegzaCLI                    ViewModel を動かして確かめる CLI（regza）
-iOS/RegzaKit/                 iOS だけで使う Swift Package（Sources/ は Android と同じく Core・Platform・UI に分ける）
-  Core/Design/                アプリとウィジェットで共通の色と余白（Android の core/design）
-  Core/Localization/          文言の定義元の String Catalog と生成した参照（Android の core/localization）
-  Platform/AppServices/       iOS の DI・依存の保持・終了時の配信停止（Storage/ に保存実装。Android の platform/appservices）
-  Platform/LiveActivity/      Live Activity の状態・更新・バックグラウンド更新の予約（Android の platform/liveupdate）
-  Platform/SystemActions/     Live Activity・ウィジェット・コントロールセンターのボタンからの操作（Android の platform/systemactions）
-  Platform/Shortcuts/         Siri・ショートカット（アプリにだけ登録する。Android にはない）
-  Platform/Widgets/           Live Activity・ホーム画面・コントロールセンターの表示（Android の platform/widgets）
-  UI/<機能>UI/                機能ごとの画面（Remote・Player・Guide・Program・Channels・Reservations・Settings）。ほかの機能を読み込まない
-  UI/UICommon/                機能の画面が共通に使う部品・プレビューの準備（Preview/）
-  UI/AppUI/                   画面の組み立て（タブ・タブの中の画面の移り変わり・アプリ全体のシート）。アプリはこれだけを読み込む
-iOS/RegzaRemote/              アプリの起動・RootView（依存を画面へ渡す、終了通知を AppServices へ渡す）
-iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
-Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）
-  RegzaAndroidBridge/         Android に見せる Swift の窓口（RegzaAndroidApp）。macOS・Linux の swift test で確かめる
-  RegzaAndroid/               Android 向けにビルドする Swift のパッケージ（Looper と、swift-java が作る Java のつなぎ）
-  ScreenGlue/                 窓口のつなぎを作る道具（screen-glue。State/・Action/ の型を swift-syntax で読む。ホストで動かし、アプリには入らない）
-  scripts/                    build-swift.sh（Swift の .so と Java のクラスを作る）・swift-toolchain.sh（mise の Swift を選ぶ）
-  core/design/                 色・余白・テーマの Gradle モジュール（デザイントークンから生成した値）
-  core/localization/           文言の Gradle モジュール（String Catalog から生成した AppStrings と文字列リソース）
-  ui/common/                   機能の画面が共通に使う部品とプレビューの準備の Gradle モジュール（debug だけに偽物での組み立て。Live Updates のスイッチは受け口だけを置き、アプリが実装を渡す）
-  core/bridge/                 Swift の窓口とつなぎの Gradle モジュール（Swift の .so・窓口 RegzaAndroidApp の Java のクラス・すべての送り先をまとめた Send と state の Flow・Swift をビルドする buildSwift）。画面は知らず、機能の画面からは読み込まない
-  presentation/<名前>/         画面の状態と操作の型の Gradle モジュール（共有の Swift の PresentationCore・<機能>Presentation・AppPresentation と 1 対 1 の core・<機能>・app）。型の Java のクラスと、画面が受け取る送り先（<接頭辞>Send）・プレビューが受け取るアプリ（<接頭辞>App）を入れる。core 以外は core だけに依存する
-  build-logic/                 Android のモジュールが共通に使うビルドの決まり（convention plugin）
-  ui/<機能>/                   機能ごとの画面の Gradle モジュール（remote・player・guide・program・channels・reservations・settings）。ui:common と同じ名前の presentation（remote は共通の presentation:core）だけを使い、ほかの機能を読み込まない
-  ui/app/                      画面の組み立ての Gradle モジュール（iOS の AppUI に対応。いちばん外側の画面・タブ・タブの中の画面の移り変わり）。機能の画面と Swift の窓口に依存し、アプリ本体は読み込まない
-  platform/appservices/        アプリの組み立て（iOS の AppServices に対応。プロセスに 1 つの Swift の窓口・画面の ViewModel の入れ物・保存先・通信）。画面と画面のない入口は読み込まない
-  platform/liveupdate/         ロック画面と通知の表示（Live Updates。iOS の LiveActivity に対応）。Swift の窓口は起動時に渡してもらい、アプリの組み立ては読み込まない
-  platform/systemactions/      画面のない入口（ウィジェットのボタン）からキーを送る（iOS の SystemActions に対応）
-  platform/widgets/            ホーム画面のウィジェット（iOS の Widgets に対応）。ボタンの操作は systemactions に任せる
-  app/                        アプリ本体（起動の MainActivity・RegzaApplication だけ）。画面は :ui:app だけを読み込み、platform/ の下をまとめて APK に入れる
-  mise.toml                   共通設定の Swift ツールチェーンと、Swift の .so と Java のクラスを作る mise run build-swift（中身は scripts/build-swift.sh）
-```
-
-- Swift のコードの書き方は swift-format（Swift のツールチェーンに入っている Apple の道具）でそろえる。設定は `.swift-format`（行の長さ 140・インデントは空白 4 つ・`#if` の中は下げない、ほかは既定の決まり）。Kotlin は ktlint でそろえる。設定は `.editorconfig`（Android Studio の書き方・行の長さ 140・`@Composable` の関数は大文字で始めてよい）で、Android Studio もこの設定で整形する。複数行に並べたものは、Kotlin では宣言でも呼び出しでも末尾にコンマを付け、Swift では配列や辞書に付ける（関数の引数は書いたとおりに残す。swift-format の「必ず付ける」は閉じかっこの前に `, )` を残す不具合があるため使わない）。`mise run lint` で両方を確かめ、`mise run format` で両方を直す。道具が作るファイル（`Generated/`・`.build/`）は対象にしない。ルートの `mise.toml` には共通タスクと Bun・ktlint の設定を置き、Swift の版は `toolchains.toml` を参照する。ルートでは Swift のコンパイラを切り替えない（初めてのときは `mise trust` と `mise install` が要る）
-- Digest 認証は URLSession の認証チャレンジに頼らず `RegzaCore` で自前実装し、URLSession と OkHttp で共有する。
-- `RegzaCore` は Android（Swift SDK for Android）でもビルドするので、Foundation 以外の Apple のフレームワークを使わない。iOS だけのものは `iOS/RegzaKit`、Android だけのものは `Android/` に置く
-- Android からは swift-java で作った Java のクラスを通して `RegzaCore` を使う。画面に出す型とリモコンのキー (`RegzaSharedModels`)、画面の ViewModel の State と Action は、写さずに iOS と同じ型をそのまま使い、Domain の型は Android に見せない（「画面を足す手順」）
-- 画面の移り変わり（タブ・タブごとの path）は共有の `AppViewModel` が持ち、iOS は `NavigationStack(path:)`、Android は Navigation 3 の back stack に渡す
-- iOS の画面のプレビューは、それぞれの画面のファイルの末尾の `#if DEBUG` の中に置く（準備は `UI/UICommon/Preview/FakePreview.swift`）。偽物のテレビ・録画サーバー（`RegzaFakeServers`）の場面で `AppViewModel` を組み立て、操作を送ってから、組み立てと同じ環境値を渡してその機能の画面を描く（アプリ全体は `UI/AppUI/AppScreen.swift` の末尾）。アプリのプロジェクトのまま、スキームをその機能の画面のモジュール（`GuideUI` など）にして画面のファイルを開けばプレビューが出る（その機能と依存だけをビルドする。スキームが `AppUI` だと全機能をビルドする）。画面のモジュールはプレビューのために偽物に依存するが、`RegzaFakeServers` は iOS のリリースのビルドでは中身のないモジュールになる（`REGZA_FAKES_DISABLED`。RegzaCore の `Package.swift`）ので、リリース版のアプリには入らない。シンボルを落としたリリース版に偽物の型がないことは `mise run check-ios-release`（CI で流す）が確かめる。画面が偽物を読み込んでよいのは `#if DEBUG` の中だけ（`LayerTests`）
-- Android の画面のプレビューは、それぞれの画面のファイルの末尾に置く（準備は `ui/common` の `ui/preview/FakePreview.kt`）。偽物のテレビ・録画サーバー（`RegzaFakeServers`）で組み立てた共有の ViewModel の state を渡す。偽物は debug の APK にだけあるので、プレビューの準備（`appservices/preview/PreviewAppFactory.kt`）は debug のソースの `FakeApps` を名前で探して呼ぶ。プレビューの関数と準備は本番のコードから呼ばれないので、release の APK では縮小で取り除かれる（下の「偽物は debug だけ」）。エディタの横のプレビューはホストの JVM で描くため、先に `mise run prepare-android-preview` でホスト向けライブラリを作る（macOS は .dylib、Linux は .so）。APK のビルドではホスト向けライブラリを作らない。「Run Preview」ではエミュレーターでアプリと同じ Android 向けのライブラリを使う。Swift の型は、ライブラリを読み込んだあと（`FakePreview` の `setUp` と中身）で作る
-- 偽物は debug だけ: 偽物で組み立てる入口（`RegzaAndroidBridge` の `RegzaAndroidFakes`。Kotlin からは `RegzaFakeApp.make`）は、本番の窓口とは別のモジュールにする。`build-swift.sh` は本番の .so（`RegzaAndroid`）と、入口を足した debug の .so（`RegzaAndroidDebug`）を同じ置き場でビルドし、どちらも `libRegzaAndroid.so` の名前で `core/bridge/src/release/jniLibs` と `core/bridge/src/debug/jniLibs` に分けて置く（Swift のランタイムなど共通の .so は `core/bridge/src/main/jniLibs`）。入口の Java のクラスも debug のソースにだけ入れる。本番の .so に偽物が入っていないことは `build-swift.sh` が、release の APK に偽物とプレビューの準備が入っていないことは `checkReleaseApk` が、ビルドのたびに確かめる
-- OS だけの機能（iOS の Live Activity・ウィジェット・Siri）も、画面と同じく共有の ViewModel の state を読み、Action を送る。共有の部分は「何を出すか」を state に入れるだけで、OS ごとの口（protocol）は持たない
-  - iOS は、アプリのプロセスに `AppViewModel` を 1 つだけ置き（`AppContainer`）、画面・Live Activity・ボタン・Siri・閉じている間の更新が同じものを使う。画面のない入口は、操作を送って終わるまで待ち（`sendAndWait`）、state を見て結果を返す
-  - Live Activity は `RemoteViewModel.state` の変わり目を見て表示を更新し、番組の終了時刻が変われば起こしてもらう時刻を予約し直す
-  - ロック画面や通知に何を出すか（見出し・番組が終わったあとの次の番組への切り替え・出すボタン）は、共有の `LiveStatus`（`RemoteState.liveStatus`）が決める。iOS の Live Activity と Android の通知は、これを OS ごとの形に描くだけにする
-  - Android は、Swift の窓口（`RegzaAndroidApp`）をプロセスに 1 つだけ置き（`AppContainer`）、画面・通知のボタン・閉じている間の更新が同じものを使う。`LiveUpdateController` が `RemoteState` の変わり目を見て通知を更新し、番組の終了時刻の 30 秒後（放送でなければ 15 分後）に AlarmManager で起こしてもらって取り直す。正確な時刻のアラームは使わない
-  - ボタンの App Intent（`RegzaKeyIntent`）は `LiveActivityIntent` なので、ウィジェットの拡張から押してもアプリのプロセスで動く。Siri の App Intent はふつうの `AppIntent` で、拡張にも登録すると拡張のプロセスで動くことがあるので、アプリにだけ登録する
-  - 画面・Live Activity・画面のない入口（`SystemActions`・`Shortcuts`）・ウィジェットが Domain・通信・組み立てを import していないこと、アプリの組み立て（`AppServices`）が画面と画面のない入口を import していないことは `RegzaKitTests` の `LayerTests` が確かめる
-- 依存オブジェクトの引数・プロパティ・組み立て時の変数は、`remoteViewModel`・`guideUseCase`・`guideRepository`・`regzaAPIClient`・`preferencesManager` のように役割を名前に含める。取得した値は `programs`・`channels` など、内容を表す名前にする。
-- 保存処理は `Infrastructure/Storage` の `SecureStorageManager`・`PreferencesManager` に分け、APIClient と並列に Repository へ注入する。Manager には OS ごとの保存実装を注入し、保存キーの選択と Data の組み立ては Repository が担当する。
-- DI は `RegzaApp/AppFactory+Repositories.swift`（APIClient・Manager → Repository）、`AppFactory+UseCases.swift`（Repository → UseCase）、`AppFactory+ViewModels.swift`（UseCase → ViewModel）にまとめる。iOS・Android・CLI は共通の Factory を使い、通信と保存先は起動時に渡す。Repository または UseCase の protocol を直接渡せるため、テストでも同じ入口から差し替えられる。
-- iOS の終了通知は `RootView` から `AppContainer.applicationWillTerminate()` に渡す。`AppServices/AppLifecycleService` が保存済みの配信先と配信 ID を使い、注入された HTTPTransport で停止を試みる。待機上限は従来どおり 2 秒で、停止できなかった ID は次回起動時の回収用に残す。UI モジュールはこの処理や Infrastructure に依存しない。
-- iOS の `AppContainer` は組み立てた `AppViewModel` と Manager を受け取れる。Android は `RegzaAndroidAppFactory.init(OkHttpTransport())` に通信実装を注入し、`makeApp(AndroidStorage(...))` で保存先を渡す。通信実装をグローバルに書き換えず、探索処理にも同じ transport を渡す。
-- iOS は `AppServices/Storage` の `KeychainStorage`・`UserDefaultsStorage`、Android は `RegzaAndroidStorage` を共通の保存プロトコルにつなぐアダプターを使う。Android のパスワードは従来どおり Keystore の鍵で暗号化する。既存の保存キー・値の形式と、iOS の旧登録 ID の移行を維持する。
-- `RegzaCore` の通信は `HTTPTransport` を通す。iOS と CLI は URLSession、Android は Kotlin の `OkHttpTransport` を使う。Swift 側はリクエストと応答の値を JNI 越しに渡し、HTTP の読み取り・圧縮・DNS・プロキシ・接続管理・TLS は各プラットフォームの通信実装に任せる。通常の HTTPS は Android の信頼ストアとホスト名検証を使う。テレビの 4430 番だけは自己署名を受け入れる既存の例外を維持し、その接続ではリダイレクトを追わない。
-- APIClient・探索処理には `HTTPTransport` を明示して渡す。URLSessionTransport は Android ではビルドせず、APK に FoundationNetworking を同梱しない。`build-swift.sh` は梱包対象に FoundationNetworking が残っていれば失敗する。独自の HTTP パーサ・SocketTransport と BoringSSL の静的リンクは使用しない。
-- Android の ICU（`lib_FoundationICU.so`。日付の書式・タイムゾーン・正規化・文字コードの変換に Foundation が使う）は、約 46 MB のほとんどが全言語のデータなので、`build-swift.sh` が SDK の静的ライブラリからデータだけを絞って作り直す（約 12 MB。release の APK は約 79 MB から約 51 MB）。残すのは言語によらないデータ・日本語と英語の言語データ・テレビの古い API の応答を読む Shift_JIS・EUC-JP の変換表で、ほかの言語・ほかの文字コード・単語の区切りの辞書・文字の変換規則・文字の名前は削る（`scripts/slim-icu-data.swift`）。公開する名前は元の .so と同じものだけにそろえ（version script）、一致することをビルドで確かめる。日付・タイムゾーン・文字コード・正規化・比較は、削る前と同じ結果になることを実機で比べて確かめた（違うのは、削った言語での日付の書式と `Locale.availableIdentifiers` だけ）。アプリが頼っている結果は、端末のテスト `FoundationICUTest` が、ICU をすべて持つ Apple の環境と同じ値（`FoundationCheckTests`）になることを確かめる。確かめる処理はテスト専用の .so（`libRegzaFoundationCheck.so`）にあり、`build-swift.sh` が `core/bridge/src/debug/jniLibs` に置くので、debug の APK にだけ入り、release の APK と本番の窓口には入らない。比べるときは `./gradlew -PregzaFullICU=true :app:assembleDebug` のように、Gradle のプロパティで元のまま入れられる（切り替えると Swift の .so を作り直す）。ほかの言語の文言を足すときは、`slim-icu-data.swift` の `languages` にも足す
-- Repository と UseCase は Domain/Data の `ChannelData`・`ProgramData` などを受け渡す。UseCase は Domain に置き、画面側には `RegzaSharedModels` の型を返す。ViewModel は Data を保持せず、番組検索の索引も Domain 内で管理する。
-- `Infrastructure/Mappers` は API の型から Data への変換、`Domain/Mappers` は Data から SharedModel への変換を担当する。
-- REGZA・Mirakurun・EPGStation の API は `OpenAPI/` の仕様から Swift OpenAPI Generator で生成する。生成クライアント、Digest 認証・LenientJSON のミドルウェア、既存の `HTTPTransport` を包む `ClientTransport` はすべて共有する。構成と生成方法は [OpenAPI/README.md](OpenAPI/README.md)。
-
-## 開発
-
-共通ツールと生成・テスト・ビルドのタスクは、ルートの `mise.toml` で管理する。
-普段はルートから `mise run <タスク名>` を実行する。Bunの版もルートに1か所だけ定義する。
-生成コード・設定・テストコードはそれぞれのディレクトリに置き、miseのタスクから作業ディレクトリを指定する。
-
-| 設定ファイル | 役割 |
+| ドキュメント | 内容 |
 | --- | --- |
-| `mise.toml` | 共通ツール（Bun・ktlint）と実行タスク |
-| `mise.linux.toml` | Linux用Swiftの選択 |
-| `Android/mise.toml` | Android用Swift・JDK・SDKと専用タスク |
-| `UITests/mise.toml` | Maestro・JDKと端末でのUIテストの準備・実行 |
-
-Android の APK ビルド・ホストの JVM テストは macOS と Linux を対象にする。Linux の APK ビルドは Android NDK のホストツールに合わせて x86_64 を使う。iOS のビルド・RegzaKit のテストは Xcode が必要なため macOS で行う。Windows ネイティブの開発環境は対象外で、WSL2 は Linux の手順を使う（Windows 側の Android Studio とのプレビュー連携は別途検証が必要）。
-
-Android SDK の場所は `ANDROID_HOME`、次に `ANDROID_SDK_ROOT` を優先し、未指定なら macOS は `~/Library/Android/sdk`、Linux は `~/Android/Sdk` を使う。SDK・NDK は開発ホスト用、APK に入れる Swift の .so は従来どおり Android の arm64-v8a 用で、この 2 つの CPU アーキテクチャは別に扱う。
-
-`mise run check` は iOS のビルドも含むため macOS 用。Linux では `lint`・`test-swift-shared`・`build-android`・`test-behavior` を個別に実行する。
-
-Swift の Android ビルド・ホスト向けビルド・振る舞いテスト用 CLI のビルドは、SwiftSyntax などの初回コンパイルでメモリを多く使うため、並列数を既定で 2 にする。`SWIFT_BUILD_JOBS=1 mise run build-android` のように変更できる。GitHub Actions の Android のジョブは 4 にしている。
-
-`build-swift.sh` は、swift-java のツールの依存と Swift の版が前と同じならツールのビルドを飛ばす。GitHub Actions の Android のジョブは Swift のビルドを取っておき、差分だけをビルドする。うまく動かないときは、Actions の Caches から `swift-tools-`・`swift-android-` で始まるものを消す。Gradle の JVM メモリは `Android/gradle.properties` で管理する。
-
-Linux のホスト JVM では、`HostSwiftRuntime` が専用スレッドで Swift のライブラリを読み込み、そのスレッドの終了まで待つ。これにより MainActor のキューを JVM の入力待ちや Future の待機から切り離す。振る舞いテストとエディタのプレビューで共通に使い、Android 端末では既存の Looper への接続を使う。
-
-Swift と Xcode の版はルートの `toolchains.toml` で管理する。`swift.version` は Android・Linux の swift.org 版と Android SDK の共通バージョン、`swift.android_sdk_checksum` はその SDK のチェックサム、`xcode.version` は iOS に使う Xcode のバージョン。`Android/mise.toml` とルートの mise タスクはこの設定を参照する。
-
-iOS は Xcode 付属の Apple Swift を使い、`swift.version` と major.minor が同じことを検査する（例: Apple Swift 6.4 と swift.org 6.4.2）。Apple 版と swift.org 版のビルド識別子の一致は要求しない。Android・Linux はリリースタグまで一致させる。Xcode の `SWIFT_VERSION = 6.0` は言語モードであり、このコンパイラの版とは別の設定。
-
-`mise run check-apple-toolchain` で選択中の Xcode と Apple Swift を確認できる。iOS のテスト・ビルドでも先に実行され、不一致なら停止する。ローカルでは使用する Xcode を `DEVELOPER_DIR` または Xcode の選択で指定する。Linux CI は `mise run check-swift-toolchain`、Android は既存の `resolve_swift_toolchain` で版を確認する。Linux CI は `MISE_ENV=linux` で `mise.linux.toml` を読み込み、共通設定の Swift を導入する。CI の Xcode 選択は `mise run select-ci-xcode`、Android SDK の準備は `mise run install-android-swift-sdk` が担当する。SDK は指定版が既にある場合は再インストールせず、CI のキャッシュも共通設定を参照する。版を上げるときは、このファイルで Xcode・Swift・SDK チェックサムの組み合わせを更新し、両環境のテストとビルドを確認する。
-
-Repository・UseCase の単体テストは [Mockolo](https://github.com/uber/mockolo) で生成するモックを使用する。対象は Domain の `@mockable` を付けた protocol。生成結果は `Tests/RegzaCoreTests/Generated/DomainMocks.swift` に置き、protocol を変更したらリポジトリのルートで `mise run generate-mocks` を実行する。Mockolo は `Tools/GenerateMocks/Package.swift` で版を固定し、アプリの依存から分離しているため、通常のアプリビルドやテストで生成ツールをビルドする必要はない。
-
-`Tests/RegzaCoreTests/Support` は、入力値の `DataFixtures.swift`、生成モックの初期値を設定する `RepositoryMocks.swift`、HTTP・保存・本番 Factory をつなぐ `HTTPTestEnvironment.swift`、ViewModel の準備と待機を行う `ViewModelFixtures.swift` に分ける。単体テストの戻り値やエラーはモックの Handler に設定し、呼び出し回数・引数は生成された記録で確認する。通信を含むテストでは本物の Repository と偽の HTTP を使う。偽物のテレビ・録画サーバー（`RegzaFakeServers`）の返事は、`FakeServersContractTests` で本物の API クライアントで読めることと、テレビの API の定義（`OpenAPI/regza-tv.yaml`）にあるどの操作にも答えることを確かめる。
-
-```sh
-mise run generate-mocks                  # Domain の protocol を変更したときにモックを再生成
-cd Packages/RegzaCore && swift test       # 共有部分のテスト
-cd Android/RegzaAndroidBridge && swift test  # Android の窓口のテスト (macOS・Linux)
-cd Android/ScreenGlue && swift test       # 窓口のつなぎを作る道具のテストと、Git に入れたつなぎが古くないかの確認
-open iOS/RegzaRemote.xcodeproj            # 実機へ入れるときは下の Local.xcconfig を作る
-
-cd Android                                # Android 版（Android Studio はなくてもよい）
-mise install                              # Swift のツールチェーン・JDK・Android CLI
-mise run setup-android-sdk                # 初回だけ。Android SDK のライセンスを確かめて同意する（Android Studio で SDK を入れていれば要らない）
-mise run install-android-swift-sdk        # 初回だけ。Swift SDK for Android（platform・build-tools・NDK は Gradle が入れる）
-./gradlew :app:assembleDebug              # Swift の .so と Java のクラスも先に作る (buildSwift が mise run build-swift を呼ぶ)
-mise run prepare-android-preview          # エディタの横にプレビューを出すとき。ホスト向けライブラリを別途作る
-mise run test-android-runtime             # arm64 のエミュレーター/実機で .so・JNI・Looper・OkHttp・Android TLS を確かめる
-./gradlew :app:assembleRelease            # 配るアプリ。作ったあと、APK に手元のフォルダの場所が入っていないことも確かめる (checkReleaseApk)
-
-cd ..                                    # リポジトリのルートへ戻る
-mise run test-behavior                    # 振る舞いのテスト (両方の相手をビルドして、同じテストを iOS 側と Android 側で流す)
-```
-
-画面の復元対象は iOS・Android で共通の `AppViewModel` が定義する。Android は `RegzaViewModel` の `SavedStateHandle`、iOS は `RootView` の `SceneStorage` と AppServices の `AppStateRestoration` へ接続する。OS の保存時に入力・検索条件・選択中タブ・設定画面・戻る道・番組表の日付と放送種別を小さな JSON にまとめ、新しい ViewModel へ戻す。番組やチャンネルは再取得し、存在しない画面は戻る道から除く。未保存のパスワード・PIN・通信中フラグ・ライブ視聴の実行状態は含めない。保存済み認証情報は従来どおり StorageManager から読む。iOS はシーンが非アクティブ・バックグラウンドへ移る際に退避し、画面の初回表示時だけ読み戻す。Siri や Live Activity による画面のない起動では復元しない。
-
-手動では、設定の IP アドレスを保存せずに入力し、「アクティビティを保存しない」をオンにしてホームへ移動したあと、履歴から戻って入力が残ることを確認する。プロセス終了も確認するときは、このオプションを戻してアプリをバックグラウンドに置き、`adb shell am kill com.example.regzaremote` で終了させる。`adb shell pidof com.example.regzaremote` で終了を確認し、履歴から戻ったときに新しい PID で入力が復元されることを確かめる。
-
-### Android 実行環境のスモークテスト
-
-`mise run test-android-runtime` は、`AndroidRuntimeSmokeTest`・`StateLifecycleTest`・`TLSTransportTest`・`StateRestorationTest`・`OkHttpTransportTest` を実機・エミュレーター上で実行する。APK のビルド・インストールも Gradle が行う。上記の Android 開発環境に加え、Android API 28 以上で `arm64-v8a` に対応した端末が必要。エミュレーターは Android Studio の Device Manager で arm64 の AVD を起動する。実機は USB デバッグを有効にし、接続時の認証を許可する。
-
-リポジトリのルートから実行する:
-
-```sh
-(cd Android && mise exec -- adb devices -l)  # 対象が device と表示されることを確認する
-mise run test-android-runtime
-# 複数の端末を接続している場合は、一覧に出たシリアル番号で対象を選ぶ
-ANDROID_SERIAL=emulator-5554 mise run test-android-runtime
-```
-
-AndroidRuntimeSmokeTest・StateLifecycleTest・TLSTransportTest・StateRestorationTest・OkHttpTransportTest・ColorAppearanceTest・LocalizationResourceTest・RemoteWidgetTest・LiveUpdateNotificationTest・FoundationICUTestを確認する。テレビ・Mirakurun・EPGStation への接続は不要。
-
-画面を出すテストは、端末のロックを解除して画面を点けたままにしてから実行する。テストの前に `ScreenTestRule` が画面を点け、パスワードなどのないロックは外し、それでもロックされていれば「端末がロックされています」と伝えて落とす（ロックされたままだと Activity が前に出られず、関係のない理由で落ちるため）。Android 17 以降はローカルネットワークへのアクセスもテストの前に許可しておく（許可のダイアログが Activity の上にかぶるため）。`ui-test-junit4` が依存する `espresso-core` 3.5.0 は、新しい Android にない `InputManager.getInstance` を呼んで端末テストが落ちるので、API 23 以上で `getSystemService` を使う 3.7.0 を指定している（Android 17 の実機で確認）。
-
-Gradle の `connectedDebugAndroidTest` は、終わるとアプリを端末から消す。テストは保存先（テレビの接続先など）も書き換えるので、ふだん使っている端末では、登録したテレビの設定がなくなる。
-
-- `swiftLibrariesJniLooperAndFlowCancellation`: APK の .so の読み込み、JNI・Looper を通る state 更新と、Flow を繰り返し終了したあとの待機の解消。
-- `earlyCancellationAndStateChangesReleaseWaits`: 初回受信直後の状態変更とキャンセルが重なっても、Swift の待機が残らない。
-- `cancellingOneCollectorKeepsOtherCollectorActive`: 同じ state を購読する一方の Flow を止めても、もう一方には変更通知が届く。
-- `StateRestorationTest`: Activity 再生成による入力の維持と、Bundle を Parcel に退避して元の ViewModel を破棄したあとの復元。
-- `OkHttpTransportTest`: 実際の Swift → JNI → OkHttp でチャンク応答・gzip・URL のクエリ・通常のリダイレクト・タイムアウト・Call の取消を確認する。MockWebServer はテスト APK だけに使用する。
-- `RemoteWidgetTest`: 中・大の登録・キーの並び・リサイズ後の表示範囲を確認し、Glanceの実際のボタンからJNI・保存済みの認証情報・Digest認証・OkHttpを通してキーを送る。
-- `TLSTransportTest`: 端末内の TLS サーバーとのハンドシェイクと HTTP 送受信、システム CA で信頼されない自己署名証明書の拒否、信頼済み証明書のホスト名不一致による拒否、テレビの自己署名例外とリダイレクトの抑止。外部通信は行わず、テスト用の信頼先を OkHttp の DI で渡す。
-- `stoppedScreenReleasesWaitAndReceivesLatestStateOnRestart`: 実際の rememberState を Compose で動かし、Lifecycle が CREATED に下がると待機が終了し、STARTED に戻ると最新の state を受け取る。
-
-ウィジェット一覧のプレビューは、本番と同じGlanceの描画から作った中・大それぞれのPNGを使う。配置を変更したときは、専用エミュレーターを指定して次の手順で画像を更新する（接続中の他の端末にはインストールしない）。
-
-```sh
-export ANDROID_SERIAL=emulator-5580
-mise -C Android exec -- ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
-mise -C Android exec -- adb -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/debug/app-debug.apk
-mise -C Android exec -- adb -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-mise -C Android exec -- adb -s "$ANDROID_SERIAL" shell am instrument -w -e class 'com.example.regzaremote.RemoteWidgetTest#layoutsFollowIOSFamiliesAndKeepTheirKeysAfterResizing' -e exportWidgetPreviews true com.example.regzaremote.test/androidx.test.runner.AndroidJUnitRunner
-for size in medium large; do
-  mise -C Android exec -- adb -s "$ANDROID_SERIAL" exec-out run-as com.example.regzaremote cat "files/widget-previews/remote_widget_${size}_preview.png" > "Android/app/src/main/res/drawable-nodpi/remote_widget_${size}_preview.png"
-done
-```
-
-Swift／Java の接続コード、state の待機・キャンセル、Looper、OkHttpTransport、.so の梱包、Swift・swift-java・NDK の版を変更したときに実行する。ホストの JVM の振る舞いテストと併せて確認する。接続済み端末が必要なため、`mise run check` には含めていない。現在の CI の Android ジョブもテスト APK のビルドまでで、端末上での実行は別途行う。
-
-| 失敗した場所 | 確認先 |
-| --- | --- |
-| 端末が見つからない・インストールできない | `adb devices -l` の状態、USB デバッグの認証、対象の API と ABI。複数台の場合は `ANDROID_SERIAL` を指定する |
-| 生成・native ビルド・梱包 | ビルドログの `[build-swift]`。下記「Swift／Java 接続の生成と調査」を参照 |
-| テストの失敗・タイムアウト | `Android/app/build/reports/androidTests/connected/debug/index.html` と `Android/app/build/outputs/androidTest-results/connected/debug/` の端末別結果 |
-| アプリのクラッシュ・native ライブラリの読み込み失敗 | 対象端末の `adb logcat -d -b crash`。複数台の場合は `adb -s <シリアル番号> logcat -d -b crash` |
-
-### 振る舞いのテスト
-
-Shopify の [Reflex](https://shopify.engineering/reflex) と同じ作りで、画面を描かずに ViewModel の state と操作を確かめる。テストは `BehaviorTests/`（Bun・TypeScript）に 1 回だけ書き、iOS 側と Android 側の 2 つの相手に同じテストを流す。片方だけ通る状態は失敗になる。テストは相手がどちらかを知らず、CLI と同じ約束事（`tree`・`ls`・`do`・`wait` の 1 行ずつの命令と JSON）だけを使う。
-
-- iOS 側の相手は `regza`（iOS と同じ共有の組み立てを macOS・Linux 上の CLI で動かす。iOS アプリそのものは起動しない）
-- Android 側の相手は `regza-android`（`Android/behavior-tests`。ホストの JVM）。命令の読み方と返す JSON は `regza` と同じもの（`IntrospectionSession`）を使い、操作を送るところと state を受け取るところだけを、アプリと同じ道（Kotlin の `send` と `xxxStates` → swift-java のつなぎ → 窓口）で行う。窓口とつなぎはホスト向けの共有ライブラリ（`RegzaJVMHost`）にして読み込む。Linux の swiftCore は使用中の Swift ツールチェーンから参照し、`/usr/lib/swift` に固定しない。エミュレーターは使わない
-- 外からの入力は偽物のテレビ・録画サーバー（`RegzaFakeServers` の `FakeServersTransport`）で渡すので、本物にはつながない。偽物は選局や予約で状態が変わり、本物の Repository から上をそのまま通る
-- テストは `sdk/app.ts` の `describeOnBothPlatforms` で書き、`do`（操作を送り、state が期待どおりになるまで待つ）と `precondition`（state が期待どおりになるまで待つ）で確かめる
-- 「テレビにつながらない」「チャンネル一覧が空」のような場面は、`describeOnBothPlatforms` に場面（`FakeScenario`。`base` で名前の場面を選び、1 つのテストだけの差し替えは宛先ごとの返事とつながらないアドレスで足す）を渡して作る。両方の相手に、起動するときに `--scenario <JSON のファイル>` で渡る
-- Swift 6 からは、Android の Foundation も iOS と同じ swift-foundation（JSON・Date・Calendar・URL・書式など）を土台にしているので、Mac で動かしても大半は Android と同じものを通る。Android の土台（ART と JNI・Bionic・Looper で動かす MainActor・APK の中の .so の読み込み）は `AndroidRuntimeSmokeTest` を arm64 のエミュレーターや実機で動かして確かめる。swift-corelibs-foundation に残る部分（RunLoop・Thread など）は、使う経路ごとに端末で確かめる
-
-バンドル ID（`com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`）と署名のチームは `iOS/Config/Signing.xcconfig` にまとめている。自分でビルドして実機に入れるときは、このファイルは変えずに、同じフォルダに `Local.xcconfig` を作って自分の値で上書きする（Git には入れない）。
-
-```
-// iOS/Config/Local.xcconfig
-BUNDLE_ID_PREFIX = com.yourname
-DEVELOPMENT_TEAM = ABCDE12345
-```
-
-テレビや Mirakurun につながずにアプリを起動して確かめるときは、UI テストの HTTP スタブ（`UITests/server.ts`）を起動し、Debug ビルドに起動引数 `-UITestServer <スタブのアドレス>` を渡す（[UITests/README.md](UITests/README.md)）。アプリには偽物を入れない。Debug ビルドを起動引数 `-LiveHost <EPGStation のアドレス> -LiveChannel <チャンネルの ID>` で起動すると、すぐライブ視聴の再生画面を開く（実際に配信を頼むので、確かめたら EPGStation で配信を止める）。
-
-画面の余白・ボタンの高さ・色は `Design`（`RemoteControls.swift`）と `AppTheme` にまとめている。余白は 16 / 12 / 24、ボタンの高さは 56 / 48 / 40 の 3 段階だけを使い、色は選択中・進行中（緑）と電源・録画（赤）だけに使う。リモコンのタブは、テレビ付属のリモコンの写真から測った色に合わせ、明るいグレーの本体にグレーのボタンと黒い文字、十字キーのあたりだけ黒い帯に黒いボタンと白い文字、銀色の決定、赤い電源ボタンの配色（`RemoteBody`・`RemoteKeyTone`）にしている。
-
-## 画面を足す手順
-
-画面の状態と操作は、iOS と Android で同じ ViewModel（`Packages/RegzaCore/Sources/Presentation`）が持つ。ViewModel は Elm 風で、画面に出すものを `state`、画面からの操作を `send(Action)` で受ける。Android は ViewModel の State と Action の型を swift-java でそのまま Java のクラスにして使い、間の窓口（`Android/RegzaAndroidBridge`）は、道具（`Android/ScreenGlue` の `screen-glue`）が State/ と Action/ のフォルダから作る。画面を足すときに窓口を手で書くことはない。
-
-### 1. 共有の ViewModel を作る
-
-`Packages/RegzaCore/Sources/Presentation/<機能>Presentation/<画面>/` に置く。例はチャンネル一覧（`ChannelsPresentation/ChannelList/`）。新しい機能なら、`<機能>Presentation/` を作って `Package.swift` の `presentationFeatures` に足し、`AppPresentation` の `AppViewModel` から作る。
-
-```
-ChannelsPresentation/ChannelList/
-├── ChannelListViewModel.swift      ViewModel
-├── State/ChannelListState.swift    画面に出すもの
-└── Action/ChannelListAction.swift  画面からの操作
-```
-
-- ViewModel は `@MainActor @Observable public final class` にし、`public typealias State = ChannelListState` と `public typealias Action = ChannelListAction` を書く。ツールはこの 2 行で、どの ViewModel にどの型を送るかを決める
-- State/ と Action/ の型は 1 つのファイルに 1 つ置き、名前は画面の名前で始める（`LivePlayerPhase` のように State の中で使う enum も State/ に置く）。ここに置いた型だけが Java のクラスになる
-- State と Action には UI の型（`RegzaSharedModels`）だけを使い、Domain の型は使わない（Android に見せないため。ViewModel の Domain を使う init やプロパティは `package` にする）
-- 表示の判断（ボタンを出すか、押せるか、保存できるかなど）は State に入れ、画面に式を書かない。画面に置いた判断はテストでも CLI（`regza`）でも確かめられず、iOS と Android にそれぞれ書くことになる
-- 1 つの画面に Action は 1 つにする。部品に分けた ViewModel（設定のテレビの登録など）の操作は、親の Action の case に入れて送る（`SettingsAction.tv(TVSetupAction)`）。部品の ViewModel には `typealias Action` を書かない（書くと Android から直接送れてしまう）
-- CLI と振る舞いのテストから動かせるよう `IntrospectableActions` にし、名前と引数の操作を Action にする `action(_:_:)` を書く（CLI も Android 側の相手もこれを使うので、置き換えは 1 か所だけ）。state を要約したり伏せたりするときは `introspectionJSON(of:)` に書く。Action のどの case も `action(_:_:)` で作れるようにする（アプリの画面から送れる操作は、どれも約束事からも送れる。`ContractCoverageTests` が漏れを確かめる）
-- 機能のモジュールは共通（`PresentationCore`）だけを使い、ほかの機能のモジュールを読み込まない。ほかの機能や `AppViewModel` から使う関数などは `package` にする。画面の復元に保存するもの（`<画面>RestorationState`）も機能に置き、`AppViewModel` がまとめて保存する
-- テストを `Tests/RegzaCoreTests/RegzaPresentation/ViewModels/` に足す
-
-### 2. AppViewModel から開けるようにする
-
-- タブの最初の画面なら `AppViewModel` に持たせて `openViewModels` に並べる
-- タブの中で開く画面なら `AppRoute` に case を足し、`AppViewModel.viewModel(for:)` でその ViewModel を返す（`id` も足す）。開くのは `AppAction.push(route)`、戻るのは `pop`
-
-### 3. iOS の画面を作る
-
-画面は機能の画面のモジュール `iOS/RegzaKit/Sources/UI/<機能>UI/<画面>Screen.swift` に `package struct <画面>Screen` として置き（`UI/ChannelsUI/ChannelListScreen.swift`）、`viewModel.state` を見て `viewModel.send(...)` で送る。組み立て（`AppUI` の `AppScreen`・`AppRoutes`）から使うので `package` にする。`RegzaDomain` とほかの機能のモジュールは import しない（`LayerTests` が確かめる）。機能の画面のモジュールが読み込むのは、共通（`PresentationCore`）と自分の機能のプレゼンテーション（`<機能>Presentation`。リモコンは共通の `RemoteViewModel`）だけで、`AppPresentation` は画面の末尾のプレビュー（`#if DEBUG`）の中でだけ読み込む（`LayerTests` と、リリースのビルドで確かめる）。ほかの画面を開く・アプリで見るなどの画面の移り変わりは、環境値の窓口（`appNavigator`。`AppViewModel` が実装する `AppNavigator`）に頼む。タブの `NavigationStack` と開いた先の画面（`AppRoutes` の `RouteView`）、アプリ全体のシートは組み立て（`AppScreen`）が持つので、機能の画面は `NavigationStack` を持たない（プレビューでは `NavigationStack { ... }` で包む）。いくつもの機能で使う部品は `UICommon` に置く。
-
-機能を足すときは、`Sources/UI/<機能>UI/` を作り、`Package.swift` の `features` に足して、`AppUI` の組み立てから使う（`LayerTests` はフォルダから機能を読み、`Package.swift` と一致することを確かめる）。機能の画面はそれぞれライブラリのプロダクトにしてあり、Xcode が機能ごとのスキーム（`GuideUI` など）を作る。
-
-モジュールの名前は「機能名＋層」にそろえる。共有の Swift のロジックは `<機能>Presentation`、iOS の画面は `<機能>UI`、Android の画面は `:ui:<機能>`。組み立ては `AppUI`（iOS）・`:ui:app`（Android）、OS の機能とつなぐ部分は `AppServices`・`LiveActivity`・`SystemActions`・`Widgets`（iOS）・`:platform:appservices`・`:platform:liveupdate`・`:platform:systemactions`・`:platform:widgets`（Android）、アプリ本体は `RegzaRemote` のターゲット（iOS）・`:app`（Android）、共通の部品は `UICommon`（iOS）・`:ui:common`（Android）。
-
-画面の名前は、iOS も Android も共有の ViewModel のフォルダの名前に `Screen` を付けたものにそろえ、1 画面 1 ファイルにする。`Screen` は画面全体にだけ付け、部品（`KeyButton`・`NowPlayingCard` など）には付けない。そろっていることは `RegzaKitTests` の `ScreenNamingTests` が確かめる。
-
-### 4. Android の画面を作る
-
-```sh
-cd Android
-swift run --package-path ScreenGlue --scratch-path .build/screen-glue -c release screen-glue   # ./gradlew のビルド (mise run build-swift) でも毎回実行される
-```
-
-ツールが作るもの（作ったものはコミットする。古いままだと `Android/ScreenGlue` のテスト `committedGlueIsUpToDate` が失敗する）。ツールは Swift のソースを swift-syntax で読み、決まりに合わない置き方（型を書いていないプロパティ、送り先の ViewModel のない Action、1 つのファイルに 2 つの型など）なら止まる:
-
-- 窓口の送る関数（`sendChannelListAction`）と state を返す関数（`channelListState(route:)`・`nextChannelListState(route:after:waitID:)`）: `RegzaAndroidBridge/Sources/RegzaAndroidBridge/Generated/ScreenActions.swift`。Kotlin の Flow が終わると `endStateWait` で Swift 側の待機も終える
-- swift-java の設定の型の一覧（`RegzaAndroid/*.swift-java.config` の `importedModuleStubs`）。どのモジュールにも共通の設定（Java のパッケージなど）は `RegzaAndroid/swift-java.common.config` に 1 回だけ書き、ビルドのときにモジュールごとの設定と重ねる
-- Kotlin の送り先と state の `Flow`: ビルドのたびに `.build/swift/screen-glue-kotlin/` に作る
-  - `<モジュール>/<接頭辞>Screens.kt`（`:presentation:<モジュール>` に入る）: その機能の画面が受け取る送り先 `<接頭辞>Send`（`send(ChannelListAction.tune(code))` のように、その機能の Action を `send` で送る。共通の `CoreSend` を受け継ぎ、リモコンの操作と画面の移り変わり（`send.push(route)` など。`AppNavigator`）も送れる）と、プレビューが受け取るアプリ `<接頭辞>App`（送り先と `app.channelListStates(route)` などの state の購読）
-  - `bridge/ScreenGlue.kt`（`:core:bridge` に入る）: すべての送り先をまとめた `Send`、Swift の窓口に送る `SwiftSend`（画面の移り変わりはアプリ全体の操作にして送る）、`RegzaAndroidApp` の state の `Flow`、プレビューに渡す `SwiftApp`
-- State/・Action/ の型ごとの Gradle のモジュールの一覧（`.build/swift/presentation-types.txt`）。`build-swift.sh` が、型の Java のクラスを `.build/swift/presentation-java/<モジュール>/` に分ける
-
-Kotlin の画面は、iOS と同じ機能の分け方の Gradle モジュール `Android/ui/<機能>` の package `com.example.regzaremote.ui.<機能>` に `<画面>Screen.kt` として `fun <画面>Screen(` を置き（`ui/channels/src/main/java/com/example/regzaremote/ui/channels/ChannelListScreen.kt`）、自分の ViewModel の state と、その機能の送り先（`<機能>Send`）を受け取って描き、操作を `send` で送る。ほかの画面を開く・アプリで見るなどの画面の移り変わりは、`send.push(route)` のように送り先の `AppNavigator` の関数で頼む（アプリ全体の操作の型 `AppAction` は機能の画面から見えない）。プレビューは `FakePreview<<機能>App>(setUp = { ... }) { app -> ... }` のように、その機能のアプリの型を選んで受け取る。
-
-画面の移り変わりの窓口（`AppNavigator`）は iOS と Android で同じ役目にし、画面の移り変わり（画面を積む・アプリで見る・いま映っているものの画面・設定）だけを置く。窓口は頼むだけにし、戻る道やシートを出しているかなどの状態は置かない。タブの戻る道（iOS の `NavigationStack(path:)`・Android の back stack）と、アプリ全体のシート（いま映っているもの・アプリで見る・設定）は、どちらも組み立て（iOS の `AppUI`・Android の `:ui:app`）が持ち、アプリ全体の state を読んで出す。機能の画面はタブのことを知らないので、組み立て方を変えればほかの場所でも使える。機能の中だけで完結する移り変わり（設定の中のページなど）は、機能の中に置いてよい。プレビューの準備の都合（ほかの機能のデータを読み込むなど）は窓口に入れず、プレビューの準備（`FakePreview`）の指定にする。戻る道の画面（1 局の番組表・番組の詳細など）に要るチャンネルと番組表は、どちらも `FakePreview(prepareRoutes: true)`・`FakePreview<<機能>App>(prepareRoutes = true)` で、`setUp` の前に読み込む（アプリ全体の操作 `prepareRoutes` を送る）。ファイルの末尾にはプレビューを置く（iOS の画面も同じく、ファイルの末尾の `#if DEBUG` の中に置く）。タブの最初の画面なら組み立てのモジュールの `ui/app/src/main/java/com/example/regzaremote/ui/app/AppRoutes.kt` の `TabRoot`、タブの中で開く画面なら同じファイルの `RouteScreen` に足す。
-
-iOS の `<機能>UI` と Android の `ui/<機能>`（package は `ui.<機能>`）に画面を置き、いくつもの機能で使う補助 View はそれぞれ `UICommon`・`ui/components` に置く。色・余白などは iOS の `Design`、Android の `design` が担当する。
-
-Android のアプリ本体（`:app`）には起動用の `MainActivity.kt`・`RegzaApplication.kt` だけを置く。`RegzaApplication` は起動時に、共有の Swift の文言を入れ、Live Updates に Swift の窓口の返し方を渡す（`LiveUpdateController.install`）。アプリの組み立て（`:platform:appservices`）の `appservices/AppFactory.kt` が保存先を Swift の Factory に渡し、組み立てた App を Android の ViewModel に注入する。`appservices/RegzaViewModel.kt` は App の保持と終了時の処理、`appservices/storage` は Android Keystore・SharedPreferences を担当する。
-
-UI は `ui.<機能>`（機能ごとの画面）・`ui/components`（共通 UI・state の購読・権限案内）・`ui.app`（組み立て。Gradle の `:ui:app`。いちばん外側の画面 `AppRoot`・タブの戻る道と表示先。`MainActivity` もここを通して画面を出し、Live Updates の実装などアプリ本体にあるものを渡す）・`ui/preview`（プレビューの準備）に分ける。色・テーマは `design/AppTheme.kt`、余白・サイズは `design/Design.kt`、ボタンや見出しなどは `ui/components/CommonComponents.kt` に置く。Gradle モジュールは、Swift の窓口とつなぎ（`:core:bridge`）・色と余白（`:core:design`）・文言（`:core:localization`）・共通の部品とプレビューの準備（`:ui:common`）・機能ごとの画面（`:ui:<機能>`）・画面の組み立て（`:ui:app`）・OS の機能とつなぐ部分（`:platform:<名前>`。アプリの組み立て `appservices`・Live Updates `liveupdate`・画面のない入口 `systemactions`・ウィジェット `widgets`。iOS の `AppServices`・`LiveActivity`・`SystemActions`・`Widgets` と 1 対 1）・アプリ本体（`:app`。起動だけ）に分ける。依存の向きも iOS と同じにする：`appservices` は `liveupdate` を使い、`systemactions` は `appservices` を、`widgets` は `systemactions` を使う。`liveupdate` はアプリの組み立てを読み込まず、Swift の窓口は起動時に渡してもらう。共通の部品（`:ui:common`）は Live Updates のオン・オフの型を `liveupdate` から読み込む（iOS の `UICommon` が `LiveActivity` を読み込むのと同じ）。通知とウィジェットで共通のキーのアイコンは `:core:design` に置く。`:app` は画面を `:ui:app` からだけ読み込み、`:ui:app` は `:app` を読み込まない（iOS のアプリが `AppUI` だけを読み込み、`AppUI` がアプリのターゲットを知らないのと同じ）。画面の状態と操作の型は、共有の Swift のプレゼンテーションのモジュールと 1 対 1 の `:presentation:<名前>`（`core`・機能ごと・`app`）に分ける。機能を足すときは、共有の Swift に `<機能>Presentation` を足したうえで、`Android/presentation/<機能>` と `Android/ui/<機能>` に `build.gradle.kts`（それぞれ `plugins { id("regza.android.presentation") }`・`plugins { id("regza.android.ui") }` だけでよい）を置き、組み立て（`ui/app`）からつなぐ。`settings.gradle.kts` が `presentation/`・`ui/` の下を読んで足し、`app` は足したすべての画面のモジュールに、`:core:bridge` はすべての `:presentation:<名前>` に依存する。SDK の版・Java の版・Compose・機能に共通の依存などは `Android/build-logic` の決まり（`regza.android.library`・`regza.android.compose`・`regza.android.presentation`・`regza.android.ui`）にまとめ、SDK の版は `gradle/libs.versions.toml` に 1 か所だけ書く。依存のないモジュールは同時にビルドする（`org.gradle.parallel`）。機能の画面のモジュールは `:ui:common`（共通の `:presentation:core` を見せる）と自分の機能の `:presentation:<機能>` だけに依存し、Swift の窓口（`:core:bridge`）にも依存しないので、ほかの機能の画面も型もコンパイルの段階で読み込めない（画面の読み込みは ktlint の規則でも禁止している）。
-
-Swift の接続コードは、生成する Kotlin の `com.example.regzaremote.presentation.<モジュール>`（`<接頭辞>Send`・`<接頭辞>App`）と `com.example.regzaremote.bridge`（`Send`・`SwiftSend`・`SwiftApp`・state の Flow）、Java の `com.example.regzaremote.core` に分ける。Java のパッケージはどのモジュールでも同じで（JNI の名前を変えないため）、Gradle のモジュールへの分け方だけを変える。生成結果は `.build/` に置く。変更するときは `ScreenGlue` や swift-java の設定を更新し、生成結果を直接編集しない。
-
-Android の Kotlin の依存方向は、`Tools/KtlintRules` の ktlint カスタムルール `regza:dependency-imports` で検査する。`mise run lint` と `mise run format` はルールのテスト・JAR のビルド後に読み込むため、push・PR の Linux CI でも実行される。既存の Gradle wrapper を使い、Android SDK・Swift の生成済みコードは不要。ktlint の版はルートの `mise.toml` からビルドに渡す。
-
-- `ui` から appservices、保存インターフェース、native の生成・変換ユーティリティ、SwiftSend・SwiftApp、BuildConfig、Swift 実行環境、SharedPreferences・DataStore・暗号化保存への import を禁止する。表示用の core の型・Send・state の購読は利用できる。
-- appservices・bridge から UI への import、design から UI・appservices・bridge・core への import を禁止する。
-- 機能の画面（`ui.<機能>`。`ui` の下の、共通の部品 `ui.components`・プレビューの準備 `ui.preview`・組み立て `ui.app` 以外）を import できるのは、その機能自身と組み立て（`ui.app`）だけ（共通部品・プレビューの準備・`MainActivity` などからも禁止）。機能から組み立てへの import も禁止する。
-- プレビューの生成は `ui/common` の `appservices/preview/PreviewAppFactory.kt`、偽物での組み立てとホスト向けライブラリの読み込みは `ui/common` の debug のソースの `appservices/preview/FakeApps.kt` に置く。`ui/preview` からはこの Factory のみ利用でき、通常の画面からは参照できない。`FakePreview.kt` は準備済み App の表示とエラー表示を担当する。
-- 配信 URL の変換は `bridge/StreamURL.kt` が担当し、画面から native のユーティリティクラスを直接呼ばない。
-
-ktlint の構文解析を使って package と import を確認する。別名 import・禁止先のワイルドカード import も検出し、コメントや文字列は対象外。違反時はファイル・行番号・依存先を表示する。自動修正はしない。完全修飾名での直接参照・同一 package 内の参照・型解決・package と配置の一致は検査しない。厳密な依存境界が必要になれば Gradle モジュールによる制約を検討する。
-
-```kotlin
-rememberState(key) { app.programListStates(route) }?.let { ProgramListScreen(it, back, send) }
-```
-
-### 5. 確かめる
-
-```sh
-mise run check                             # 全部を順に確かめる (CI と同じ)
-```
-
-`mise run check` は、次のタスクを順に流す。1 つだけ流すこともできる。
-
-```sh
-mise run lint                              # Swift と Kotlin のコードの書き方 (swift-format と ktlint。直すときは mise run format)
-mise run test-swift                        # Swift のパッケージのテスト (test-swift-shared と test-swift-apple)
-mise run test-swift-shared                 #   Apple の環境がなくても流せるもの (RegzaCore・RegzaAndroidBridge・ScreenGlue。Linux でも流せる)
-mise run test-swift-apple                  #   Xcode が要るもの (RegzaKit)
-mise run build-ios                         # iOS のアプリとウィジェットのビルド (Debug)
-mise run check-ios-release                 # Release でもビルドし、リリース版に偽物が入っていないことを確かめる
-mise run build-android                     # Android のアプリとテスト APK のビルド (debug・release。release は APK の中身も確かめる)
-mise run prepare-android-preview           # Android Studio のエディタ用にホスト向けライブラリを準備 (macOS・Linux)
-mise run test-android-runtime              # 接続済み arm64 端末で AndroidRuntimeSmokeTest を実行 (check には含まない)
-mise run test-behavior                     # 振る舞いのテスト (iOS 側と Android 側)
-```
-
-エミュレーターや実機が要る `test-android-runtime` は、`check` には入れていない。
-
-GitHub に push すると、GitHub Actions（`.github/workflows/check.yml`）が同じタスクを流す。書き方と `test-swift-shared` は Linux、Xcode が必要な `test-swift-apple`・`check-ios-release`（`build-ios` を含む）は macOS で、ジョブに分けて流す。`build-android` と `test-behavior` のジョブ（android）も Linux x86_64 で実行する。初回の Swift ビルドに時間がかかるため、このジョブは GitHub Actions の画面から手で動かしたとき（Run workflow）だけ流す。
-
-画面を足したら、`BehaviorTests/tests/` にもその画面の振る舞いのテストを足す（操作を送り、state が期待どおりになるまで待つ）。
-
-### Swift／Java 接続の生成と調査
-
-入口は `Android/` の `./gradlew :app:assembleDebug`（内部で `scripts/build-swift.sh` を実行）。NDK の版は Gradle、Swift と SDK の版は `toolchains.toml`、Java のパッケージなどは `RegzaAndroid/swift-java.common.config` を参照する。以下のパスは `Android/` からの相対パス。
-
-`mise run build-swift` と `mise run build-jvm-host` は、`scripts/with-build-lock.swift` で同じ OS のファイルロックを取得する。別の Gradle プロセスから起動しても、接続コードの生成・互換対応・native ビルド・梱包を同時実行しない。待機中はログに表示し、終了時には OS がロックを解放する。`.build/swift-build.lock` は使用中に削除しない。生成ファイルを共有するため、ビルドはこれらの mise タスクを通して実行する。
-
-| 段階 | 入力・設定 | 出力 |
-| --- | --- | --- |
-| 共有モデルの Java 生成 | `../Packages/RegzaCore/Sources/RegzaSharedModels`、swift-java の共通設定 | `.build/swift/regzashared-java/`、`RegzaAndroid/Sources/RegzaSharedJava/Generated/` |
-| 画面の型の Java 生成 | `Sources/Presentation` の State/・Action/（`RegzaPresentation` の型としてまとめて作る）、`RegzaAndroid/RegzaPresentation.swift-java.config` | `.build/swift/regzapresentation-java/`（Gradle のモジュールごとに分けたものは `.build/swift/presentation-java/<モジュール>/`）、`RegzaAndroid/Sources/RegzaPresentationJava/Generated/` |
-| 画面の接続コード生成 | `ScreenGlue` が共有の State/・Action/・ViewModel を読む | `Generated/ScreenActions.swift`、`.build/swift/screen-glue-kotlin/`、`.build/swift/presentation-types.txt`、設定内の型一覧 |
-| アプリ窓口の Java 生成 | `RegzaAndroidBridge/Sources/RegzaAndroidBridge`、`RegzaAndroid/RegzaAndroidBridge.swift-java.config` | `.build/swift/regzabridge-java/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/` |
-| Kotlin へのコールバック生成 | 生成した `RegzaAndroidStorage.java`・`RegzaAndroidHTTPClient.java` と通信の引数の型 | `.build/swift/bridge-callbacks/`、`RegzaAndroid/Sources/RegzaAndroidBridgeJava/Generated/JavaCallbacks.swift` |
-| native ビルド・梱包 | 接続コード、Swift SDK、NDK | `core/bridge/src/{main,release,debug}/jniLibs/arm64-v8a/` |
-
-Kotlin が実装する保存先・HTTP のコールバックと通信の引数の型は、`build-swift.sh` の `callback_types` で明示する。public protocol を追加しても自動で公開対象にはしない。追加するときは、Kotlin 側の実装と生成対象を合わせて検討する。
-
-ビルドログの `[build-swift]` に処理段階・モジュール・設定が表示され、Java 生成時には入力と出力も表示される。失敗時は、元のエラーに続いて段階・モジュール・設定・スクリプトの行番号・終了コードが出る。設定は共通設定とモジュール設定を合成した `.build/swift/configs/` を確認する。Foundation の重複除去とコールバック生成は「swift-java 互換対応」と表示し、通常の生成と区別する。
-
-### swift-java の制約と回避策
-
-swift-java（301e3da）には次の制約がある。どれも、守れなければビルドかテストで止まるようにしている。
-
-- 型を書いていないプロパティ（`public var count = 0`）を、警告だけ出して Java にしない。State/ と Action/ の public なプロパティには型を書く（`public var count: Int = 0`）。書いていなければ `screen-glue` が止まる
-- Foundation の型（`URL`・`Date`・`Data`・`UUID`）を enum の値（`case ready(url: URL)`）でしか使っていないと、その型の Java のクラスを作らず、javac が失敗する。`URL` は共有の UI の型の `urlString` が使うので作られる。ほかの型を enum の値だけで使うときは、共有の UI の型（`RegzaSharedModels`）で一度使う（あとのモジュールの Foundation の型のつなぎは、共有の UI の型のものを使って消すため、ほかのモジュールで作ると消せずに止まる）
-- Foundation の型の Java のクラスを、使うモジュールごとに作る。3 つのモジュール（`RegzaSharedModels`・`RegzaPresentation`・`RegzaAndroidBridge`）は同じ Java のパッケージに出しているので、そのままでは同じ名前の JNI の関数がぶつかってリンクできない。`mise run build-swift` が、前のモジュールにもある型のつなぎを消す（消せない混ざり方なら止まる）。モジュールごとにパッケージを分けると、ぶつからない代わりに `Date` がモジュールごとに別の型になり、モジュールをまたいで渡せなくなる
-- 同じ名前で引数の型だけ違う関数を並べられない。窓口の送る関数を `sendChannelListAction` のように型ごとの名前にしているのはこのため（Kotlin からは `<機能>Send`・`Send` を通してどれも `send` で送れる）
-- swift-java が何か宣言を Java にできなかったときは、`mise run build-swift` が止まる（`Failed to import`）
-- jextract の入力は絶対 file URL に統一する。相対パスを URL として渡すと Linux で同じ extension が重複収集され、Java のメソッド名や定義が重複するため、`build-swift.sh` がパスの解決と URL エンコードを行う。
-- Future のキャンセルが Swift Task に伝わらない制約（[swift-java #947](https://github.com/swiftlang/swift-java/issues/947)）に対し、Flow の finally から endStateWait を呼ぶ。StateWaitRegistry は Swift Task のキャンセルでも continuation を起こすが、遅れて届く終了通知を扱うため、waitID と完了記録は維持する。対応版へ更新するときも、開始前・待機中・状態変更との競合を端末テストで確認してから回避策を簡略化する。
-- rememberState は collectAsStateWithLifecycle で購読する。画面の Lifecycle が STARTED 未満になると Flow の終了通知で Swift の待機を解放し、再開時は最新値から受け取り直す。エディタのプレビューでは従来どおり初期値を先に取得する。
+| [AGENTS.md](AGENTS.md) | 人と AI エージェントが守ること（言葉・入れてはいけないもの） |
+| [docs/architecture.md](docs/architecture.md) | 層とモジュール、依存の向き、iOS と Android の対応、それぞれの理由、そろえない違い |
+| [docs/repository-structure.md](docs/repository-structure.md) | フォルダの並び、生成物 |
+| [docs/development-guide.md](docs/development-guide.md) | 環境、確かめ方、テスト、画面と機能の足し方、Android の Swift のビルド |
+| [OpenAPI/README.md](OpenAPI/README.md) | 外部の API の定義と、API クライアントの生成 |
+| [Design/README.md](Design/README.md) | デザイントークン（色・余白） |
+| [Localization/README.md](Localization/README.md) | 文言（String Catalog） |
+| [UITests/README.md](UITests/README.md) | 画面のテスト（Maestro）と HTTP スタブ |
+
+動かし方は開発ガイドの「[初めてのとき](docs/development-guide.md#初めてのとき)」と「[ふだんの確かめ方](docs/development-guide.md#ふだんの確かめ方)」にある。
+
+## できること
+
+- 画面は「リモコン」（テレビを操作するボタン）と、見るための「番組表」「チャンネル」「録画予約」のタブに分けている。
+  テレビで映っているものは、どのタブでもタブバーの上のミニプレーヤーに出し、押すと番組の詳細（録画ならシーク）を開く
+- 録画番組の再生中は、番組名・再生位置を Dynamic Island とロック画面の Live Activity に出し、そこから音量・チャンネル・再生を操作できる
+- REGZA だけでも、リモコン・Live Activity・Siri・チャンネル一覧と選局・録画予約の一覧・最初から見るが使える。
+  Mirakurun（番組名・番組表・番組表からの予約）と EPGStation（ライブ視聴）は、設定の「録画サーバーとの連携」で設定した人だけが使う
+  - 番組表のタブは未設定でも消さず（タブを出したり消したりしない HIG に合わせる）、何ができるかと設定のしかたを案内する
+  - 連携は、それぞれの設定画面の「連携を解除」でやめられる
+  - アドレスとポートは別々の欄で入れ、ポートが空なら標準のポート（Mirakurun 40772・EPGStation 8888）を使う。保存は `<アドレス>:<ポート>` の 1 つの文字列（ポートの欄が空なら `<アドレス>` だけ）
+  - 「探す」と、同じサーバーの EPGStation の候補は、標準のポートだけを確かめる
+  - EPGStation は Mirakurun から放送を受け取るので、ライブ視聴は Mirakurun を設定してから設定できるようにし（EPGStation だけでは番組名も出ず、見られない局も一覧に混ざる）、
+    Mirakurun と同じサーバーで EPGStation が動いていれば候補として出す。Mirakurun の連携を解除すると EPGStation の連携も解除する
+- テレビが未登録なら、タブの代わりに登録の案内を出す（設定は自動では開かない）
+- 設定の「外観」で「システムに合わせる」「ライト」「ダーク」を選べる。初期値は OS に合わせ、選ぶとすぐに反映して保存する（テレビの接続の設定の保存・キャンセルとは別）
+
+### 見た目
+
+- 色は REGZA の公式サイトで使われている深い緑（`#00442D`）を基調にする（ライトでは `#006B4F`、ダークでは暗い背景でも見える明るめの `#1D866F`）。ロゴはまねしない
+- 余白は 16 / 12 / 24、ボタンの高さは 56 / 48 / 40 の 3 段階だけを使い、色は選択中・進行中（緑）と電源・録画（赤）だけに使う
+- リモコンのタブは、テレビ付属のリモコンの写真から測った色に合わせる。明るいグレーの本体にグレーのボタンと黒い文字、十字キーのあたりだけ黒い帯に黒いボタンと白い文字、
+  銀色の決定、赤い電源ボタン。両方の外観で同じ配色にする
+
+### iOS のウィジェット・コントロールセンター・Siri
+
+- ホーム画面のリモコンのウィジェット（`RemoteWidget.swift`）
+  - 中: 電源・入力切替・消音・チャンネルの上下・音量の上下
+  - 大: 電源・入力切替・消音・地デジ/BS/CS・数字 1〜12・黒い帯に音量とチャンネルの上下・再生の段（10 秒戻し・再生・一時停止・30 秒送り）。
+    数字を主役にするため、数字以外の段は低くそろえる。再生と一時停止は、ウィジェットからは今の状態が分からないので別々のボタン
+  - 小は置けるボタンが少なく、同じ操作はコントロールセンターのボタンで足りるので出さない
+  - 番組名などは出さず、ボタンだけを並べる（ウィジェットはすぐには更新されないので、今の番組は Live Activity に任せる）
+- コントロールセンター・ロック画面・アクションボタンに置けるボタン（`ControlCenterControls.swift`）: 電源・消音・音量の上下・チャンネルの上下
+- ウィジェットとコントロールセンターのボタンは `RegzaKeyIntent` でキーを送る。`LiveActivityIntent` なので、ウィジェットの拡張ではなくアプリのプロセスで動き、
+  キーチェーンのテレビの登録情報をそのまま使える
+- Siri・ショートカット（`RemoteIntents.swift`。言い方の登録はアプリのターゲットの `RegzaRemoteShortcuts`）
+  - チャンネルを切り替える（`TuneChannelIntent`）: テレビのチャンネル一覧から局を選ぶ。全角・半角や「・」の違いを無視して局名で探すので、「NHK」でも「ＮＨＫ総合１・東京」に合う
+  - テレビを操作する（`RemoteCommandIntent`）: 電源・音量・消音・チャンネルの上下・入力切替・再生・一時停止・停止・30 秒送り・10 秒戻し・録画リストを、回数を指定して押す
+  - 「REGZAリモコンで NHK総合にして」「REGZAリモコンで消音」「REGZAリモコンでテレビをつけて」のように呼ぶ。チャンネル名の候補はアプリを開いたときにテレビの一覧で更新する
+  - Siri の App Intent はふつうの `AppIntent` で、拡張にも登録すると拡張のプロセスで動くことがあるので、アプリにだけ登録する
+
+### Android のウィジェット・通知
+
+- iOS と同じ中・大のリモコンのウィジェットがある。先にアプリでテレビを登録し、Android 17 以降はローカルネットワークへのアクセスを許可してから、
+  ホーム画面のウィジェットの一覧で「リモコン（中）」か「リモコン（大）」を追加する
+  - 大きさを変えても種類とボタンの並びは変わらない。背景は置いた場所いっぱいに広げ、ボタンは縦横比を保って中央に置く
+  - ボタン以外を押すとアプリを開き、ボタンはアプリを開かずにキーを送る。未設定・認証の失敗・通信の失敗はメッセージで知らせる
+  - Jetpack Glance で描き、番組の取得や定期的な通信はしない。ボタンは画面のない入口（`:platform:systemactions`）から、保存済みの設定と共有の Swift でキーだけを送る。
+    画面用の窓口は作らない（理由は [docs/architecture.md の「そろえない違い」](docs/architecture.md#そろえない違い)）
+- 設定の「表示」か再生中の画面の「ロック画面と通知に表示」をオンにすると、iOS の Live Activity と同じ内容（番組名・チャンネル・進み具合・リモコンのボタン）を常駐の通知に出す
+  - Android 16 以降は Live Updates として、ステータスバーのチップ（短い局名、録画中は「録画」）とロック画面の上にも出す
+  - 通知のボタンは 3 つまでなので、放送中は CH−・CH＋・消音、録画は再生の操作、待機中は電源を出す
+  - 残り時間（放送）と経過時間（録画）はシステムが進める時計で出し、進捗のバーはアプリが通知を更新したときに進む
+  - 通知をスワイプで消すとオフになる。オンにするときに通知の権限を求め、通知やライブアップデートがオフなら設定を開く案内を出す
+  - 番組の終了時刻の 30 秒後（放送でなければ 15 分後）に起こしてもらって取り直す。正確な時刻のアラームは使わない
 
 ## テレビ側の準備
 
@@ -377,12 +80,18 @@ swift-java（301e3da）には次の制約がある。どれも、守れなけれ
 - 見つからないときは IP アドレスを手入力する
 - 使用中にテレビへつながらなくなったら（通信エラーのとき）、同じ方法で探し直し、保存済みの資格情報で認証が通ったテレビのアドレスに切り替える（DHCP でアドレスが変わった場合など）。電源が切れているだけのこともあるので、探し直しは 3 分に 1 回まで
 - テレビを選ぶか IP アドレスを入力し、「テレビに PIN を表示」→ テレビに出た PIN を入力して登録する（レグザAppsコネクト v2 の `request_connection` / `confirm_connection`）
-  - パスワードは PIN から作った鍵（PBKDF2-HMAC-SHA1, 1331 回）の AES-128-CBC で暗号化されて届く。Android でも動くよう SHA-1 / AES は `RegzaCore` で自前実装している
+  - パスワードは PIN から作った鍵（PBKDF2-HMAC-SHA1, 1331 回）の AES-128-CBC で暗号化されて届く。Android でも動くよう SHA-1 / AES は共有の Swift で自前実装している
   - ユーザー ID はアプリ用に MAC アドレス形式のランダムな値を 1 つ作り、キーチェーンに保存して使い回す（iOS は本物の MAC アドレスを取得できない）。同じ ID で登録し直すとテレビ側で上書きされ、前のパスワードは無効になる。キーチェーンはアプリを削除しても残るので、入れ直しても登録は増えない
   - 手入力されたユーザー名は他のツールと共有しているかもしれないので、PIN 登録には使わない
   - 別のユーザー ID の登録は共存する（アプリと別のツールを別々の ID で登録し、両方で操作できることを実機で確認）。登録できる件数の上限と、テレビ側で登録を削除する方法は不明（取扱説明書に記載がない）
 - PIN 登録に対応していない機種は、テレビの外部連携設定で決めたユーザー名・パスワードを手入力する
 - 電源 ON をスマホから行うには、待機時の通信（クイック起動など）を有効にする
+
+## テレビとの通信
+
+- Digest 認証は OS の認証チャレンジに頼らず、共有の Swift で自前実装して両 OS で使う
+- 通常の HTTPS は各 OS の信頼ストアとホスト名の検証を使う。テレビの 4430 番だけは自己署名の証明書を受け入れ、その接続ではリダイレクトを追わない
+- iOS の旧登録 ID の移行と、保存キー・値の形式を保つ
 
 ## 視聴状況の取得
 
@@ -418,15 +127,16 @@ swift-java（301e3da）には次の制約がある。どれも、守れなけれ
 
 EPGStation が設定されていれば、放送中の番組をアプリで見られる（番組の詳細と視聴中の画面の「アプリで見る」）。家の Wi-Fi の中だけで使う。
 
-再生画面は縦向きでは映像の下に今の番組の情報（Mirakurun の番組表から。30 秒ごとに更新）と局の一覧を出し、局を押すと前の配信を止めてその局の配信を頼み直す。局の一覧は Mirakurun が受信している局（＝ EPGStation で見られる局）の代表チャンネルだけで、地デジ/BS/CS の選択は番組表・チャンネルのタブと共有する。横向きでは映像だけを出す。映像の部分は iOS 標準のプレーヤーなので、全画面・ピクチャインピクチャ・AirPlay のボタンはそのまま使える。
+再生画面は縦向きでは映像の下に今の番組の情報（Mirakurun の番組表から。30 秒ごとに更新）と局の一覧を出し、局を押すと前の配信を止めてその局の配信を頼み直す。局の一覧は Mirakurun が受信している局（＝ EPGStation で見られる局）の代表チャンネルだけで、地デジ/BS/CS の選択は番組表・チャンネルのタブと共有する。横向きでは映像だけを出す。iOS の映像の部分は標準のプレーヤーなので、全画面・ピクチャインピクチャ・AirPlay のボタンはそのまま使える。
 
-- `GET /api/streams/live/:channelId/hls?mode=0` で配信を頼み、`/streamfiles/stream{番号}.m3u8` に映像の部分（.ts）が載ったら iOS 標準のプレーヤー（AVPlayerViewController。ピクチャインピクチャ・AirPlay 対応）で再生する。映像は H.264、音声は AAC で届く
+- `GET /api/streams/live/:channelId/hls?mode=0` で配信を頼み、`/streamfiles/stream{番号}.m3u8` に映像の部分（.ts）が載ったら再生する（iOS は AVPlayerViewController、Android は ExoPlayer）。映像は H.264、音声は AAC で届く
 - チャンネル ID は Mirakurun のサービス ID と同じ（`network_id × 100000 + service_id`）
 - 見ている間は `PUT /api/streams/:id/keep` を 10 秒ごとに送り、閉じたら `DELETE /api/streams/:id` で止めてチューナーを空ける
-- EPGStation は keep が途切れても配信を自動では止めない（160 秒待っても残った）。そのため、アプリが頼んだ配信の番号を覚えておき、強制終了などで止められなかったものは、次にアプリを開いたとき・次に配信を頼むときに止める。終了するときも止めてみる
+- EPGStation は keep が途切れても配信を自動では止めない（160 秒待っても残った）。そのため、アプリが頼んだ配信の番号を覚えておき、強制終了などで止められなかったものは、次にアプリの画面を開いたとき・次に配信を頼むときに止める。終了するときにも止めてみる（iOS はアプリの終了で、待つのは 2 秒まで。Android は画面の ViewModel が片づけられるときで、待たずに送る）。止められなかったものは次に画面を開いたときに止める
 - 配信が始まらなかったときは、利用者が選んだ場合だけ、準備できないまま残っている配信（ほかの端末のものも含む）を止めてからもう一度頼む
 - 頼んでから再生できるまで 20 秒ほどかかる。同時に変換できる数に上限がある構成では、ほかで見ている配信があると始まらないことがある
 - 画質は EPGStation の設定の最初のもの（mode 0）だけを使う
+- ほかのアプリに移ったときの扱いは OS で違う（[docs/architecture.md の「そろえない違い」](docs/architecture.md#そろえない違い)）
 - EPGStation で録画する機能は入れていない（録画先がテレビと EPGStation の 2 つになり、予約の画面が分かりにくくなるため）
 
 ## 録画
@@ -444,22 +154,6 @@ EPGStation が設定されていれば、放送中の番組をアプリで見ら
   - テレビで番組を指定して再生する `POST /v2/remote/pvr/play/list/:rec_storage_id/:rec_content_id` はあるが、DLNA の番組 ID（独自の `X_Toshiba_REGZA_Browse` も含む）から `rec_content_id` を求められなかった
 - 番組表 `GET /v2/remote/epg/:channel_code?time=<Unix 秒>` は番組名・説明が空で返るため使っていない
 
-## Siri・ショートカット
-
-App Intents で次の操作を出している（`RemoteIntents.swift`。言い方の登録はアプリのターゲットの `RegzaRemoteShortcuts`）。
-
-- チャンネルを切り替える（`TuneChannelIntent`）: テレビのチャンネル一覧から局を選ぶ。全角・半角や「・」の違いを無視して局名で探すので、「NHK」でも「ＮＨＫ総合１・東京」に合う
-- テレビを操作する（`RemoteCommandIntent`）: 電源・音量・消音・チャンネルの上下・入力切替・再生・一時停止・停止・30 秒送り・10 秒戻し・録画リストを、回数を指定して押す
-- Siri では「REGZAリモコンで NHK総合にして」「REGZAリモコンで消音」「REGZAリモコンでテレビをつけて」のように呼ぶ。チャンネル名の候補はアプリを開いたときにテレビの一覧で更新する
-
-## ホーム画面のウィジェット
-
-ホーム画面に置くリモコンのウィジェット（`RemoteWidget.swift`。小は置けるボタンが少なく、同じ操作はコントロールセンターのボタンで足りるので出さない。中: 電源・入力切替・消音・チャンネルの上下・音量の上下、大: 電源・入力切替・消音・地デジ/BS/CS・数字 1〜12・黒い帯に音量とチャンネルの上下・再生の段（10 秒戻し・再生・一時停止・30 秒送り）で、実物のリモコンに近い並び。数字を主役にするため、数字以外の段は低くそろえる。再生と一時停止は、ウィジェットからは今の状態が分からないので別々のボタン）。番組名などは出さず、ボタンだけを並べる（ウィジェットはすぐには更新されないので、今の番組は Live Activity に任せる）。ボタンはコントロールセンターのボタンと同じく `RegzaKeyIntent` でキーを送る。配色はリモコンのタブと同じ明るいグレーの本体・グレーのボタン・赤い電源。
-
-## コントロールセンターのボタン
-
-ウィジェット拡張に、コントロールセンター・ロック画面・アクションボタンに置けるボタン（ControlWidget）を入れている（`ControlCenterControls.swift`）。電源・消音・音量の上下・チャンネルの上下の 6 つで、押すと `RegzaKeyIntent` でキーを送る。`RegzaKeyIntent` は LiveActivityIntent なので、ウィジェット拡張ではなくアプリのプロセスで動き、キーチェーンのテレビの登録情報をそのまま使える。
-
 ## 制限
 
 - 録画の再生を始めるなど、テレビの映像が切り替わっている最中に `play/status` を問い合わせると、テレビが再起動する機種がある（決定キーの 0.4 秒後の問い合わせで再起動し、決定キーだけでは起きないことを実機で確認）。決定・再生・停止・戻る・終了などのキーを送った後と、選局した後は 6 秒間問い合わせない（選局の直後に問い合わせると status 1 が返ることも実機で確認）
@@ -475,6 +169,19 @@ App Intents で次の操作を出している（`RemoteIntents.swift`。言い�
 - テレビ本体のリモコンでチャンネルを変えたことは、アプリを開くか iOS がアプリを起こすまで反映されない
 - 確実に更新するには、家のサーバーからテレビの状態を見て ActivityKit のプッシュ通知を送る仕組みが必要（未実装）
 
-### Maestro による UI テスト
+## このアプリの開発用の手順
 
-設定入力・画面遷移・入力復元の 3 フローを iOS / Android で実行する。通常の APIClient・通信をローカル HTTP スタブへ接続し、アプリに偽物を注入しない。スタブの返事は OpenAPI の定義に合うことを `mise run check-ui-stub`（lint に含まれる）で確かめる。導入と実行方法は [UITests/README.md](UITests/README.md)。`mise run test-ui-ios` / `mise run test-ui-android` は対象端末 ID を指定して明示的に実行する。
+- Debug ビルドを起動引数 `-LiveHost <EPGStation のアドレス> -LiveChannel <チャンネルの ID>` で起動すると、すぐライブ視聴の再生画面を開く（実際に配信を頼むので、確かめたら EPGStation で配信を止める）
+- バンドル ID は `com.example.RegzaRemote`、ウィジェットは `com.example.RegzaRemote.Widget`（手元の値で上書きする方法は開発ガイドの「[初めてのとき](docs/development-guide.md#初めてのとき)」）
+- Android のウィジェットの一覧の見本の画像は、本番と同じ Glance の描画から作った中・大の PNG を使う。並びを変えたときは、専用のエミュレーターを指定して作り直す（接続中のほかの端末には入れない）
+
+```sh
+export ANDROID_SERIAL=emulator-5580
+mise -C Android exec -- ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+mise -C Android exec -- adb -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/debug/app-debug.apk
+mise -C Android exec -- adb -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+mise -C Android exec -- adb -s "$ANDROID_SERIAL" shell am instrument -w -e class 'com.example.regzaremote.RemoteWidgetTest#layoutsFollowIOSFamiliesAndKeepTheirKeysAfterResizing' -e exportWidgetPreviews true com.example.regzaremote.test/androidx.test.runner.AndroidJUnitRunner
+for size in medium large; do
+  mise -C Android exec -- adb -s "$ANDROID_SERIAL" exec-out run-as com.example.regzaremote cat "files/widget-previews/remote_widget_${size}_preview.png" > "Android/platform/widgets/src/main/res/drawable-nodpi/remote_widget_${size}_preview.png"
+done
+```
