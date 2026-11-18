@@ -16,6 +16,7 @@ import com.example.regzaremote.appservices.AppFactory
 import com.example.regzaremote.appservices.RegzaViewModel
 import com.example.regzaremote.bridge.appStates
 import com.example.regzaremote.design.AppTheme
+import com.example.regzaremote.liveupdate.LiveUpdateController
 import com.example.regzaremote.ui.app.AppRoot
 import com.example.regzaremote.ui.components.LocalNetworkGate
 import com.example.regzaremote.ui.components.rememberState
@@ -36,7 +37,8 @@ class MainActivity : ComponentActivity() {
                         val regzaViewModel: RegzaViewModel = viewModel(factory = appViewModelFactory)
                         val app = regzaViewModel.app
                         val state = rememberState(app) { app.appStates() } ?: return@LocalNetworkGate
-                        AppRoot(app, state, regzaViewModel.send)
+                        // Live Updates の実装はアプリ本体にあるので、組み立てに渡す (iOS の RootView が Live Activity を AppScreen に渡すのと同じ)
+                        AppRoot(app, state, regzaViewModel.send, LiveUpdateController)
                     }
                 }
             }

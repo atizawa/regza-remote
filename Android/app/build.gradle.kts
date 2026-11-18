@@ -91,8 +91,10 @@ dependencies {
     implementation(project(":core:design"))
     // 文言 (String Catalog から生成)
     implementation(project(":core:localization"))
-    // 画面のモジュール (settings.gradle.kts が ui/ の下から読んだ、共通の部品と機能ごとの画面)。組み立て (ui.app) がつなぐ
-    rootProject.subprojects.filter { it.path.startsWith(":ui:") }.forEach { implementation(project(it.path)) }
+    // 画面の組み立て (iOS の AppUI に対応)。機能の画面はここから読み込み、アプリ本体は直接読み込まない (iOS のアプリも AppUI だけを読み込む)
+    implementation(project(":ui:app"))
+    // 共通の部品 (ローカルネットワークの許可の案内・state の購読・Live Updates の受け口)
+    implementation(project(":ui:common"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -105,9 +107,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    // タブの中の画面の移り変わり: 共有の AppViewModel が持つ path を back stack として渡す
-    implementation(libs.androidx.navigation3.runtime)
-    implementation(libs.androidx.navigation3.ui)
+
     implementation(libs.kotlinx.coroutines.android)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)

@@ -13,17 +13,21 @@ import com.example.regzaremote.core.AppState
 import com.example.regzaremote.core.RegzaAndroidApp
 import com.example.regzaremote.design.AppTheme
 import com.example.regzaremote.design.AppearanceTheme
-import com.example.regzaremote.liveupdate.LiveUpdateController
+import com.example.regzaremote.ui.components.LiveUpdates
 import com.example.regzaremote.ui.components.LocalLiveUpdates
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.player.LivePlayerScreen
 import com.example.regzaremote.ui.settings.SettingsScreen
 
-/** アプリのいちばん外側の画面。設定を開いていれば設定の画面、そうでなければタブの画面。ライブ視聴はどの画面の上にも重ねる */
+/**
+ * アプリのいちばん外側の画面。設定を開いていれば設定の画面、そうでなければタブの画面。ライブ視聴はどの画面の上にも重ねる
+ *
+ * @param liveUpdates ロック画面と通知の表示 (Live Updates) の実装。アプリ本体 (app) にあるので、起動の画面 (MainActivity) が渡す
+ */
 @Composable
-fun AppRoot(app: RegzaAndroidApp, state: AppState, send: Send) {
+fun AppRoot(app: RegzaAndroidApp, state: AppState, send: Send, liveUpdates: LiveUpdates) {
     // Live Updates のスイッチ (共通の部品) に、アプリの実装を渡す
-    CompositionLocalProvider(LocalLiveUpdates provides LiveUpdateController) {
+    CompositionLocalProvider(LocalLiveUpdates provides liveUpdates) {
         AppearanceTheme(state.appearance.isDark) {
             Surface(modifier = Modifier.fillMaxSize(), color = AppTheme.background) {
                 // 設定は開いている間だけ state が届く
