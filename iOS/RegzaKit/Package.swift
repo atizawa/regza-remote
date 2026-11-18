@@ -71,7 +71,10 @@ let package = Package(
         // アプリだけに登録する Siri・ショートカット。Widget 拡張への依存には含めない。
         .target(
             name: "Shortcuts",
-            dependencies: ["AppServices", "LiveActivity", .product(name: "RegzaApp", package: "RegzaCore")]),
+            dependencies: [
+                "AppServices", "LiveActivity", .product(name: "RegzaPresentation", package: "RegzaCore"),
+                .product(name: "RegzaStrings", package: "RegzaCore"),
+            ]),
         // ホーム画面・Live Activity・コントロールセンターの表示。
         .target(
             name: "Widgets",

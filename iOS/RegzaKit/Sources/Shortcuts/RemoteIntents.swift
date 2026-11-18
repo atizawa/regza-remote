@@ -1,7 +1,8 @@
 #if os(iOS)
 import AppIntents
 import Foundation
-import RegzaApp
+import RegzaPresentation
+import RegzaStrings
 import AppServices
 import LiveActivity
 
@@ -65,10 +66,10 @@ public struct ChannelQuery: EntityStringQuery {
     @MainActor
     static func channels() async throws -> [ChannelItem] {
         let remoteViewModel = AppContainer.shared.appViewModel.remoteViewModel
-        guard remoteViewModel.state.isConfigured else { throw RegzaError.notConfigured }
+        guard remoteViewModel.state.isConfigured else { throw ShortcutError.notConfigured }
         await remoteViewModel.sendAndWait(.loadChannels(force: false))
         guard !remoteViewModel.registeredChannels.isEmpty else {
-            throw RegzaError.network(remoteViewModel.state.errorMessage ?? "チャンネル一覧を取得できませんでした")
+            throw ShortcutError(remoteViewModel.state.errorMessage ?? "チャンネル一覧を取得できませんでした")
         }
         return remoteViewModel.registeredChannels
     }
@@ -92,13 +93,13 @@ public struct TuneChannelIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let channels = try await ChannelQuery.channels()
         guard let target = channels.first(where: { $0.code == channel.id }) else {
-            throw RegzaError.commandRejected("チャンネルが見つかりません")
+            throw ShortcutError.commandRejected("チャンネルが見つかりません")
         }
         // チャンネル一覧の画面と同じ選局 (切り替えられなければ tuneError に説明が入る)
         let container = AppContainer.shared
         let channelListViewModel = container.appViewModel.channelListViewModel
         await channelListViewModel.sendAndWait(.tune(target.code))
-        if let error = channelListViewModel.state.tuneError { throw RegzaError.commandRejected(error) }
+        if let error = channelListViewModel.state.tuneError { throw ShortcutError.commandRejected(error) }
         await container.liveActivity.update()
         return .result(dialog: "\(target.name)に切り替えました")
     }
@@ -174,12 +175,12 @@ public struct RemoteCommandIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let container = AppContainer.shared
         let remoteViewModel = container.appViewModel.remoteViewModel
-        guard remoteViewModel.state.isConfigured else { throw RegzaError.notConfigured }
+        guard remoteViewModel.state.isConfigured else { throw ShortcutError.notConfigured }
         let key = command.key
         for _ in 0..<max(1, count) {
             // リモコンの画面と同じ操作 (送ったあと、テレビの状態を取り直す)。送れなければ errorMessage に説明が入る
             await remoteViewModel.sendAndWait(.press(key))
-            if let error = remoteViewModel.state.errorMessage { throw RegzaError.commandRejected(error) }
+            if let error = remoteViewModel.state.errorMessage { throw ShortcutError.commandRejected(error) }
         }
         await container.liveActivity.update()
         return .result(dialog: "\(key.label)を送りました")
@@ -188,4 +189,16 @@ public struct RemoteCommandIntent: AppIntent {
 
 /// アプリの AppIntentsPackage から参照して、このモジュールの Intent を登録する (ウィジェットの拡張機能には登録しない)
 public struct ShortcutsPackage: AppIntentsPackage {}
+
+/// Siri・ショートカットに返す失敗 (説明を Siri が読み上げる)。文言は共有の Swift と同じものを使う。
+/// 画面のない入口も画面と同じく、共有の state と操作だけを使い、Domain の型は使わない
+private struct ShortcutError: LocalizedError {
+    let errorDescription: String?
+
+    init(_ message: String) { errorDescription = message }
+
+    static let notConfigured = ShortcutError(CoreStrings.errorNotConfigured)
+
+    static func commandRejected(_ detail: String) -> ShortcutError { ShortcutError(CoreStrings.errorCommandRejected(detail)) }
+}
 #endif

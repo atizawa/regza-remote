@@ -78,7 +78,7 @@ Android/                      Android 版（Kotlin・Jetpack Compose・Navigatio
   - ロック画面や通知に何を出すか（見出し・番組が終わったあとの次の番組への切り替え・出すボタン）は、共有の `LiveStatus`（`RemoteState.liveStatus`）が決める。iOS の Live Activity と Android の通知は、これを OS ごとの形に描くだけにする
   - Android は、Swift の窓口（`RegzaAndroidApp`）をプロセスに 1 つだけ置き（`AppContainer`）、画面・通知のボタン・閉じている間の更新が同じものを使う。`LiveUpdateController` が `RemoteState` の変わり目を見て通知を更新し、番組の終了時刻の 30 秒後（放送でなければ 15 分後）に AlarmManager で起こしてもらって取り直す。正確な時刻のアラームは使わない
   - ボタンの App Intent（`RegzaKeyIntent`）は `LiveActivityIntent` なので、ウィジェットの拡張から押してもアプリのプロセスで動く。Siri の App Intent はふつうの `AppIntent` で、拡張にも登録すると拡張のプロセスで動くことがあるので、アプリにだけ登録する
-  - 画面と Live Activity が Domain・通信・組み立てを import していないことは `RegzaKitTests` の `LayerTests` が確かめる
+  - 画面・Live Activity・画面のない入口（`SystemActions`・`Shortcuts`）・ウィジェットが Domain・通信・組み立てを import していないこと、アプリの組み立て（`AppServices`）が画面と画面のない入口を import していないことは `RegzaKitTests` の `LayerTests` が確かめる
 - 依存オブジェクトの引数・プロパティ・組み立て時の変数は、`remoteViewModel`・`guideUseCase`・`guideRepository`・`regzaAPIClient`・`preferencesManager` のように役割を名前に含める。取得した値は `programs`・`channels` など、内容を表す名前にする。
 - 保存処理は `Infrastructure/Storage` の `SecureStorageManager`・`PreferencesManager` に分け、APIClient と並列に Repository へ注入する。Manager には OS ごとの保存実装を注入し、保存キーの選択と Data の組み立ては Repository が担当する。
 - DI は `RegzaApp/AppFactory+Repositories.swift`（APIClient・Manager → Repository）、`AppFactory+UseCases.swift`（Repository → UseCase）、`AppFactory+ViewModels.swift`（UseCase → ViewModel）にまとめる。iOS・Android・CLI は共通の Factory を使い、通信と保存先は起動時に渡す。Repository または UseCase の protocol を直接渡せるため、テストでも同じ入口から差し替えられる。

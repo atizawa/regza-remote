@@ -1,11 +1,13 @@
 import Foundation
 import Testing
 
-/// 画面 (機能のモジュール・共通の部品・組み立て) と Live Activity (LiveActivity) が、プレゼンテーション層 (ViewModel と UI の型) より
-/// 下の層 (Domain・通信・組み立て) を使っていないことを確かめる。どれも ViewModel の state を読み、Action を送るだけにする。
-/// 機能の画面のモジュール (<機能>UI) は、共通 (PresentationCore) と自分の機能のプレゼンテーション (<機能>Presentation) だけを読み込み、
-/// ほかの機能とアプリ全体 (AppPresentation) を読み込まない (ほかの画面へ移るときは共通の窓口 AppNavigator に頼み、
-/// ほかの機能の画面は組み立て (AppUI) が環境値で渡す)。
+/// iOS のモジュールが読み込むものを確かめる。
+/// - 画面 (機能のモジュール・共通の部品・組み立て)、Live Activity、画面のない入口 (SystemActions・Shortcuts)、ウィジェットは、
+///   プレゼンテーション層 (ViewModel と UI の型) より下の層 (Domain・通信・共有の組み立て) を使わない。どれも ViewModel の state を読み、Action を送るだけにする
+/// - 機能の画面のモジュール (<機能>UI) は、共通 (PresentationCore) と自分の機能のプレゼンテーション (<機能>Presentation) だけを読み込み、
+///   ほかの機能とアプリ全体 (AppPresentation) を読み込まない (ほかの画面へ移るときは共通の窓口 AppNavigator に頼み、
+///   ほかの機能の画面は組み立て (AppUI) が出す)
+/// - アプリの組み立て (AppServices) だけが、共有の組み立て (RegzaApp) と通信を使う。画面と画面のない入口は読み込まない
 /// SwiftPM は依存の先のモジュールを import すること自体は止めないので、import を見て止める。
 /// 画面のプレビュー (`#if DEBUG` の中) だけは、偽物のテレビ・録画サーバーと、それで組み立てたアプリ全体の ViewModel を使ってよい
 @Suite struct LayerTests {
@@ -27,6 +29,26 @@ import Testing
     static let liveActivityImports: Set<String> = [
         "Foundation", "Observation", "ActivityKit", "BackgroundTasks",
         "RegzaPresentation", "Localization",
+    ]
+
+    /// 画面のない入口 (ウィジェット・コントロールセンター・Live Activity のボタンからの操作) が読み込んでよいモジュール。
+    /// 画面と同じく ViewModel の state と Action だけを使い、Domain・通信は読み込まない (AppContainer から ViewModel を受け取る)
+    static let systemActionsImports: Set<String> = ["Foundation", "AppIntents", "RegzaPresentation", "AppServices"]
+
+    /// Siri・ショートカットが読み込んでよいモジュール (画面のない入口と同じ決まりに、Live Activity と共有の文言を足したもの)
+    static let shortcutsImports = systemActionsImports.union(["LiveActivity", "RegzaStrings"])
+
+    /// ウィジェット (ホーム画面・Live Activity・コントロールセンターの表示) が読み込んでよいモジュール。
+    /// 表示は ViewModel の state を使い、ボタンの操作は画面のない入口 (SystemActions) に任せる。アプリの組み立て (AppServices) は読み込まない
+    static let widgetsImports: Set<String> = [
+        "Foundation", "SwiftUI", "WidgetKit", "ActivityKit", "AppIntents",
+        "RegzaPresentation", "Design", "Localization", "LiveActivity", "SystemActions",
+    ]
+
+    /// アプリの組み立て (AppContainer)・保存先・終了時の処理が読み込んでよいモジュール。
+    /// 共有の組み立て (RegzaApp) と通信 (保存先の受け口) を使う唯一の場所で、画面と画面のない入口は読み込まない
+    static let appServicesImports: Set<String> = [
+        "Foundation", "Security", "RegzaApp", "RegzaInfrastructure", "LiveActivity", "Localization",
     ]
 
     static let package = URL(fileURLWithPath: #filePath)
@@ -63,6 +85,22 @@ import Testing
 
     @Test func liveActivityImportsOnlyPresentation() throws {
         try Self.check("LiveActivity", allowed: Self.liveActivityImports)
+    }
+
+    @Test func systemActionsImportOnlyPresentation() throws {
+        try Self.check("SystemActions", allowed: Self.systemActionsImports)
+    }
+
+    @Test func shortcutsImportOnlyPresentation() throws {
+        try Self.check("Shortcuts", allowed: Self.shortcutsImports)
+    }
+
+    @Test func widgetsImportOnlyPresentationAndSystemActions() throws {
+        try Self.check("Widgets", allowed: Self.widgetsImports)
+    }
+
+    @Test func appServicesDoNotImportScreensOrEntryPoints() throws {
+        try Self.check("AppServices", allowed: Self.appServicesImports)
     }
 
     /// `DEBUG`、または `DEBUG` を && でつないだ条件 (`os(iOS) && DEBUG` など) なら、Debug のビルドでだけ入る
