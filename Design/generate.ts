@@ -23,7 +23,7 @@ for (const dictionary of [dimensions, light, dark]) {
 }
 
 // Style DictionaryにColor Assetの標準出力がないため、DTCGのsRGB値をAny/Darkへ配置する。
-const assetRoot = "../iOS/RegzaKit/Sources/Design/Generated/DesignColors.xcassets";
+const assetRoot = "../iOS/RegzaKit/Sources/Core/Design/Generated/DesignColors.xcassets";
 const lightTokens = (await light.getPlatformTokens("assets")).allTokens;
 const darkTokens = (await dark.getPlatformTokens("assets")).allTokens;
 const darkByName = new Map(darkTokens.map(token => [token.name, token]));

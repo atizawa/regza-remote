@@ -1,6 +1,6 @@
 
 //
-// ../iOS/RegzaKit/Sources/Design/Generated/DesignDimensions.swift
+// ../iOS/RegzaKit/Sources/Core/Design/Generated/DesignDimensions.swift
 //
 
 // Design/tokens/ から Style Dictionary で生成。直接編集しないでください。

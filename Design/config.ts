@@ -17,7 +17,7 @@ export default {
       // トークンの px を、同じ数値の pt として出力する。
       basePxFontSize: 1,
       files: [{
-        destination: "../iOS/RegzaKit/Sources/Design/Generated/DesignDimensions.swift",
+        destination: "../iOS/RegzaKit/Sources/Core/Design/Generated/DesignDimensions.swift",
         format: "ios-swift/enum.swift",
         options: { ...options, import: ["CoreGraphics"] },
       }],
@@ -51,7 +51,7 @@ export function colors(mode: "light" | "dark"): Config {
       ...(mode === "light" ? {
         swift: {
           transforms: ["name/camel"],
-          files: [{ destination: "../iOS/RegzaKit/Sources/Design/Generated/DesignColors.swift", format: "native/swift-colors" }],
+          files: [{ destination: "../iOS/RegzaKit/Sources/Core/Design/Generated/DesignColors.swift", format: "native/swift-colors" }],
         },
         compose: {
           transforms: ["name/camel"],

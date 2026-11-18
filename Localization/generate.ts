@@ -5,7 +5,7 @@ import { androidXML, messages, splitCore, type Argument, type Catalog } from "./
 const args = process.argv.slice(2);
 if (args.length && (args.length !== 1 || args[0] !== "--check")) throw new Error("使い方: bun generate.ts [--check]");
 const check = args[0] === "--check";
-const source = "../iOS/RegzaKit/Sources/Localization/Resources/Localizable.xcstrings";
+const source = "../iOS/RegzaKit/Sources/Core/Localization/Resources/Localizable.xcstrings";
 const catalog: Catalog = JSON.parse(await readFile(source, "utf8"));
 const all = messages(catalog);
 // core_ で始まるキーは、共有の Swift (RegzaCore) が引く文言。OS の画面の AppStrings には出さず、CoreStrings に出す
@@ -82,7 +82,7 @@ ${core.map(entry => `        "${entry.key}" to R.string.${entry.key},`).join("\n
 const outputs = new Map([
   ["../Packages/RegzaCore/Sources/RegzaStrings/Generated/CoreStrings.swift", coreSwift],
   ["../Android/core/localization/src/main/java/com/example/regzaremote/localization/Generated/CoreStringResources.kt", coreKotlin],
-  ["../iOS/RegzaKit/Sources/Localization/Generated/AppStrings.swift", swift],
+  ["../iOS/RegzaKit/Sources/Core/Localization/Generated/AppStrings.swift", swift],
   ["../Android/core/localization/src/main/java/com/example/regzaremote/localization/Generated/AppStrings.kt", kotlin],
 ]);
 for (const locale of new Set(all.flatMap(entry => [...entry.translations.keys()]))) {

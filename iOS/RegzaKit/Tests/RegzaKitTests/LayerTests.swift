@@ -84,23 +84,23 @@ import Testing
     }
 
     @Test func liveActivityImportsOnlyPresentation() throws {
-        try Self.check("LiveActivity", allowed: Self.liveActivityImports)
+        try Self.check("Platform/LiveActivity", allowed: Self.liveActivityImports)
     }
 
     @Test func systemActionsImportOnlyPresentation() throws {
-        try Self.check("SystemActions", allowed: Self.systemActionsImports)
+        try Self.check("Platform/SystemActions", allowed: Self.systemActionsImports)
     }
 
     @Test func shortcutsImportOnlyPresentation() throws {
-        try Self.check("Shortcuts", allowed: Self.shortcutsImports)
+        try Self.check("Platform/Shortcuts", allowed: Self.shortcutsImports)
     }
 
     @Test func widgetsImportOnlyPresentationAndSystemActions() throws {
-        try Self.check("Widgets", allowed: Self.widgetsImports)
+        try Self.check("Platform/Widgets", allowed: Self.widgetsImports)
     }
 
     @Test func appServicesDoNotImportScreensOrEntryPoints() throws {
-        try Self.check("AppServices", allowed: Self.appServicesImports)
+        try Self.check("Platform/AppServices", allowed: Self.appServicesImports)
     }
 
     /// `DEBUG`、または `DEBUG` を && でつないだ条件 (`os(iOS) && DEBUG` など) なら、Debug のビルドでだけ入る

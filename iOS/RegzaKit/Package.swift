@@ -45,15 +45,16 @@ let package = Package(
     dependencies: [.package(path: "../../Packages/RegzaCore")],
     targets: [
         // アプリ・Widget で共有する色やサイズ。
-        .target(name: "Design", resources: [.process("Generated/DesignColors.xcassets")]),
+        .target(name: "Design", path: "Sources/Core/Design", resources: [.process("Generated/DesignColors.xcassets")]),
         // 文言の定義元。AndroidのXMLもこのString Catalogから生成する。
         .target(
             name: "Localization", dependencies: [.product(name: "RegzaStrings", package: "RegzaCore")],
-            resources: [.process("Resources")]),
+            path: "Sources/Core/Localization", resources: [.process("Resources")]),
         // Live Activity の状態と更新。画面と同じく共有 ViewModel だけを使う。
         .target(
             name: "LiveActivity",
             dependencies: [.product(name: "RegzaPresentation", package: "RegzaCore"), "Localization"],
+            path: "Sources/Platform/LiveActivity",
             swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
         // iOS の保存実装を共通 Factory に渡し、アプリ全体の依存を保持する。
         // 画面・Siri・Live Activity の操作は同じ AppContainer を使う。
@@ -63,25 +64,29 @@ let package = Package(
                 .product(name: "RegzaApp", package: "RegzaCore"),
                 .product(name: "RegzaInfrastructure", package: "RegzaCore"),
                 "LiveActivity", "Localization",
-            ]),
+            ],
+            path: "Sources/Platform/AppServices"),
         // アプリと Widget の両方に登録する、ボタンからの操作。
         .target(
             name: "SystemActions",
-            dependencies: ["AppServices", .product(name: "RegzaPresentation", package: "RegzaCore")]),
+            dependencies: ["AppServices", .product(name: "RegzaPresentation", package: "RegzaCore")],
+            path: "Sources/Platform/SystemActions"),
         // アプリだけに登録する Siri・ショートカット。Widget 拡張への依存には含めない。
         .target(
             name: "Shortcuts",
             dependencies: [
                 "AppServices", "LiveActivity", .product(name: "RegzaPresentation", package: "RegzaCore"),
                 .product(name: "RegzaStrings", package: "RegzaCore"),
-            ]),
+            ],
+            path: "Sources/Platform/Shortcuts"),
         // ホーム画面・Live Activity・コントロールセンターの表示。
         .target(
             name: "Widgets",
             dependencies: [
                 .product(name: "RegzaPresentation", package: "RegzaCore"),
                 "LiveActivity", "SystemActions", "Design", "Localization",
-            ]),
+            ],
+            path: "Sources/Platform/Widgets"),
         // 画面は ViewModel の state と Action を使い、DI・Domain・通信を扱わない。
         // 機能ごとのモジュールが共通に使う部品・画面の移り先の受け取り口・プレビューの準備
         .target(

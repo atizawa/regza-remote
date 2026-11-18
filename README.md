@@ -35,16 +35,17 @@ Packages/RegzaCore/           iOS と Android で共有する Swift Package（RE
   RegzaApp                    組み立て（どの Repository を使うかを決めて ViewModel を作る）
   RegzaFakeServers            偽物のテレビ・Mirakurun・EPGStation と場面（プレビュー・振る舞いのテスト・CLI 用）
   RegzaCLI                    ViewModel を動かして確かめる CLI（regza）
-iOS/RegzaKit/                 iOS だけで使う Swift Package
-  AppServices/                iOS の DI・依存の保持・終了時の配信停止（Storage/ に保存実装）
+iOS/RegzaKit/                 iOS だけで使う Swift Package（Sources/ は Android と同じく Core・Platform・UI に分ける）
+  Core/Design/                アプリとウィジェットで共通の色と余白（Android の core/design）
+  Core/Localization/          文言の定義元の String Catalog と生成した参照（Android の core/localization）
+  Platform/AppServices/       iOS の DI・依存の保持・終了時の配信停止（Storage/ に保存実装。Android の platform/appservices）
+  Platform/LiveActivity/      Live Activity の状態・更新・バックグラウンド更新の予約（Android の platform/liveupdate）
+  Platform/SystemActions/     Live Activity・ウィジェット・コントロールセンターのボタンからの操作（Android の platform/systemactions）
+  Platform/Shortcuts/         Siri・ショートカット（アプリにだけ登録する。Android にはない）
+  Platform/Widgets/           Live Activity・ホーム画面・コントロールセンターの表示（Android の platform/widgets）
   UI/<機能>UI/                機能ごとの画面（Remote・Player・Guide・Program・Channels・Reservations・Settings）。ほかの機能を読み込まない
-  UI/UICommon/                機能の画面が共通に使う部品・画面の移り先の受け取り口・プレビューの準備（Preview/）
-  UI/AppUI/                   画面の組み立て（タブ・タブの中で開く画面を機能へ渡す）。アプリはこれだけを読み込む
-  Design/                     アプリとウィジェットで共通の色
-  LiveActivity/               Live Activity の状態・更新・バックグラウンド更新の予約
-  SystemActions/              Live Activity・ウィジェット・コントロールセンターのボタンからの操作
-  Shortcuts/                  Siri・ショートカット（アプリにだけ登録する）
-  Widgets/                    Live Activity・ホーム画面・コントロールセンターの表示
+  UI/UICommon/                機能の画面が共通に使う部品・プレビューの準備（Preview/）
+  UI/AppUI/                   画面の組み立て（タブ・タブの中の画面の移り変わり・アプリ全体のシート）。アプリはこれだけを読み込む
 iOS/RegzaRemote/              アプリの起動・RootView（依存を画面へ渡す、終了通知を AppServices へ渡す）
 iOS/RegzaRemote.xcodeproj     アプリ・ウィジェット拡張（モジュールを組み立てるだけの薄い層）
 Android/                      Android 版（Kotlin・Jetpack Compose・Navigation 3）

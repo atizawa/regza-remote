@@ -1,6 +1,6 @@
 # 共通の文字列
 
-文言は `iOS/RegzaKit/Sources/Localization/Resources/Localizable.xcstrings` で編集する。
+文言は `iOS/RegzaKit/Sources/Core/Localization/Resources/Localizable.xcstrings` で編集する。
 iOSはSwift Packageの標準リソースとして読み込み、Android XMLと両OSの参照コードを生成する。
 現在の元言語は日本語。今回の変更で新しい翻訳言語は追加しない。
 
@@ -20,7 +20,7 @@ Xcodeから翻訳を追加する場合は、元言語を含めて使う文字列
 
 生成結果は以下のとおり。元ファイルと生成結果を一緒にGitへ含め、生成結果は直接編集しない。
 
-- `iOS/RegzaKit/Sources/Localization/Generated/AppStrings.swift`
+- `iOS/RegzaKit/Sources/Core/Localization/Generated/AppStrings.swift`
 - `Android/core/localization/src/main/java/com/example/regzaremote/localization/Generated/AppStrings.kt`
 - `Android/core/localization/src/main/res/values/app_strings.xml`（元言語・未翻訳時のフォールバック）
 - `Android/core/localization/src/main/res/values-b+…/app_strings.xml`（追加した言語）
