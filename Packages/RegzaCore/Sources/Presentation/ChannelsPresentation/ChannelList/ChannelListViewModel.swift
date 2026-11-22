@@ -43,7 +43,7 @@ public final class ChannelListViewModel {
         let rows = channelUseCase.items(band: band, nowPlayingCode: remoteViewModel.state.nowPlaying?.channelCode)
         return State(
             isLoading: isLoading,
-            loadErrorMessage: remoteViewModel.channels.isEmpty ? loadError.map(Self.message) : nil,
+            loadErrorMessage: remoteViewModel.channels.isEmpty ? loadError.map { ErrorMessage.text($0, in: .channelList) } : nil,
             hasNoChannels: remoteViewModel.channels.isEmpty,
             tuneError: tuneError,
             tuningCode: tuningCode,
@@ -65,13 +65,6 @@ public final class ChannelListViewModel {
         case .reload: work.run { await self.load(force: true) }
         case .tune(let code): work.run { await self.tune(code: code, startOver: false) }
         case .tuneFromStart(let code): work.run { await self.tune(code: code, startOver: true) }
-        }
-    }
-
-    private static func message(for error: RegzaError) -> String {
-        switch error {
-        case .httpStatus(404), .unsupported: CoreStrings.channelListUnsupported
-        default: error.localizedDescription
         }
     }
 
@@ -99,10 +92,8 @@ public final class ChannelListViewModel {
             } else {
                 try await remoteViewModel.tuneAndStartOver(channel)
             }
-        } catch .commandRejected {
-            tuneError = CoreStrings.channelTuneFailed(channel.name)
         } catch {
-            tuneError = error.localizedDescription
+            tuneError = ErrorMessage.text(error, in: .tune(channelName: channel.name))
         }
     }
 }

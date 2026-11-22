@@ -77,6 +77,7 @@ public final class ProgramDetailViewModel {
         switch action {
         case .appear:
             work.run {
+                // 予約済みかを出すための下準備。読めなくても、番組の詳細はそのまま出す
                 if self.recordingUseCase.reservations.isEmpty { try? await self.recordingUseCase.loadReservations() }
                 await self.remoteViewModel.tvUseCase.loadTimeshiftSettings()
             }
@@ -97,11 +98,8 @@ public final class ProgramDetailViewModel {
                 // テレビの一覧にまだ反映されていない
                 reserveMessage = CoreStrings.programReserveDone
             }
-        } catch .commandRejected(let code) {
-            // 重なる予約が多い、ハードディスクがないなど
-            reserveMessage = CoreStrings.programReserveRejected(code)
         } catch {
-            reserveMessage = error.localizedDescription
+            reserveMessage = ErrorMessage.text(error, in: .reserve)
         }
     }
 
@@ -114,7 +112,7 @@ public final class ProgramDetailViewModel {
             try await recordingUseCase.cancel(reservation)
             reserveCount += 1
         } catch {
-            reserveMessage = CoreStrings.programReserveCancelFailed(error.localizedDescription)
+            reserveMessage = CoreStrings.programReserveCancelFailed(ErrorMessage.text(error, in: .recording))
         }
     }
 
@@ -130,7 +128,7 @@ public final class ProgramDetailViewModel {
                 tuneMessage = CoreStrings.programTuned(channel.name)
             }
         } catch {
-            tuneMessage = error.localizedDescription
+            tuneMessage = ErrorMessage.text(error, in: .tune(channelName: channel.name))
         }
     }
 }

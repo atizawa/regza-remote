@@ -18,6 +18,7 @@ public enum CoreStrings {
         "core_error_invalid_pin": "PIN が正しくありません。テレビに表示されている数字を確認してください",
         "core_error_invalid_response": "不正なレスポンスです",
         "core_error_not_configured": "接続先が設定されていません",
+        "core_error_problem": "サーバーでうまく処理できませんでした",
         "core_error_request_cancelled": "通信を取り消しました",
         "core_error_stream_unavailable": "配信の準備ができませんでした",
         "core_error_unauthorized": "認証に失敗しました。ユーザー名とパスワードを確認してください",
@@ -95,6 +96,7 @@ public enum CoreStrings {
         "core_now_playing_standby": "待機中",
         "core_now_playing_title_tv": "テレビ",
         "core_now_playing_title_watching": "視聴中",
+        "core_player_failed": "再生できませんでした。%@\nEPGStation で同時に変換できる数の上限に達していると始まりません。ほかの画面で見ている配信を閉じるか、準備できないまま残っている配信を止めてから試してください。",
         "core_player_preparing": "%@ の配信を準備しています…（20 秒ほど）",
         "core_player_unavailable": "このチャンネルは EPGStation で見られません。",
         "core_program_reserve_cancel_failed": "予約を取り消せませんでした: %@",
@@ -170,6 +172,8 @@ public enum CoreStrings {
     public static var errorInvalidResponse: String { CoreStringTable.text("core_error_invalid_response") }
 
     public static var errorNotConfigured: String { CoreStringTable.text("core_error_not_configured") }
+
+    public static var errorProblem: String { CoreStringTable.text("core_error_problem") }
 
     public static var errorRequestCancelled: String { CoreStringTable.text("core_error_request_cancelled") }
 
@@ -326,6 +330,10 @@ public enum CoreStrings {
     public static var nowPlayingTitleTv: String { CoreStringTable.text("core_now_playing_title_tv") }
 
     public static var nowPlayingTitleWatching: String { CoreStringTable.text("core_now_playing_title_watching") }
+
+    public static func playerFailed(_ value1: String) -> String {
+        CoreStringTable.text("core_player_failed", [.string(value1)])
+    }
 
     public static func playerPreparing(_ value1: String) -> String {
         CoreStringTable.text("core_player_preparing", [.string(value1)])

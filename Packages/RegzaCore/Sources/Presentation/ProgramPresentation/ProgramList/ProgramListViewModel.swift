@@ -34,7 +34,7 @@ public final class ProgramListViewModel {
             channelName: channel.name,
             days: programs.map { guideUseCase.days($0) },
             isLoading: isLoading,
-            loadErrorMessage: programs == nil ? loadError?.localizedDescription : nil
+            loadErrorMessage: programs == nil ? loadError.map { ErrorMessage.text($0) } : nil
         )
     }
 
@@ -43,6 +43,7 @@ public final class ProgramListViewModel {
         case .appear:
             work.run {
                 if self.programs == nil { await self.load() }
+                // 予約の印を付けるための下準備。読めなくても、番組はそのまま出す
                 if self.recordingUseCase.reservations.isEmpty { try? await self.recordingUseCase.loadReservations() }
             }
         case .reload: work.run { await self.load() }

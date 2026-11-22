@@ -144,11 +144,11 @@ public final class TVSetupViewModel {
             pairing = session
             pin = ""
             isWaitingForPIN = true
-        } catch RegzaError.unsupported, RegzaError.httpStatus(404) {
-            pairingMessage = CoreStrings.tvPairingUnsupported
-            isShowingManualEntry = true
         } catch {
-            pairingMessage = error.localizedDescription
+            let error = RegzaError(error)
+            pairingMessage = ErrorMessage.text(error, in: .pairing)
+            // PIN 登録に対応していない機種は、ユーザー名とパスワードを入れてもらう
+            if error == .unsupported || error == .httpStatus(404) { isShowingManualEntry = true }
         }
     }
 
@@ -164,7 +164,7 @@ public final class TVSetupViewModel {
             hasRegistered = true
         } catch {
             // PIN の打ち間違いはそのまま入力し直せるようにする
-            pairingMessage = error.localizedDescription
+            pairingMessage = ErrorMessage.text(error, in: .pairing)
         }
     }
 
@@ -193,7 +193,7 @@ public final class TVSetupViewModel {
             let detail = nowPlaying.title.isEmpty ? nowPlaying.channelName : nowPlaying.title
             testResult = detail.isEmpty ? CoreStrings.tvConnected : CoreStrings.tvConnectedDetail(detail)
         case .failure(let error):
-            testResult = error.localizedDescription
+            testResult = ErrorMessage.text(error)
         }
     }
 

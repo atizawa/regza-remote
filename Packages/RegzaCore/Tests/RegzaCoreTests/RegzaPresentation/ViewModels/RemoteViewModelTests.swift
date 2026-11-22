@@ -58,12 +58,21 @@ import Testing
         #expect(remoteViewModel.state.lastCommandLabel == nil)
     }
 
+    /// 操作の失敗は捨てずに、キーを押したときと同じく画面に出す
+    @Test func loadingChannelsFailureIsShown() async {
+        let (remoteViewModel, _, _) = makeModel { _ in HTTPResponse(statusCode: 500, headers: [:], body: Data()) }
+        await remoteViewModel.sendAndWait(.loadChannels(force: true))
+
+        #expect(remoteViewModel.lastError == .httpStatus(500))
+        #expect(remoteViewModel.state.errorMessage == ErrorMessage.text(RegzaError.httpStatus(500)))
+    }
+
     @Test func refreshFailureKeepsError() async {
         let (remoteViewModel, _, _) = makeModel { _ in HTTPResponse(statusCode: 500, headers: [:], body: Data()) }
         await remoteViewModel.refresh()
 
         #expect(remoteViewModel.lastError == .httpStatus(500))
-        #expect(remoteViewModel.state.errorMessage == RegzaError.httpStatus(500).localizedDescription)
+        #expect(remoteViewModel.state.errorMessage == ErrorMessage.text(RegzaError.httpStatus(500)))
         #expect(remoteViewModel.state.nowPlaying == nil)
         #expect(!remoteViewModel.state.isConnected)
     }

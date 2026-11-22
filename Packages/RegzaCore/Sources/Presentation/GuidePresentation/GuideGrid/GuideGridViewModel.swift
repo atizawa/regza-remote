@@ -76,6 +76,7 @@ public final class GuideGridViewModel {
 
     package func load() async {
         defer { hasLoaded = true }
+        // 番組表の下準備 (局の並び・予約の印)。読めなくても、番組表は読めた分だけ出す
         try? await remoteViewModel.loadChannels()
         await guideUseCase.loadGuidePrograms()
         guideSearchViewModel.updateIndex()

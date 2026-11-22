@@ -31,7 +31,7 @@ public final class RemoteViewModel {
         State(
             isConfigured: tvUseCase.connection.isConfigured,
             nowPlaying: nowPlaying,
-            errorMessage: lastError?.localizedDescription,
+            errorMessage: lastError.map { ErrorMessage.text($0) },
             isConnected: isConnected,
             lastCommandLabel: lastCommand?.label,
             tapCount: tapCount,
@@ -59,15 +59,26 @@ public final class RemoteViewModel {
         case .press(let key): press(key)
         case .seek(let seconds): run { await self.seek(to: seconds) }
         case .selectBand(let band): if selectedBand != band { selectedBand = band }
-        case .loadChannels(let force): run { try? await self.loadChannels(force: force) }
+        // 操作の失敗は、キーを押したときと同じく画面に出す
+        case .loadChannels(let force): run { await self.reportingFailure { try await self.loadChannels(force: force) } }
         case .tune(let code):
             guard let channel = channels.first(where: { $0.code == code }) else { return }
-            run { try? await self.tune(to: channel) }
+            run { await self.reportingFailure { try await self.tune(to: channel) } }
         case .refresh: run { await self.refresh() }
         case .startPolling: startPolling()
         case .stopPolling: stopPolling()
         case .report(let message): lastError = .network(message)
         }
+    }
+
+    /// テレビとのやり取りの失敗を画面に出す (ほかの画面の操作の失敗も、ここに出す)
+    package func report(_ error: RegzaError) {
+        lastError = error
+    }
+
+    /// 操作を動かし、失敗したら画面に出す
+    package func reportingFailure(_ operation: () async throws -> Void) async {
+        do { try await operation() } catch { report(RegzaError(error)) }
     }
 
     /// 操作から始める処理。終わるまで isBusy にする

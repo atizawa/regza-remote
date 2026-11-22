@@ -33,7 +33,7 @@ public final class ReservationListViewModel {
         return State(
             hasLoaded: hasLoaded,
             isLoading: isLoading,
-            loadErrorMessage: items.isEmpty ? loadError?.recordingMessage : nil,
+            loadErrorMessage: items.isEmpty ? loadError.map { ErrorMessage.text($0, in: .recording) } : nil,
             cancelError: cancelError,
             scheduled: items.filter(\.isScheduled),
             waiting: items.filter { !$0.isScheduled }
@@ -69,7 +69,7 @@ public final class ReservationListViewModel {
         do {
             try await recordingUseCase.cancel(id: id)
         } catch {
-            cancelError = CoreStrings.reservationCancelFailed(title, error.localizedDescription)
+            cancelError = CoreStrings.reservationCancelFailed(title, ErrorMessage.text(error, in: .recording))
         }
     }
 }
@@ -95,16 +95,6 @@ extension ReservationListViewModel: IntrospectableActions {
             }
             return .cancel(id)
         default: throw IntrospectionError.unknownAction(name)
-        }
-    }
-}
-
-extension RegzaError {
-    /// 録画まわりの画面に出すメッセージ
-    package var recordingMessage: String {
-        switch self {
-        case .httpStatus(404), .unsupported: CoreStrings.reservationListUnsupported
-        default: localizedDescription
         }
     }
 }

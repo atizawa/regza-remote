@@ -44,6 +44,7 @@
     <string name="core_error_invalid_pin" formatted="false">"PIN が正しくありません。テレビに表示されている数字を確認してください"</string>
     <string name="core_error_invalid_response" formatted="false">"不正なレスポンスです"</string>
     <string name="core_error_not_configured" formatted="false">"接続先が設定されていません"</string>
+    <string name="core_error_problem" formatted="false">"サーバーでうまく処理できませんでした"</string>
     <string name="core_error_request_cancelled" formatted="false">"通信を取り消しました"</string>
     <string name="core_error_stream_unavailable" formatted="false">"配信の準備ができませんでした"</string>
     <string name="core_error_unauthorized" formatted="false">"認証に失敗しました。ユーザー名とパスワードを確認してください"</string>
@@ -121,6 +122,7 @@
     <string name="core_now_playing_standby" formatted="false">"待機中"</string>
     <string name="core_now_playing_title_tv" formatted="false">"テレビ"</string>
     <string name="core_now_playing_title_watching" formatted="false">"視聴中"</string>
+    <string name="core_player_failed">"再生できませんでした。%1$s\nEPGStation で同時に変換できる数の上限に達していると始まりません。ほかの画面で見ている配信を閉じるか、準備できないまま残っている配信を止めてから試してください。"</string>
     <string name="core_player_preparing">"%1$s の配信を準備しています…（20 秒ほど）"</string>
     <string name="core_player_unavailable" formatted="false">"このチャンネルは EPGStation で見られません。"</string>
     <string name="core_program_reserve_cancel_failed">"予約を取り消せませんでした: %1$s"</string>

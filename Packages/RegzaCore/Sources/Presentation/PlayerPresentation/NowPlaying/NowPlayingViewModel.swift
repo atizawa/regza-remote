@@ -47,10 +47,12 @@ public final class NowPlayingViewModel {
         case .appear:
             work.run {
                 await self.remoteViewModel.tvUseCase.loadTimeshiftSettings()
+                // チャンネル名を出すための下準備。読めなくても、いま映っているものはそのまま出す
                 try? await self.remoteViewModel.loadChannels()
             }
         case .powerOn: remoteViewModel.send(.press(.power))
-        case .startOver: work.run { try? await self.remoteViewModel.startOver() }
+        case .startOver:
+            work.run { await self.remoteViewModel.reportingFailure { try await self.remoteViewModel.startOver() } }
         }
     }
 

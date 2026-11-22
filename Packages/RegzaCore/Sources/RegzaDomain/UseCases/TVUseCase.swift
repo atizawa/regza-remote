@@ -127,6 +127,7 @@ public final class TVUseCase: TVUseCaseProtocol {
         guard let data = tvRepository.channels.first(where: { $0.code == channel.code }) else { throw .unsupported }
         let nowPlaying = try await tvRepository.tune(to: data)
         try? await Task.sleep(for: .seconds(3))
+        // 選局はできているので、最初から見られなくても選局の結果を返す (選局の失敗として伝えない)
         try? await tvRepository.send(.jumpToStart)
         return nowPlaying.map(UseCaseModelMapper.nowPlaying)
     }

@@ -30,7 +30,7 @@ public final class RegzaAndroidAppFactory {
             try await tvUseCase.send(key)
             return nil
         } catch {
-            return error.localizedDescription
+            return AppFactory.errorMessage(for: error)
         }
     }
 

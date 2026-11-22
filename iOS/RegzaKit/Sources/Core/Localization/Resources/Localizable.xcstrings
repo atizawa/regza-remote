@@ -517,6 +517,18 @@
         }
       }
     },
+    "core_error_problem": {
+      "extractionState": "manual",
+      "comment": "core / error / problem",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーでうまく処理できませんでした"
+          }
+        }
+      }
+    },
     "core_error_request_cancelled": {
       "extractionState": "manual",
       "comment": "core / error / request / cancelled",
@@ -1437,6 +1449,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "視聴中"
+          }
+        }
+      }
+    },
+    "core_player_failed": {
+      "extractionState": "manual",
+      "comment": "core / player / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生できませんでした。%@\nEPGStation で同時に変換できる数の上限に達していると始まりません。ほかの画面で見ている配信を閉じるか、準備できないまま残っている配信を止めてから試してください。"
           }
         }
       }

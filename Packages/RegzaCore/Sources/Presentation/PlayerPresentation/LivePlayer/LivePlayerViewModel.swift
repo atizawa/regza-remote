@@ -63,6 +63,7 @@ public final class LivePlayerViewModel {
         switch action {
         case .appear:
             work.run {
+                // 局の一覧を出すための下準備。読めなくても、見ている局の配信はそのまま始める
                 try? await self.remoteViewModel.loadChannels()
                 await self.guideUseCase.loadGuidePrograms()
             }
@@ -130,11 +131,7 @@ public final class LivePlayerViewModel {
                 self.streamID = nil
                 await streamUseCase.stop(streamID: requested)
             }
-            phase = .failed(
-                message: """
-                    再生できませんでした。\(error.localizedDescription)
-                    EPGStation で同時に変換できる数の上限に達していると始まりません。ほかの画面で見ている配信を閉じるか、準備できないまま残っている配信を止めてから試してください。
-                    """, canRetry: true)
+            phase = .failed(message: CoreStrings.playerFailed(ErrorMessage.text(error)), canRetry: true)
         }
     }
 }

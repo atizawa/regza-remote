@@ -220,6 +220,7 @@ public final class AppViewModel {
 
     /// 新しい ViewModel に入力と表示位置を戻す。壊れたデータや未知の版では初期表示を保つ。
     public func restore(_ json: String) {
+        // 前の版の形などで読めなければ、復元せずに初めから出す
         guard let saved = try? JSONDecoder().decode(AppRestorationState.self, from: Data(json.utf8)), saved.version == 1 else { return }
         restoringPaths = nil
         navigation.tab = saved.tab
