@@ -12,9 +12,6 @@ object AppStrings {
     val activityHelp: String
         @Composable get() = stringResource(R.string.activity_help)
 
-    @Composable
-    fun activityStartFailed(value1: String): String = stringResource(R.string.activity_start_failed, value1)
-
     val activityTitle: String
         @Composable get() = stringResource(R.string.activity_title)
 

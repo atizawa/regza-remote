@@ -48,6 +48,28 @@ import Testing
         #expect(ErrorMessage.text(RegzaError.problem(APIProblem(type: "https://example.com/problems/unknown"))) != "")
     }
 
+    /// アプリが決めた code の失敗は、表で文言を引く (表にない code は、決まった言い方にする)
+    @Test func appCodesUseTheTable() {
+        let fallback = RegzaError.failed("not_in_table").localizedDescription
+        let texts = [ErrorCode.streamUnavailable, .lockScreenStartFailed].map { ErrorMessage.text(RegzaError.failed($0)) }
+        #expect(texts.allSatisfy { $0 != fallback })
+        #expect(Set(texts).count == texts.count)
+        #expect(RegzaError.failed(.streamUnavailable).code == .streamUnavailable)
+    }
+
+    /// 形が違って読めない返事は、機種が対応していないとは言わず、返事が正しくないものにする
+    @Test func unreadableResponseIsInvalidResponse() async {
+        let transport = FakeHTTPTransport { _ in
+            HTTPResponse(statusCode: 200, headers: ["Content-Type": "application/json"], body: Data(#"{"version":1}"#.utf8))
+        }
+        do {
+            _ = try await EPGStationAPIClient(host: "192.0.2.30", transport: transport).request(EPGStationVersionRequest())
+            Issue.record("読めないはずの返事が通りました")
+        } catch {
+            #expect(RegzaError(error) == .connection(.invalidResponse))
+        }
+    }
+
     @Test func problemJSONIsReadAtTheHTTPBoundary() async {
         let body = #"{"type":"https://example.com/problems/busy","title":"Busy","detail":"Try later"}"#
         let transport = FakeHTTPTransport { _ in
@@ -98,8 +120,9 @@ import Testing
             !$0.hasPrefix("RegzaFakeServers/") && $0 != "Presentation/PresentationCore/Errors/ErrorMessage.swift"
         }
         let bridge = try SourceLine.read(under: "Android/RegzaAndroidBridge/Sources")
-        #expect(!shared.isEmpty && !bridge.isEmpty)
-        for line in shared + bridge where line.code.contains(".localizedDescription") {
+        let iOS = try SourceLine.read(under: "iOS/RegzaKit/Sources")
+        #expect(!shared.isEmpty && !bridge.isEmpty && !iOS.isEmpty)
+        for line in shared + bridge + iOS where line.code.contains(".localizedDescription") {
             Issue.record("\(line.location) がエラーの文言を直接読んでいます。ErrorMessage.text で文言にしてください")
         }
     }
@@ -128,5 +151,7 @@ import Testing
     /// RegzaError 以外のエラーも、OS の文言を使わずにアプリの言い方にする
     @Test func otherErrorsUseAppWording() {
         #expect(RegzaError(CocoaError(.fileNoSuchFile)) == .connection(.other))
+        // 処理を途中で止めたときは、つながらなかったとは言わない
+        #expect(RegzaError(CancellationError()) == .connection(.cancelled))
     }
 }

@@ -26,8 +26,8 @@ describeOnBothPlatforms("リモコン", (app) => {
     expect(remote!.state.lastCommandLabel).toBe("電源");
   });
 
-  test("テレビとのやり取りの外で起きたエラーを知らせると、説明を出す", async () => {
-    const remote = await app().do("app/remote", "report", { message: "Live Activity を始められませんでした" }, (node) => node.state.errorMessage !== null);
-    expect(remote!.state.errorMessage).toBe("Live Activity を始められませんでした");
+  test("ロック画面の表示を始められなかったことを知らせると、説明を出す", async () => {
+    const remote = await app().do("app/remote", "lockScreenStartFailed", {}, (node) => node.state.errorMessage !== null);
+    expect(remote!.state.errorMessage).toBe("ロック画面の表示を始められませんでした");
   });
 });

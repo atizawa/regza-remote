@@ -25,18 +25,6 @@
         }
       }
     },
-    "activity_start_failed": {
-      "extractionState": "manual",
-      "comment": "activity / start / failed",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Live Activity を開始できませんでした: %@"
-          }
-        }
-      }
-    },
     "activity_title": {
       "extractionState": "manual",
       "comment": "activity / title",
@@ -517,6 +505,18 @@
         }
       }
     },
+    "core_error_failed": {
+      "extractionState": "manual",
+      "comment": "core / error / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "うまくいきませんでした"
+          }
+        }
+      }
+    },
     "core_error_http_status": {
       "extractionState": "manual",
       "comment": "core / error / http / status",
@@ -561,6 +561,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "不正なレスポンスです"
+          }
+        }
+      }
+    },
+    "core_error_lock_screen_start_failed": {
+      "extractionState": "manual",
+      "comment": "core / error / lock / screen / start / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロック画面の表示を始められませんでした"
           }
         }
       }

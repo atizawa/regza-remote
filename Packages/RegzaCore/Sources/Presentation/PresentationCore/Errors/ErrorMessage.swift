@@ -66,6 +66,9 @@ package enum ErrorMessage {
         }
     }
 
-    /// どの場面でも同じ言い換え。API の問題の種類 (type) ごとの文言は、ここに足す
-    static let commonRules: [Rule] = []
+    /// どの場面でも同じ言い換え。アプリが決めた code と、API の問題の種類 (type) ごとの文言は、ここに足す
+    static let commonRules: [Rule] = [
+        Rule(code: .streamUnavailable) { _ in CoreStrings.errorStreamUnavailable },
+        Rule(code: .lockScreenStartFailed) { _ in CoreStrings.errorLockScreenStartFailed },
+    ]
 }

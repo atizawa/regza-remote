@@ -12,8 +12,8 @@ public enum RegzaError: Error, Equatable, Sendable {
     case unsupported
     /// PIN 登録で PIN が違う
     case invalidPIN
-    /// アプリが決めた文言のエラー (配信の準備ができないなど)
-    case network(String)
+    /// アプリが決めた code の失敗 (配信の準備ができないなど)。文言は画面に出すときに code で引く
+    case failed(ErrorCode)
     /// 通信が返事を受け取れなかった
     case connection(ConnectionFailure)
     /// HTTP API が返したエラーの詳細 (RFC 9457)
@@ -31,7 +31,7 @@ extension RegzaError {
         case .commandRejected(let code): ErrorCode.commandRejected.appending(code)
         case .unsupported: "unsupported"
         case .invalidPIN: "invalid_pin"
-        case .network: "network"
+        case .failed(let code): code
         case .connection(let failure): ErrorCode.connection.appending(failure.rawValue)
         case .problem(let problem):
             problem.type == APIProblem.blankType
@@ -49,6 +49,10 @@ extension ErrorCode {
     public static let unsupported: ErrorCode = "unsupported"
     /// 通信が返事を受け取れなかった仲間 (connection.timed_out など)
     public static let connection: ErrorCode = "connection"
+    /// 配信の準備ができなかった
+    public static let streamUnavailable: ErrorCode = "stream_unavailable"
+    /// ロック画面の表示を始められなかった
+    public static let lockScreenStartFailed: ErrorCode = "lock_screen_start_failed"
 }
 
 extension RegzaError: LocalizedError {
@@ -61,7 +65,7 @@ extension RegzaError: LocalizedError {
         case .commandRejected(let code): CoreStrings.errorCommandRejected(code)
         case .unsupported: CoreStrings.errorUnsupported
         case .invalidPIN: CoreStrings.errorInvalidPin
-        case .network(let message): message
+        case .failed: CoreStrings.errorFailed
         case .connection(let failure):
             switch failure {
             case .cannotConnect: CoreStrings.errorConnectionCannotConnect
@@ -79,8 +83,9 @@ extension RegzaError: LocalizedError {
 }
 
 extension RegzaError {
-    /// RegzaError 以外のエラーは、通信が返事を受け取れなかったものとして扱う (OS の文言は使わない)
+    /// RegzaError 以外のエラーは、通信が返事を受け取れなかったものとして扱う (OS の文言は使わない)。
+    /// 処理を途中で止めたときは、取り消したものとして扱う
     public init(_ error: any Error) {
-        self = error as? RegzaError ?? .connection(.other)
+        self = error as? RegzaError ?? (error is CancellationError ? .connection(.cancelled) : .connection(.other))
     }
 }

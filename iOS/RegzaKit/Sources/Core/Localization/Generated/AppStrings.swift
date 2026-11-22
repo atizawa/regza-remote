@@ -6,10 +6,6 @@ public enum AppStrings {
 
     public static var activityHelp: String { String(localized: "activity_help", bundle: .module) }
 
-    public static func activityStartFailed(_ value1: String) -> String {
-        String.localizedStringWithFormat(NSLocalizedString("activity_start_failed", bundle: .module, comment: ""), value1)
-    }
-
     public static var activityTitle: String { String(localized: "activity_title", bundle: .module) }
 
     public static var appName: String { String(localized: "app_name", bundle: .module) }

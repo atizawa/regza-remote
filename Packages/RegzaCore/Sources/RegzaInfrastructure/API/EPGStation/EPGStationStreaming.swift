@@ -1,6 +1,5 @@
 import Foundation
 import RegzaDomain
-internal import RegzaStrings
 
 struct EPGStationStreaming {
     let epgStationAPIClient: EPGStationAPIClient
@@ -22,6 +21,6 @@ struct EPGStationStreaming {
             try? await epgStationAPIClient.request(EPGStationKeepStreamRequest(streamID: streamID))
             try await Task.sleep(for: .seconds(1))
         }
-        throw RegzaError.network(CoreStrings.errorStreamUnavailable)
+        throw RegzaError.failed(.streamUnavailable)
     }
 }

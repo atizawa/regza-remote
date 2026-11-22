@@ -3,7 +3,6 @@
 <resources>
     <string name="activity_disabled_help" formatted="false">"iPhone の「設定」→「REGZAリモコン」で「ライブアクティビティ」をオンにすると使えます。"</string>
     <string name="activity_help" formatted="false">"アプリを閉じていても、番組名とリモコンのボタンを表示します。"</string>
-    <string name="activity_start_failed">"Live Activity を開始できませんでした: %1$s"</string>
     <string name="activity_title" formatted="false">"ロック画面と Dynamic Island に表示"</string>
     <string name="app_name" formatted="false">"REGZA リモコン"</string>
     <string name="appearance_dark" formatted="false">"ダーク"</string>
@@ -44,10 +43,12 @@
     <string name="core_error_connection_failed" formatted="false">"通信に失敗しました"</string>
     <string name="core_error_connection_offline" formatted="false">"ネットワークにつながっていません"</string>
     <string name="core_error_connection_timed_out" formatted="false">"返事がありませんでした。テレビ・サーバーの電源とネットワークを確かめてください"</string>
+    <string name="core_error_failed" formatted="false">"うまくいきませんでした"</string>
     <string name="core_error_http_status">"HTTPエラー (%1$d)"</string>
     <string name="core_error_invalid_host" formatted="false">"IPアドレスが正しくありません"</string>
     <string name="core_error_invalid_pin" formatted="false">"PIN が正しくありません。テレビに表示されている数字を確認してください"</string>
     <string name="core_error_invalid_response" formatted="false">"不正なレスポンスです"</string>
+    <string name="core_error_lock_screen_start_failed" formatted="false">"ロック画面の表示を始められませんでした"</string>
     <string name="core_error_not_configured" formatted="false">"接続先が設定されていません"</string>
     <string name="core_error_problem" formatted="false">"サーバーでうまく処理できませんでした"</string>
     <string name="core_error_request_cancelled" formatted="false">"通信を取り消しました"</string>

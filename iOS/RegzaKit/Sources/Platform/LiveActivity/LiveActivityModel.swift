@@ -1,6 +1,5 @@
 #if os(iOS)
 import Foundation
-import Localization
 import Observation
 import RegzaPresentation
 
@@ -34,7 +33,8 @@ public final class LiveActivityModel {
                 await LiveActivityController.end()
             }
         } catch {
-            remoteViewModel.send(.report(AppStrings.activityStartFailed(error.localizedDescription)))
+            // OS の文言は出さない (文言は共有の Swift がエラーの code で決める)
+            remoteViewModel.send(.lockScreenStartFailed)
         }
         isOn = LiveActivityController.isActive
         scheduleBackgroundRefresh()

@@ -37,7 +37,7 @@ public struct HTTPResponse: Sendable {
 }
 
 /// HTTP の送り方。iOS は URLSession、Android は Kotlin から注入した OkHttp。
-/// 失敗は `RegzaError.network` で返す
+/// 返事を受け取れなかったときは、理由の種類を `RegzaError.connection` で返す
 public protocol HTTPTransport: Sendable {
     func send(_ request: HTTPRequest) async throws -> HTTPResponse
 }

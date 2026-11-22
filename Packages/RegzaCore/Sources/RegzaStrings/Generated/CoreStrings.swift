@@ -18,10 +18,12 @@ public enum CoreStrings {
         "core_error_connection_failed": "通信に失敗しました",
         "core_error_connection_offline": "ネットワークにつながっていません",
         "core_error_connection_timed_out": "返事がありませんでした。テレビ・サーバーの電源とネットワークを確かめてください",
+        "core_error_failed": "うまくいきませんでした",
         "core_error_http_status": "HTTPエラー (%lld)",
         "core_error_invalid_host": "IPアドレスが正しくありません",
         "core_error_invalid_pin": "PIN が正しくありません。テレビに表示されている数字を確認してください",
         "core_error_invalid_response": "不正なレスポンスです",
+        "core_error_lock_screen_start_failed": "ロック画面の表示を始められませんでした",
         "core_error_not_configured": "接続先が設定されていません",
         "core_error_problem": "サーバーでうまく処理できませんでした",
         "core_error_request_cancelled": "通信を取り消しました",
@@ -176,6 +178,8 @@ public enum CoreStrings {
 
     public static var errorConnectionTimedOut: String { CoreStringTable.text("core_error_connection_timed_out") }
 
+    public static var errorFailed: String { CoreStringTable.text("core_error_failed") }
+
     public static func errorHttpStatus(_ value1: Int) -> String {
         CoreStringTable.text("core_error_http_status", [.int(value1)])
     }
@@ -185,6 +189,8 @@ public enum CoreStrings {
     public static var errorInvalidPin: String { CoreStringTable.text("core_error_invalid_pin") }
 
     public static var errorInvalidResponse: String { CoreStringTable.text("core_error_invalid_response") }
+
+    public static var errorLockScreenStartFailed: String { CoreStringTable.text("core_error_lock_screen_start_failed") }
 
     public static var errorNotConfigured: String { CoreStringTable.text("core_error_not_configured") }
 

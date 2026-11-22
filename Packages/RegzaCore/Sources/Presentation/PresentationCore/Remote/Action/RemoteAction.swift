@@ -15,6 +15,6 @@ public enum RemoteAction: Sendable {
     /// 画面が見えている間、2 秒ごとに取り直す
     case startPolling
     case stopPolling
-    /// テレビとのやり取りの外で起きたエラーの説明を出す (iOS の Live Activity を始められなかったときなど)
-    case report(String)
+    /// ロック画面の表示を始められなかったことを出す (テレビとのやり取りの外で起きた失敗)
+    case lockScreenStartFailed
 }

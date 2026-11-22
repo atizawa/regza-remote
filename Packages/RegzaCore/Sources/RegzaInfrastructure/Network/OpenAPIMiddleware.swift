@@ -64,7 +64,8 @@ func performOpenAPI<Value>(
     do { return try await operation() } catch let error as ClientError {
         if let underlying = error.underlyingError as? RegzaError { throw underlying }
         if error.underlyingError is CancellationError { throw CancellationError() }
-        throw RegzaError.unsupported
+        // 返事を読めなかった (形が違うなど)。機種が対応していないときは 404 が返るので、ここでは対応していないとは言わない
+        throw RegzaError.connection(.invalidResponse)
     }
 }
 
