@@ -94,25 +94,13 @@ import Testing
 /// (OS のエラーは、通信が種類 (ConnectionFailure) に分けて RegzaError にし、OS の文言は使わない)
 @Suite struct ErrorMessageUsageGuardTests {
     @Test func onlyErrorMessageReadsLocalizedDescription() throws {
-        let repository = FakeServersContractTests.repository
-        let allowed: Set<String> = [
-            "Packages/RegzaCore/Sources/Presentation/PresentationCore/Errors/ErrorMessage.swift"
-        ]
-        let roots = ["Packages/RegzaCore/Sources", "Android/RegzaAndroidBridge/Sources"]
-        var paths: [String] = []
-        for root in roots {
-            paths += try FileManager.default.subpathsOfDirectory(atPath: repository.appending(path: root).path(percentEncoded: false))
-                .filter { $0.hasSuffix(".swift") && !$0.hasPrefix("RegzaFakeServers/") }
-                .map { root + "/" + $0 }
-                .filter { !allowed.contains($0) }
+        let shared = try SourceLine.read(under: "Packages/RegzaCore/Sources") {
+            !$0.hasPrefix("RegzaFakeServers/") && $0 != "Presentation/PresentationCore/Errors/ErrorMessage.swift"
         }
-        #expect(!paths.isEmpty)
-        for path in paths {
-            let lines = try String(contentsOf: repository.appending(path: path), encoding: .utf8).components(separatedBy: "\n")
-            for (index, line) in lines.enumerated()
-            where line.contains(".localizedDescription") && !line.trimmingCharacters(in: .whitespaces).hasPrefix("//") {
-                Issue.record("\(path):\(index + 1) がエラーの文言を直接読んでいます。ErrorMessage.text で文言にしてください")
-            }
+        let bridge = try SourceLine.read(under: "Android/RegzaAndroidBridge/Sources")
+        #expect(!shared.isEmpty && !bridge.isEmpty)
+        for line in shared + bridge where line.code.contains(".localizedDescription") {
+            Issue.record("\(line.location) がエラーの文言を直接読んでいます。ErrorMessage.text で文言にしてください")
         }
     }
 }

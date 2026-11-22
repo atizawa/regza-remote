@@ -63,17 +63,12 @@ import Testing
 /// 偽物のサーバーは場面を作るために今の時刻を使ってよい。待つ時間は ContinuousClock で測る
 @Suite struct ClockUsageGuardTests {
     @Test func sharedSwiftReadsTimeOnlyFromAppClock() throws {
-        let sources = FakeServersContractTests.repository.appending(path: "Packages/RegzaCore/Sources")
-        let allowed: Set<String> = ["RegzaDomain/Data/AppClock.swift"]
-        let paths = try FileManager.default.subpathsOfDirectory(atPath: sources.path(percentEncoded: false))
-            .filter { $0.hasSuffix(".swift") && !$0.hasPrefix("RegzaFakeServers/") && !allowed.contains($0) }
-        #expect(!paths.isEmpty)
-        for path in paths {
-            let lines = try String(contentsOf: sources.appending(path: path), encoding: .utf8).components(separatedBy: "\n")
-            for (index, line) in lines.enumerated()
-            where line.contains("Date()") && !line.trimmingCharacters(in: .whitespaces).hasPrefix("//") {
-                Issue.record("\(path):\(index + 1) が Date() を直接読んでいます。時計 (AppClock) から読んでください")
-            }
+        let lines = try SourceLine.read(under: "Packages/RegzaCore/Sources") {
+            !$0.hasPrefix("RegzaFakeServers/") && $0 != "RegzaDomain/Data/AppClock.swift"
+        }
+        #expect(!lines.isEmpty)
+        for line in lines where line.code.contains("Date()") {
+            Issue.record("\(line.location) が Date() を直接読んでいます。時計 (AppClock) から読んでください")
         }
     }
 }
