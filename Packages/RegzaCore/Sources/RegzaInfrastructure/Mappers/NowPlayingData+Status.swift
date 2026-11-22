@@ -5,7 +5,7 @@ import RegzaDomain
 extension NowPlayingData {
     /// 旧 API (`status.htm`) から作る。
     /// `action` の値の意味は公開されていないため、前回からの再生位置の変化で再生中かを判定する
-    init(status: RegzaStatus, previous: NowPlayingData?, now: Date = Date()) {
+    init(status: RegzaStatus, previous: NowPlayingData?, now: Date) {
         let title = Self.cleanTitle(status.titleName)
         let sameTitle = previous?.title == title && previous?.duration == status.totalTime
         self.init(
@@ -21,7 +21,7 @@ extension NowPlayingData {
     }
 
     /// v2 API (`/v2/remote/play/status`) から作る
-    init(playStatus: RegzaPlayStatus, now: Date = Date()) {
+    init(playStatus: RegzaPlayStatus, now: Date) {
         switch playStatus.contentType {
         case "broadcast":
             let program = playStatus.currentProgram

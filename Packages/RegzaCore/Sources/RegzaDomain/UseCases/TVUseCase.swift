@@ -4,6 +4,8 @@ import Foundation
 /// @mockable
 @MainActor
 public protocol TVUseCaseProtocol: AnyObject {
+    /// 今の時刻 (時刻で決まる判断は、これから読む)
+    var clock: AppClock { get }
     /// 保存してある接続
     var connection: ConnectionItem { get }
 
@@ -56,9 +58,11 @@ extension TVUseCaseProtocol {
 /// テレビ (REGZA) の操作: リモコンのキー・選局・いま映っているもの・チャンネル・接続の保存
 @MainActor
 public final class TVUseCase: TVUseCaseProtocol {
+    public let clock: AppClock
     private let tvRepository: any TVRepositoryProtocol
 
-    public init(tvRepository: any TVRepositoryProtocol) {
+    public init(tvRepository: any TVRepositoryProtocol, clock: AppClock) {
+        self.clock = clock
         self.tvRepository = tvRepository
     }
 
@@ -109,7 +113,7 @@ public final class TVUseCase: TVUseCaseProtocol {
 
     /// その局の番組を最初から見られるか (タイムシフトマシンで、番組の始まりから録画している時間帯)
     public func canStartOver(channelCode: String, programStart: Date) -> Bool {
-        tvRepository.canStartOver(channelCode: channelCode, programStart: programStart)
+        tvRepository.canStartOver(channelCode: channelCode, programStart: programStart, now: clock.now)
     }
 
     /// いま映っている番組を最初から再生する (リモコンの「始めにジャンプ」)

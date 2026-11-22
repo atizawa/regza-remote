@@ -19,12 +19,15 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     public private(set) var channels: [ChannelData] = []
     /// 読み込んだ設定と、そのときの接続。接続が変わったら使わない
     private var loadedTimeshift: (settings: TimeshiftSettingsData, revision: Int)?
+    /// 今の時刻 (接続を確かめるときの視聴状況にも使う)
+    private let clock: AppClock
 
     public init(
         secureStorageManager: SecureStorageManager, preferencesManager: PreferencesManager, regzaAPIClient: RegzaAPIClient,
         connectionState: RegzaConnectionState,
         regzaRemote: RegzaRemote? = nil,
-        locateTV: @escaping @Sendable (ConnectionData) async -> String?
+        locateTV: @escaping @Sendable (ConnectionData) async -> String?,
+        clock: AppClock
     ) {
         if let regzaRemote { precondition(regzaRemote.regzaAPIClient === regzaAPIClient, "remote と Repository は同じ APIClient を共有してください") }
         self.locateTV = locateTV
@@ -32,7 +35,8 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
         self.preferencesManager = preferencesManager
         self.regzaAPIClient = regzaAPIClient
         self.connectionState = connectionState
-        self.regzaRemote = regzaRemote ?? RegzaRemote(regzaAPIClient: regzaAPIClient)
+        self.clock = clock
+        self.regzaRemote = regzaRemote ?? RegzaRemote(regzaAPIClient: regzaAPIClient, clock: clock)
     }
 
     public var timeshiftSettings: TimeshiftSettingsData? {
@@ -124,7 +128,7 @@ public final class RegzaTVRepository: TVRepositoryProtocol {
     public func testConnection(_ connection: ConnectionData) async -> Result<NowPlayingData, RegzaError> {
         do {
             let testAPIClient = await regzaAPIClient.replacingConnection(connection)
-            return .success(try await RegzaRemote(regzaAPIClient: testAPIClient).refresh())
+            return .success(try await RegzaRemote(regzaAPIClient: testAPIClient, clock: clock).refresh())
         } catch {
             return .failure(RegzaError(error))
         }

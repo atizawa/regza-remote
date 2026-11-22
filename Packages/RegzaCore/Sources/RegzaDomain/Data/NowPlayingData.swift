@@ -45,7 +45,7 @@ public struct NowPlayingData: Equatable, Sendable {
         kind: Kind = .unknown, channelName: String = "", channelCode: String = "", title: String = "", description: String = "",
         chapterName: String = "", position: Int = 0, duration: Int = 0, isAdvancing: Bool = false,
         nextProgramStart: Date? = nil, nextProgramDuration: Int = 0, nextTitle: String = "", genre: String = "",
-        shortChannel: String = "", updatedAt: Date = Date()
+        shortChannel: String = "", updatedAt: Date
     ) {
         self.kind = kind
         self.channelName = channelName

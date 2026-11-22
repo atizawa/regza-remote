@@ -15,7 +15,9 @@ let generatedSource = try generate(
     annotation: "@mockable", header: nil, macro: nil, declType: .protocolType,
     useTemplateFunc: false, allowSetCallCount: false, enableFuncArgsHistory: true,
     disableCombineDefaultValues: false, mockFinal: true, testableImports: [],
-    customImports: ["RegzaDomain", "RegzaSharedModels"], excludeImports: [],
+    customImports: ["RegzaDomain", "RegzaSharedModels"],
+    // 実装だけが使う文言の参照は、モックには要らない (読み込むと、テストの読み込み方と食い違う)
+    excludeImports: ["RegzaStrings"],
     to: outputURL.path, loggingLevel: 2, concurrencyLimit: nil)
 
 let normalizedSource =

@@ -44,7 +44,7 @@ public final class LivePlayerViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
-        let now = Date()
+        let now = guideUseCase.clock.now
         let bands = channelUseCase.liveBands
         let band = remoteViewModel.band(among: bands)
         return State(

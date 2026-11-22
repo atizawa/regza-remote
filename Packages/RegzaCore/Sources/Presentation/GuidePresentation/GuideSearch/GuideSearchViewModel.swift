@@ -39,7 +39,7 @@ public final class GuideSearchViewModel {
     @ObservationIgnored private var indexedAt: Date?
 
     public var state: State {
-        let now = Date()
+        let now = guideUseCase.clock.now
         return State(
             text: text,
             isBlank: text.trimmingCharacters(in: .whitespaces).isEmpty,
@@ -101,7 +101,7 @@ public final class GuideSearchViewModel {
     }
 
     private func refresh() {
-        var query = isLiteral ? ProgramSearchQuery(text: text) : ProgramSearchQuery(parsing: text)
+        var query = isLiteral ? ProgramSearchQuery(text: text) : ProgramSearchQuery(parsing: text, now: guideUseCase.clock.now)
         if removed.contains(.day) { query.dayOffset = nil }
         if removed.contains(.hours) {
             query.startHour = nil
@@ -127,7 +127,7 @@ public final class GuideSearchViewModel {
             case 1: return CoreStrings.dayTomorrow
             case 2: return CoreStrings.dayAfterTomorrow
             case let offset:
-                let today = BroadcastDay.start(of: Date())
+                let today = BroadcastDay.start(of: guideUseCase.clock.now)
                 let day = Calendar.current.date(byAdding: .day, value: offset, to: today) ?? today
                 return day.formatted(.dateTime.locale(CoreStringTable.locale).month().day().weekday())
             }

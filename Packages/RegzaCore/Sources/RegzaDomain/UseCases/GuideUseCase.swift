@@ -4,6 +4,8 @@ internal import RegzaStrings
 /// @mockable
 @MainActor
 public protocol GuideUseCaseProtocol: AnyObject {
+    /// 今の時刻 (時刻で決まる判断は、これから読む)
+    var clock: AppClock { get }
     var guideHost: String { get }
     var hasGuide: Bool { get }
     var guideChannelCodes: Set<String> { get }
@@ -25,27 +27,29 @@ public protocol GuideUseCaseProtocol: AnyObject {
 
 extension GuideUseCaseProtocol {
     public func currentProgram(for channel: ChannelItem) -> ProgramItem? {
-        currentProgram(for: channel, at: Date())
+        currentProgram(for: channel, at: clock.now)
     }
-    public func item(_ program: ProgramItem) -> ProgramItem { item(program, now: Date()) }
-    public func days(_ programs: [ProgramItem]) -> [ProgramDay] { days(programs, now: Date()) }
-    public func column(_ channel: ChannelItem) -> GuideColumn { column(channel, now: Date()) }
-    public func guideDays() -> [GuideDay] { guideDays(now: Date()) }
+    public func item(_ program: ProgramItem) -> ProgramItem { item(program, now: clock.now) }
+    public func days(_ programs: [ProgramItem]) -> [ProgramDay] { days(programs, now: clock.now) }
+    public func column(_ channel: ChannelItem) -> GuideColumn { column(channel, now: clock.now) }
+    public func guideDays() -> [GuideDay] { guideDays(now: clock.now) }
     public func search(_ query: ProgramSearchQuery, channels: [ChannelItem]) -> [SearchResultItem] {
-        search(query, channels: channels, now: Date())
+        search(query, channels: channels, now: clock.now)
     }
 }
 
 /// Repository の Data と検索索引を内部に保ち、SharedModel だけを返す。
 @MainActor
 public final class GuideUseCase: GuideUseCaseProtocol {
+    public let clock: AppClock
     private let guideRepository: any GuideRepositoryProtocol
     private let recordingRepository: any RecordingRepositoryProtocol
     private var searchIndex = ProgramSearchIndex([])
     private var indexedAt: Date?
     private var indexedHost: String?
 
-    public init(guideRepository: any GuideRepositoryProtocol, recordingRepository: any RecordingRepositoryProtocol) {
+    public init(guideRepository: any GuideRepositoryProtocol, recordingRepository: any RecordingRepositoryProtocol, clock: AppClock) {
+        self.clock = clock
         self.guideRepository = guideRepository
         self.recordingRepository = recordingRepository
     }
@@ -59,14 +63,14 @@ public final class GuideUseCase: GuideUseCaseProtocol {
 
     public func programs(for channel: ChannelItem) async throws(RegzaError) -> [ProgramItem] {
         let programs = try await guideRepository.programs(channelCode: channel.code)
-        return programs.map { item($0, now: Date()) }
+        return programs.map { item($0, now: clock.now) }
     }
 
     public func program(id: Int, channelCode: String) -> ProgramItem? {
-        guideRepository.program(id: id, channelCode: channelCode).map { item($0, now: Date()) }
+        guideRepository.program(id: id, channelCode: channelCode).map { item($0, now: clock.now) }
     }
 
-    public func currentProgram(for channel: ChannelItem, at date: Date = Date()) -> ProgramItem? {
+    public func currentProgram(for channel: ChannelItem, at date: Date) -> ProgramItem? {
         guideRepository.guidePrograms[channel.code]?.first { $0.isOnAir(at: date) }.map { item($0, now: date) }
     }
 
@@ -77,12 +81,12 @@ public final class GuideUseCase: GuideUseCaseProtocol {
         indexedHost = nil
     }
 
-    public func item(_ program: ProgramItem, now: Date = Date()) -> ProgramItem {
+    public func item(_ program: ProgramItem, now: Date) -> ProgramItem {
         guard let data = guideRepository.program(id: program.id, channelCode: program.channelCode) else { return program }
         return item(data, now: now)
     }
 
-    func item(_ data: ProgramData, now: Date = Date()) -> ProgramItem {
+    func item(_ data: ProgramData, now: Date) -> ProgramItem {
         UseCaseModelMapper.program(data, isReserved: recordingRepository.isReserved(data), now: now)
     }
 
@@ -91,24 +95,24 @@ public final class GuideUseCase: GuideUseCaseProtocol {
         return UseCaseModelMapper.programTexts(data)
     }
 
-    public func days(_ programs: [ProgramItem], now: Date = Date()) -> [ProgramDay] {
+    public func days(_ programs: [ProgramItem], now: Date) -> [ProgramDay] {
         Dictionary(grouping: programs) { Calendar.current.startOfDay(for: $0.start) }
             .map { date, programs in
                 ProgramDay(date: date, label: DisplayText.day(date), programs: programs.map { item($0, now: now) })
             }.sorted { $0.date < $1.date }
     }
 
-    func days(_ programs: [ProgramData], now: Date = Date()) -> [ProgramDay] {
+    func days(_ programs: [ProgramData], now: Date) -> [ProgramDay] {
         days(programs.map { item($0, now: now) }, now: now)
     }
 
-    public func column(_ channel: ChannelItem, now: Date = Date()) -> GuideColumn {
+    public func column(_ channel: ChannelItem, now: Date) -> GuideColumn {
         GuideColumn(
             channelCode: channel.code, channelName: channel.name,
             programs: (guideRepository.guidePrograms[channel.code] ?? []).map { item($0, now: now) })
     }
 
-    public func guideDays(now: Date = Date()) -> [GuideDay] {
+    public func guideDays(now: Date) -> [GuideDay] {
         ([nil] + Self.days(guideRepository.guidePrograms, now: now)).map {
             GuideDay(date: $0, label: Self.label(of: $0, now: now), kind: Self.kind(of: $0))
         }
@@ -126,7 +130,7 @@ public final class GuideUseCase: GuideUseCaseProtocol {
         indexedHost = host
     }
 
-    public func search(_ query: ProgramSearchQuery, channels: [ChannelItem], now: Date = Date()) -> [SearchResultItem] {
+    public func search(_ query: ProgramSearchQuery, channels: [ChannelItem], now: Date) -> [SearchResultItem] {
         guard !query.isEmpty, indexedHost == guideRepository.guideHost, indexedAt == guideRepository.guideProgramsLoadedAt else {
             return []
         }
@@ -146,7 +150,7 @@ public final class GuideUseCase: GuideUseCaseProtocol {
         return result
     }
 
-    func searchResult(_ result: ProgramSearchResult, channel: ChannelItem, now: Date = Date()) -> SearchResultItem {
+    func searchResult(_ result: ProgramSearchResult, channel: ChannelItem, now: Date) -> SearchResultItem {
         SearchResultItem(
             program: item(result.program, now: now), channelCode: channel.code, channelName: channel.name,
             timeText: Self.searchTimeText(of: result.program, now: now), reason: Self.reason(for: result))
@@ -169,7 +173,7 @@ public final class GuideUseCase: GuideUseCaseProtocol {
     }
 
     /// 「今日」「明日」「9(月)」
-    static func label(of day: Date?, now: Date = Date()) -> String {
+    static func label(of day: Date?, now: Date) -> String {
         guard let day else { return CoreStrings.dayToday }
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: BroadcastDay.start(of: now))
         if day == tomorrow { return CoreStrings.dayTomorrow }
@@ -189,7 +193,7 @@ public final class GuideUseCase: GuideUseCaseProtocol {
     }
 
     /// 「11/5(木) 21:00〜」。放送中は「放送中 〜21:54」
-    static func searchTimeText(of program: ProgramData, now: Date = Date()) -> String {
+    static func searchTimeText(of program: ProgramData, now: Date) -> String {
         if program.isOnAir(at: now) { return CoreStrings.searchOnAirUntil(DisplayText.time(program.end)) }
         let day = program.start.formatted(.dateTime.locale(DisplayText.locale).month(.defaultDigits).day().weekday())
         return CoreStrings.searchStartsAt(day, DisplayText.time(program.start))

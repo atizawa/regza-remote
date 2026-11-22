@@ -14,7 +14,8 @@ extension AppViewModel {
             ]))
         let transport = URLSessionTransport()
         let guideRepository = MirakurunGuideRepository(
-            preferencesManager: preferencesManager, mirakurunAPIClient: MirakurunAPIClient(host: "192.0.2.2", transport: transport))
+            preferencesManager: preferencesManager, mirakurunAPIClient: MirakurunAPIClient(host: "192.0.2.2", transport: transport),
+            clock: guideUseCase.clock)
         let repository = EPGStationStreamRepository(
             preferencesManager: preferencesManager, epgStationAPIClient: EPGStationAPIClient(host: streamHost, transport: transport))
         let streamUseCase = StreamUseCase(streamRepository: repository, guideRepository: guideRepository)

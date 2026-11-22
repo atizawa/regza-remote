@@ -9,10 +9,10 @@ struct EPGStationStreaming {
         return try? EPGStationPlaylistRequest(streamID: streamID).url(baseURL: context.baseURL)
     }
 
-    /// 再生できるまで keep を送りながら待つ。
+    /// 再生できるまで keep を送りながら待つ (待つ時間は、時計の変更に左右されない ContinuousClock で測る)
     func waitUntilReady(streamID: Int, timeout: TimeInterval = 60) async throws {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
+        let deadline = ContinuousClock.now + .seconds(timeout)
+        while ContinuousClock.now < deadline {
             try Task.checkCancellation()
             if (try? await executeAPIRequest(EPGStationPlaylistRequest(streamID: streamID), using: epgStationAPIClient.playlistContext()))
                 == true

@@ -14,7 +14,7 @@ import Testing
         ])
         let guideUseCase = GuideUseCase(
             guideRepository: GuideRepositoryProtocolMock(guideHost: "192.0.2.2", programs: [onAir, later]),
-            recordingRepository: recordingRepository)
+            recordingRepository: recordingRepository, clock: .system)
 
         let item = guideUseCase.item(onAir, now: TestData.now)
         #expect(item.startText == "13:00")
@@ -28,14 +28,14 @@ import Testing
         #expect(!reserved.isOnAir)
         // テレビの予約の番組 ID と、Mirakurun の番組の ID が同じ放送の番組なら予約済み
         #expect(reserved.isReserved)
-        #expect(guideUseCase.item(onAir).genre == 3)
-        #expect(try guideUseCase.item(TestData.program(id: 3, start: TestData.now)).genre == -1)
+        #expect(guideUseCase.item(onAir, now: TestData.now).genre == 3)
+        #expect(try guideUseCase.item(TestData.program(id: 3, start: TestData.now), now: TestData.now).genre == -1)
     }
 
     @Test func programsAreGroupedByDay() throws {
         let guideUseCase = GuideUseCase(
             guideRepository: GuideRepositoryProtocolMock(guideHost: "", programs: []),
-            recordingRepository: RecordingRepositoryProtocolMock(reservations: []))
+            recordingRepository: RecordingRepositoryProtocolMock(reservations: []), clock: .system)
         let days = guideUseCase.days(
             [
                 try TestData.program(id: 3, start: TestData.date(day: 8, hour: 9)),
@@ -50,7 +50,7 @@ import Testing
         let programs = [try TestData.program(id: 1, start: TestData.date(day: 9, hour: 10))]
         let guideUseCase = GuideUseCase(
             guideRepository: GuideRepositoryProtocolMock(guideHost: "192.0.2.2", programs: programs),
-            recordingRepository: RecordingRepositoryProtocolMock(reservations: [])
+            recordingRepository: RecordingRepositoryProtocolMock(reservations: []), clock: .system
         )
         let days = guideUseCase.guideDays(now: TestData.now)
         // 今日 (今の時刻から)、明日、そのあとは「9(月)」のように日付で書く。日付は朝 4 時から
@@ -66,7 +66,7 @@ import Testing
         let channel = try #require(TestData.channels().first)
         let guideUseCase = GuideUseCase(
             guideRepository: GuideRepositoryProtocolMock(guideHost: "", programs: []),
-            recordingRepository: RecordingRepositoryProtocolMock(reservations: []))
+            recordingRepository: RecordingRepositoryProtocolMock(reservations: []), clock: .system)
 
         let byCast = guideUseCase.searchResult(
             ProgramSearchResult(program: onAir, matches: [.init(term: "見本太郎", field: .cast)]), channel: UseCaseModelMapper.channel(channel),
@@ -87,7 +87,7 @@ import Testing
         let program = try TestData.program(id: 7, start: TestData.now)
         let guideUseCase = GuideUseCase(
             guideRepository: GuideRepositoryProtocolMock(guideHost: "192.0.2.2", programs: [program]),
-            recordingRepository: RecordingRepositoryProtocolMock(reservations: []))
+            recordingRepository: RecordingRepositoryProtocolMock(reservations: []), clock: .system)
         #expect(guideUseCase.program(id: 7, channelCode: "JP-G00000001")?.id == program.id)
         #expect(guideUseCase.program(id: 7, channelCode: "JP-G00000002") == nil)
     }

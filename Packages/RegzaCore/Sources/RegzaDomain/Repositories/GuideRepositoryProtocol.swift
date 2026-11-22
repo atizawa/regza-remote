@@ -25,7 +25,7 @@ extension GuideRepositoryProtocol {
     public var hasGuide: Bool { !guideHost.isEmpty }
 
     /// そのチャンネルでいま放送中の番組
-    public func currentProgram(for channel: ChannelData, at date: Date = Date()) -> ProgramData? {
+    public func currentProgram(for channel: ChannelData, at date: Date) -> ProgramData? {
         guidePrograms[channel.code]?.first { $0.isOnAir(at: date) }
     }
 }

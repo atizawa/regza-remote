@@ -54,7 +54,7 @@ public struct ProgramData: Decodable, Hashable, Sendable, Identifiable {
         BroadcastID.epgContentID(networkId: networkId, serviceId: serviceId, eventId: eventId)
     }
 
-    public func isOnAir(at date: Date = Date()) -> Bool { start <= date && date < end }
+    public func isOnAir(at date: Date) -> Bool { start <= date && date < end }
 
     /// 最初のジャンルの名前
     public var genreName: String? { genres.first.flatMap(ProgramGenre.name) }

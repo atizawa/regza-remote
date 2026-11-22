@@ -37,19 +37,19 @@ import Testing
 
     @Test func nowPlayingDetectsAdvance() {
         var status = RegzaStatus(text: text)
-        let first = NowPlayingData(status: status, previous: nil)
+        let first = NowPlayingData(status: status, previous: nil, now: Date())
         #expect(first.title == "アニメ　日常　＜新＞＜全１２回＞「日常の第一話」")
         #expect(!first.isAdvancing)
 
         status.titleTime = 31
-        #expect(NowPlayingData(status: status, previous: first).isAdvancing)
+        #expect(NowPlayingData(status: status, previous: first, now: Date()).isAdvancing)
 
         status.titleTime = 29
-        #expect(!NowPlayingData(status: status, previous: first).isAdvancing)
+        #expect(!NowPlayingData(status: status, previous: first, now: Date()).isAdvancing)
     }
 
     @Test func legacyIdleIsUnknownKind() {
-        let nowPlaying = NowPlayingData(status: RegzaStatus(text: "action=0\n"), previous: nil)
+        let nowPlaying = NowPlayingData(status: RegzaStatus(text: "action=0\n"), previous: nil, now: Date())
         #expect(nowPlaying.kind == .unknown)
     }
 

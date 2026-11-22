@@ -38,7 +38,7 @@ import Testing
     }
 
     @Test func recordedUsesPlayingAction() throws {
-        let nowPlaying = NowPlayingData(playStatus: try decode(recorded))
+        let nowPlaying = NowPlayingData(playStatus: try decode(recorded), now: Date())
         #expect(nowPlaying.kind == .recorded)
         #expect(nowPlaying.title == "おかあさんといっしょ　ファミリーコンサート２０２６春〜きっと、あしたは〜")
         #expect(nowPlaying.channelName == "ＮＨＫＥテレ１東京")
@@ -66,14 +66,14 @@ import Testing
     @Test func shortChannelForSatellite() throws {
         let bs =
             #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G000400b5","channel_number":181,"rcu_channel_number":8,"start_time":1700000000,"duration":600}}"#
-        #expect(NowPlayingData(playStatus: try decode(bs)).shortChannel == "BS181")
+        #expect(NowPlayingData(playStatus: try decode(bs), now: Date()).shortChannel == "BS181")
         let cs =
             #"{"status":0,"content_type":"broadcast","epg_info_current":{"channel":"JP-G00070037","channel_number":55,"start_time":1700000000,"duration":600}}"#
-        #expect(NowPlayingData(playStatus: try decode(cs)).shortChannel == "CS055")
+        #expect(NowPlayingData(playStatus: try decode(cs), now: Date()).shortChannel == "CS055")
     }
 
     @Test func otherKinds() throws {
-        #expect(NowPlayingData(playStatus: try decode(#"{"status":0,"content_type":"external"}"#)).kind == .external)
-        #expect(NowPlayingData(playStatus: try decode(#"{"status":0,"content_type":"other"}"#)).kind == .standby)
+        #expect(NowPlayingData(playStatus: try decode(#"{"status":0,"content_type":"external"}"#), now: Date()).kind == .external)
+        #expect(NowPlayingData(playStatus: try decode(#"{"status":0,"content_type":"other"}"#), now: Date()).kind == .standby)
     }
 }

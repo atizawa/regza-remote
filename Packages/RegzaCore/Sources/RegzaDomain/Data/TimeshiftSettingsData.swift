@@ -60,7 +60,7 @@ public struct TimeshiftSettingsData: Decodable, Sendable, Equatable {
 
     /// その局の、`start` に始まった番組を最初から見られるか (始まりから今まで、ずっと録画している時間帯か)。
     /// 録画していない番組で「始めにジャンプ」を押すと、テレビにエラーが出る
-    public func canStartOver(channelCode: String, programStart start: Date, now: Date = Date()) -> Bool {
+    public func canStartOver(channelCode: String, programStart start: Date, now: Date) -> Bool {
         guard isEnabled, targetChannels.contains(channelCode), start <= now else { return false }
         var time = start
         while time < now {

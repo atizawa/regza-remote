@@ -4,6 +4,8 @@ import Foundation
 /// @mockable
 @MainActor
 public protocol ChannelUseCaseProtocol: AnyObject {
+    /// 今の時刻 (時刻で決まる判断は、これから読む)
+    var clock: AppClock { get }
     /// テレビに登録されている放送の種類 (地デジ・BS・CS の順)
     var bands: [BroadcastBand] { get }
 
@@ -22,21 +24,23 @@ public protocol ChannelUseCaseProtocol: AnyObject {
 
 extension ChannelUseCaseProtocol {
     public func liveItems(band: BroadcastBand?, watchingCode: String) -> [ChannelItem] {
-        liveItems(band: band, watchingCode: watchingCode, now: Date())
+        liveItems(band: band, watchingCode: watchingCode, now: clock.now)
     }
 
     public func items(band: BroadcastBand?, nowPlayingCode: String?) -> [ChannelItem] {
-        items(band: band, nowPlayingCode: nowPlayingCode, now: Date())
+        items(band: band, nowPlayingCode: nowPlayingCode, now: clock.now)
     }
 }
 
 /// チャンネル: テレビに登録されているチャンネルを、放送の種類ごとに、放送中の番組名つきで並べる
 @MainActor
 public final class ChannelUseCase: ChannelUseCaseProtocol {
+    public let clock: AppClock
     private let tvRepository: any TVRepositoryProtocol
     private let guideRepository: any GuideRepositoryProtocol
 
-    public init(tvRepository: any TVRepositoryProtocol, guideRepository: any GuideRepositoryProtocol) {
+    public init(tvRepository: any TVRepositoryProtocol, guideRepository: any GuideRepositoryProtocol, clock: AppClock) {
+        self.clock = clock
         self.tvRepository = tvRepository
         self.guideRepository = guideRepository
     }
@@ -65,7 +69,7 @@ public final class ChannelUseCase: ChannelUseCaseProtocol {
     }
 
     /// ライブ視聴の局の一覧 (UI の型)。見ている局は isNowPlaying にする
-    public func liveItems(band: BroadcastBand?, watchingCode: String, now: Date = Date()) -> [ChannelItem] {
+    public func liveItems(band: BroadcastBand?, watchingCode: String, now: Date) -> [ChannelItem] {
         liveChannels.filter { $0.band == band }.map { channel in
             ChannelItem(
                 code: channel.code,
@@ -81,7 +85,7 @@ public final class ChannelUseCase: ChannelUseCaseProtocol {
     }
 
     /// 一覧に出すチャンネル (UI の型)。サブチャンネルは代表と、いま映っているものだけにする
-    public func items(band: BroadcastBand?, nowPlayingCode: String?, now: Date = Date()) -> [ChannelItem] {
+    public func items(band: BroadcastBand?, nowPlayingCode: String?, now: Date) -> [ChannelItem] {
         let listed = ChannelData.channelList(tvRepository.channels, in: band, nowPlayingChannelCode: nowPlayingCode) {
             guideRepository.currentProgram(for: $0, at: now)?.name
         }
@@ -94,7 +98,8 @@ public final class ChannelUseCase: ChannelUseCaseProtocol {
                 programName: program?.name,
                 isNowPlaying: channel.code == nowPlayingCode,
                 hasPrograms: guideRepository.hasGuide && guideRepository.guidePrograms[channel.code] != nil,
-                canStartOver: program.map { tvRepository.canStartOver(channelCode: channel.code, programStart: $0.start) } ?? false,
+                canStartOver: program.map { tvRepository.canStartOver(channelCode: channel.code, programStart: $0.start, now: now) }
+                    ?? false,
                 isSubchannel: !channel.isRepresentative && channel.band != .cs,
                 band: channel.band, isRepresentative: channel.isRepresentative, remoteNumber: channel.remoteNumber
             )

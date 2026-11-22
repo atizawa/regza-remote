@@ -15,11 +15,16 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     public private(set) var guidePrograms: [String: [ProgramData]] = [:]
     public private(set) var guideProgramsLoadedAt: Date?
 
+    /// 今の時刻 (読み込んだ時刻と、放送中の番組の判断に使う)
+    @ObservationIgnored private let clock: AppClock
+
     public init(
         preferencesManager: PreferencesManager,
-        mirakurunAPIClient: MirakurunAPIClient
+        mirakurunAPIClient: MirakurunAPIClient,
+        clock: AppClock
     ) {
         self.preferencesManager = preferencesManager
+        self.clock = clock
         self.mirakurunAPIClient = mirakurunAPIClient
         guideHost = mirakurunAPIClient.host
     }
@@ -42,11 +47,11 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     /// 全チャンネルの番組を読む。数 MB あるので 30 分に 1 回まで
     public func loadGuidePrograms() async {
         guard let guideAPIClient = guideClient() else { return }
-        if let guideProgramsLoadedAt, Date().timeIntervalSince(guideProgramsLoadedAt) < 30 * 60 { return }
+        if let guideProgramsLoadedAt, clock.now.timeIntervalSince(guideProgramsLoadedAt) < 30 * 60 { return }
         guard let programs = try? await guideAPIClient.request(MirakurunAllProgramsRequest()) else { return }
         guard guideAPIClient === mirakurunAPIClient else { return }
         guidePrograms = Self.byChannel(programs)
-        guideProgramsLoadedAt = Date()
+        guideProgramsLoadedAt = clock.now
     }
 
     static func byChannel(_ programs: [ProgramData]) -> [String: [ProgramData]] {
@@ -57,7 +62,7 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
         guard let guideAPIClient = guideClient() else { throw .notConfigured }
         do {
             guard let ids = BroadcastID.ids(channelCode: channelCode) else { return [] }
-            let now = Date()
+            let now = clock.now
             let programs = try await guideAPIClient.request(
                 MirakurunChannelProgramsRequest(networkID: ids.networkId, serviceID: ids.serviceId)
             )

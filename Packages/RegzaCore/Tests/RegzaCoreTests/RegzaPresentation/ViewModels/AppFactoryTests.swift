@@ -14,7 +14,7 @@ import Testing
 @MainActor
 @Suite struct AppFactoryTests {
     @Test func injectedUseCaseReceivesCommandsAndReturnsErrors() async {
-        let tvUseCase = TVUseCaseProtocolMock(connection: .init(host: "192.0.2.1"))
+        let tvUseCase = TVUseCaseProtocolMock(clock: .system, connection: .init(host: "192.0.2.1"))
         tvUseCase.sendHandler = { _ throws(RegzaError) in throw .httpStatus(503) }
         let appViewModel = AppFactory.makeAppViewModel(
             tvUseCase: tvUseCase,

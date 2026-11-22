@@ -9,7 +9,8 @@ public enum AppFactory {
     public static func makeLiveTVUseCase(
         secureStorageManager: SecureStorageManager,
         preferencesManager: PreferencesManager,
-        transport: any HTTPTransport
+        transport: any HTTPTransport,
+        clock: AppClock = .system
     ) -> TVUseCase {
         let connectionState = RegzaConnectionState(
             connection: RegzaTVRepository.loadConnection(secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
@@ -18,15 +19,17 @@ public enum AppFactory {
             secureStorageManager: secureStorageManager, preferencesManager: preferencesManager,
             regzaAPIClient: RegzaAPIClient(connection: connectionState.connection, transport: transport),
             connectionState: connectionState,
-            locateTV: { await RegzaDiscovery.locate($0, transport: transport) })
-        return TVUseCase(tvRepository: tvRepository)
+            locateTV: { await RegzaDiscovery.locate($0, transport: transport) }, clock: clock)
+        return TVUseCase(tvRepository: tvRepository, clock: clock)
     }
 
     /// 通信・保存の実装は OS の起動処理から渡す。グローバル設定は参照しない。
+    /// 時刻はすべて clock から読む (UseCase・Repository・テレビとの通信に同じものを渡す)
     public static func makeLiveAppViewModel(
         secureStorageManager: SecureStorageManager,
         preferencesManager: PreferencesManager,
-        transport: any HTTPTransport
+        transport: any HTTPTransport,
+        clock: AppClock = .system
     ) -> AppViewModel {
         let connectionState = RegzaConnectionState(
             connection: RegzaTVRepository.loadConnection(secureStorageManager: secureStorageManager, preferencesManager: preferencesManager)
@@ -36,21 +39,23 @@ public enum AppFactory {
         let guideAPIClient = MirakurunAPIClient(host: guideHost, transport: transport)
         let remoteGuideAPIClient = MirakurunAPIClient(host: guideHost, timeout: 3, transport: transport)
         let regzaRemote = RegzaRemote(
-            regzaAPIClient: regzaAPIClient, mirakurunAPIClient: guideHost.isEmpty ? nil : remoteGuideAPIClient)
+            regzaAPIClient: regzaAPIClient, mirakurunAPIClient: guideHost.isEmpty ? nil : remoteGuideAPIClient, clock: clock)
         let tvRepository = RegzaTVRepository(
             secureStorageManager: secureStorageManager, preferencesManager: preferencesManager,
             regzaAPIClient: regzaAPIClient, connectionState: connectionState, regzaRemote: regzaRemote,
-            locateTV: { await RegzaDiscovery.locate($0, transport: transport) })
-        let guideRepository = MirakurunGuideRepository(preferencesManager: preferencesManager, mirakurunAPIClient: guideAPIClient)
+            locateTV: { await RegzaDiscovery.locate($0, transport: transport) }, clock: clock)
+        let guideRepository = MirakurunGuideRepository(
+            preferencesManager: preferencesManager, mirakurunAPIClient: guideAPIClient, clock: clock)
         let streamRepository = EPGStationStreamRepository(
             preferencesManager: preferencesManager,
             epgStationAPIClient: EPGStationAPIClient(host: preferencesManager.value(forKey: .streamHost) ?? "", transport: transport))
-        let recordingRepository = RegzaRecordingRepository(regzaAPIClient: regzaAPIClient, connectionState: connectionState)
+        let recordingRepository = RegzaRecordingRepository(regzaAPIClient: regzaAPIClient, connectionState: connectionState, clock: clock)
         return makeAppViewModel(
             tvRepository: tvRepository, guideRepository: guideRepository,
             recordingRepository: recordingRepository, streamRepository: streamRepository,
             deviceRepository: NetworkDeviceRepository(transport: transport),
             appPreferencesRepository: AppPreferencesRepository(preferencesManager: preferencesManager),
+            clock: clock,
             onGuideHostChange: { host in
                 await tvRepository.updateGuide(mirakurunAPIClient: host.isEmpty ? nil : remoteGuideAPIClient.replacingHost(host))
             }

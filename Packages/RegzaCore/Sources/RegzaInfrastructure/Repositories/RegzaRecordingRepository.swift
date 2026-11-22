@@ -11,7 +11,11 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
     /// 読み込んだ予約と、そのときの接続。接続が変わったら使わない
     private var loaded: (reservations: [ReservationData], revision: Int)?
 
-    public init(regzaAPIClient: RegzaAPIClient, connectionState: RegzaConnectionState) {
+    /// 今の時刻 (予定の予約を先に並べるのに使う)
+    @ObservationIgnored private let clock: AppClock
+
+    public init(regzaAPIClient: RegzaAPIClient, connectionState: RegzaConnectionState, clock: AppClock) {
+        self.clock = clock
         self.regzaAPIClient = regzaAPIClient
         self.connectionState = connectionState
     }
@@ -29,7 +33,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
             throw RegzaError(error)
         }
         guard revision == connectionState.revision else { return }
-        let now = Date()
+        let now = clock.now
         loaded = (
             list.sorted { lhs, rhs in
                 let left = lhs.isScheduled(now: now)

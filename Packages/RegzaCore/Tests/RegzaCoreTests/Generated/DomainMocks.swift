@@ -58,9 +58,16 @@ public final class AppPreferencesUseCaseProtocolMock: AppPreferencesUseCaseProto
 
 public final class ChannelUseCaseProtocolMock: ChannelUseCaseProtocol {
     public init() {}
-    public init(bands: [BroadcastBand] = [BroadcastBand](), liveBands: [BroadcastBand] = [BroadcastBand]()) {
+    public init(clock: AppClock, bands: [BroadcastBand] = [BroadcastBand](), liveBands: [BroadcastBand] = [BroadcastBand]()) {
+        self._clock = clock
         self.bands = bands
         self.liveBands = liveBands
+    }
+
+    private var _clock: AppClock!
+    public var clock: AppClock {
+        get { return _clock }
+        set { _clock = newValue }
     }
 
     public var bands: [BroadcastBand] = [BroadcastBand]()
@@ -277,178 +284,6 @@ public final class GuideRepositoryProtocolMock: GuideRepositoryProtocol {
     }
 }
 
-public final class GuideUseCaseProtocolMock: GuideUseCaseProtocol {
-    public init() {}
-    public init(
-        guideHost: String = "", hasGuide: Bool = false, guideChannelCodes: Set<String> = Set<String>(), guideProgramsLoadedAt: Date? = nil
-    ) {
-        self.guideHost = guideHost
-        self.hasGuide = hasGuide
-        self.guideChannelCodes = guideChannelCodes
-        self.guideProgramsLoadedAt = guideProgramsLoadedAt
-    }
-
-    public var guideHost: String = ""
-
-    public var hasGuide: Bool = false
-
-    public var guideChannelCodes: Set<String> = Set<String>()
-
-    public var guideProgramsLoadedAt: Date? = nil
-
-    public private(set) var loadGuideProgramsCallCount = 0
-    public var loadGuideProgramsHandler: (() async -> Void)?
-    public func loadGuidePrograms() async {
-        loadGuideProgramsCallCount += 1
-        if let loadGuideProgramsHandler = loadGuideProgramsHandler {
-            await loadGuideProgramsHandler()
-        }
-
-    }
-
-    public private(set) var programsCallCount = 0
-    public var programsArgValues: [ChannelItem] = []
-    public var programsHandler: ((ChannelItem) async throws(RegzaError) -> [ProgramItem])?
-    public func programs(for channel: ChannelItem) async throws(RegzaError) -> [ProgramItem] {
-        programsCallCount += 1
-        programsArgValues.append(channel)
-        if let programsHandler = programsHandler {
-            return try await programsHandler(channel)
-        }
-        return [ProgramItem]()
-    }
-
-    public private(set) var programCallCount = 0
-    public var programArgValues: [(id: Int, channelCode: String)] = []
-    public var programHandler: ((Int, String) -> ProgramItem?)?
-    public func program(id: Int, channelCode: String) -> ProgramItem? {
-        programCallCount += 1
-        programArgValues.append((id, channelCode))
-        if let programHandler = programHandler {
-            return programHandler(id, channelCode)
-        }
-        return nil
-    }
-
-    public private(set) var currentProgramCallCount = 0
-    public var currentProgramArgValues: [(channel: ChannelItem, date: Date)] = []
-    public var currentProgramHandler: ((ChannelItem, Date) -> ProgramItem?)?
-    public func currentProgram(for channel: ChannelItem, at date: Date) -> ProgramItem? {
-        currentProgramCallCount += 1
-        currentProgramArgValues.append((channel, date))
-        if let currentProgramHandler = currentProgramHandler {
-            return currentProgramHandler(channel, date)
-        }
-        return nil
-    }
-
-    public private(set) var saveGuideHostCallCount = 0
-    public var saveGuideHostArgValues: [String] = []
-    public var saveGuideHostHandler: ((String) async -> Void)?
-    public func saveGuideHost(_ host: String) async {
-        saveGuideHostCallCount += 1
-        saveGuideHostArgValues.append(host)
-        if let saveGuideHostHandler = saveGuideHostHandler {
-            await saveGuideHostHandler(host)
-        }
-
-    }
-
-    public private(set) var itemCallCount = 0
-    public var itemArgValues: [(program: ProgramItem, now: Date)] = []
-    public var itemHandler: ((ProgramItem, Date) -> ProgramItem)?
-    public func item(_ program: ProgramItem, now: Date) -> ProgramItem {
-        itemCallCount += 1
-        itemArgValues.append((program, now))
-        if let itemHandler = itemHandler {
-            return itemHandler(program, now)
-        }
-        fatalError("itemHandler returns can't have a default value thus its handler must be set")
-    }
-
-    public private(set) var textsCallCount = 0
-    public var textsArgValues: [ProgramItem] = []
-    public var textsHandler: ((ProgramItem) -> [ProgramTextItem])?
-    public func texts(of program: ProgramItem) -> [ProgramTextItem] {
-        textsCallCount += 1
-        textsArgValues.append(program)
-        if let textsHandler = textsHandler {
-            return textsHandler(program)
-        }
-        return [ProgramTextItem]()
-    }
-
-    public private(set) var daysCallCount = 0
-    public var daysArgValues: [(programs: [ProgramItem], now: Date)] = []
-    public var daysHandler: (([ProgramItem], Date) -> [ProgramDay])?
-    public func days(_ programs: [ProgramItem], now: Date) -> [ProgramDay] {
-        daysCallCount += 1
-        daysArgValues.append((programs, now))
-        if let daysHandler = daysHandler {
-            return daysHandler(programs, now)
-        }
-        return [ProgramDay]()
-    }
-
-    public private(set) var columnCallCount = 0
-    public var columnArgValues: [(channel: ChannelItem, now: Date)] = []
-    public var columnHandler: ((ChannelItem, Date) -> GuideColumn)?
-    public func column(_ channel: ChannelItem, now: Date) -> GuideColumn {
-        columnCallCount += 1
-        columnArgValues.append((channel, now))
-        if let columnHandler = columnHandler {
-            return columnHandler(channel, now)
-        }
-        fatalError("columnHandler returns can't have a default value thus its handler must be set")
-    }
-
-    public private(set) var guideDaysCallCount = 0
-    public var guideDaysArgValues: [Date] = []
-    public var guideDaysHandler: ((Date) -> [GuideDay])?
-    public func guideDays(now: Date) -> [GuideDay] {
-        guideDaysCallCount += 1
-        guideDaysArgValues.append(now)
-        if let guideDaysHandler = guideDaysHandler {
-            return guideDaysHandler(now)
-        }
-        return [GuideDay]()
-    }
-
-    public private(set) var searchResultCallCount = 0
-    public var searchResultArgValues: [(result: SearchResultItem, now: Date)] = []
-    public var searchResultHandler: ((SearchResultItem, Date) -> SearchResultItem?)?
-    public func searchResult(_ result: SearchResultItem, now: Date) -> SearchResultItem? {
-        searchResultCallCount += 1
-        searchResultArgValues.append((result, now))
-        if let searchResultHandler = searchResultHandler {
-            return searchResultHandler(result, now)
-        }
-        return nil
-    }
-
-    public private(set) var updateSearchIndexCallCount = 0
-    public var updateSearchIndexHandler: (() async -> Void)?
-    public func updateSearchIndex() async {
-        updateSearchIndexCallCount += 1
-        if let updateSearchIndexHandler = updateSearchIndexHandler {
-            await updateSearchIndexHandler()
-        }
-
-    }
-
-    public private(set) var searchCallCount = 0
-    public var searchArgValues: [(query: ProgramSearchQuery, channels: [ChannelItem], now: Date)] = []
-    public var searchHandler: ((ProgramSearchQuery, [ChannelItem], Date) -> [SearchResultItem])?
-    public func search(_ query: ProgramSearchQuery, channels: [ChannelItem], now: Date) -> [SearchResultItem] {
-        searchCallCount += 1
-        searchArgValues.append((query, channels, now))
-        if let searchHandler = searchHandler {
-            return searchHandler(query, channels, now)
-        }
-        return [SearchResultItem]()
-    }
-}
-
 public final class RecordingRepositoryProtocolMock: RecordingRepositoryProtocol {
     public init() {}
     public init(reservations: [ReservationData] = [ReservationData]()) {
@@ -494,8 +329,15 @@ public final class RecordingRepositoryProtocolMock: RecordingRepositoryProtocol 
 
 public final class RecordingUseCaseProtocolMock: RecordingUseCaseProtocol {
     public init() {}
-    public init(reservations: [ReservationItem] = [ReservationItem]()) {
+    public init(clock: AppClock, reservations: [ReservationItem] = [ReservationItem]()) {
+        self._clock = clock
         self.reservations = reservations
+    }
+
+    private var _clock: AppClock!
+    public var clock: AppClock {
+        get { return _clock }
+        set { _clock = newValue }
     }
 
     public var reservations: [ReservationItem] = [ReservationItem]()
@@ -1032,9 +874,16 @@ public final class TVRepositoryProtocolMock: TVRepositoryProtocol {
 
 public final class TVUseCaseProtocolMock: TVUseCaseProtocol {
     public init() {}
-    public init(connection: ConnectionItem, channels: [ChannelItem] = [ChannelItem]()) {
+    public init(clock: AppClock, connection: ConnectionItem, channels: [ChannelItem] = [ChannelItem]()) {
+        self._clock = clock
         self._connection = connection
         self.channels = channels
+    }
+
+    private var _clock: AppClock!
+    public var clock: AppClock {
+        get { return _clock }
+        set { _clock = newValue }
     }
 
     private var _connection: ConnectionItem!
@@ -1199,6 +1048,186 @@ public final class TVUseCaseProtocolMock: TVUseCaseProtocol {
             return pairingUserIDHandler()
         }
         return ""
+    }
+}
+
+public final class GuideUseCaseProtocolMock: GuideUseCaseProtocol {
+    public init() {}
+    public init(
+        clock: AppClock, guideHost: String = "", hasGuide: Bool = false, guideChannelCodes: Set<String> = Set<String>(),
+        guideProgramsLoadedAt: Date? = nil
+    ) {
+        self._clock = clock
+        self.guideHost = guideHost
+        self.hasGuide = hasGuide
+        self.guideChannelCodes = guideChannelCodes
+        self.guideProgramsLoadedAt = guideProgramsLoadedAt
+    }
+
+    private var _clock: AppClock!
+    public var clock: AppClock {
+        get { return _clock }
+        set { _clock = newValue }
+    }
+
+    public var guideHost: String = ""
+
+    public var hasGuide: Bool = false
+
+    public var guideChannelCodes: Set<String> = Set<String>()
+
+    public var guideProgramsLoadedAt: Date? = nil
+
+    public private(set) var loadGuideProgramsCallCount = 0
+    public var loadGuideProgramsHandler: (() async -> Void)?
+    public func loadGuidePrograms() async {
+        loadGuideProgramsCallCount += 1
+        if let loadGuideProgramsHandler = loadGuideProgramsHandler {
+            await loadGuideProgramsHandler()
+        }
+
+    }
+
+    public private(set) var programsCallCount = 0
+    public var programsArgValues: [ChannelItem] = []
+    public var programsHandler: ((ChannelItem) async throws(RegzaError) -> [ProgramItem])?
+    public func programs(for channel: ChannelItem) async throws(RegzaError) -> [ProgramItem] {
+        programsCallCount += 1
+        programsArgValues.append(channel)
+        if let programsHandler = programsHandler {
+            return try await programsHandler(channel)
+        }
+        return [ProgramItem]()
+    }
+
+    public private(set) var programCallCount = 0
+    public var programArgValues: [(id: Int, channelCode: String)] = []
+    public var programHandler: ((Int, String) -> ProgramItem?)?
+    public func program(id: Int, channelCode: String) -> ProgramItem? {
+        programCallCount += 1
+        programArgValues.append((id, channelCode))
+        if let programHandler = programHandler {
+            return programHandler(id, channelCode)
+        }
+        return nil
+    }
+
+    public private(set) var currentProgramCallCount = 0
+    public var currentProgramArgValues: [(channel: ChannelItem, date: Date)] = []
+    public var currentProgramHandler: ((ChannelItem, Date) -> ProgramItem?)?
+    public func currentProgram(for channel: ChannelItem, at date: Date) -> ProgramItem? {
+        currentProgramCallCount += 1
+        currentProgramArgValues.append((channel, date))
+        if let currentProgramHandler = currentProgramHandler {
+            return currentProgramHandler(channel, date)
+        }
+        return nil
+    }
+
+    public private(set) var saveGuideHostCallCount = 0
+    public var saveGuideHostArgValues: [String] = []
+    public var saveGuideHostHandler: ((String) async -> Void)?
+    public func saveGuideHost(_ host: String) async {
+        saveGuideHostCallCount += 1
+        saveGuideHostArgValues.append(host)
+        if let saveGuideHostHandler = saveGuideHostHandler {
+            await saveGuideHostHandler(host)
+        }
+
+    }
+
+    public private(set) var itemCallCount = 0
+    public var itemArgValues: [(program: ProgramItem, now: Date)] = []
+    public var itemHandler: ((ProgramItem, Date) -> ProgramItem)?
+    public func item(_ program: ProgramItem, now: Date) -> ProgramItem {
+        itemCallCount += 1
+        itemArgValues.append((program, now))
+        if let itemHandler = itemHandler {
+            return itemHandler(program, now)
+        }
+        fatalError("itemHandler returns can't have a default value thus its handler must be set")
+    }
+
+    public private(set) var textsCallCount = 0
+    public var textsArgValues: [ProgramItem] = []
+    public var textsHandler: ((ProgramItem) -> [ProgramTextItem])?
+    public func texts(of program: ProgramItem) -> [ProgramTextItem] {
+        textsCallCount += 1
+        textsArgValues.append(program)
+        if let textsHandler = textsHandler {
+            return textsHandler(program)
+        }
+        return [ProgramTextItem]()
+    }
+
+    public private(set) var daysCallCount = 0
+    public var daysArgValues: [(programs: [ProgramItem], now: Date)] = []
+    public var daysHandler: (([ProgramItem], Date) -> [ProgramDay])?
+    public func days(_ programs: [ProgramItem], now: Date) -> [ProgramDay] {
+        daysCallCount += 1
+        daysArgValues.append((programs, now))
+        if let daysHandler = daysHandler {
+            return daysHandler(programs, now)
+        }
+        return [ProgramDay]()
+    }
+
+    public private(set) var columnCallCount = 0
+    public var columnArgValues: [(channel: ChannelItem, now: Date)] = []
+    public var columnHandler: ((ChannelItem, Date) -> GuideColumn)?
+    public func column(_ channel: ChannelItem, now: Date) -> GuideColumn {
+        columnCallCount += 1
+        columnArgValues.append((channel, now))
+        if let columnHandler = columnHandler {
+            return columnHandler(channel, now)
+        }
+        fatalError("columnHandler returns can't have a default value thus its handler must be set")
+    }
+
+    public private(set) var guideDaysCallCount = 0
+    public var guideDaysArgValues: [Date] = []
+    public var guideDaysHandler: ((Date) -> [GuideDay])?
+    public func guideDays(now: Date) -> [GuideDay] {
+        guideDaysCallCount += 1
+        guideDaysArgValues.append(now)
+        if let guideDaysHandler = guideDaysHandler {
+            return guideDaysHandler(now)
+        }
+        return [GuideDay]()
+    }
+
+    public private(set) var searchResultCallCount = 0
+    public var searchResultArgValues: [(result: SearchResultItem, now: Date)] = []
+    public var searchResultHandler: ((SearchResultItem, Date) -> SearchResultItem?)?
+    public func searchResult(_ result: SearchResultItem, now: Date) -> SearchResultItem? {
+        searchResultCallCount += 1
+        searchResultArgValues.append((result, now))
+        if let searchResultHandler = searchResultHandler {
+            return searchResultHandler(result, now)
+        }
+        return nil
+    }
+
+    public private(set) var updateSearchIndexCallCount = 0
+    public var updateSearchIndexHandler: (() async -> Void)?
+    public func updateSearchIndex() async {
+        updateSearchIndexCallCount += 1
+        if let updateSearchIndexHandler = updateSearchIndexHandler {
+            await updateSearchIndexHandler()
+        }
+
+    }
+
+    public private(set) var searchCallCount = 0
+    public var searchArgValues: [(query: ProgramSearchQuery, channels: [ChannelItem], now: Date)] = []
+    public var searchHandler: ((ProgramSearchQuery, [ChannelItem], Date) -> [SearchResultItem])?
+    public func search(_ query: ProgramSearchQuery, channels: [ChannelItem], now: Date) -> [SearchResultItem] {
+        searchCallCount += 1
+        searchArgValues.append((query, channels, now))
+        if let searchHandler = searchHandler {
+            return searchHandler(query, channels, now)
+        }
+        return [SearchResultItem]()
     }
 }
 

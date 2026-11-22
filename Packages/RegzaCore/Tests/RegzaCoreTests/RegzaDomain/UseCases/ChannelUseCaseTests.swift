@@ -15,7 +15,8 @@ import Testing
         ]
         let tvRepository = TVRepositoryProtocolMock(connection: ConnectionData(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
         let useCase = ChannelUseCase(
-            tvRepository: tvRepository, guideRepository: GuideRepositoryProtocolMock(guideHost: "192.0.2.2", programs: programs))
+            tvRepository: tvRepository, guideRepository: GuideRepositoryProtocolMock(guideHost: "192.0.2.2", programs: programs),
+            clock: .system)
 
         #expect(useCase.bands == [.terrestrial, .bs, .cs])
         // サブチャンネルは代表と同じ番組なので出さない
@@ -43,7 +44,7 @@ import Testing
         let tvRepository = TVRepositoryProtocolMock(connection: ConnectionData(host: "192.0.2.1"), channels: channels, nowPlaying: nil)
         // 番組表がまだなければ、CS 以外の代表のチャンネル
         let noGuideUseCase = ChannelUseCase(
-            tvRepository: tvRepository, guideRepository: GuideRepositoryProtocolMock(guideHost: "192.0.2.2", programs: []))
+            tvRepository: tvRepository, guideRepository: GuideRepositoryProtocolMock(guideHost: "192.0.2.2", programs: []), clock: .system)
         #expect(noGuideUseCase.liveBands == [.terrestrial, .bs])
         #expect(
             noGuideUseCase.liveItems(band: .terrestrial, watchingCode: "JP-G00000001", now: TestData.now).map(\.name) == ["テスト局１"])
@@ -55,7 +56,7 @@ import Testing
                 guideHost: "192.0.2.2",
                 programs: [
                     try TestData.program(id: 1, networkId: 4, serviceId: 1, start: TestData.now)
-                ]))
+                ]), clock: .system)
         #expect(withGuideUseCase.liveBands == [.bs])
         let bs = withGuideUseCase.liveItems(band: .bs, watchingCode: "JP-G00040001", now: TestData.now)
         #expect(bs.map(\.name) == ["テストBS"])

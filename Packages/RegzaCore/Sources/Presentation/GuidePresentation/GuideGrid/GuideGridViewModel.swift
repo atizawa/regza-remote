@@ -36,7 +36,7 @@ public final class GuideGridViewModel {
     public var state: State {
         let bands = Self.bands(remoteViewModel.channels, guideUseCase.guideChannelCodes)
         let band = remoteViewModel.band(among: bands)
-        let now = Date()
+        let now = guideUseCase.clock.now
         let window = Self.window(now: now, day: selectedDay)
         let columns = remoteViewModel.channels
             .filter { $0.band == band && guideUseCase.guideChannelCodes.contains($0.code) }
@@ -104,8 +104,7 @@ extension GuideGridViewModel: IntrospectableActions {
 
     /// 番組表は 1 週間分あると大きいので、局ごとに番組の数と放送中の番組名だけを見せる
     nonisolated public static func introspectionJSON(of state: State) -> JSONValue {
-        let now = Date()
-        return JSONValue.object([
+        JSONValue.object([
             "hasGuide": .bool(state.hasGuide),
             "hasLoaded": .bool(state.hasLoaded),
             "canSearch": .bool(state.canSearch),
@@ -118,7 +117,7 @@ extension GuideGridViewModel: IntrospectableActions {
                         "channel": .string(column.channelCode),
                         "name": .string(column.channelName),
                         "programCount": .number(Double(column.programs.count)),
-                        "onAir": column.programs.first { $0.start <= now && now < $0.end }.map {
+                        "onAir": column.programs.first(where: \.isOnAir).map {
                             .object([
                                 "id": .number(Double($0.id)), "name": .string($0.name),
                             ])

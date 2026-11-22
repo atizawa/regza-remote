@@ -33,7 +33,8 @@ public struct RemoteState: Equatable, Sendable {
             duration: nowPlaying?.duration ?? 0,
             // つながらない間は録画の再生位置が分からないので止めておく。放送は時刻から進めてよい
             isAdvancing: (nowPlaying?.isAdvancing ?? false) && (isConnected || nowPlaying?.kind == .broadcast),
-            updatedAt: nowPlaying?.updatedAt ?? Date(),
+            // いま映っているものがなければ進み具合を出さないので、時刻は使わない (読むたびに変わらないよう決まった値にする)
+            updatedAt: nowPlaying?.updatedAt ?? .distantPast,
             nextProgramStart: nowPlaying?.nextProgramStart,
             nextProgramDuration: nowPlaying?.nextProgramDuration ?? 0,
             nextTitle: nowPlaying?.nextTitle ?? "",

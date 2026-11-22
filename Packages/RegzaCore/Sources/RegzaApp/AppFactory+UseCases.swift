@@ -12,15 +12,16 @@ extension AppFactory {
         deviceRepository: any DeviceRepositoryProtocol,
         appPreferencesRepository: any AppPreferencesRepositoryProtocol,
         initialNowPlaying: NowPlayingItem? = nil,
+        clock: AppClock = .system,
         onGuideHostChange: @escaping @MainActor (String) async -> Void = { _ in }
     ) -> AppViewModel {
         let remoteViewModel = makeRemoteViewModel(
-            tvUseCase: TVUseCase(tvRepository: tvRepository), nowPlaying: initialNowPlaying)
+            tvUseCase: TVUseCase(tvRepository: tvRepository, clock: clock), nowPlaying: initialNowPlaying)
         return makeAppViewModel(
             remoteViewModel: remoteViewModel,
-            channelUseCase: ChannelUseCase(tvRepository: tvRepository, guideRepository: guideRepository),
-            guideUseCase: GuideUseCase(guideRepository: guideRepository, recordingRepository: recordingRepository),
-            recordingUseCase: RecordingUseCase(recordingRepository: recordingRepository, guideRepository: guideRepository),
+            channelUseCase: ChannelUseCase(tvRepository: tvRepository, guideRepository: guideRepository, clock: clock),
+            guideUseCase: GuideUseCase(guideRepository: guideRepository, recordingRepository: recordingRepository, clock: clock),
+            recordingUseCase: RecordingUseCase(recordingRepository: recordingRepository, guideRepository: guideRepository, clock: clock),
             streamUseCase: StreamUseCase(streamRepository: streamRepository, guideRepository: guideRepository),
             setupUseCase: SetupUseCase(
                 deviceRepository: deviceRepository, guideRepository: guideRepository, streamRepository: streamRepository

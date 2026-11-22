@@ -180,8 +180,8 @@ public final class RemoteViewModel {
 
     /// DHCP などで IP アドレスが変わったテレビを探し、見つかればそのアドレスに切り替える
     private func searchForMovedTV() async {
-        if let lastSearch, Date().timeIntervalSince(lastSearch) < Self.searchInterval { return }
-        lastSearch = Date()
+        if let lastSearch, tvUseCase.clock.now.timeIntervalSince(lastSearch) < Self.searchInterval { return }
+        lastSearch = tvUseCase.clock.now
         isSearchingTV = true
         defer { isSearchingTV = false }
         guard await tvUseCase.locateMovedTV() != nil else { return }

@@ -28,7 +28,7 @@ public struct ReservationData: Decodable, Hashable, Sendable, Identifiable {
     }
 
     /// 次に録画する予定があるか (録画中も含む)
-    public func isScheduled(now: Date = Date()) -> Bool { end > now }
+    public func isScheduled(now: Date) -> Bool { end > now }
 
     public var repeatLabel: String? {
         switch repeatRule {

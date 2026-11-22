@@ -8,10 +8,11 @@ import Testing
 @Suite struct TVUseCaseTests {
     @Test func nowPlayingItemUsesDomainTexts() {
         let tvUseCase = TVUseCase(
-            tvRepository: TVRepositoryProtocolMock(connection: ConnectionData(host: "192.0.2.1"), channels: [], nowPlaying: nil))
+            tvRepository: TVRepositoryProtocolMock(connection: ConnectionData(host: "192.0.2.1"), channels: [], nowPlaying: nil),
+            clock: .system)
         let recorded = tvUseCase.item(
             NowPlayingData(
-                kind: .recorded, channelName: "テスト局１", title: "見本の録画", position: 60, duration: 120, isAdvancing: true
+                kind: .recorded, channelName: "テスト局１", title: "見本の録画", position: 60, duration: 120, isAdvancing: true, updatedAt: Date()
             ))
         #expect(recorded.kind == .recorded)
         #expect(recorded.captionText == "録画 · テスト局１")
@@ -19,7 +20,7 @@ import Testing
         #expect(recorded.progress == 0.5)
         #expect(recorded.hasTimeline)
 
-        let standby = tvUseCase.item(NowPlayingData(kind: .standby))
+        let standby = tvUseCase.item(NowPlayingData(kind: .standby, updatedAt: Date()))
         #expect(standby.kind == .standby)
         #expect(standby.statusText == "待機中")
         #expect(standby.headlineText == "待機中")
@@ -34,7 +35,7 @@ import Testing
             events.append("tune \($0.code)")
             return nil
         }
-        let tvUseCase = TVUseCase(tvRepository: repository)
+        let tvUseCase = TVUseCase(tvRepository: repository, clock: .system)
         let channel = try #require(TestData.channels().first)
 
         repository.channels = [channel]

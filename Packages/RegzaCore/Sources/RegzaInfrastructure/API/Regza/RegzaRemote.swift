@@ -15,7 +15,7 @@ public actor RegzaRemote {
     /// この時刻までは視聴状況を問い合わせない。
     /// 録画の再生を始めるときなど、テレビの映像が切り替わっている最中に `play/status` を問い合わせると、
     /// テレビが再起動する機種がある (決定キーの 0.4 秒後の問い合わせで再起動することを実機で確認)
-    private var quietUntil: Date?
+    private var quietUntil: ContinuousClock.Instant?
     /// 映像の切り替えが落ち着くまで待つ時間。危ない時間は測っていないので余裕を持たせている
     static let switchingQuietPeriod: TimeInterval = 6
 
@@ -23,7 +23,7 @@ public actor RegzaRemote {
     /// 旧 API は切り替えの最中に 0.2 秒おきに問い合わせても再起動しないことを実機で確認している。
     /// 見張った値が変わったら切り替え中とみなして待ち、`play/status` は落ち着いているときに間隔を空けて問い合わせる
     private var lastProbe: Probe?
-    private var lastPlayStatusAt: Date?
+    private var lastPlayStatusAt: ContinuousClock.Instant?
     /// 自分でキーを送った後など、すぐに `play/status` で取り直したい
     private var needsPlayStatus = false
     /// 落ち着いているときに `play/status` を問い合わせる間隔
@@ -47,18 +47,22 @@ public actor RegzaRemote {
     }
 
     /// 番組名を毎回問い合わせないよう、調べた番組を覚えておく (取れなかったときは 1 分後に調べ直す)
-    private var programCache: [Int: (program: ProgramData?, checkedAt: Date)] = [:]
+    private var programCache: [Int: (program: ProgramData?, checkedAt: ContinuousClock.Instant)] = [:]
+    /// 今の時刻 (いま映っているものの更新時刻と、放送の進み具合に使う)。待つ間隔は時計の変更に左右されない ContinuousClock で測る
+    private let clock: AppClock
 
     public init(
-        connection: ConnectionData, mirakurunAPIClient: MirakurunAPIClient? = nil, transport: any HTTPTransport
+        connection: ConnectionData, mirakurunAPIClient: MirakurunAPIClient? = nil, transport: any HTTPTransport, clock: AppClock
     ) {
         regzaAPIClient = RegzaAPIClient(connection: connection, transport: transport)
         self.mirakurunAPIClient = mirakurunAPIClient
+        self.clock = clock
     }
 
-    public init(regzaAPIClient: RegzaAPIClient, mirakurunAPIClient: MirakurunAPIClient? = nil) {
+    public init(regzaAPIClient: RegzaAPIClient, mirakurunAPIClient: MirakurunAPIClient? = nil, clock: AppClock) {
         self.regzaAPIClient = regzaAPIClient
         self.mirakurunAPIClient = mirakurunAPIClient
+        self.clock = clock
     }
 
     public func update(mirakurunAPIClient: MirakurunAPIClient?) {
@@ -79,7 +83,7 @@ public actor RegzaRemote {
         lastCommand = key
         needsPlayStatus = true
         if key.mayStartContentSwitch {
-            quietUntil = Date().addingTimeInterval(Self.switchingQuietPeriod)
+            quietUntil = ContinuousClock.now + .seconds(Self.switchingQuietPeriod)
         }
     }
 
@@ -89,12 +93,12 @@ public actor RegzaRemote {
         needsPlayStatus = true
         // 映像が切り替わるので、キーと同じく落ち着くまで play/status は問い合わせない
         // (切り替えの最中に問い合わせると status 1 が返ることを実機で確認)
-        quietUntil = Date().addingTimeInterval(Self.switchingQuietPeriod)
+        quietUntil = ContinuousClock.now + .seconds(Self.switchingQuietPeriod)
         // 切り替わるのは分かっているので、選局の前に見張っていた値は捨てる
         // (残すと、待ったあとに status.htm の値が変わったとしてもう一度待ち、番組名が出るまで倍かかる)
         lastProbe = nil
         // 待つ間も選んだチャンネルが分かるよう、切り替わったものとして先に出す。番組名などは落ち着いてから取り直す
-        nowPlaying = NowPlayingData(kind: .broadcast, channelName: channel.name, channelCode: channel.code)
+        nowPlaying = NowPlayingData(kind: .broadcast, channelName: channel.name, channelCode: channel.code, updatedAt: clock.now)
     }
 
     public func seek(to seconds: Int) async throws {
@@ -126,33 +130,32 @@ public actor RegzaRemote {
         lastProbe = probe
         if let previous, previous != probe {
             // 切り替わりの最中かもしれないので、落ち着くまで play/status は問い合わせない
-            quietUntil = Date().addingTimeInterval(Self.switchingQuietPeriod)
+            quietUntil = ContinuousClock.now + .seconds(Self.switchingQuietPeriod)
             needsPlayStatus = true
             return current
         }
-        let isDue = lastPlayStatusAt.map { Date().timeIntervalSince($0) >= Self.playStatusInterval } ?? true
+        let isDue = lastPlayStatusAt.map { ContinuousClock.now - $0 >= .seconds(Self.playStatusInterval) } ?? true
         if needsPlayStatus || isDue {
             // status.htm の返事を待つ間に切り替わるキーが送られていたら、play/status は落ち着いてからにする
             guard !isQuiet else { return current }
             return try await fetch()
         }
-        let updated = Self.advanced(current, with: status)
+        let updated = Self.advanced(current, with: status, now: clock.now)
         nowPlaying = updated
         return updated
     }
 
-    private var isQuiet: Bool { quietUntil.map { $0 > Date() } ?? false }
+    private var isQuiet: Bool { quietUntil.map { $0 > ContinuousClock.now } ?? false }
 
     /// 切り替わりが落ち着くまで待つ。待っている間にキーが送られて延びたら、延びた分も待つ
     private func waitUntilQuiet() async throws {
-        while let quietUntil, quietUntil > Date() {
-            let wait = quietUntil.timeIntervalSinceNow
-            try await Task.sleep(for: .seconds(wait))
+        while let quietUntil, quietUntil > ContinuousClock.now {
+            try await Task.sleep(until: quietUntil, clock: .continuous)
         }
     }
 
     /// play/status を問い合わせない間は、前回の値を今の時刻まで進める (録画は旧 API の再生位置を使う)
-    static func advanced(_ nowPlaying: NowPlayingData, with status: RegzaStatus, now: Date = Date()) -> NowPlayingData {
+    static func advanced(_ nowPlaying: NowPlayingData, with status: RegzaStatus, now: Date) -> NowPlayingData {
         var updated = nowPlaying
         switch nowPlaying.kind {
         case .recorded where status.isPlayingRecording:
@@ -176,9 +179,9 @@ public actor RegzaRemote {
             do {
                 let status = try await regzaAPIClient.request(RegzaPlayStatusRequest())
                 supportsPlayStatus = true
-                lastPlayStatusAt = Date()
+                lastPlayStatusAt = ContinuousClock.now
                 needsPlayStatus = false
-                updated = await withProgramName(NowPlayingData(playStatus: status), status: status)
+                updated = await withProgramName(NowPlayingData(playStatus: status, now: clock.now), status: status)
             } catch let error as RegzaError where error == .httpStatus(404) || error == .unsupported {
                 // 一度でも v2 API で取れたテレビなら、切り替え中などの一時的な失敗として扱い、旧 API に切り替えない
                 guard supportsPlayStatus == nil else { throw error }
@@ -214,18 +217,18 @@ public actor RegzaRemote {
 
     private func program(epgContentID: String?) async -> ProgramData? {
         guard let mirakurunAPIClient, let id = epgContentID.flatMap(BroadcastID.programID(epgContentID:)) else { return nil }
-        if let cached = programCache[id], cached.program != nil || Date().timeIntervalSince(cached.checkedAt) < 60 {
+        if let cached = programCache[id], cached.program != nil || ContinuousClock.now - cached.checkedAt < .seconds(60) {
             return cached.program
         }
         // 番組表が取れなくても視聴状況はそのまま返す
         let program = try? await mirakurunAPIClient.request(MirakurunProgramRequest(id: id))
         // 今と次の番組だけ覚えておけば足りるので、増えすぎたら捨てる
         if programCache.count > 8 { programCache = [:] }
-        programCache[id] = (program, Date())
+        programCache[id] = (program, ContinuousClock.now)
         return program
     }
 
     private func legacyStatus() async throws -> NowPlayingData {
-        NowPlayingData(status: try await regzaAPIClient.request(RegzaLegacyStatusRequest()), previous: nowPlaying)
+        NowPlayingData(status: try await regzaAPIClient.request(RegzaLegacyStatusRequest()), previous: nowPlaying, now: clock.now)
     }
 }

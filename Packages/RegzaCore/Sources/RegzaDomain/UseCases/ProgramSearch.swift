@@ -51,7 +51,7 @@ struct ProgramSearchIndex: Sendable {
 
     /// 条件に合う、これから放送する番組 (放送中を含む) を時刻順に返す
     func search(
-        _ query: ProgramSearchQuery, now: Date = Date(), calendar: Calendar = .current
+        _ query: ProgramSearchQuery, now: Date, calendar: Calendar = .current
     ) -> [ProgramSearchResult] {
         let groups = query.keywordGroups
             .map { group in group.map { ($0, Array(ProgramSearch.normalize($0).utf8)) }.filter { !$0.1.isEmpty } }
@@ -144,7 +144,7 @@ extension ProgramSearchQuery {
     /// 打った言葉から日付・時間帯・ジャンルの言葉を読み取って条件にし、残りを探す言葉にする。
     /// 「明日の夜のサッカー」→ 明日・18〜28 時・「サッカー」。
     /// 言葉の途中は読まない (「朝ドラ」「大河ドラマ」はそのまま探す言葉にする)
-    public init(parsing text: String, now: Date = Date(), calendar: Calendar = .current) {
+    public init(parsing text: String, now: Date, calendar: Calendar = .current) {
         self.init()
         let today = BroadcastDay.start(of: now, calendar: calendar)
         let digits = String(

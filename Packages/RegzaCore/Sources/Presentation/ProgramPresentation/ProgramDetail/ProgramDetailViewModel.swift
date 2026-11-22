@@ -46,9 +46,11 @@ public final class ProgramDetailViewModel {
     @ObservationIgnored private let work = Work()
 
     public var state: State {
+        // 1 つの state の中の判断 (放送中か・予約できるか) は、同じ時刻で決める
+        let now = guideUseCase.clock.now
         let reservation = recordingUseCase.reservation(for: program)
         return State(
-            program: guideUseCase.item(program),
+            program: guideUseCase.item(program, now: now),
             texts: guideUseCase.texts(of: program),
             channelCode: channel.code,
             channelName: channel.name,
@@ -58,10 +60,10 @@ public final class ProgramDetailViewModel {
             message: reserveMessage ?? tuneMessage,
             reservedText: reservation.map(Self.reservedText),
             reservationIsSeries: reservation?.isSeries,
-            canTune: program.isOnAir(at: Date()),
-            canReserve: program.end > Date(),
-            canStream: program.isOnAir(at: Date()) && streamUseCase.canStream,
-            canStartOver: program.isOnAir(at: Date())
+            canTune: program.isOnAir(at: now),
+            canReserve: program.end > now,
+            canStream: program.isOnAir(at: now) && streamUseCase.canStream,
+            canStartOver: program.isOnAir(at: now)
                 && remoteViewModel.tvUseCase.canStartOver(channelCode: program.channelCode, programStart: program.start)
         )
     }

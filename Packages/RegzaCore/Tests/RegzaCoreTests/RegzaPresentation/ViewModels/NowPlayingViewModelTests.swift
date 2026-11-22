@@ -21,12 +21,15 @@ import Testing
     @Test func offersPowerOnOnlyInStandby() throws {
         let channels = try GuideViewModelTests().channels()
 
-        let standbyViewModel = fixtures.makeApp(nowPlaying: NowPlayingData(kind: .standby), channels: channels).nowPlayingViewModel
+        let standbyViewModel = fixtures.makeApp(
+            nowPlaying: NowPlayingData(kind: .standby, updatedAt: Date()), channels: channels
+        ).nowPlayingViewModel
         #expect(standbyViewModel.state.canPowerOn)
         #expect(standbyViewModel.state.title == "テレビ")
 
         let broadcastViewModel = fixtures.makeApp(
-            nowPlaying: NowPlayingData(kind: .broadcast, channelCode: "JP-G00000001", title: "見本の番組", description: "見本の説明"),
+            nowPlaying: NowPlayingData(
+                kind: .broadcast, channelCode: "JP-G00000001", title: "見本の番組", description: "見本の説明", updatedAt: Date()),
             channels: channels
         ).nowPlayingViewModel
         let state = broadcastViewModel.state

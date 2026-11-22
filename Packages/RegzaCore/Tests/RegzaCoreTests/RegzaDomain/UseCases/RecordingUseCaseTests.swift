@@ -13,7 +13,8 @@ import Testing
                 id: "2", channelCode: "JP-G00000009", start: TestData.date(day: 1, hour: 21), series: true),
         ])
         let useCase = RecordingUseCase(
-            recordingRepository: recordingRepository, guideRepository: GuideRepositoryProtocolMock(guideHost: "", programs: []))
+            recordingRepository: recordingRepository, guideRepository: GuideRepositoryProtocolMock(guideHost: "", programs: []),
+            clock: .system)
         let items = useCase.items(channels: try TestData.channels().map(UseCaseModelMapper.channel), now: TestData.now)
 
         let recordingNow = try #require(items.first)

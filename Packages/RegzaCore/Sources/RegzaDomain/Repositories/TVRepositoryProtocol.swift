@@ -35,7 +35,7 @@ public protocol TVRepositoryProtocol: AnyObject {
 extension TVRepositoryProtocol {
     /// その局の番組を最初から見られるか。録画していない番組で「始めにジャンプ」を押すとテレビにエラーが出るので、
     /// 対象の局で、番組の始まりから今までずっと録画している時間帯のときだけ true
-    public func canStartOver(channelCode: String, programStart: Date) -> Bool {
-        timeshiftSettings?.canStartOver(channelCode: channelCode, programStart: programStart) ?? false
+    public func canStartOver(channelCode: String, programStart: Date, now: Date) -> Bool {
+        timeshiftSettings?.canStartOver(channelCode: channelCode, programStart: programStart, now: now) ?? false
     }
 }
