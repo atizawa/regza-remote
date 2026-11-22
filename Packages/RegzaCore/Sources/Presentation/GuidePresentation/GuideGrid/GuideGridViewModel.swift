@@ -30,6 +30,8 @@ public final class GuideGridViewModel {
     public typealias Action = GuideGridAction
 
     private var hasLoaded = false
+    /// 番組表を読めなかったときのエラー。読み直して読めたら消す
+    private var loadError: RegzaError?
     private var selectedDay: Date?
     @ObservationIgnored private let work = Work()
 
@@ -51,6 +53,7 @@ public final class GuideGridViewModel {
         return State(
             hasGuide: guideUseCase.hasGuide,
             hasLoaded: hasLoaded,
+            loadErrorMessage: loadError.map { ErrorMessage.text($0) },
             canSearch: guideUseCase.hasGuide && hasLoaded && !columns.isEmpty,
             bands: bands,
             band: band,
@@ -78,7 +81,12 @@ public final class GuideGridViewModel {
         defer { hasLoaded = true }
         // 番組表の下準備 (局の並び・予約の印)。読めなくても、番組表は読めた分だけ出す
         try? await remoteViewModel.loadChannels()
-        await guideUseCase.loadGuidePrograms()
+        do {
+            try await guideUseCase.loadGuidePrograms()
+            loadError = nil
+        } catch {
+            loadError = error
+        }
         guideSearchViewModel.updateIndex()
         try? await recordingUseCase.loadReservations()
     }
@@ -108,6 +116,7 @@ extension GuideGridViewModel: IntrospectableActions {
         JSONValue.object([
             "hasGuide": .bool(state.hasGuide),
             "hasLoaded": .bool(state.hasLoaded),
+            "loadErrorMessage": JSONValue(reflecting: state.loadErrorMessage as Any),
             "canSearch": .bool(state.canSearch),
             "bands": JSONValue(reflecting: state.bands),
             "selectedDay": JSONValue(reflecting: state.selectedDay as Any),

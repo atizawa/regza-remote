@@ -45,10 +45,12 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     }
 
     /// 全チャンネルの番組を読む。数 MB あるので 30 分に 1 回まで
-    public func loadGuidePrograms() async {
+    public func loadGuidePrograms() async throws(RegzaError) {
         guard let guideAPIClient = guideClient() else { return }
         if let guideProgramsLoadedAt, clock.now.timeIntervalSince(guideProgramsLoadedAt) < 30 * 60 { return }
-        guard let programs = try? await guideAPIClient.request(MirakurunAllProgramsRequest()) else { return }
+        let programs: [ProgramData]
+        do { programs = try await guideAPIClient.request(MirakurunAllProgramsRequest()) } catch { throw RegzaError(error) }
+        // 読んでいる間に番組表の接続先が変わったら、前の接続先の番組は入れない
         guard guideAPIClient === mirakurunAPIClient else { return }
         guidePrograms = Self.byChannel(programs)
         guideProgramsLoadedAt = clock.now

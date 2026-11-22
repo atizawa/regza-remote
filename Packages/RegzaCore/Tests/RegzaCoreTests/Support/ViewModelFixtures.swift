@@ -23,12 +23,14 @@ struct ViewModelFixtures {
     func makeApp(
         connection: ConnectionData = .init(host: "192.0.2.1"),
         nowPlaying: NowPlayingData? = nil, channels: [ChannelData],
-        guideHost: String? = nil, programs: [ProgramData] = [], reservations: [ReservationData] = []
+        guideHost: String? = nil, programs: [ProgramData] = [], reservations: [ReservationData] = [],
+        guideRepository: GuideRepositoryProtocolMock? = nil
     ) -> AppViewModel {
         let tvRepository = TVRepositoryProtocolMock(connection: connection, channels: channels, nowPlaying: nowPlaying)
         return AppFactory.makeAppViewModel(
             tvRepository: tvRepository,
-            guideRepository: GuideRepositoryProtocolMock(guideHost: guideHost ?? (programs.isEmpty ? "" : "192.0.2.2"), programs: programs),
+            guideRepository: guideRepository
+                ?? GuideRepositoryProtocolMock(guideHost: guideHost ?? (programs.isEmpty ? "" : "192.0.2.2"), programs: programs),
             recordingRepository: RecordingRepositoryProtocolMock(reservations: reservations),
             streamRepository: StreamRepositoryProtocolMock(streamHost: ""), deviceRepository: DeviceRepositoryProtocolMock(),
             appPreferencesRepository: AppPreferencesRepositoryProtocolMock(preferences: .init()),

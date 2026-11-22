@@ -6,6 +6,8 @@ public struct GuideGridState: Equatable, Sendable {
     /// 番組表 (Mirakurun) が設定されている
     public var hasGuide: Bool
     public var hasLoaded: Bool
+    /// 番組表を読めなかった理由。読めたときは nil
+    public var loadErrorMessage: String?
     /// 検索を出せる (番組表を読み込めたときだけ)
     public var canSearch: Bool
     /// 番組表がある放送の種類

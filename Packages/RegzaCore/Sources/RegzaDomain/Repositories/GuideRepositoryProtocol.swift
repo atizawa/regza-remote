@@ -12,7 +12,7 @@ public protocol GuideRepositoryProtocol: AnyObject {
     var guideProgramsLoadedAt: Date? { get }
 
     /// 全局の番組表を読む。数 MB あるので、読み込んでから間がなければ読み直さない
-    func loadGuidePrograms() async
+    func loadGuidePrograms() async throws(RegzaError)
     /// 1 チャンネルの番組表 (放送中の番組から)。読んだ番組は、番組の id から引けるように覚えておく
     func programs(channelCode: String) async throws(RegzaError) -> [ProgramData]
     /// 全局の番組表か、1 チャンネルの番組表で読んだ番組

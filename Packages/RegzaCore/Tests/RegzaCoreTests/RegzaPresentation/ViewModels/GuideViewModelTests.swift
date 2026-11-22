@@ -29,6 +29,23 @@ import Testing
         try #require(try JSONDecoder().decode(RegzaChannelList.self, from: Data(TestData.channelListJSON.utf8)).channels)
     }
 
+    /// 番組表を読めなかったら理由を出し、読み直して読めたら消す
+    @Test func gridShowsWhyGuideCouldNotBeLoaded() async throws {
+        let guideRepository = GuideRepositoryProtocolMock(guideHost: "192.0.2.2", programs: [])
+        guideRepository.loadGuideProgramsHandler = { () async throws(RegzaError) in throw .connection(.timedOut) }
+        let appViewModel = fixtures.makeApp(channels: try channels(), guideRepository: guideRepository)
+        let viewModel = GuideGridViewModel(
+            remoteViewModel: appViewModel.remoteViewModel, guideUseCase: appViewModel.guideUseCase,
+            recordingUseCase: appViewModel.recordingUseCase)
+
+        await viewModel.load()
+        #expect(viewModel.state.loadErrorMessage == ErrorMessage.text(RegzaError.connection(.timedOut)))
+
+        guideRepository.loadGuideProgramsHandler = {}
+        await viewModel.load()
+        #expect(viewModel.state.loadErrorMessage == nil)
+    }
+
     @Test func gridShowsChannelsThatHavePrograms() async throws {
         let appViewModel = fixtures.makeApp(
             channels: try channels(),

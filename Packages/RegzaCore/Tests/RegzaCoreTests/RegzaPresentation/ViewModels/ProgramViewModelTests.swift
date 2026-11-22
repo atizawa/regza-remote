@@ -29,7 +29,7 @@ import Testing
                 ? FakeHTTPTransport.response(200, #"{"status":2}"#) : FakeHTTPTransport.response(200, #"{"status":0,"rsv_list":[]}"#)
         }
         await app.guideUseCase.saveGuideHost("192.0.2.2")
-        await app.guideUseCase.loadGuidePrograms()
+        try await app.guideUseCase.loadGuidePrograms()
         let viewModel = ProgramDetailViewModel(
             remoteViewModel: app.remoteViewModel, guideUseCase: app.guideUseCase, recordingUseCase: app.recordingUseCase,
             streamUseCase: app.streamUseCase,
@@ -57,7 +57,7 @@ import Testing
             FakeHTTPTransport.response(200, request.url.path == "/api/programs" ? programJSON : list)
         }
         await app.guideUseCase.saveGuideHost("192.0.2.2")
-        await app.guideUseCase.loadGuidePrograms()
+        try await app.guideUseCase.loadGuidePrograms()
         let viewModel = ProgramDetailViewModel(
             remoteViewModel: app.remoteViewModel, guideUseCase: app.guideUseCase, recordingUseCase: app.recordingUseCase,
             streamUseCase: app.streamUseCase,

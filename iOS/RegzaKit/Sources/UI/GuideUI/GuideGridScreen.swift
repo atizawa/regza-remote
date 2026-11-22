@@ -63,6 +63,7 @@ package struct GuideGridScreen: View {
             ContentUnavailableView {
                 Label(AppStrings.guideLoadFailed, systemImage: "calendar.badge.exclamationmark")
             } description: {
+                if let reason = state.loadErrorMessage { Text(reason) }
                 Text(AppStrings.guideConnectionHelp)
             } actions: {
                 Button(AppStrings.commonRetry) { viewModel.send(.load) }

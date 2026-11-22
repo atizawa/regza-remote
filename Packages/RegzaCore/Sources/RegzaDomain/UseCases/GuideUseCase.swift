@@ -10,7 +10,7 @@ public protocol GuideUseCaseProtocol: AnyObject {
     var hasGuide: Bool { get }
     var guideChannelCodes: Set<String> { get }
     var guideProgramsLoadedAt: Date? { get }
-    func loadGuidePrograms() async
+    func loadGuidePrograms() async throws(RegzaError)
     func programs(for channel: ChannelItem) async throws(RegzaError) -> [ProgramItem]
     func program(id: Int, channelCode: String) -> ProgramItem?
     func currentProgram(for channel: ChannelItem, at date: Date) -> ProgramItem?
@@ -59,7 +59,7 @@ public final class GuideUseCase: GuideUseCaseProtocol {
     public var guideChannelCodes: Set<String> { Set(guideRepository.guidePrograms.keys) }
     public var guideProgramsLoadedAt: Date? { guideRepository.guideProgramsLoadedAt }
 
-    public func loadGuidePrograms() async { await guideRepository.loadGuidePrograms() }
+    public func loadGuidePrograms() async throws(RegzaError) { try await guideRepository.loadGuidePrograms() }
 
     public func programs(for channel: ChannelItem) async throws(RegzaError) -> [ProgramItem] {
         let programs = try await guideRepository.programs(channelCode: channel.code)

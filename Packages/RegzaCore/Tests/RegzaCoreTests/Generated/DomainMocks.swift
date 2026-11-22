@@ -238,11 +238,11 @@ public final class GuideRepositoryProtocolMock: GuideRepositoryProtocol {
     public var guideProgramsLoadedAt: Date? = nil
 
     public private(set) var loadGuideProgramsCallCount = 0
-    public var loadGuideProgramsHandler: (() async -> Void)?
-    public func loadGuidePrograms() async {
+    public var loadGuideProgramsHandler: (() async throws(RegzaError) -> Void)?
+    public func loadGuidePrograms() async throws(RegzaError) {
         loadGuideProgramsCallCount += 1
         if let loadGuideProgramsHandler = loadGuideProgramsHandler {
-            await loadGuideProgramsHandler()
+            try await loadGuideProgramsHandler()
         }
 
     }
@@ -1079,11 +1079,11 @@ public final class GuideUseCaseProtocolMock: GuideUseCaseProtocol {
     public var guideProgramsLoadedAt: Date? = nil
 
     public private(set) var loadGuideProgramsCallCount = 0
-    public var loadGuideProgramsHandler: (() async -> Void)?
-    public func loadGuidePrograms() async {
+    public var loadGuideProgramsHandler: (() async throws(RegzaError) -> Void)?
+    public func loadGuidePrograms() async throws(RegzaError) {
         loadGuideProgramsCallCount += 1
         if let loadGuideProgramsHandler = loadGuideProgramsHandler {
-            await loadGuideProgramsHandler()
+            try await loadGuideProgramsHandler()
         }
 
     }

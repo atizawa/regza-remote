@@ -63,9 +63,9 @@ public final class LivePlayerViewModel {
         switch action {
         case .appear:
             work.run {
-                // 局の一覧を出すための下準備。読めなくても、見ている局の配信はそのまま始める
+                // 局の一覧と番組名を出すための下準備。読めなくても、見ている局の配信はそのまま始める
                 try? await self.remoteViewModel.loadChannels()
-                await self.guideUseCase.loadGuidePrograms()
+                try? await self.guideUseCase.loadGuidePrograms()
             }
         case .start:
             start()

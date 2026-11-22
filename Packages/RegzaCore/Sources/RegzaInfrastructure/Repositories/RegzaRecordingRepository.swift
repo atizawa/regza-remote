@@ -59,6 +59,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
             throw RegzaError(error)
         }
         guard revision == connectionState.revision else { return }
+        // 予約はできたので、一覧を読み直せなくても予約の失敗として伝えない (一覧は次に開いたときに読み直す)
         try? await loadReservations()
     }
 
@@ -73,6 +74,7 @@ public final class RegzaRecordingRepository: RecordingRepositoryProtocol {
         if let current = loaded, current.revision == revision {
             loaded = (current.reservations.filter { $0.id != reservation.id }, current.revision)
         }
+        // 取り消しはできて一覧からも除いたので、読み直せなくても取り消しの失敗として伝えない
         try? await loadReservations()
     }
 }

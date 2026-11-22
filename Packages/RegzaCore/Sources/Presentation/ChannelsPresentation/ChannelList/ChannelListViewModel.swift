@@ -59,7 +59,8 @@ public final class ChannelListViewModel {
         case .appear:
             work.run {
                 await self.load(force: false)
-                await self.guideUseCase.loadGuidePrograms()
+                // 放送中の番組名を出すための下準備。読めなくても、チャンネルの一覧はそのまま出す
+                try? await self.guideUseCase.loadGuidePrograms()
                 await self.remoteViewModel.loadTimeshiftSettings()
             }
         case .reload: work.run { await self.load(force: true) }

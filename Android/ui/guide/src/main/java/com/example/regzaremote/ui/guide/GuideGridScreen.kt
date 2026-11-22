@@ -83,7 +83,11 @@ fun GuideGridScreen(guide: GuideGridState, send: GuideSend) {
 
             !guide.isHasLoaded -> Loading()
 
-            guide.columns.isEmpty() -> EmptyState(AppStrings.guideLoadFailed, AppStrings.guideConnectionHelp) {
+            guide.columns.isEmpty() -> EmptyState(
+                AppStrings.guideLoadFailed,
+                // 読めなかった理由があれば、確かめることの前に出す
+                listOfNotNull(guide.loadErrorMessage.orElse(null), AppStrings.guideConnectionHelp).joinToString("\n"),
+            ) {
                 TextButton(onClick = { send(GuideGridAction.load()) }) { Text(AppStrings.commonRetry) }
             }
 
