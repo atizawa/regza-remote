@@ -10,7 +10,7 @@ import RegzaStrings
 @Observable
 public final class TVSetupViewModel {
     public let remoteViewModel: RemoteViewModel
-    package let setupUseCase: any SetupUseCaseProtocol
+    private let setupUseCase: any SetupUseCaseProtocol
     /// このアプリ用のユーザー ID。手入力のユーザー名は他のツールと共有している
     /// かもしれないので使い回さない (同じ ID で登録し直すと、前のパスワードが無効になる)
     public let pairingUserID: String

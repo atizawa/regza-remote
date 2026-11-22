@@ -8,7 +8,7 @@ import RegzaStrings
 @MainActor
 @Observable
 public final class ServerSetupViewModel {
-    package let setupUseCase: any SetupUseCaseProtocol
+    private let setupUseCase: any SetupUseCaseProtocol
 
     package init(setupUseCase: any SetupUseCaseProtocol) {
         self.setupUseCase = setupUseCase

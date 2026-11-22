@@ -8,8 +8,8 @@ package import RegzaDomain
 @Observable
 public final class GuideGridViewModel {
     public let remoteViewModel: RemoteViewModel
-    package let guideUseCase: any GuideUseCaseProtocol
-    package let recordingUseCase: any RecordingUseCaseProtocol
+    private let guideUseCase: any GuideUseCaseProtocol
+    private let recordingUseCase: any RecordingUseCaseProtocol
     /// 番組表から開く検索。開き直しても前に探した言葉を残すので、番組表と一緒に持つ
     public let guideSearchViewModel: GuideSearchViewModel
 

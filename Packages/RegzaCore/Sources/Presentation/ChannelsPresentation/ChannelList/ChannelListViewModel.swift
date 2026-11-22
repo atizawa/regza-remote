@@ -10,9 +10,9 @@ import RegzaStrings
 @Observable
 public final class ChannelListViewModel {
     public let remoteViewModel: RemoteViewModel
-    package let channelUseCase: any ChannelUseCaseProtocol
-    package let guideUseCase: any GuideUseCaseProtocol
-    package let streamUseCase: any StreamUseCaseProtocol
+    private let channelUseCase: any ChannelUseCaseProtocol
+    private let guideUseCase: any GuideUseCaseProtocol
+    private let streamUseCase: any StreamUseCaseProtocol
 
     package init(
         remoteViewModel: RemoteViewModel, channelUseCase: any ChannelUseCaseProtocol, guideUseCase: any GuideUseCaseProtocol,
@@ -60,7 +60,7 @@ public final class ChannelListViewModel {
             work.run {
                 await self.load(force: false)
                 await self.guideUseCase.loadGuidePrograms()
-                await self.remoteViewModel.tvUseCase.loadTimeshiftSettings()
+                await self.remoteViewModel.loadTimeshiftSettings()
             }
         case .reload: work.run { await self.load(force: true) }
         case .tune(let code): work.run { await self.tune(code: code, startOver: false) }

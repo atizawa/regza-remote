@@ -11,9 +11,9 @@ import RegzaStrings
 @Observable
 public final class LivePlayerViewModel {
     public let remoteViewModel: RemoteViewModel
-    package let channelUseCase: any ChannelUseCaseProtocol
-    package let guideUseCase: any GuideUseCaseProtocol
-    package let streamUseCase: any StreamUseCaseProtocol
+    private let channelUseCase: any ChannelUseCaseProtocol
+    private let guideUseCase: any GuideUseCaseProtocol
+    private let streamUseCase: any StreamUseCaseProtocol
 
     package init(
         remoteViewModel: RemoteViewModel, channelUseCase: any ChannelUseCaseProtocol, guideUseCase: any GuideUseCaseProtocol,

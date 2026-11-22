@@ -24,11 +24,11 @@ import Testing
             {"rsv_id":"1","title":"これからの番組","channel":"JP-G00000001","epg_content_id":"JP-0000000000010002","start_time":4000000000,"duration":1800},\
             {"rsv_id":"2","title":"次の回待ち","channel":"JP-G00000009","epg_content_id":"JP-0000000000010003","start_time":1000000000,"duration":1800,"repeat":"weekly","series_rec":"true"}]}
             """
-        let (remoteViewModel, _, recordingUseCase, _) = fixtures.makeHTTPModels { request in
+        let app = fixtures.makeHTTPApp { request in
             request.url.path.hasSuffix("channel_list")
                 ? FakeHTTPTransport.response(200, TestData.channelListJSON) : FakeHTTPTransport.response(200, list)
         }
-        let viewModel = ReservationListViewModel(remoteViewModel: remoteViewModel, recordingUseCase: recordingUseCase)
+        let viewModel = ReservationListViewModel(remoteViewModel: app.remoteViewModel, recordingUseCase: app.recordingUseCase)
         await fixtures.send(viewModel) { $0.send(.load) }
 
         let state = viewModel.state

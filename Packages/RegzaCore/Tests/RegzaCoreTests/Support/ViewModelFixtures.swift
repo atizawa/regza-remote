@@ -15,14 +15,8 @@ import Foundation
 /// ViewModel のテストで使う、テレビの応答の見本と、画面の ViewModel の組み立て
 @MainActor
 struct ViewModelFixtures {
-    func makeHTTPModels(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse)
-        -> (RemoteViewModel, any GuideUseCaseProtocol, any RecordingUseCaseProtocol, any StreamUseCaseProtocol)
-    {
-        let live = HTTPTestEnvironment(transport: FakeHTTPTransport(respond))
-        return (
-            live.appViewModel.remoteViewModel, live.appViewModel.guideUseCase, live.appViewModel.recordingUseCase,
-            live.appViewModel.streamUseCase
-        )
+    func makeHTTPApp(_ respond: @escaping @Sendable (HTTPRequest) -> HTTPResponse) -> AppViewModel {
+        HTTPTestEnvironment(transport: FakeHTTPTransport(respond)).appViewModel
     }
 
     /// テストで必要な入力を明示して、Repository の偽物を直接注入する。

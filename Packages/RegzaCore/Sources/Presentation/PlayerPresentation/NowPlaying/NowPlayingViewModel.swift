@@ -10,8 +10,8 @@ import RegzaStrings
 @Observable
 public final class NowPlayingViewModel {
     public let remoteViewModel: RemoteViewModel
-    package let guideUseCase: any GuideUseCaseProtocol
-    package let streamUseCase: any StreamUseCaseProtocol
+    private let guideUseCase: any GuideUseCaseProtocol
+    private let streamUseCase: any StreamUseCaseProtocol
 
     package init(remoteViewModel: RemoteViewModel, guideUseCase: any GuideUseCaseProtocol, streamUseCase: any StreamUseCaseProtocol) {
         self.remoteViewModel = remoteViewModel
@@ -46,7 +46,7 @@ public final class NowPlayingViewModel {
         switch action {
         case .appear:
             work.run {
-                await self.remoteViewModel.tvUseCase.loadTimeshiftSettings()
+                await self.remoteViewModel.loadTimeshiftSettings()
                 // チャンネル名を出すための下準備。読めなくても、いま映っているものはそのまま出す
                 try? await self.remoteViewModel.loadChannels()
             }
@@ -59,7 +59,7 @@ public final class NowPlayingViewModel {
     private func canStartOver(_ nowPlaying: NowPlayingItem?) -> Bool {
         guard let nowPlaying, nowPlaying.kind == .broadcast, nowPlaying.hasTimeline else { return false }
         let start = nowPlaying.updatedAt.addingTimeInterval(-TimeInterval(nowPlaying.position))
-        return remoteViewModel.tvUseCase.canStartOver(channelCode: nowPlaying.channelCode, programStart: start)
+        return remoteViewModel.canStartOver(channelCode: nowPlaying.channelCode, programStart: start)
     }
 }
 

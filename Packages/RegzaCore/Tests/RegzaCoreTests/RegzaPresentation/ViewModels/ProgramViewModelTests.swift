@@ -23,16 +23,17 @@ import Testing
         let programJSON = """
             [{"id":\(program.id),"eventId":\(program.eventId),"networkId":\(program.networkId),"serviceId":\(program.serviceId),"startAt":\(Int(program.start.timeIntervalSince1970 * 1000)),"duration":1800000,"name":"テスト番組"}]
             """
-        let (remoteViewModel, guideUseCase, recordingUseCase, streamUseCase) = fixtures.makeHTTPModels { request in
+        let app = fixtures.makeHTTPApp { request in
             if request.url.path == "/api/programs" { return FakeHTTPTransport.response(200, programJSON) }
             return request.url.path.hasSuffix("reserves/new")
                 ? FakeHTTPTransport.response(200, #"{"status":2}"#) : FakeHTTPTransport.response(200, #"{"status":0,"rsv_list":[]}"#)
         }
-        await guideUseCase.saveGuideHost("192.0.2.2")
-        await guideUseCase.loadGuidePrograms()
+        await app.guideUseCase.saveGuideHost("192.0.2.2")
+        await app.guideUseCase.loadGuidePrograms()
         let viewModel = ProgramDetailViewModel(
-            remoteViewModel: remoteViewModel, guideUseCase: guideUseCase, recordingUseCase: recordingUseCase, streamUseCase: streamUseCase,
-            program: try #require(guideUseCase.program(id: program.id, channelCode: program.channelCode)),
+            remoteViewModel: app.remoteViewModel, guideUseCase: app.guideUseCase, recordingUseCase: app.recordingUseCase,
+            streamUseCase: app.streamUseCase,
+            program: try #require(app.guideUseCase.program(id: program.id, channelCode: program.channelCode)),
             channel: TestData.channel(code: program.channelCode)
         )
         #expect(viewModel.state.canReserve)
@@ -52,14 +53,15 @@ import Testing
         let programJSON = """
             [{"id":\(program.id),"eventId":\(program.eventId),"networkId":\(program.networkId),"serviceId":\(program.serviceId),"startAt":\(Int(program.start.timeIntervalSince1970 * 1000)),"duration":1800000,"name":"テスト番組"}]
             """
-        let (remoteViewModel, guideUseCase, recordingUseCase, streamUseCase) = fixtures.makeHTTPModels { request in
+        let app = fixtures.makeHTTPApp { request in
             FakeHTTPTransport.response(200, request.url.path == "/api/programs" ? programJSON : list)
         }
-        await guideUseCase.saveGuideHost("192.0.2.2")
-        await guideUseCase.loadGuidePrograms()
+        await app.guideUseCase.saveGuideHost("192.0.2.2")
+        await app.guideUseCase.loadGuidePrograms()
         let viewModel = ProgramDetailViewModel(
-            remoteViewModel: remoteViewModel, guideUseCase: guideUseCase, recordingUseCase: recordingUseCase, streamUseCase: streamUseCase,
-            program: try #require(guideUseCase.program(id: program.id, channelCode: program.channelCode)),
+            remoteViewModel: app.remoteViewModel, guideUseCase: app.guideUseCase, recordingUseCase: app.recordingUseCase,
+            streamUseCase: app.streamUseCase,
+            program: try #require(app.guideUseCase.program(id: program.id, channelCode: program.channelCode)),
             channel: TestData.channel(code: program.channelCode)
         )
         await fixtures.send(viewModel) { $0.send(.appear) }

@@ -1,8 +1,8 @@
-import Foundation
+package import Foundation
 public import Observation
 package import RegzaDomain
 
-/// アプリ全体で 1 つの ViewModel。
+/// テレビとのやりとりを受け持つ、アプリに 1 つだけの ViewModel。
 /// テレビへの接続・いま映っているもの・リモコンの操作・チャンネルと選局を受け持つ。
 /// 画面は `state` を読み、`send` で操作する。OS ごとの機能 (iOS の Live Activity など) も、画面と同じく state を読む。
 /// ほかの ViewModel (機能のモジュールとアプリ全体) は、結果を待てる関数 (package) も使う
@@ -10,7 +10,7 @@ package import RegzaDomain
 @Observable
 public final class RemoteViewModel {
     /// テレビの操作。接続とチャンネルは、この先の Repository が持つ
-    package let tvUseCase: any TVUseCaseProtocol
+    private let tvUseCase: any TVUseCaseProtocol
 
     /// 画面に出すもの
     public typealias State = RemoteState
@@ -69,6 +69,16 @@ public final class RemoteViewModel {
         case .stopPolling: stopPolling()
         case .report(let message): lastError = .network(message)
         }
+    }
+
+    /// タイムシフトの設定を読む (どの局を最初から見られるかを決めるため)
+    package func loadTimeshiftSettings() async {
+        await tvUseCase.loadTimeshiftSettings()
+    }
+
+    /// その局の番組を最初から見られるか
+    package func canStartOver(channelCode: String, programStart: Date) -> Bool {
+        tvUseCase.canStartOver(channelCode: channelCode, programStart: programStart)
     }
 
     /// テレビとのやり取りの失敗を画面に出す (ほかの画面の操作の失敗も、ここに出す)

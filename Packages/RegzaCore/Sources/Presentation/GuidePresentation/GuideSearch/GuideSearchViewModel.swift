@@ -11,7 +11,7 @@ import RegzaStrings
 @Observable
 public final class GuideSearchViewModel {
     public let remoteViewModel: RemoteViewModel
-    package let guideUseCase: any GuideUseCaseProtocol
+    private let guideUseCase: any GuideUseCaseProtocol
 
     package init(remoteViewModel: RemoteViewModel, guideUseCase: any GuideUseCaseProtocol) {
         self.remoteViewModel = remoteViewModel

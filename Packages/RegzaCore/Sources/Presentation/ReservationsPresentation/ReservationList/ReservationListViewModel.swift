@@ -9,7 +9,7 @@ import RegzaStrings
 @Observable
 public final class ReservationListViewModel {
     public let remoteViewModel: RemoteViewModel
-    package let recordingUseCase: any RecordingUseCaseProtocol
+    private let recordingUseCase: any RecordingUseCaseProtocol
 
     package init(remoteViewModel: RemoteViewModel, recordingUseCase: any RecordingUseCaseProtocol) {
         self.remoteViewModel = remoteViewModel

@@ -7,8 +7,8 @@ package import RegzaDomain
 @MainActor
 @Observable
 public final class ProgramListViewModel {
-    package let guideUseCase: any GuideUseCaseProtocol
-    package let recordingUseCase: any RecordingUseCaseProtocol
+    private let guideUseCase: any GuideUseCaseProtocol
+    private let recordingUseCase: any RecordingUseCaseProtocol
     package let channel: ChannelItem
 
     package init(guideUseCase: any GuideUseCaseProtocol, recordingUseCase: any RecordingUseCaseProtocol, channel: ChannelItem) {

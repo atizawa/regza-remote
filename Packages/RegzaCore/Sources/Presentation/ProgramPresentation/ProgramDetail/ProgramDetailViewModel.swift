@@ -9,9 +9,9 @@ import RegzaStrings
 @Observable
 public final class ProgramDetailViewModel {
     public let remoteViewModel: RemoteViewModel
-    package let guideUseCase: any GuideUseCaseProtocol
-    package let recordingUseCase: any RecordingUseCaseProtocol
-    package let streamUseCase: any StreamUseCaseProtocol
+    private let guideUseCase: any GuideUseCaseProtocol
+    private let recordingUseCase: any RecordingUseCaseProtocol
+    private let streamUseCase: any StreamUseCaseProtocol
     package let program: ProgramItem
     package let channel: ChannelItem
 
@@ -64,7 +64,7 @@ public final class ProgramDetailViewModel {
             canReserve: program.end > now,
             canStream: program.isOnAir(at: now) && streamUseCase.canStream,
             canStartOver: program.isOnAir(at: now)
-                && remoteViewModel.tvUseCase.canStartOver(channelCode: program.channelCode, programStart: program.start)
+                && remoteViewModel.canStartOver(channelCode: program.channelCode, programStart: program.start)
         )
     }
 
@@ -79,7 +79,7 @@ public final class ProgramDetailViewModel {
             work.run {
                 // 予約済みかを出すための下準備。読めなくても、番組の詳細はそのまま出す
                 if self.recordingUseCase.reservations.isEmpty { try? await self.recordingUseCase.loadReservations() }
-                await self.remoteViewModel.tvUseCase.loadTimeshiftSettings()
+                await self.remoteViewModel.loadTimeshiftSettings()
             }
         case .reserve(let series): work.run { await self.reserve(series: series) }
         case .cancelReservation: work.run { await self.cancelReservation() }
