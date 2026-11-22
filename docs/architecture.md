@@ -110,7 +110,9 @@ ViewModel は Elm 風にする。画面に出すものを `state`、画面から
   ほかの ViewModel からは、その state と `package` にした操作・値だけを使う。
   アプリ全体の ViewModel が UseCase を `package` で持つのは、テストと開発用の組み立てが、機能の ViewModel に渡すものと同じものを使えるようにするため
 - どの ViewModel も、名前と引数の操作を Action にする口（`IntrospectableActions`）を持つ。CLI と振る舞いのテストはこの口で動かし、
-  アプリの画面から送れる操作は、どれも CLI からも送れる（`ContractCoverageTests`）
+  アプリの画面から送れる操作は、どれも CLI からも送れる（`ContractCoverageTests`）。
+  CLI と振る舞いのテストに見せる操作の一覧（`introspectionActions`）は手で書くので、操作と引数の名前が受け付けるものと合っているかを
+  ソースを読んで確かめる（`ActionDescriptionTests`）。名前は Action の case と違い、引数はいまの状態と照らして確かめるので、生成はしない
 - 画面の復元に保存するもの（入力・選択・戻る道）は機能ごとに決め、アプリ全体の ViewModel がまとめて小さな JSON にする。
   パスワード・PIN・通信中の状態・再生中の状態は保存しない。取得したデータは取り直し、なくなった画面は戻る道から除く
   - 画面を初めて出すときだけ戻し、画面のない起動（ボタンや音声アシスタント）では戻さない（保存先は OS ごとに違う。下の「そろえない違い」）
