@@ -54,6 +54,7 @@ import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.RecordIcon
 import com.example.regzaremote.ui.components.ScreenHeader
 import com.example.regzaremote.ui.components.SensoryFeedback
+import com.example.regzaremote.ui.components.rememberCurrentTime
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.preview.FAKE_CHANNEL
 import com.example.regzaremote.ui.preview.FAKE_PROGRAM
@@ -119,7 +120,8 @@ private fun DetailHeader(detail: ProgramDetailState) {
         if (program.isOnAir) {
             val start = program.start.timeIntervalSince1970
             val end = program.end.timeIntervalSince1970
-            val now = System.currentTimeMillis() / 1000.0
+            // 放送の進み具合を、時刻が進むにつれて動かす
+            val now = rememberCurrentTime(intervalSeconds = 30)
             LinearProgressIndicator(
                 progress = { ((now - start) / (end - start)).toFloat().coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),

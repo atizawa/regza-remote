@@ -10,6 +10,24 @@ struct StateWaitRegistryTests {
         var value = 0
     }
 
+    /// 変わっても知らせない値
+    fileprivate final class Unobserved {
+        var value = 0
+    }
+
+    /// 見張っていない値 (今の時刻など) で変わる state も、決めた間隔で読み直して届ける
+    @Test func rereadsUnobservedChangesAfterInterval() async {
+        let registry = StateWaitRegistry(rereadInterval: .milliseconds(50))
+        let unobserved = Unobserved()
+        let next = Task { await registry.next(after: 0, waitID: 1) { unobserved.value } }
+        await Task.yield()
+        unobserved.value = 1
+
+        #expect(await next.value == 1)
+        registry.end(1)
+        #expect(registry.count == 0)
+    }
+
     @Test func cancellingSwiftTaskOffActorFinishesBeforeEndArrives() async throws {
         let registry = StateWaitRegistry()
         let counter = Counter()

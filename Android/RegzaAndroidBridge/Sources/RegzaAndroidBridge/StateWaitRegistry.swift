@@ -7,6 +7,13 @@ import Observation
 @MainActor
 final class StateWaitRegistry {
     private var waits: [Int64: StateWait] = [:]
+    /// 変わったと知らされなくても読み直す間隔。state には今の時刻で決まるもの (放送中の番組・番組表に出す時間) があり、
+    /// 時刻が進んだことは知らされないので、iOS の画面が一定の間隔で読み直す (TimelineView) のと同じく読み直す
+    private let rereadInterval: Duration
+
+    init(rereadInterval: Duration = .seconds(30)) {
+        self.rereadInterval = rereadInterval
+    }
 
     var count: Int { waits.count }
 
@@ -40,7 +47,7 @@ final class StateWaitRegistry {
                     waits[waitID] = .completed
                     return current
                 }
-                await changes.wait()
+                await changes.wait(upTo: rereadInterval)
             }
         } onCancel: {
             // ハンドラーは別スレッドでも呼ばれる。変更通知・end と同じ MainActor 上で待機を起こす。
@@ -83,9 +90,16 @@ final class StateWaitRegistry {
             }
         }
 
-        func wait() async {
+        /// 変わったと知らされるか、interval が過ぎるまで待つ
+        func wait(upTo interval: Duration) async {
             if hasChanged { return }
+            let timer = Task { @MainActor [weak self] in
+                // 待つだけなので、取り消されたら何もしない
+                guard (try? await Task.sleep(for: interval)) != nil else { return }
+                self?.changed()
+            }
             await withCheckedContinuation { waiter = $0 }
+            timer.cancel()
         }
 
         func changed() {

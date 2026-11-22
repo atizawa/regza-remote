@@ -74,6 +74,7 @@ import com.example.regzaremote.ui.components.Note
 import com.example.regzaremote.ui.components.ProminentButton
 import com.example.regzaremote.ui.components.RowDivider
 import com.example.regzaremote.ui.components.ScreenHeader
+import com.example.regzaremote.ui.components.rememberCurrentTime
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.preview.FAKE_CHANNEL
 import com.example.regzaremote.ui.preview.FakePreview
@@ -286,7 +287,8 @@ private fun ProgramInfo(player: LivePlayerState) {
             Note(program.timeText + (program.genreName.orElse(null)?.let { " · $it" } ?: ""))
             val start = program.start.timeIntervalSince1970
             val end = program.end.timeIntervalSince1970
-            val now = System.currentTimeMillis() / 1000.0
+            // 放送の進み具合を、時刻が進むにつれて動かす
+            val now = rememberCurrentTime(intervalSeconds = 30)
             LinearProgressIndicator(
                 progress = { ((now - start) / (end - start)).toFloat().coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth(),

@@ -56,6 +56,7 @@ import com.example.regzaremote.ui.components.LocalMiniPlayerInset
 import com.example.regzaremote.ui.components.ProminentButton
 import com.example.regzaremote.ui.components.RecordIcon
 import com.example.regzaremote.ui.components.ScreenHeader
+import com.example.regzaremote.ui.components.rememberCurrentTime
 import com.example.regzaremote.ui.components.rememberState
 import com.example.regzaremote.ui.preview.FakePreview
 
@@ -203,9 +204,9 @@ private fun GuideGrid(guide: GuideGridState, send: GuideSend) {
                         }
                     }
                 }
-                // 今の時刻の線 (今日を見ているときだけ)
+                // 今の時刻の線 (今日を見ているときだけ)。毎分動かす
                 if (guide.isToday) {
-                    val now = System.currentTimeMillis() / 1000.0
+                    val now = rememberCurrentTime(intervalSeconds = 60)
                     val offset = ((now - windowStart) / 60).coerceIn(0.0, minutes.toDouble())
                     Box(
                         Modifier
