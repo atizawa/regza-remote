@@ -88,6 +88,7 @@ iOS と Android で、画面の状態と操作のロジックを 1 つの Swift 
 | 画面の名前が iOS・Android・共有の ViewModel でそろっている | `ScreenNamingTests` |
 | 共有の Swift は今の時刻を `Date()` で直接読まない（偽物のサーバーを除く） | `ClockUsageGuardTests` |
 | 共有の Swift と Android の橋渡しは、エラーの文言を `localizedDescription` で読まない（`ErrorMessage` を除く） | `ErrorMessageUsageGuardTests` |
+| 画面の ViewModel は UseCase を `private` で持ち、ほかの ViewModel の UseCase を使わない（画面の移り変わりを持つアプリ全体の ViewModel を除く） | `ViewModelDependencyGuardTests` |
 
 決まりの一覧はテストと設定のほうが正しい。ドキュメントには理由を書き、細かい一覧はテストを見る。
 ktlint の規則は import だけを見る（完全修飾名での直接の参照・同じ package の中の参照・型の解決は見ない）ので、境界の本体は Gradle のモジュールの依存で守る。
@@ -102,6 +103,9 @@ ViewModel は Elm 風にする。画面に出すものを `state`、画面から
 - 表示の判断（ボタンを出すか、押せるか、保存できるか、入力が正しいか）は State に入れ、画面に式を書かない。
   画面に置いた判断はテストでも CLI でも確かめられず、iOS と Android にそれぞれ書くことになる
 - 部品に分けた ViewModel の操作は、親の Action の case に入れて送る（1 つの画面に Action は 1 つ）
+- ViewModel が UseCase を組み立てから受け取るのは（決まりは上の表）、受け取るものを見れば依存が分かるようにするため。
+  ほかの ViewModel からは、その state と `package` にした操作・値だけを使う。
+  アプリ全体の ViewModel が UseCase を `package` で持つのは、テストと開発用の組み立てが、機能の ViewModel に渡すものと同じものを使えるようにするため
 - どの ViewModel も、名前と引数の操作を Action にする口（`IntrospectableActions`）を持つ。CLI と振る舞いのテストはこの口で動かし、
   アプリの画面から送れる操作は、どれも CLI からも送れる（`ContractCoverageTests`）
 - 画面の復元に保存するもの（入力・選択・戻る道）は機能ごとに決め、アプリ全体の ViewModel がまとめて小さな JSON にする。
