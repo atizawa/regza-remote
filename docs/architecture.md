@@ -31,7 +31,9 @@ iOS と Android で、画面の状態と操作のロジックを 1 つの Swift 
   時計の変更に左右されない `ContinuousClock` で測る
 - エラーを画面に出す文言にするのは、プレゼンテーションの共通の `ErrorMessage` 1 か所だけにする（`localizedDescription` を画面に出さない）。
   文言はエラーの code（`ErrorCode`）で、「場面ごとの言い換え」→「どの場面でも同じ言い換え」→ エラーの元の文言の順に引く。
-  HTTP API が RFC 9457 の problem+json を返したときは、通信がその詳細（`APIProblem`）を読み、種類（`type`）を code にする。
+  HTTP API が RFC 9457 の problem+json を返したときは、通信がその詳細（`APIProblem`）を読み、種類（`type`）と、拡張メンバーで返す API の code を code にする
+  （`ErrorCode.problemType`・`ErrorCode.apiCode`。表に足すときもこれで作る）。
+  code は API の code・`type`・HTTP のステータスの順に詳しく、それぞれの言い換えの中では詳しい code から引く。
   サーバーの `title`・`detail` は言語や言い方がアプリと合うとは限らないので、画面には出さない。
   API が返す code で分岐するアプリでも、表に code と文言を足すだけで済むようにするため。
   アプリが決める失敗（配信の準備ができないなど）も、文言ではなく code を持たせ（`RegzaError.failed`）、文言は表で引く。
