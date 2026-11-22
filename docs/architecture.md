@@ -29,6 +29,13 @@ iOS と Android で、画面の状態と操作のロジックを 1 つの Swift 
   時刻で決まる判断（放送中か・予約できるか）を、テストで時刻を決めて境目まで確かめられるようにするため。
   ViewModel は持っている UseCase の時計から読む。待つ時間（キーを送ったあとの静かな時間・待ち合わせの期限）は、
   時計の変更に左右されない `ContinuousClock` で測る
+- エラーを画面に出す文言にするのは、プレゼンテーションの共通の `ErrorMessage` 1 か所だけにする（`localizedDescription` を画面に出さない）。
+  文言はエラーの code（`ErrorCode`）で、「場面ごとの言い換え」→「どの場面でも同じ言い換え」→ エラーの元の文言の順に引く。
+  HTTP API が RFC 9457 の problem+json を返したときは、通信がその詳細（`APIProblem`）を読み、種類（`type`）を code にする。
+  サーバーの `title`・`detail` は言語や言い方がアプリと合うとは限らないので、画面には出さない。
+  API が返す code で分岐するアプリでも、表に code と文言を足すだけで済むようにするため
+- ユーザーの操作の失敗は捨てずに画面に出す。`try?` で失敗を捨ててよいのは、下準備・片付け・機器を探すとき・待つときだけで、
+  捨ててよい理由をコメントに書く
 
 ## モジュールの対応
 
@@ -78,6 +85,7 @@ iOS と Android で、画面の状態と操作のロジックを 1 つの Swift 
 | 偽物（テスト用のサーバー）は、プレビューの中でだけ読み込む | iOS: `LayerTests` とリリース版の検査、Android: debug にだけ入れ、リリース版の検査 |
 | 画面の名前が iOS・Android・共有の ViewModel でそろっている | `ScreenNamingTests` |
 | 共有の Swift は今の時刻を `Date()` で直接読まない（偽物のサーバーを除く） | `ClockUsageGuardTests` |
+| 共有の Swift はエラーの文言を `localizedDescription` で直接画面に出さない（文言を決めるところと、OS のエラーを変えるところを除く） | `ErrorMessageUsageGuardTests` |
 
 決まりの一覧はテストと設定のほうが正しい。ドキュメントには理由を書き、細かい一覧はテストを見る。
 ktlint の規則は import だけを見る（完全修飾名での直接の参照・同じ package の中の参照・型の解決は見ない）ので、境界の本体は Gradle のモジュールの依存で守る。
