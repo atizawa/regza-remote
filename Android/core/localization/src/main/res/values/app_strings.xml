@@ -264,6 +264,8 @@
     <string name="settings_stream_title" formatted="false">"ライブ視聴 (EPGStation)"</string>
     <string name="settings_title" formatted="false">"設定"</string>
     <string name="settings_unlink" formatted="false">"連携を解除"</string>
+    <string name="shortcut_channel_not_found" formatted="false">"チャンネルが見つかりません"</string>
+    <string name="shortcut_channels_unavailable" formatted="false">"チャンネル一覧を取得できませんでした"</string>
     <string name="tab_channels" formatted="false">"チャンネル"</string>
     <string name="tab_guide" formatted="false">"番組表"</string>
     <string name="tab_remote" formatted="false">"リモコン"</string>

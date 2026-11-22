@@ -75,7 +75,7 @@ let package = Package(
         .target(
             name: "Shortcuts",
             dependencies: [
-                "AppServices", "LiveActivity", .product(name: "RegzaPresentation", package: "RegzaCore"),
+                "AppServices", "LiveActivity", "Localization", .product(name: "RegzaPresentation", package: "RegzaCore"),
                 .product(name: "RegzaStrings", package: "RegzaCore"),
             ],
             path: "Sources/Platform/Shortcuts"),

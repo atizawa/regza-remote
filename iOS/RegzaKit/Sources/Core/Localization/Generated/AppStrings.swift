@@ -280,6 +280,10 @@ public enum AppStrings {
 
     public static var settingsUnlink: String { String(localized: "settings_unlink", bundle: .module) }
 
+    public static var shortcutChannelNotFound: String { String(localized: "shortcut_channel_not_found", bundle: .module) }
+
+    public static var shortcutChannelsUnavailable: String { String(localized: "shortcut_channels_unavailable", bundle: .module) }
+
     public static var tabChannels: String { String(localized: "tab_channels", bundle: .module) }
 
     public static var tabGuide: String { String(localized: "tab_guide", bundle: .module) }

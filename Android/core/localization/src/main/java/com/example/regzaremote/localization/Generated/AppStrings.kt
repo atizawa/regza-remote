@@ -381,6 +381,12 @@ object AppStrings {
     val settingsUnlink: String
         @Composable get() = stringResource(R.string.settings_unlink)
 
+    val shortcutChannelNotFound: String
+        @Composable get() = stringResource(R.string.shortcut_channel_not_found)
+
+    val shortcutChannelsUnavailable: String
+        @Composable get() = stringResource(R.string.shortcut_channels_unavailable)
+
     val tabChannels: String
         @Composable get() = stringResource(R.string.tab_channels)
 

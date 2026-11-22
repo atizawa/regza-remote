@@ -1,6 +1,7 @@
 #if os(iOS)
 import AppIntents
 import Foundation
+import Localization
 import RegzaPresentation
 import RegzaStrings
 import AppServices
@@ -69,7 +70,7 @@ public struct ChannelQuery: EntityStringQuery {
         guard remoteViewModel.state.isConfigured else { throw ShortcutError.notConfigured }
         await remoteViewModel.sendAndWait(.loadChannels(force: false))
         guard !remoteViewModel.registeredChannels.isEmpty else {
-            throw ShortcutError(remoteViewModel.state.errorMessage ?? "チャンネル一覧を取得できませんでした")
+            throw ShortcutError(remoteViewModel.state.errorMessage ?? AppStrings.shortcutChannelsUnavailable)
         }
         return remoteViewModel.registeredChannels
     }
@@ -93,7 +94,7 @@ public struct TuneChannelIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let channels = try await ChannelQuery.channels()
         guard let target = channels.first(where: { $0.code == channel.id }) else {
-            throw ShortcutError.commandRejected("チャンネルが見つかりません")
+            throw ShortcutError.commandRejected(AppStrings.shortcutChannelNotFound)
         }
         // チャンネル一覧の画面と同じ選局 (切り替えられなければ tuneError に説明が入る)
         let container = AppContainer.shared

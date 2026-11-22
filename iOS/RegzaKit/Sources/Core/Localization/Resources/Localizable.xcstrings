@@ -3157,6 +3157,30 @@
         }
       }
     },
+    "shortcut_channel_not_found": {
+      "extractionState": "manual",
+      "comment": "shortcut / channel / not found",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャンネルが見つかりません"
+          }
+        }
+      }
+    },
+    "shortcut_channels_unavailable": {
+      "extractionState": "manual",
+      "comment": "shortcut / channels / unavailable",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャンネル一覧を取得できませんでした"
+          }
+        }
+      }
+    },
     "tab_channels": {
       "extractionState": "manual",
       "comment": "tab / channels",

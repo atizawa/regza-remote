@@ -39,8 +39,8 @@ import Testing
     /// 画面と同じく ViewModel の state と Action だけを使い、Domain・通信は読み込まない (AppContainer から ViewModel を受け取る)
     static let systemActionsImports: Set<String> = ["Foundation", "AppIntents", "RegzaPresentation", "AppServices"]
 
-    /// Siri・ショートカットが読み込んでよいモジュール (画面のない入口と同じ決まりに、Live Activity と共有の文言を足したもの)
-    static let shortcutsImports = systemActionsImports.union(["LiveActivity", "RegzaStrings"])
+    /// Siri・ショートカットが読み込んでよいモジュール (画面のない入口と同じ決まりに、Live Activity と文言を足したもの)
+    static let shortcutsImports = systemActionsImports.union(["LiveActivity", "RegzaStrings", "Localization"])
 
     /// ウィジェット (ホーム画面・Live Activity・コントロールセンターの表示) が読み込んでよいモジュール。
     /// 表示は ViewModel の state を使い、ボタンの操作は画面のない入口 (SystemActions) に任せる。アプリの組み立て (AppServices) は読み込まない
