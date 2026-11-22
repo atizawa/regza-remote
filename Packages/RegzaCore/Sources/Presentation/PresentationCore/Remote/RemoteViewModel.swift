@@ -182,7 +182,8 @@ public final class RemoteViewModel {
             lastSearch = nil
         case .failure(let error):
             lastError = error
-            if case .network = error { await searchForMovedTV() }
+            // IP アドレスが変わると、つながらないか返事が来ない。そのときだけ探し直す
+            if case .connection(let failure) = error, [.cannotConnect, .timedOut].contains(failure) { await searchForMovedTV() }
         }
     }
 

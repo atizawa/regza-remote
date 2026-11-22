@@ -22,6 +22,22 @@ import Testing
         return (live.appViewModel.remoteViewModel, transport, live.store)
     }
 
+    /// IP アドレスが変わったテレビは、つながらないか返事が来ないときだけ探し直す
+    @Test(arguments: [
+        (RegzaError.connection(.cannotConnect), true), (.connection(.timedOut), true),
+        (.connection(.offline), false), (.connection(.certificate), false), (.unauthorized, false),
+    ])
+    func searchesForMovedTVOnlyWhenUnreachable(error: RegzaError, searches: Bool) async {
+        let tvUseCase = TVUseCaseProtocolMock(clock: .system, connection: .init(host: "192.0.2.1"))
+        tvUseCase.refreshHandler = { () async throws(RegzaError) in throw error }
+        let remoteViewModel = RemoteViewModel(tvUseCase: tvUseCase)
+
+        await remoteViewModel.refresh()
+
+        #expect(tvUseCase.locateMovedTVCallCount == (searches ? 1 : 0))
+        #expect(remoteViewModel.lastError == error)
+    }
+
     @Test func tuneShowsChannelRightAway() async throws {
         let (remoteViewModel, transport, _) = makeModel { request in
             request.url.path.hasSuffix("channel_list")
