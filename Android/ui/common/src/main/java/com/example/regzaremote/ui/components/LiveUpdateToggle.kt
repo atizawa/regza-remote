@@ -75,7 +75,7 @@ fun LiveUpdateToggle(modifier: Modifier = Modifier) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(AppStrings.liveUpdateTitle, Modifier.weight(1f))
-            Switch(checked = isOn, onCheckedChange = ::turn, modifier = Modifier.testTag("liveUpdate.toggle"))
+            Switch(checked = isOn, onCheckedChange = ::turn, modifier = Modifier.testTag("lockScreen.toggle"))
         }
         when {
             // 断られたあとや、設定で通知をオフにされているとき

@@ -20,6 +20,7 @@ package struct LiveActivityToggle: View {
                 Label(AppStrings.activityTitle, systemImage: "platter.filled.top.iphone")
             }
             .disabled(!LiveActivityController.areActivitiesEnabled)
+            .accessibilityIdentifier("lockScreen.toggle")
             Text(
                 LiveActivityController.areActivitiesEnabled
                     ? AppStrings.activityHelp
