@@ -20,7 +20,8 @@ public struct ErrorCode: RawRepresentable, Hashable, Sendable, ExpressibleByStri
     /// family と同じか、その下の code (`http.404` は `http` の仲間)
     public func belongs(to family: ErrorCode) -> Bool {
         if rawValue == family.rawValue { return true }
-        return !family.isURI && rawValue.hasPrefix(family.rawValue + ".")
+        // URI は階層を持たないので、仲間を持たず、どの仲間にも入らない
+        return !family.isURI && !isURI && rawValue.hasPrefix(family.rawValue + ".")
     }
 
     /// URI か (`https://…` や `urn:…` のように `:` を含む)

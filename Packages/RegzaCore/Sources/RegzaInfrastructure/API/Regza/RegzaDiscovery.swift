@@ -68,7 +68,7 @@ public enum RegzaDiscovery {
         } catch RegzaError.commandRejected {
             // 認証は通っている
             return true
-        } catch RegzaError.httpStatus(404), RegzaError.unsupported {
+        } catch let error as RegzaError where error.isUnsupported {
             // v2 API が無い機種は旧 API で確かめる
             return (try? await regzaAPIClient.request(RegzaLegacyStatusRequest())) != nil
         } catch {

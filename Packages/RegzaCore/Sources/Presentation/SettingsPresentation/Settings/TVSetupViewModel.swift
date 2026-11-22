@@ -148,7 +148,7 @@ public final class TVSetupViewModel {
             let error = RegzaError(error)
             pairingMessage = ErrorMessage.text(error, in: .pairing)
             // PIN 登録に対応していない機種は、ユーザー名とパスワードを入れてもらう
-            if error == .unsupported || error == .httpStatus(404) { isShowingManualEntry = true }
+            if error.isUnsupported { isShowingManualEntry = true }
         }
     }
 

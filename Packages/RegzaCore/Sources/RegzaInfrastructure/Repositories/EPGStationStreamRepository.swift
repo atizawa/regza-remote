@@ -86,8 +86,11 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
     public func cleanUp() async {
         guard let serverAPIClient = streamServer() else { return }
         for id in preferencesManager.integers(forKey: .ownStreamIDs) {
-            do { try await serverAPIClient.request(EPGStationStopStreamRequest(streamID: id)) } catch RegzaError.httpStatus(404) {} catch {
-                continue
+            // 止める指示が届いたか、もう無い (404) ときだけ忘れる
+            do {
+                try await serverAPIClient.request(EPGStationStopStreamRequest(streamID: id))
+            } catch {
+                guard RegzaError(error).isNotFound else { continue }
             }
             guard serverAPIClient === epgStationAPIClient else { return }
             preferencesManager.updateIntegers(forKey: .ownStreamIDs) { $0.removeAll { $0 == id } }
@@ -101,7 +104,7 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
             do {
                 try await epgStationAPIClient.request(EPGStationStopStreamRequest(streamID: id))
                 preferencesManager.updateIntegers(forKey: .ownStreamIDs) { $0.removeAll { $0 == id } }
-            } catch RegzaError.httpStatus(404) {
+            } catch  where RegzaError(error).isNotFound {
                 preferencesManager.updateIntegers(forKey: .ownStreamIDs) { $0.removeAll { $0 == id } }
             } catch {}
         }

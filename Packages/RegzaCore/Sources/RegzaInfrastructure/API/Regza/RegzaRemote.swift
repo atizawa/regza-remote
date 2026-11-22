@@ -182,7 +182,7 @@ public actor RegzaRemote {
                 lastPlayStatusAt = ContinuousClock.now
                 needsPlayStatus = false
                 updated = await withProgramName(NowPlayingData(playStatus: status, now: clock.now), status: status)
-            } catch let error as RegzaError where error == .httpStatus(404) || error == .unsupported {
+            } catch let error as RegzaError where error.isUnsupported {
                 // 一度でも v2 API で取れたテレビなら、切り替え中などの一時的な失敗として扱い、旧 API に切り替えない
                 guard supportsPlayStatus == nil else { throw error }
                 supportsPlayStatus = false

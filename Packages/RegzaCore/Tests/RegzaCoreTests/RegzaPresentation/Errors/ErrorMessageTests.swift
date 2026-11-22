@@ -37,6 +37,51 @@ import Testing
         #expect(ErrorMessage.text(blank, in: .channelList) == ErrorMessage.text(RegzaError.httpStatus(404), in: .channelList))
     }
 
+    /// API が決めた code (拡張メンバー) があれば、api の仲間の code にし、type・HTTP のステータスの順に続ける
+    @Test func problemIsFoundByItsAPICode() {
+        let problem = RegzaError.problem(APIProblem(type: "https://example.com/problems/stock", status: 409, code: "out_of_stock"))
+        #expect(problem.codes == ["api.out_of_stock", "https://example.com/problems/stock", "http.409"])
+        #expect(problem.code.belongs(to: .api))
+        // 表にない code は、HTTP のステータスのとおりの文言にする
+        #expect(ErrorMessage.text(problem) == RegzaError.httpStatus(409).localizedDescription)
+        // API の code の表がなくても、場面ごとの 404 の言い換えは使える
+        let notFound = RegzaError.problem(APIProblem(status: 404, code: "not_found"))
+        #expect(ErrorMessage.text(notFound, in: .channelList) == ErrorMessage.text(RegzaError.httpStatus(404), in: .channelList))
+        // 見分けられた 404 は、もう無いものではあるが、機種が対応していないものではない
+        #expect(notFound.isNotFound)
+        #expect(!notFound.isUnsupported)
+        #expect(RegzaError.httpStatus(404).isUnsupported && RegzaError.httpStatus(404).isNotFound)
+        #expect(RegzaError.unsupported.isUnsupported)
+        // API の code の . と : は、階層や URI の印にせず、ほかの code とも重ならない
+        let similar = ["stock", "stock.low", "stock_low", "stock:low", "stock%2Elow"].map(ErrorCode.apiCode)
+        #expect(Set(similar).count == similar.count)
+        #expect(!ErrorCode.apiCode("stock.low").belongs(to: ErrorCode.apiCode("stock")))
+        #expect(!ErrorCode.apiCode("E:1001").isURI)
+    }
+
+    /// URI でない種類 (相対参照) は、type の仲間にし、アプリが決めた仲間に紛れさせない
+    @Test func relativeProblemTypeStaysOutOfAppFamilies() {
+        let relative = RegzaError.problem(APIProblem(type: "http.404", status: 409))
+        #expect(relative.codes == [ErrorCode.problemType("http.404"), "http.409"])
+        #expect(!relative.code.belongs(to: .http))
+        #expect(ErrorCode.problemType("https://example.com/problems/stock") == "https://example.com/problems/stock")
+        // : を含んで URI として扱うものも、アプリが決めた仲間には入らない
+        #expect(!ErrorCode.problemType("http.404:legacy").belongs(to: .http))
+    }
+
+    /// 拡張メンバーの code は、数も文字にし、空のときは code がないものにする
+    @Test func apiCodeIsReadFromExtensionMember() throws {
+        func decode(_ json: String) throws -> APIProblem { try JSONDecoder().decode(APIProblem.self, from: Data(json.utf8)) }
+        #expect(try decode(#"{"code":"out_of_stock"}"#).code == "out_of_stock")
+        #expect(try decode(#"{"code":1001}"#).code == "1001")
+        #expect(try decode(#"{"code":" \n"}"#).code == nil)
+        #expect(try decode(#"{"code":"out_of_stock\n"}"#).code == "out_of_stock")
+        #expect(try decode(#"{"code":true}"#).code == nil)
+        // 書き出して読み直しても、code は残る
+        let problem = APIProblem(type: "https://example.com/problems/stock", status: 409, code: "out_of_stock")
+        #expect(try decode(String(decoding: JSONEncoder().encode(problem), as: UTF8.self)) == problem)
+    }
+
     /// 表にない問題は、サーバーの title・detail を出さず、アプリの言い方にする
     @Test func unknownProblemUsesAppWording() {
         let error = RegzaError.problem(
@@ -79,7 +124,7 @@ import Testing
             _ = try await EPGStationAPIClient(host: "192.0.2.30", transport: transport).request(EPGStationVersionRequest())
             Issue.record("エラーになるはずの返事が通りました")
         } catch {
-            // 本文に status がなければ、返事のステータスを入れる
+            // 本文に status がなくても、返事のステータスを入れる
             #expect(
                 RegzaError(error)
                     == .problem(APIProblem(type: "https://example.com/problems/busy", title: "Busy", status: 503, detail: "Try later")))
@@ -96,6 +141,25 @@ import Testing
             Issue.record("エラーになるはずの返事が通りました")
         } catch {
             #expect(RegzaError(error) == .httpStatus(404))
+        }
+    }
+
+    /// 種類 (type) がなくても、API が決めた code があれば、問題の詳細として読む。
+    /// ステータスは、本文の status (目安) ではなく、返事のステータスにする
+    @Test func blankProblemWithAPICodeIsRead() async {
+        let transport = FakeHTTPTransport { _ in
+            HTTPResponse(
+                statusCode: 409, headers: ["Content-Type": "application/problem+json"],
+                body: Data(#"{"code":"out_of_stock","status":400}"#.utf8))
+        }
+        do {
+            _ = try await EPGStationAPIClient(host: "192.0.2.30", transport: transport).request(EPGStationVersionRequest())
+            Issue.record("エラーになるはずの返事が通りました")
+        } catch {
+            #expect(RegzaError(error) == .problem(APIProblem(status: 409, code: "out_of_stock")))
+            #expect(RegzaError(error).code == "api.out_of_stock")
+            // 404 で分かれる処理は、ステータスを見る
+            #expect(RegzaError(error).status == 409)
         }
     }
 

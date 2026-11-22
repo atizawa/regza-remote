@@ -37,9 +37,10 @@ struct OpenAPIResponseMiddleware: ClientMiddleware {
         case 200..<300: return response
         case 401 where usesDigestAuthentication: throw RegzaError.unauthorized
         default:
-            // RFC 9457 の problem+json で種類 (type) があれば、種類で文言を引けるよう詳細を読む。
-            // 種類がなければ HTTP のステータスのとおりの意味なので、ステータスのエラーのままにする (404 で分かれる処理をそのまま使う)
-            if let problem = await Self.problem(response.0, response.1), problem.type != APIProblem.blankType {
+            // RFC 9457 の problem+json で種類 (type) か API が決めた code があれば、それで文言を引けるよう詳細を読む。
+            // どちらもなければ HTTP のステータスのとおりの意味なので、ステータスのエラーのままにする。
+            // 詳細を読んだときも、404 で分かれる処理は RegzaError.status でステータスを見る
+            if let problem = await Self.problem(response.0, response.1), problem.isIdentified {
                 throw RegzaError.problem(problem)
             }
             throw RegzaError.httpStatus(response.0.status.code)
@@ -52,8 +53,8 @@ struct OpenAPIResponseMiddleware: ClientMiddleware {
             let data = try? await Data(collecting: body, upTo: 64 * 1024),
             var problem = try? JSONDecoder().decode(APIProblem.self, from: data)
         else { return nil }
-        // 本文に status がなければ、返事のステータスを使う
-        if problem.status == nil { problem.status = response.status.code }
+        // 本文の status は目安 (RFC 9457) で、途中で書き換わることもあるので、返事のステータスにそろえる
+        problem.status = response.status.code
         return problem
     }
 }

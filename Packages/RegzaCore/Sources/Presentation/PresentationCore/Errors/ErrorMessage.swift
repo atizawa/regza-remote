@@ -4,7 +4,8 @@ internal import RegzaStrings
 /// エラーを画面に出す文言にする。画面と OS の入口に出す文言は、どれもここを通す (`localizedDescription` を直接出さない)。
 ///
 /// 文言はエラーの code (`ErrorCode`) で引く。引く順は「場面ごとの言い換え」→「どの場面でも同じ言い換え」→ エラーの元の文言。
-/// API が返す code (RFC 9457 の type など) で分岐するときも、下の表に code と文言を足すだけで済む
+/// code が詳しい順に並ぶとき (API の問題) は、それぞれの言い換えの中で、詳しい code から順に引く
+/// API が返す code (RFC 9457 の type や、拡張メンバーの code) で分岐するときも、下の表に code と文言を足すだけで済む
 package enum ErrorMessage {
     /// エラーが起きた場面
     package enum Scene: Sendable {
@@ -29,9 +30,9 @@ package enum ErrorMessage {
     }
 
     package static func text(_ error: RegzaError, in scene: Scene = .general) -> String {
-        let code = error.code
-        let rule = rules(in: scene).first { code.belongs(to: $0.code) } ?? commonRules.first { code.belongs(to: $0.code) }
-        return rule?.text(error) ?? error.localizedDescription
+        let codes = error.codes
+        func find(in table: [Rule]) -> Rule? { codes.lazy.compactMap { code in table.first { code.belongs(to: $0.code) } }.first }
+        return (find(in: rules(in: scene)) ?? find(in: commonRules))?.text(error) ?? error.localizedDescription
     }
 
     /// RegzaError 以外のエラーも、通信のエラーとして文言にする
@@ -66,7 +67,8 @@ package enum ErrorMessage {
         }
     }
 
-    /// どの場面でも同じ言い換え。アプリが決めた code と、API の問題の種類 (type) ごとの文言は、ここに足す
+    /// どの場面でも同じ言い換え。アプリが決めた code と、API の問題の種類 (type)・API が決めた code ごとの文言は、ここに足す
+    /// (`ErrorCode.problemType`・`ErrorCode.apiCode` で code を作る)
     static let commonRules: [Rule] = [
         Rule(code: .streamUnavailable) { _ in CoreStrings.errorStreamUnavailable },
         Rule(code: .lockScreenStartFailed) { _ in CoreStrings.errorLockScreenStartFailed },

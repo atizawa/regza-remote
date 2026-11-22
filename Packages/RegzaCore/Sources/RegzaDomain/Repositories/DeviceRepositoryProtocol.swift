@@ -19,7 +19,7 @@ public protocol DeviceRepositoryProtocol: Sendable {
 /// テレビから受け取った暗号化パスワードを持っているので、start から confirm まで同じものを使う
 /// @mockable
 public protocol PairingSession: Sendable {
-    /// テレビに PIN を表示させる。PIN 登録に対応していない機種では `RegzaError.unsupported` か `httpStatus(404)`
+    /// テレビに PIN を表示させる。PIN 登録に対応していない機種では `RegzaError.isUnsupported` のエラー
     func start() async throws
     /// PIN で登録を確定し、保存すべき接続情報を返す
     func confirm(pin: String) async throws -> ConnectionData
