@@ -17,7 +17,7 @@ struct AndroidHTTPTransportTests {
             #expect(request.hasBody)
             #expect(request.timeout == 0.5)
             completion.succeed(201, ["X-Result", "ok"], [0, -128, -1])
-            completion.fail("遅れて届いた失敗")
+            completion.fail()
         }
         let response = try await AndroidHTTPTransport(httpClient: client).send(
             HTTPRequest(
@@ -29,15 +29,15 @@ struct AndroidHTTPTransportTests {
     }
 
     @Test func propagatesFailure() async throws {
-        let client = RecordingHTTPClient { _, completion in completion.fail("読み取りに失敗しました") }
-        await #expect(throws: RegzaError.network("読み取りに失敗しました")) {
+        let client = RecordingHTTPClient { _, completion in completion.failTimedOut() }
+        await #expect(throws: RegzaError.connection(.timedOut)) {
             try await AndroidHTTPTransport(httpClient: client).send(request())
         }
     }
 
     @Test func rejectsMalformedResponse() async throws {
         let client = RecordingHTTPClient { _, completion in completion.succeed(200, ["missing-value"], []) }
-        await #expect(throws: RegzaError.network("不正なレスポンスです")) {
+        await #expect(throws: RegzaError.connection(.invalidResponse)) {
             try await AndroidHTTPTransport(httpClient: client).send(request())
         }
     }
@@ -49,7 +49,7 @@ struct AndroidHTTPTransportTests {
         try await wait { !client.requests.isEmpty }
         let outgoing = try #require(client.requests.first)
         task.cancel()
-        await #expect(throws: RegzaError.network("通信を取り消しました")) { try await task.value }
+        await #expect(throws: RegzaError.connection(.cancelled)) { try await task.value }
         try await wait { client.cancelled == [outgoing.id] }
         client.completion?.succeed(200, [], [])
     }
@@ -59,7 +59,7 @@ struct AndroidHTTPTransportTests {
         let transport = AndroidHTTPTransport(httpClient: client)
         let task = Task { try await transport.send(request()) }
         task.cancel()
-        await #expect(throws: RegzaError.network("通信を取り消しました")) { try await task.value }
+        await #expect(throws: RegzaError.connection(.cancelled)) { try await task.value }
         try await wait { !client.cancelled.isEmpty }
         #expect(client.requests.isEmpty)
     }

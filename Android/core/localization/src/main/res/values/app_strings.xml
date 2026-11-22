@@ -39,6 +39,11 @@
     <string name="core_day_today" formatted="false">"今日"</string>
     <string name="core_day_tomorrow" formatted="false">"明日"</string>
     <string name="core_error_command_rejected">"テレビがコマンドを拒否しました (%1$s)"</string>
+    <string name="core_error_connection_cannot_connect" formatted="false">"つながりませんでした。端末とテレビ・サーバーが同じネットワークにあるか確かめてください"</string>
+    <string name="core_error_connection_certificate" formatted="false">"接続先の証明書を確かめられませんでした"</string>
+    <string name="core_error_connection_failed" formatted="false">"通信に失敗しました"</string>
+    <string name="core_error_connection_offline" formatted="false">"ネットワークにつながっていません"</string>
+    <string name="core_error_connection_timed_out" formatted="false">"返事がありませんでした。テレビ・サーバーの電源とネットワークを確かめてください"</string>
     <string name="core_error_http_status">"HTTPエラー (%1$d)"</string>
     <string name="core_error_invalid_host" formatted="false">"IPアドレスが正しくありません"</string>
     <string name="core_error_invalid_pin" formatted="false">"PIN が正しくありません。テレビに表示されている数字を確認してください"</string>

@@ -41,7 +41,8 @@ public final class RegzaAndroidAppFactory {
             let response = try await httpTransport.send(HTTPRequest(url: url, timeout: timeout))
             return "\(response.statusCode)\n\(String(decoding: response.body, as: UTF8.self))"
         } catch {
-            return "error: \(error)"
+            // 失敗の種類を code で返す (connection.timed_out など)
+            return "error: \(RegzaError(error).code)"
         }
     }
 }

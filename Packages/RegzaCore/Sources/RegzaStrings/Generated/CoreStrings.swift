@@ -13,6 +13,11 @@ public enum CoreStrings {
         "core_day_today": "今日",
         "core_day_tomorrow": "明日",
         "core_error_command_rejected": "テレビがコマンドを拒否しました (%@)",
+        "core_error_connection_cannot_connect": "つながりませんでした。端末とテレビ・サーバーが同じネットワークにあるか確かめてください",
+        "core_error_connection_certificate": "接続先の証明書を確かめられませんでした",
+        "core_error_connection_failed": "通信に失敗しました",
+        "core_error_connection_offline": "ネットワークにつながっていません",
+        "core_error_connection_timed_out": "返事がありませんでした。テレビ・サーバーの電源とネットワークを確かめてください",
         "core_error_http_status": "HTTPエラー (%lld)",
         "core_error_invalid_host": "IPアドレスが正しくありません",
         "core_error_invalid_pin": "PIN が正しくありません。テレビに表示されている数字を確認してください",
@@ -160,6 +165,16 @@ public enum CoreStrings {
     public static func errorCommandRejected(_ value1: String) -> String {
         CoreStringTable.text("core_error_command_rejected", [.string(value1)])
     }
+
+    public static var errorConnectionCannotConnect: String { CoreStringTable.text("core_error_connection_cannot_connect") }
+
+    public static var errorConnectionCertificate: String { CoreStringTable.text("core_error_connection_certificate") }
+
+    public static var errorConnectionFailed: String { CoreStringTable.text("core_error_connection_failed") }
+
+    public static var errorConnectionOffline: String { CoreStringTable.text("core_error_connection_offline") }
+
+    public static var errorConnectionTimedOut: String { CoreStringTable.text("core_error_connection_timed_out") }
 
     public static func errorHttpStatus(_ value1: Int) -> String {
         CoreStringTable.text("core_error_http_status", [.int(value1)])

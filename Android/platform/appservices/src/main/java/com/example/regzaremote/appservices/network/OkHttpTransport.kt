@@ -4,13 +4,16 @@ import com.example.regzaremote.core.RegzaAndroidHTTPClient
 import com.example.regzaremote.core.RegzaAndroidHTTPCompletion
 import com.example.regzaremote.core.RegzaAndroidHTTPRequest
 import java.io.IOException
+import java.io.InterruptedIOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.UnknownHostException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLHandshakeException
-import javax.net.ssl.SSLPeerUnverifiedException
+import javax.net.ssl.SSLException
 import javax.net.ssl.X509TrustManager
 import okhttp3.Call
 import okhttp3.Callback
@@ -45,7 +48,7 @@ class OkHttpTransport(private val client: OkHttpClient = OkHttpClient()) : Regza
         try {
             val builder = Request.Builder().url(request.address)
             val headers = request.headers
-            require(headers.size % 2 == 0) { "不正なリクエストヘッダーです" }
+            require(headers.size % 2 == 0) { "ヘッダーは名前と値の組で渡す" }
             for (index in headers.indices step 2) builder.header(headers[index], headers[index + 1])
             val method = request.method
             val body = if (request.isHasBody || method in listOf("POST", "PUT", "PATCH")) request.body.toRequestBody() else null
@@ -62,7 +65,7 @@ class OkHttpTransport(private val client: OkHttpClient = OkHttpClient()) : Regza
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, error: IOException) {
                     calls.remove(id)
-                    completion.fail(if (call.isCanceled()) "通信を取り消しました" else message(error, outgoing.url.host))
+                    if (call.isCanceled()) completion.failCancelled() else fail(completion, error)
                 }
 
                 override fun onResponse(call: Call, response: Response) {
@@ -72,7 +75,7 @@ class OkHttpTransport(private val client: OkHttpClient = OkHttpClient()) : Regza
                             completion.succeed(it.code, fields.toTypedArray(), it.body.bytes())
                         }
                     } catch (error: Exception) {
-                        completion.fail(if (call.isCanceled()) "通信を取り消しました" else message(error, outgoing.url.host))
+                        if (call.isCanceled()) completion.failCancelled() else fail(completion, error)
                     } finally {
                         calls.remove(id)
                     }
@@ -80,7 +83,7 @@ class OkHttpTransport(private val client: OkHttpClient = OkHttpClient()) : Regza
             })
         } catch (error: Exception) {
             calls.remove(id)?.cancel()
-            completion.fail(error.localizedMessage ?: "通信に失敗しました")
+            completion.fail()
         }
     }
 
@@ -88,8 +91,14 @@ class OkHttpTransport(private val client: OkHttpClient = OkHttpClient()) : Regza
         calls.remove(id)?.cancel()
     }
 
-    private fun message(error: Exception, host: String): String = when (error) {
-        is SSLPeerUnverifiedException, is SSLHandshakeException -> "$host の証明書を確かめられませんでした"
-        else -> error.localizedMessage ?: "通信に失敗しました"
+    /**
+     * 失敗は種類だけを伝える。文言は共有の Swift が決める (例外の文は言語が違い、接続先のアドレスが入ることもある)。
+     * 時間切れは SocketTimeoutException と、OkHttp の InterruptedIOException("timeout")。
+     */
+    private fun fail(completion: RegzaAndroidHTTPCompletion, error: Exception) = when (error) {
+        is SSLException -> completion.failCertificate()
+        is UnknownHostException, is ConnectException, is NoRouteToHostException -> completion.failCannotConnect()
+        is InterruptedIOException -> completion.failTimedOut()
+        else -> completion.fail()
     }
 }

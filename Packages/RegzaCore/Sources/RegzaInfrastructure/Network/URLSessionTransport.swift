@@ -1,7 +1,6 @@
 #if !os(Android)
 import Foundation
 import RegzaDomain
-internal import RegzaStrings
 
 #if canImport(FoundationNetworking)
 import FoundationNetworking
@@ -30,7 +29,7 @@ public final class URLSessionTransport: HTTPTransport {
             try await withCheckedThrowingContinuation { continuation in
                 let task = session.dataTask(with: urlRequest) { data, response, error in
                     if let error {
-                        continuation.resume(throwing: RegzaError.network(error.localizedDescription))
+                        continuation.resume(throwing: RegzaError.connection(ConnectionFailure(error)))
                     } else if let response = response as? HTTPURLResponse {
                         let headers = response.allHeaderFields.reduce(into: [String: String]()) { result, field in
                             if let name = field.key as? String, let value = field.value as? String { result[name] = value }
@@ -38,7 +37,7 @@ public final class URLSessionTransport: HTTPTransport {
                         continuation.resume(
                             returning: HTTPResponse(statusCode: response.statusCode, headers: headers, body: data ?? Data()))
                     } else {
-                        continuation.resume(throwing: RegzaError.network(CoreStrings.errorInvalidResponse))
+                        continuation.resume(throwing: RegzaError.connection(.invalidResponse))
                     }
                 }
                 running.start(task)
@@ -91,4 +90,24 @@ private final class LocalTrustDelegate: NSObject, URLSessionDelegate, Sendable {
     }
 }
 
+extension ConnectionFailure {
+    /// URLSession のエラーを種類に分ける
+    init(_ error: any Error) {
+        guard let error = error as? URLError else {
+            self = .other
+            return
+        }
+        switch error.code {
+        case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .networkConnectionLost: self = .cannotConnect
+        case .timedOut: self = .timedOut
+        case .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid,
+            .serverCertificateHasUnknownRoot, .secureConnectionFailed, .clientCertificateRejected:
+            self = .certificate
+        case .notConnectedToInternet, .dataNotAllowed, .internationalRoamingOff: self = .offline
+        case .cancelled: self = .cancelled
+        case .badServerResponse, .cannotParseResponse, .cannotDecodeRawData, .cannotDecodeContentData: self = .invalidResponse
+        default: self = .other
+        }
+    }
+}
 #endif

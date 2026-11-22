@@ -8,7 +8,7 @@ describeOnBothPlatforms(
     test("リモコンに、接続できない説明を出す", async () => {
       await app().do("app/remote", "startPolling");
       const remote = await app().precondition("app/remote", (node) => node.state.errorMessage !== null);
-      expect(remote.state.errorMessage).toContain("接続できません");
+      expect(remote.state.errorMessage).toContain("つながりませんでした");
       expect(remote.state.nowPlaying).toBeNull();
       await app().do("app/remote", "stopPolling");
     });

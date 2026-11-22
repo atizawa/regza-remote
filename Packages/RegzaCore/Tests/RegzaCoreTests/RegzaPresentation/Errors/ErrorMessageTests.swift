@@ -90,15 +90,13 @@ import Testing
     }
 }
 
-/// 画面に出すエラーの文言は ErrorMessage だけが作る。`localizedDescription` を読んでよいのは、
-/// エラーの文言を決めるところ (ErrorMessage・RegzaError) と、OS のエラーを RegzaError に変えるところだけ
+/// 画面に出すエラーの文言は ErrorMessage だけが作る。`localizedDescription` を読んでよいのは ErrorMessage だけ
+/// (OS のエラーは、通信が種類 (ConnectionFailure) に分けて RegzaError にし、OS の文言は使わない)
 @Suite struct ErrorMessageUsageGuardTests {
     @Test func onlyErrorMessageReadsLocalizedDescription() throws {
         let repository = FakeServersContractTests.repository
         let allowed: Set<String> = [
-            "Packages/RegzaCore/Sources/Presentation/PresentationCore/Errors/ErrorMessage.swift",
-            "Packages/RegzaCore/Sources/RegzaDomain/Data/RegzaError.swift",
-            "Packages/RegzaCore/Sources/RegzaInfrastructure/Network/URLSessionTransport.swift",
+            "Packages/RegzaCore/Sources/Presentation/PresentationCore/Errors/ErrorMessage.swift"
         ]
         let roots = ["Packages/RegzaCore/Sources", "Android/RegzaAndroidBridge/Sources"]
         var paths: [String] = []
@@ -116,5 +114,31 @@ import Testing
                 Issue.record("\(path):\(index + 1) がエラーの文言を直接読んでいます。ErrorMessage.text で文言にしてください")
             }
         }
+    }
+}
+
+/// 通信が返事を受け取れなかったときは、OS によらず同じ文言にする
+@Suite struct ConnectionFailureTests {
+    @Test func everyKindHasAppWording() {
+        let texts = ConnectionFailure.allCases.map { ErrorMessage.text(RegzaError.connection($0)) }
+        #expect(texts.allSatisfy { !$0.isEmpty })
+        #expect(Set(texts).count == texts.count)
+        #expect(RegzaError.connection(.timedOut).code == "connection.timed_out")
+    }
+
+    #if !os(Android)
+    @Test func urlSessionErrorsAreSortedIntoKinds() {
+        #expect(ConnectionFailure(URLError(.timedOut)) == .timedOut)
+        #expect(ConnectionFailure(URLError(.cannotConnectToHost)) == .cannotConnect)
+        #expect(ConnectionFailure(URLError(.serverCertificateUntrusted)) == .certificate)
+        #expect(ConnectionFailure(URLError(.notConnectedToInternet)) == .offline)
+        #expect(ConnectionFailure(URLError(.cancelled)) == .cancelled)
+        #expect(ConnectionFailure(CocoaError(.fileNoSuchFile)) == .other)
+    }
+    #endif
+
+    /// RegzaError 以外のエラーも、OS の文言を使わずにアプリの言い方にする
+    @Test func otherErrorsUseAppWording() {
+        #expect(RegzaError(CocoaError(.fileNoSuchFile)) == .connection(.other))
     }
 }

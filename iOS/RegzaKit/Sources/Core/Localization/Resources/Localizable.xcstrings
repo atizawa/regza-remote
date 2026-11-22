@@ -457,6 +457,66 @@
         }
       }
     },
+    "core_error_connection_cannot_connect": {
+      "extractionState": "manual",
+      "comment": "core / error / connection / cannot connect",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "つながりませんでした。端末とテレビ・サーバーが同じネットワークにあるか確かめてください"
+          }
+        }
+      }
+    },
+    "core_error_connection_certificate": {
+      "extractionState": "manual",
+      "comment": "core / error / connection / certificate",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続先の証明書を確かめられませんでした"
+          }
+        }
+      }
+    },
+    "core_error_connection_failed": {
+      "extractionState": "manual",
+      "comment": "core / error / connection / failed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通信に失敗しました"
+          }
+        }
+      }
+    },
+    "core_error_connection_offline": {
+      "extractionState": "manual",
+      "comment": "core / error / connection / offline",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワークにつながっていません"
+          }
+        }
+      }
+    },
+    "core_error_connection_timed_out": {
+      "extractionState": "manual",
+      "comment": "core / error / connection / timed out",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返事がありませんでした。テレビ・サーバーの電源とネットワークを確かめてください"
+          }
+        }
+      }
+    },
     "core_error_http_status": {
       "extractionState": "manual",
       "comment": "core / error / http / status",

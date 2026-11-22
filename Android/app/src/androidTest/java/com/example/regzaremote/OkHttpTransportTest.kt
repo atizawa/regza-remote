@@ -73,7 +73,7 @@ class OkHttpTransportTest {
             server.start()
             val factory = RegzaAndroidAppFactory.`init`(OkHttpTransport())
             val result = withTimeout(TIMEOUT) { factory.networkProbe(server.url("/slow").toString(), 0.1).await() }
-            assertTrue(result, result.startsWith("error:") && result.contains("timeout", ignoreCase = true))
+            assertTrue(result, result == "error: connection.timed_out")
         }
     }
 
@@ -88,7 +88,7 @@ class OkHttpTransportTest {
             assertNotNull(server.takeRequest(3, TimeUnit.SECONDS))
             client.cancel(requireNotNull(client.requestID.get()))
             val result = withTimeout(2_000) { response.await() }
-            assertTrue(result, result.startsWith("error:") && result.contains("取り消しました"))
+            assertTrue(result, result == "error: connection.cancelled")
         }
     }
 

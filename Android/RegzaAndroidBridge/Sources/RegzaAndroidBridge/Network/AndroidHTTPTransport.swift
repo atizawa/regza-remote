@@ -1,6 +1,5 @@
 import Foundation
 import RegzaApp
-import RegzaStrings
 
 /// Kotlin が実装する通信の窓口。開始と取消は MainActor 上で呼び、送受信自体は OkHttp に任せる。
 public protocol RegzaAndroidHTTPClient {
@@ -39,7 +38,7 @@ public final class RegzaAndroidHTTPCompletion: @unchecked Sendable {
 
     public func succeed(_ status: Int32, _ headers: [String], _ body: [Int8]) {
         guard (100...599).contains(status), headers.count.isMultiple(of: 2) else {
-            fail(CoreStrings.errorInvalidResponse)
+            finish(.failure(.connection(.invalidResponse)))
             return
         }
         let fields = stride(from: 0, to: headers.count, by: 2).reduce(into: [String: String]()) { fields, index in
@@ -49,9 +48,18 @@ public final class RegzaAndroidHTTPCompletion: @unchecked Sendable {
         finish(.success(HTTPResponse(statusCode: Int(status), headers: fields, body: data)))
     }
 
-    public func fail(_ message: String) {
-        finish(.failure(.network(message)))
-    }
+    // 失敗は種類だけを受け取る。文言は共有の Swift が決める (OS の例外の文は、言語が違い、接続先のアドレスが入ることもあるので使わない)
+
+    /// 接続先が見つからない・つながらない
+    public func failCannotConnect() { finish(.failure(.connection(.cannotConnect))) }
+    /// 決めた時間までに返事がない
+    public func failTimedOut() { finish(.failure(.connection(.timedOut))) }
+    /// 接続先の証明書を確かめられない
+    public func failCertificate() { finish(.failure(.connection(.certificate))) }
+    /// 通信を取り消した
+    public func failCancelled() { finish(.failure(.connection(.cancelled))) }
+    /// そのほかの理由で返事を受け取れない
+    public func fail() { finish(.failure(.connection(.other))) }
 
     var isFinished: Bool { lock.withLock { result != nil } }
 
@@ -96,7 +104,7 @@ final class AndroidHTTPTransport: HTTPTransport, @unchecked Sendable {
                 }
             }
         } onCancel: {
-            completion.fail(CoreStrings.errorRequestCancelled)
+            completion.failCancelled()
             Task { @MainActor in self.httpClient.cancel(outgoing.id) }
         }
     }

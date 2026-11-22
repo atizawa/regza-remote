@@ -17,13 +17,13 @@ public struct FakeServersTransport: HTTPTransport {
     public func send(_ request: HTTPRequest) async throws -> HTTPResponse {
         let host = request.url.host ?? ""
         if scenario.unreachable.contains(host) {
-            throw RegzaError.network("\(host) に接続できません")
+            throw RegzaError.connection(.cannotConnect)
         }
         if let response = scenario.responses[request.url.path] {
             return HTTPResponse(statusCode: response.status, headers: [:], body: Data(response.body.json.utf8))
         }
         guard let response = servers.respond(to: FakeRequest(request)) else {
-            throw RegzaError.network("\(host) に接続できません")
+            throw RegzaError.connection(.cannotConnect)
         }
         return response
     }

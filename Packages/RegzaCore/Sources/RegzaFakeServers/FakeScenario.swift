@@ -62,7 +62,7 @@ public struct FakeScenario: Sendable {
     public var tvHasChannels = true
     /// 録画予約が 1 件ある
     public var hasReservation = true
-    /// つながらないアドレス (そこへの通信は、本物と同じく「接続できません」で失敗する)
+    /// つながらないアドレス (そこへの通信は、本物と同じく「つながらない」失敗になる)
     public var unreachable: [String] = []
     /// 宛先 (URL の path) ごとに差し替える返事
     public var responses: [String: Response] = [:]
