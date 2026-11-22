@@ -40,33 +40,36 @@ struct GuideSearchResults: View {
     let onSelect: (SearchResultItem) -> Void
 
     var body: some View {
-        let state = guideSearchViewModel.state
-        List {
-            if !state.conditions.isEmpty {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ConditionChips(conditions: state.conditions) { guideSearchViewModel.send(.removeCondition($0)) }
-                        Button(AppStrings.searchLiteral(state.text)) { guideSearchViewModel.send(.searchLiterally) }
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(AppTheme.accent)
+        // 放送中の印は時刻で変わるので、決めた間隔で state を読み直す
+        CurrentTimeView { _ in
+            let state = guideSearchViewModel.state
+            List {
+                if !state.conditions.isEmpty {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ConditionChips(conditions: state.conditions) { guideSearchViewModel.send(.removeCondition($0)) }
+                            Button(AppStrings.searchLiteral(state.text)) { guideSearchViewModel.send(.searchLiterally) }
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        .listRowSeparator(.hidden)
                     }
-                    .listRowSeparator(.hidden)
                 }
+                section(state.results)
             }
-            section(state.results)
-        }
-        .listStyle(.plain)
-        .overlay {
-            if state.isBlank {
-                ContentUnavailableView {
-                    Label(AppStrings.searchTitle, systemImage: "magnifyingglass")
-                } description: {
-                    Text(AppStrings.searchHelp)
+            .listStyle(.plain)
+            .overlay {
+                if state.isBlank {
+                    ContentUnavailableView {
+                        Label(AppStrings.searchTitle, systemImage: "magnifyingglass")
+                    } description: {
+                        Text(AppStrings.searchHelp)
+                    }
+                } else if state.results.isEmpty, state.isIndexing {
+                    ProgressView(AppStrings.searchLoading)
+                } else if state.results.isEmpty {
+                    ContentUnavailableView.search(text: state.text)
                 }
-            } else if state.results.isEmpty, state.isIndexing {
-                ProgressView(AppStrings.searchLoading)
-            } else if state.results.isEmpty {
-                ContentUnavailableView.search(text: state.text)
             }
         }
     }

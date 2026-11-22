@@ -69,8 +69,8 @@ package struct GuideGridScreen: View {
             }
         } else {
             // 毎分、今の時刻の線を動かす。表に出す時間も正時ごとに進むので、state もここで読み直す
-            TimelineView(.periodic(from: .now, by: 60)) { context in
-                grid(viewModel.state, now: context.date)
+            CurrentTimeView(intervalSeconds: 60) { now in
+                grid(viewModel.state, now: now)
             }
             .dynamicTypeSize(...Self.maximumDynamicTypeSize)
             // 上に積むと日付の横スクロールが先に見つかり、下へスクロールしてもタブバーが小さくならないので、表の上に重ねる

@@ -123,9 +123,8 @@ private struct ProgramInfo: View {
     let viewModel: LivePlayerViewModel
 
     var body: some View {
-        // 番組が変わったら表示も変える
-        // state は読むたびに今の時刻で番組を求める
-        TimelineView(.periodic(from: .now, by: 30)) { _ in
+        // 番組が変わったら表示も変える (state は読むたびに今の時刻で番組を求める)
+        CurrentTimeView { _ in
             let state = viewModel.state
             let program = state.program
             VStack(alignment: .leading, spacing: 6) {

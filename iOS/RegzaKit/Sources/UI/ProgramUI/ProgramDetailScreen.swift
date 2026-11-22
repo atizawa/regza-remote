@@ -21,19 +21,22 @@ package struct ProgramDetailScreen: View {
     private var program: ProgramItem { state.program }
 
     package var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignDimensions.spacingGroup) {
-                header
-                actions
-                if let message = state.message {
-                    Text(message)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+        // 放送中か・選局や予約ができるかは時刻で変わるので、決めた間隔で state を読み直す
+        CurrentTimeView { _ in
+            ScrollView {
+                VStack(alignment: .leading, spacing: DesignDimensions.spacingGroup) {
+                    header
+                    actions
+                    if let message = state.message {
+                        Text(message)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    details
                 }
-                details
+                .padding(DesignDimensions.spacingOuter)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(DesignDimensions.spacingOuter)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Surface.background)
         .navigationTitle(AppStrings.programDetails)
