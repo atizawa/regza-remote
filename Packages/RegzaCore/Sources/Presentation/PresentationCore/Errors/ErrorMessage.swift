@@ -1,3 +1,4 @@
+package import AppErrors
 package import RegzaDomain
 internal import RegzaStrings
 
@@ -44,7 +45,7 @@ package enum ErrorMessage {
 
     /// 場面ごとの言い換え。機種が対応していないことは場面ごとに何ができないかを、受け付けなかったことは何を受け付けなかったかを伝える
     static func rules(in scene: Scene) -> [Rule] {
-        let unsupported: [ErrorCode] = [.unsupported, ErrorCode.http.appending("404")]
+        let unsupported: [ErrorCode] = [.unsupported, .httpStatus(404)]
         switch scene {
         case .general:
             return []
@@ -60,7 +61,7 @@ package enum ErrorMessage {
             // 重なる予約が多い、ハードディスクがないなど。テレビの返した値を添える
             return [
                 Rule(code: .commandRejected) { error in
-                    guard case .commandRejected(let code) = error else { return error.localizedDescription }
+                    guard case .app(.commandRejected(let code)) = error else { return error.localizedDescription }
                     return CoreStrings.programReserveRejected(code)
                 }
             ]

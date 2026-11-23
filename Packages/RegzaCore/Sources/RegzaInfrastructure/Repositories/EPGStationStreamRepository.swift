@@ -38,8 +38,8 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
     }
 
     public func startLiveStream(channelCode: String) async throws(RegzaError) -> Int {
-        guard let serverAPIClient = streamServer() else { throw .notConfigured }
-        guard let ids = BroadcastID.ids(channelCode: channelCode) else { throw .unsupported }
+        guard let serverAPIClient = streamServer() else { throw .app(.notConfigured) }
+        guard let ids = BroadcastID.ids(channelCode: channelCode) else { throw .app(.unsupported) }
         let channelID = ids.networkId * 100_000 + ids.serviceId
         let streamID: Int
         do {
@@ -49,22 +49,22 @@ public final class EPGStationStreamRepository: StreamRepositoryProtocol {
         }
         guard serverAPIClient === epgStationAPIClient else {
             try? await serverAPIClient.request(EPGStationStopStreamRequest(streamID: streamID))
-            throw .notConfigured
+            throw .app(.notConfigured)
         }
         preferencesManager.updateIntegers(forKey: .ownStreamIDs) { if !$0.contains(streamID) { $0.append(streamID) } }
         return streamID
     }
 
     public func waitUntilReady(streamID: Int) async throws(RegzaError) -> URL {
-        guard let serverAPIClient = streamServer() else { throw .notConfigured }
+        guard let serverAPIClient = streamServer() else { throw .app(.notConfigured) }
         do {
             try await EPGStationStreaming(epgStationAPIClient: serverAPIClient).waitUntilReady(streamID: streamID)
         } catch {
             throw RegzaError(error)
         }
-        guard serverAPIClient === epgStationAPIClient else { throw .notConfigured }
+        guard serverAPIClient === epgStationAPIClient else { throw .app(.notConfigured) }
         guard let url = EPGStationStreaming(epgStationAPIClient: serverAPIClient).playlistURL(streamID: streamID) else {
-            throw .invalidHost
+            throw .app(.invalidHost)
         }
         return url
     }

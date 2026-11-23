@@ -65,7 +65,7 @@ public enum RegzaDiscovery {
         do {
             _ = try await regzaAPIClient.request(RegzaPlayStatusRequest())
             return true
-        } catch RegzaError.commandRejected {
+        } catch RegzaError.app(.commandRejected) {
             // 認証は通っている
             return true
         } catch let error as RegzaError where error.isUnsupported {

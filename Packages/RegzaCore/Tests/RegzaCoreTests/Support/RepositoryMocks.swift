@@ -8,7 +8,7 @@ extension TVRepositoryProtocolMock {
         self.init(connection: connection, channels: channels)
         lastNowPlayingHandler = { nowPlaying }
         refreshHandler = { () throws(RegzaError) in
-            guard let nowPlaying else { throw .notConfigured }
+            guard let nowPlaying else { throw .app(.notConfigured) }
             return nowPlaying
         }
         saveHandler = { [weak self] in self?.connection = $0 }

@@ -15,10 +15,10 @@ struct EPGStationPlaylistRequest: APIRequest {
 
     func url(baseURL: URL) throws -> URL {
         guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
-            throw RegzaError.invalidHost
+            throw RegzaError.app(.invalidHost)
         }
         components.path = "/streamfiles/stream\(streamID).m3u8"
-        guard let url = components.url else { throw RegzaError.invalidHost }
+        guard let url = components.url else { throw RegzaError.app(.invalidHost) }
         return url
     }
 

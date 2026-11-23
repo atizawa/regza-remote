@@ -22,6 +22,7 @@ let package = Package(
         .target(
             name: "RegzaAndroidBridge",
             dependencies: [
+                .product(name: "AppErrors", package: "RegzaCore"),
                 .product(name: "RegzaApp", package: "RegzaCore"),
                 // 共有の Swift の文言に、Android の文字列リソースを入れる
                 .product(name: "RegzaStrings", package: "RegzaCore"),

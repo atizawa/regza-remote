@@ -1,3 +1,4 @@
+import AppErrors
 import Foundation
 import RegzaApp
 

@@ -61,15 +61,15 @@ public final class StreamUseCase: StreamUseCaseProtocol {
 
     /// 前に止められずに残った、このアプリの配信を止めてから、その局の配信を頼む。配信の番号を返す
     public func startLiveStream(channelCode: String) async throws(RegzaError) -> Int {
-        guard canStream else { throw .notConfigured }
+        guard canStream else { throw .app(.notConfigured) }
         await streamRepository.cleanUp()
-        guard canStream else { throw .notConfigured }
+        guard canStream else { throw .app(.notConfigured) }
         return try await streamRepository.startLiveStream(channelCode: channelCode)
     }
 
     /// 再生できるようになるまで待ち、再生する URL を返す
     public func waitUntilReady(streamID: Int) async throws(RegzaError) -> URL {
-        guard canStream else { throw .notConfigured }
+        guard canStream else { throw .app(.notConfigured) }
         return try await streamRepository.waitUntilReady(streamID: streamID)
     }
 

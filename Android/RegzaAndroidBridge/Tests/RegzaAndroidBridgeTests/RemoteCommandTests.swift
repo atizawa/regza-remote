@@ -21,7 +21,7 @@ import Testing
     @Test func missingConnectionDoesNotSendAnyRequest() async {
         let transport = CommandTransport(status: 200, body: "0")
         let error = await RegzaAndroidAppFactory(httpTransport: transport).sendRemoteKey(.power, storage: MemoryStorage([:]))
-        #expect(error == RegzaError.notConfigured.localizedDescription)
+        #expect(error == RegzaError.app(.notConfigured).localizedDescription)
         #expect(transport.requests.isEmpty)
     }
 
@@ -29,7 +29,7 @@ import Testing
         let transport = CommandTransport(status: 200, body: "1")
         let error = await RegzaAndroidAppFactory(httpTransport: transport).sendRemoteKey(
             .mute, storage: MemoryStorage(["host": "192.0.2.1"]))
-        #expect(error == RegzaError.commandRejected("1").localizedDescription)
+        #expect(error == RegzaError.app(.commandRejected("1")).localizedDescription)
     }
 }
 

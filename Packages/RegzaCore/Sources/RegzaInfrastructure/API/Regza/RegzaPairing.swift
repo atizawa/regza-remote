@@ -28,17 +28,17 @@ public actor RegzaPairing {
     /// PIN で登録を確定し、保存すべき接続情報を返す
     public func confirm(pin: String) async throws -> ConnectionData {
         guard let challenge, let encrypted = challenge.password, let salt = challenge.salt else {
-            throw RegzaError.notConfigured
+            throw RegzaError.app(.notConfigured)
         }
         guard let password = Self.decryptPassword(encrypted, pin: pin, salt: salt) else {
-            throw RegzaError.invalidPIN
+            throw RegzaError.app(.invalidPIN)
         }
         let connection = ConnectionData(host: host, user: user, password: password)
         await regzaAPIClient.update(connection: connection)
         do {
             try await regzaAPIClient.request(RegzaConfirmPairingRequest())
         } catch RegzaError.unauthorized {
-            throw RegzaError.invalidPIN
+            throw RegzaError.app(.invalidPIN)
         }
         return connection
     }

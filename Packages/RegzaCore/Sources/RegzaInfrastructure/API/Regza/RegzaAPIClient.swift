@@ -41,16 +41,16 @@ public actor RegzaAPIClient {
     }
 
     private func openAPI(secure: Bool = false, queryOverride: String? = nil) throws -> Client {
-        guard connection.isConfigured else { throw RegzaError.notConfigured }
+        guard connection.isConfigured else { throw RegzaError.app(.notConfigured) }
         var host = connection.trimmedHost
         if !host.contains("://") { host = "http://" + host }
         while host.hasSuffix("/") { host.removeLast() }
-        guard var components = URLComponents(string: host), components.host != nil else { throw RegzaError.invalidHost }
+        guard var components = URLComponents(string: host), components.host != nil else { throw RegzaError.app(.invalidHost) }
         if secure {
             components.scheme = "https"
             components.port = Self.securePort
         }
-        guard let url = components.url else { throw RegzaError.invalidHost }
+        guard let url = components.url else { throw RegzaError.app(.invalidHost) }
         return Client(
             serverURL: url,
             transport: OpenAPIHTTPTransport(transport: transport, timeout: timeout),

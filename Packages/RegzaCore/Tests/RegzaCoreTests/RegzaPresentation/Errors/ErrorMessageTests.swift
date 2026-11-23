@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 
+@testable import AppErrors
 @testable import PresentationCore
 @testable import RegzaDomain
 @testable import RegzaInfrastructure
@@ -10,8 +11,8 @@ import Testing
     @Test func codesFormFamilies() {
         #expect(RegzaError.httpStatus(404).code == "http.404")
         #expect(RegzaError.httpStatus(404).code.belongs(to: .http))
-        #expect(RegzaError.commandRejected("2").code == "command_rejected.2")
-        #expect(RegzaError.commandRejected("2").code.belongs(to: .commandRejected))
+        #expect(RegzaError.app(.commandRejected("2")).code == "command_rejected.2")
+        #expect(RegzaError.app(.commandRejected("2")).code.belongs(to: .commandRejected))
         // 名前の始まりが同じでも、階層が違えば仲間ではない
         #expect(!ErrorCode("http_x").belongs(to: .http))
         // URI は . を含んでも階層ではない
@@ -20,10 +21,11 @@ import Testing
 
     @Test func sceneRewritesByCode() {
         #expect(
-            ErrorMessage.text(RegzaError.unsupported, in: .channelList) == ErrorMessage.text(RegzaError.httpStatus(404), in: .channelList))
-        #expect(ErrorMessage.text(RegzaError.unsupported, in: .channelList) != ErrorMessage.text(RegzaError.unsupported))
-        #expect(ErrorMessage.text(RegzaError.commandRejected("2"), in: .tune(channelName: "見本の局")).contains("見本の局"))
-        #expect(ErrorMessage.text(RegzaError.commandRejected("2"), in: .reserve).contains("2"))
+            ErrorMessage.text(RegzaError.app(.unsupported), in: .channelList)
+                == ErrorMessage.text(RegzaError.httpStatus(404), in: .channelList))
+        #expect(ErrorMessage.text(RegzaError.app(.unsupported), in: .channelList) != ErrorMessage.text(RegzaError.app(.unsupported)))
+        #expect(ErrorMessage.text(RegzaError.app(.commandRejected("2")), in: .tune(channelName: "見本の局")).contains("見本の局"))
+        #expect(ErrorMessage.text(RegzaError.app(.commandRejected("2")), in: .reserve).contains("2"))
         // 言い換えのない場面では、エラーの元の文言
         #expect(ErrorMessage.text(RegzaError.httpStatus(500), in: .channelList) == RegzaError.httpStatus(500).localizedDescription)
     }
@@ -51,7 +53,7 @@ import Testing
         #expect(notFound.isNotFound)
         #expect(!notFound.isUnsupported)
         #expect(RegzaError.httpStatus(404).isUnsupported && RegzaError.httpStatus(404).isNotFound)
-        #expect(RegzaError.unsupported.isUnsupported)
+        #expect(RegzaError.app(.unsupported).isUnsupported)
         // API の code の . と : は、階層や URI の印にせず、ほかの code とも重ならない
         let similar = ["stock", "stock.low", "stock_low", "stock:low", "stock%2Elow"].map(ErrorCode.apiCode)
         #expect(Set(similar).count == similar.count)
@@ -80,6 +82,18 @@ import Testing
         // 書き出して読み直しても、code は残る
         let problem = APIProblem(type: "https://example.com/problems/stock", status: 409, code: "out_of_stock")
         #expect(try decode(String(decoding: JSONEncoder().encode(problem), as: UTF8.self)) == problem)
+    }
+
+    /// このアプリ固有の失敗の code は、共通の失敗の仲間に入らない (入ると、共通の失敗の言い換えが当てはまってしまう)
+    @Test func appFailuresStayOutOfCommonFamilies() {
+        let failures: [RegzaFailure] = [.notConfigured, .invalidHost, .commandRejected("2"), .unsupported, .invalidPIN]
+        // case を足したら、ここが網羅されずにコンパイルが止まるので、上の並びにも足す
+        for failure in failures {
+            switch failure {
+            case .notConfigured, .invalidHost, .commandRejected, .unsupported, .invalidPIN: break
+            }
+            #expect(!RegzaError.commonFamilies.contains { failure.code.belongs(to: $0) }, "\(failure.code) が共通の仲間に入っています")
+        }
     }
 
     /// 表にない問題は、サーバーの title・detail を出さず、アプリの言い方にする

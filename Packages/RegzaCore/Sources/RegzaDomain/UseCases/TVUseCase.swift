@@ -80,7 +80,7 @@ public final class TVUseCase: TVUseCaseProtocol {
 
     /// 選局する。切り替わったものとしての「いま映っているもの」を返す
     public func tune(to channel: ChannelItem) async throws(RegzaError) -> NowPlayingItem? {
-        guard let data = tvRepository.channels.first(where: { $0.code == channel.code }) else { throw .unsupported }
+        guard let data = tvRepository.channels.first(where: { $0.code == channel.code }) else { throw .app(.unsupported) }
         return try await tvRepository.tune(to: data).map(UseCaseModelMapper.nowPlaying)
     }
 
@@ -124,7 +124,7 @@ public final class TVUseCase: TVUseCaseProtocol {
     /// チャンネルを切り替えてから、その番組を最初から再生する。
     /// 切り替えた直後は「始めにジャンプ」が効かないので、選局が落ち着くのを待ってから送る
     public func tuneAndStartOver(_ channel: ChannelItem) async throws(RegzaError) -> NowPlayingItem? {
-        guard let data = tvRepository.channels.first(where: { $0.code == channel.code }) else { throw .unsupported }
+        guard let data = tvRepository.channels.first(where: { $0.code == channel.code }) else { throw .app(.unsupported) }
         let nowPlaying = try await tvRepository.tune(to: data)
         try? await Task.sleep(for: .seconds(3))
         // 選局はできているので、最初から見られなくても選局の結果を返す (選局の失敗として伝えない)

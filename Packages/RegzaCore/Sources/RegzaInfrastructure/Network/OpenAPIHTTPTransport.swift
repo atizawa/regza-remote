@@ -30,7 +30,7 @@ struct OpenAPIHTTPTransport: ClientTransport {
         var base = baseURL.absoluteString
         while base.hasSuffix("/") { base.removeLast() }
         guard let path = request.path, path.hasPrefix("/"), let url = URL(string: base + path) else {
-            throw RegzaError.invalidHost
+            throw RegzaError.app(.invalidHost)
         }
         return url
     }

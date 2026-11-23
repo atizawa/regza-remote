@@ -64,7 +64,7 @@ public final class RecordingUseCase: RecordingUseCaseProtocol {
     }
 
     public func reserve(_ program: ProgramItem, series: Bool = false) async throws(RegzaError) {
-        guard let data = guideRepository.program(id: program.id, channelCode: program.channelCode) else { throw .unsupported }
+        guard let data = guideRepository.program(id: program.id, channelCode: program.channelCode) else { throw .app(.unsupported) }
         try await recordingRepository.reserve(data, series: series)
     }
 

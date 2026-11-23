@@ -6,7 +6,7 @@ struct RegzaReservationsResponse: APIResponse {
 
     init(_ output: RegzaTVAPI.Components.Schemas.ReservationList) async throws {
         let list: RegzaReservationList = try RegzaDataMapper.model(from: output)
-        guard list.status == 0 else { throw RegzaError.commandRejected(String(list.status)) }
+        guard list.status == 0 else { throw RegzaError.app(.commandRejected(String(list.status))) }
         value = list.reservations ?? []
     }
 }

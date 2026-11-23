@@ -19,7 +19,7 @@ actor RegzaDigestMiddleware: ClientMiddleware {
         let data: Data?
         if let body { data = try await Data(collecting: body, upTo: .max) } else { data = nil }
         let url = try OpenAPIHTTPTransport.url(for: request, baseURL: baseURL)
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { throw RegzaError.invalidHost }
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { throw RegzaError.app(.invalidHost) }
         let uri = components.percentEncodedPath + (components.percentEncodedQuery.map { "?" + $0 } ?? "")
         try Task.checkCancellation()
         let response = try await next(authorize(request, uri: uri), data.map { HTTPBody($0) }, baseURL)

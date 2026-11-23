@@ -1,4 +1,5 @@
 #if !os(Android)
+import AppErrors
 import Foundation
 import RegzaDomain
 

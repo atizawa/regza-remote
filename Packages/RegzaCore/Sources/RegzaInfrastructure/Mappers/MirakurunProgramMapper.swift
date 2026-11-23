@@ -6,11 +6,11 @@ enum MirakurunProgramMapper {
     /// 生成 DTO を直接 Domain に変換する。番組表全体を JSON に再エンコードしない。
     static func program(_ source: MirakurunAPI.Components.Schemas.Program) throws -> ProgramData {
         let extended = try (source.extended?.value ?? [:]).map { key, value in
-            guard let text = value as? String else { throw RegzaError.unsupported }
+            guard let text = value as? String else { throw RegzaError.app(.unsupported) }
             return ProgramData.Extended(title: key, text: text)
         }
         let genres = try (source.genres ?? []).map { genre in
-            guard let value = genre.lv1 else { throw RegzaError.unsupported }
+            guard let value = genre.lv1 else { throw RegzaError.app(.unsupported) }
             return value
         }
         let startAt = Double(source.startAt)

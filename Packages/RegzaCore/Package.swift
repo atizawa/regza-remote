@@ -25,6 +25,8 @@ let package = Package(
     platforms: [.iOS("26.0"), .macOS(.v14)],
     products: [
         .library(name: "RegzaInfrastructure", targets: ["RegzaInfrastructure"]),
+        // どのアプリにも共通のエラー (Android の窓口が、エラーの code や通信の失敗の種類を読むとき)
+        .library(name: "AppErrors", targets: ["AppErrors"]),
         // プレゼンテーション層をまとめて見せる (Android の窓口・組み立て・CLI・テスト)。画面のモジュールは機能ごとのものを使う
         .library(name: "RegzaPresentation", targets: ["RegzaPresentation"]),
         .library(name: "PresentationCore", targets: ["PresentationCore"]),
@@ -85,11 +87,14 @@ let package = Package(
         // Strings: 共有の Swift が画面に出す文言。String Catalog から生成したキーで引き、OS が入れた文言を使う (入っていなければ元言語)
         .target(name: "RegzaStrings"),
         .target(name: "RegzaSharedModels", dependencies: ["RegzaStrings"], exclude: ["README.md"]),
-        .target(name: "RegzaDomain", dependencies: ["RegzaSharedModels", "RegzaStrings"]),
+        // AppErrors: どのアプリにも共通のエラー。アプリ固有の失敗は Domain が決めて入れる (分け方は docs/architecture.md)
+        .target(name: "AppErrors", dependencies: ["RegzaStrings"]),
+        .target(name: "RegzaDomain", dependencies: ["AppErrors", "RegzaSharedModels", "RegzaStrings"]),
         // Infrastructure: テレビ・Mirakurun・EPGStation との通信、HTTP、暗号、通信の形から Domain の型への変換 (Mappers)
         .target(
             name: "RegzaInfrastructure",
             dependencies: [
+                "AppErrors",
                 "RegzaDomain",
                 "RegzaStrings",
                 "RegzaTVAPI",
@@ -101,7 +106,8 @@ let package = Package(
         // Presentation: iOS と Android で共有する ViewModel と、画面の状態・操作の型。Domain の UseCase だけを使う (Repository や通信は知らない)。
         // 共通 (処理中の数え方・CLI 向けの約束事・テレビとのつながり・画面の移り変わりの窓口)、機能ごと、アプリ全体に分ける。
         // 機能どうしは読み込まず、アプリ全体が機能をまとめる。Domain を使う初期化などは、同じパッケージの組み立てだけが使える package にする
-        presentation("PresentationCore", ["RegzaSharedModels"]),
+        // 共通は、エラーを文言にする (ErrorMessage) ので、共通のエラーも読み込む
+        presentation("PresentationCore", ["AppErrors", "RegzaSharedModels"]),
         presentation("AppPresentation", ["PresentationCore"] + presentationFeatures.map { .target(name: $0) }),
         // プレゼンテーション層をまとめて読み込むためのモジュール (中身は読み込み直しだけ)
         .target(
@@ -131,7 +137,7 @@ let package = Package(
         .testTarget(
             name: "RegzaCoreTests",
             dependencies: [
-                "RegzaApp", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels", "RegzaStrings",
+                "AppErrors", "RegzaApp", "RegzaPresentation", "RegzaDomain", "RegzaInfrastructure", "RegzaSharedModels", "RegzaStrings",
                 "RegzaFakeServers", "PresentationCore", "AppPresentation",
             ] + presentationFeatures.map { .target(name: $0) }),
     ] + presentationFeatures.map { presentation($0, ["PresentationCore"]) }

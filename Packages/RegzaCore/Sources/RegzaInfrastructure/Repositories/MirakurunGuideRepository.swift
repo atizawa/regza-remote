@@ -61,7 +61,7 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
     }
 
     public func programs(channelCode: String) async throws(RegzaError) -> [ProgramData] {
-        guard let guideAPIClient = guideClient() else { throw .notConfigured }
+        guard let guideAPIClient = guideClient() else { throw .app(.notConfigured) }
         do {
             guard let ids = BroadcastID.ids(channelCode: channelCode) else { return [] }
             let now = clock.now
@@ -69,7 +69,7 @@ public final class MirakurunGuideRepository: GuideRepositoryProtocol {
                 MirakurunChannelProgramsRequest(networkID: ids.networkId, serviceID: ids.serviceId)
             )
             .filter { $0.end > now }
-            guard guideAPIClient === mirakurunAPIClient else { throw RegzaError.notConfigured }
+            guard guideAPIClient === mirakurunAPIClient else { throw RegzaError.app(.notConfigured) }
             channelPrograms[channelCode] = programs
             return programs
         } catch {

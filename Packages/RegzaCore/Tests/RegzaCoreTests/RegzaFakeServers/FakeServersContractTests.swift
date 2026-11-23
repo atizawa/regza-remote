@@ -36,7 +36,7 @@ import Testing
         let code = BroadcastID.channelCode(networkId: 0, serviceId: 2)
         try await tv.request(RegzaTuneRequest(code: code))
         #expect(try await tv.request(RegzaPlayStatusRequest()).currentProgram?.channelName == "テスト局２")
-        await #expect(throws: RegzaError.commandRejected("2")) { try await tv.request(RegzaTuneRequest(code: "JP-G99999999")) }
+        await #expect(throws: RegzaError.app(.commandRejected("2"))) { try await tv.request(RegzaTuneRequest(code: "JP-G99999999")) }
     }
 
     /// 予約すると一覧に載り、取り消すと消える
@@ -60,7 +60,7 @@ import Testing
     @Test func pairing() async throws {
         let pairing = RegzaPairing(host: FakeServers.Host.tv, user: "02-00-00-00-00-01", transport: transport)
         try await pairing.start()
-        await #expect(throws: RegzaError.invalidPIN) { try await pairing.confirm(pin: "0000") }
+        await #expect(throws: RegzaError.app(.invalidPIN)) { try await pairing.confirm(pin: "0000") }
         let connection = try await pairing.confirm(pin: FakeTV.Pairing.pin)
         #expect(connection.host == FakeServers.Host.tv)
         #expect(!connection.password.isEmpty)

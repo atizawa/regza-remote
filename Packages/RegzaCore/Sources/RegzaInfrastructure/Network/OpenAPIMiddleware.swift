@@ -1,3 +1,4 @@
+import AppErrors
 import Foundation
 import HTTPTypes
 import OpenAPIRuntime
@@ -72,15 +73,15 @@ func performOpenAPI<Value>(
 
 /// サーバーの仕様の basePath (/api) と、利用者が設定したホスト・ポートを組み合わせる。
 func recordingServerURL(host: String, defaultPort: Int, template: URL) throws -> URL {
-    guard !host.isEmpty else { throw RegzaError.notConfigured }
+    guard !host.isEmpty else { throw RegzaError.app(.notConfigured) }
     let address = host.contains("://") ? host : "http://" + host
     guard var components = URLComponents(string: address), components.host != nil,
         components.scheme == "http" || components.scheme == "https"
-    else { throw RegzaError.invalidHost }
+    else { throw RegzaError.app(.invalidHost) }
     if components.port == nil { components.port = defaultPort }
     components.path = template.path
     components.query = nil
     components.fragment = nil
-    guard let url = components.url else { throw RegzaError.invalidHost }
+    guard let url = components.url else { throw RegzaError.app(.invalidHost) }
     return url
 }

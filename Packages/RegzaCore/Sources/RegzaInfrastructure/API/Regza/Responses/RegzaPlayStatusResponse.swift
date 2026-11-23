@@ -6,7 +6,7 @@ struct RegzaPlayStatusResponse: APIResponse {
 
     init(_ output: RegzaTVAPI.Components.Schemas.PlayStatus) async throws {
         let status: RegzaPlayStatus = try RegzaDataMapper.model(from: output)
-        guard status.status == 0 else { throw RegzaError.commandRejected(String(status.status)) }
+        guard status.status == 0 else { throw RegzaError.app(.commandRejected(String(status.status))) }
         value = status
     }
 }
