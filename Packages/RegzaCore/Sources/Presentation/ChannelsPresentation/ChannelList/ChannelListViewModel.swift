@@ -103,30 +103,22 @@ extension ChannelListViewModel: IntrospectableActions {
     public var introspectionName: String { "channelList" }
     public var isBusy: Bool { work.isBusy }
 
-    public var introspectionActions: [ActionDescription] {
-        [
-            ActionDescription("appear", "画面を開いたときと同じく読み込む"),
-            ActionDescription("reload", "チャンネル一覧を読み直す"),
-            ActionDescription("tune", "選局する", parameters: ["channel": "チャンネルの code"]),
-            ActionDescription("tuneFromStart", "選局して、放送中の番組を最初から再生する", parameters: ["channel": "チャンネルの code"]),
+    public var introspectionTable: [IntrospectionAction<Action>] {
+        let channel = ActionParameter<String>.string("channel", "チャンネルの code")
+        return [
+            IntrospectionAction("appear", "画面を開いたときと同じく読み込む", .appear),
+            IntrospectionAction("reload", "チャンネル一覧を読み直す", .reload),
+            IntrospectionAction("tune", "選局する", channel) { .tune(try self.row($0).code) },
+            IntrospectionAction("tuneFromStart", "選局して、放送中の番組を最初から再生する", channel) { code in
+                let row = try self.row(code)
+                guard row.canStartOver else { throw IntrospectionError.unavailable("\(row.name) の番組は最初から見られません") }
+                return .tuneFromStart(row.code)
+            },
         ]
     }
 
-    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        switch name {
-        case "appear": return .appear
-        case "reload": return .reload
-        case "tune": return .tune(try row(arguments).code)
-        case "tuneFromStart":
-            let row = try row(arguments)
-            guard row.canStartOver else { throw IntrospectionError.unavailable("\(row.name) の番組は最初から見られません") }
-            return .tuneFromStart(row.code)
-        default: throw IntrospectionError.unknownAction(name)
-        }
-    }
-
-    private func row(_ arguments: [String: JSONValue]) throws -> ChannelItem {
-        let code = try arguments.string("channel")
+    /// code のチャンネルの行
+    private func row(_ code: String) throws -> ChannelItem {
         guard let row = state.rows.first(where: { $0.code == code }) else {
             throw IntrospectionError.unavailable("チャンネル \(code) は一覧にありません")
         }

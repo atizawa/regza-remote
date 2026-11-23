@@ -132,45 +132,29 @@ extension SettingsViewModel: IntrospectableActions {
     }
 
     /// 設定の画面の操作と、部品の操作 (テレビの登録は「tv.〜」、録画サーバーは「server.〜」)
-    public var introspectionActions: [ActionDescription] {
-        func prefixed(_ prefix: String, _ actions: [ActionDescription]) -> [ActionDescription] {
-            actions.map { ActionDescription(prefix + $0.name, $0.summary, parameters: $0.parameters) }
-        }
-        return [
-            ActionDescription("setAppearance", "外観を保存して切り替える", parameters: ["appearance": "system | light | dark"]),
-            ActionDescription("openPage", "設定の中の画面を開く", parameters: ["page": "tv | guide | stream"]),
-            ActionDescription("back", "設定の中で 1 つ戻る"),
-            ActionDescription("setPath", "設定の中の画面の並びをまとめて変える (iOS で戻るスワイプをしたときと同じ)", parameters: ["path": "[tv | guide | stream]"]),
-            ActionDescription("save", "設定を保存して閉じる"),
-            ActionDescription("close", "設定を閉じる (保存しない)"),
-        ] + prefixed("tv.", TVSetupViewModel.introspectionActions) + prefixed("server.", ServerSetupViewModel.introspectionActions)
-    }
-
-    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        if name.hasPrefix("tv.") { return .tv(try tvSetupViewModel.introspectionAction(String(name.dropFirst(3)), arguments)) }
-        if name.hasPrefix("server.") { return .server(try serverSetupViewModel.introspectionAction(String(name.dropFirst(7)), arguments)) }
-        switch name {
-        case "setAppearance":
-            guard let appearance = AppAppearance(rawValue: try arguments.string("appearance")) else {
-                throw IntrospectionError.invalidArgument("appearance")
-            }
-            return .setAppearance(appearance)
-        case "openPage":
-            guard let page = SettingsPage(rawValue: try arguments.string("page")) else { throw IntrospectionError.invalidArgument("page") }
-            return .openPage(page)
-        case "back": return .back
-        case "setPath":
-            guard case .array(let pages) = arguments["path"] ?? .array([]) else { throw IntrospectionError.invalidArgument("path") }
-            return .setPath(
-                try pages.map { page in
-                    guard case .string(let name) = page, let page = SettingsPage(rawValue: name) else {
-                        throw IntrospectionError.invalidArgument("path")
-                    }
-                    return page
-                })
-        case "save": return .save
-        case "close": return .close
-        default: throw IntrospectionError.unknownAction(name)
-        }
+    public var introspectionTable: [IntrospectionAction<Action>] {
+        [
+            IntrospectionAction("setAppearance", "外観を保存して切り替える", ActionParameter<AppAppearance>.choice("appearance")) {
+                .setAppearance($0)
+            },
+            IntrospectionAction("openPage", "設定の中の画面を開く", ActionParameter<SettingsPage>.choice("page")) { .openPage($0) },
+            IntrospectionAction("back", "設定の中で 1 つ戻る", .back),
+            IntrospectionAction(
+                "setPath", "設定の中の画面の並びをまとめて変える (iOS で戻るスワイプをしたときと同じ)",
+                .array("path", "[\(SettingsPage.allCases.map(\.rawValue).joined(separator: " | "))]")
+            ) { pages in
+                .setPath(
+                    try pages.map { page in
+                        guard case .string(let name) = page, let page = SettingsPage(rawValue: name) else {
+                            throw IntrospectionError.invalidArgument("path")
+                        }
+                        return page
+                    })
+            },
+            IntrospectionAction("save", "設定を保存して閉じる", .save),
+            IntrospectionAction("close", "設定を閉じる (保存しない)", .close),
+        ]
+            + tvSetupViewModel.introspectionTable.map { $0.prefixed("tv.") { .tv($0) } }
+            + serverSetupViewModel.introspectionTable.map { $0.prefixed("server.") { .server($0) } }
     }
 }

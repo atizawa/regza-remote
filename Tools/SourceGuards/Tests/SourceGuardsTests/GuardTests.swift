@@ -145,3 +145,102 @@ private func record(_ findings: [Finding], _ message: String) {
         #expect(Guards.borrowedUseCases(in: file).map(\.line) == [10, 12, 13])
     }
 }
+
+/// 約束事 (CLI と振る舞いのテストの操作) に漏れがないこと。
+/// 画面の Action (Presentation/<モジュール>/<画面>/Action/) のどの case も、操作の表 (introspectionTable) で作られていること
+/// (アプリの画面から送れる操作は、どれも約束事からも送れる)
+@Suite struct ContractCoverageTests {
+    @Test func everyActionCaseCanBeSentFromTheContract() throws {
+        let files = try Repository.files(under: "Packages/RegzaCore/Sources/Presentation")
+        let types = Guards.actionTypes(in: files)
+        let tables = Guards.tables(in: files)
+        #expect(types.count > 10, "Action の型が見つかりません")
+        for type in types {
+            #expect(!type.cases.isEmpty, "\(type.name) に case が見つかりません")
+            guard let names = tables[type.name] else {
+                Issue.record("\(type.path) の \(type.name) を作る操作の表 (introspectionTable) が見つかりません")
+                continue
+            }
+            let missing = type.cases.filter { !names.contains($0) }
+            #expect(missing.isEmpty, "\(type.name) の \(missing.joined(separator: "・")) を約束事から送れません。操作の表に足してください")
+        }
+    }
+
+    /// 1 つの表の中で、操作の名前が重ならない (重なると、後ろの操作を送れない)
+    @Test func actionNamesAreUniqueInEachTable() throws {
+        let files = try Repository.files(under: "Packages/RegzaCore/Sources/Presentation")
+        record(files.flatMap(Guards.duplicateActionNames), "の操作の名前が、同じ表の中のほかの操作と重なっています")
+    }
+
+    @Test func readsActionTypesAndTables() {
+        let action = SourceFile(
+            path: "Feature/Screen/Action/ScreenAction.swift",
+            text: """
+                /// 画面からの操作
+                public enum ScreenAction: Sendable {
+                    case load
+                    case select(String), close
+                }
+                """)
+        let viewModel = SourceFile(
+            path: "Feature/Screen/ScreenViewModel.swift",
+            text: """
+                public final class ScreenViewModel {
+                    public typealias Action = ScreenAction
+                }
+                extension ScreenViewModel: IntrospectableActions {
+                    public var introspectionTable: [IntrospectionAction<Action>] {
+                        [
+                            IntrospectionAction("load", "読む", .load),
+                            IntrospectionAction("select", "選ぶ", .string("id", "id")) { id in
+                                guard ids.contains(where: { $0 == id }) else { throw IntrospectionError.invalidArgument("id") }
+                                return .select(.close(id))
+                            },
+                            IntrospectionAction("again", "名前を付けた処理で作る", .string("id", "id"), make: { .select($0) }),
+                            IntrospectionAction("load", "名前が重なる", .load),
+                            IntrospectionAction("pick", "条件で選ぶ", .bool("on", "x")) { $0 ? .open : .shut },
+                            IntrospectionAction("pickIf", "if の式で選ぶ", .bool("on", "x")) { on in if on { .first } else { .second(1) } },
+                        ]
+                    }
+                }
+                """)
+        #expect(
+            Guards.actionTypes(in: [action, viewModel]) == [
+                .init(name: "ScreenAction", cases: ["load", "select", "close"], path: action.path)
+            ])
+        let names = Guards.tables(in: [action, viewModel])["ScreenAction"] ?? []
+        // 作る case だけを数える (引数の作り方や、case の中の値の名前は数えない)
+        #expect(names == ["load", "select", "select", "load", "open", "shut", "first", "second"])
+        #expect(Guards.duplicateActionNames(in: viewModel).map(\.line) == [13])
+    }
+
+    /// 1 つの操作の中で、引数の名前が重ならない。表の中で名前を付けた引数も、付けた名前から探す
+    @Test func findsDuplicateParameterNames() throws {
+        let file = source(
+            """
+            final class Screen {
+                public typealias Action = ScreenAction
+                struct Inner { typealias Action = OtherAction }
+            }
+            extension Screen: IntrospectableActions {
+                public var introspectionTable: [IntrospectionAction<Action>] {
+                    let id = ActionParameter<String>.string("id", "id")
+                    return [
+                        IntrospectionAction("a", "重ならない", id, .int("count", "数")) { .a($0, $1) },
+                        IntrospectionAction("b", "重なる", id, ActionParameter<String>.string("id", "別").optional) { .b($0, $1) },
+                        IntrospectionAction("c", "重なる", .bool("on", "x"), .bool("on", "y"), make: { .c($0, $1) }),
+                    ]
+                }
+            }
+            """)
+        #expect(Guards.duplicateParameterNames(in: file).map(\.line) == [10, 11])
+        // 表の型は、一番外の型の typealias Action で決める (入れ子の型のものは使わない)
+        #expect(Guards.tables(in: [file]).keys.sorted() == ["ScreenAction"])
+    }
+
+    /// 1 つの操作の中で、引数の名前が重ならない (重なると、一覧に引数が 1 つしか出ず、同じ値を 2 通りに読む)
+    @Test func parameterNamesAreUniqueInEachAction() throws {
+        let files = try Repository.files(under: "Packages/RegzaCore/Sources/Presentation")
+        record(files.flatMap(Guards.duplicateParameterNames), "の引数の名前が重なっています")
+    }
+}

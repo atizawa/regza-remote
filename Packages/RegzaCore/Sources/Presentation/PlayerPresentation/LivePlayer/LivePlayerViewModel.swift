@@ -141,29 +141,18 @@ extension LivePlayerViewModel: IntrospectableActions {
     /// 配信の準備中も忙しいとする (CLI の do で、再生できるか失敗するまで待てるように)
     public var isBusy: Bool { work.isBusy || (session != nil && phase == .preparing) }
 
-    public var introspectionActions: [ActionDescription] {
+    public var introspectionTable: [IntrospectionAction<Action>] {
         [
-            ActionDescription("appear", "画面を開いた。局名と番組名を出すため、チャンネルと番組表を読む"),
-            ActionDescription("start", "配信を頼む (準備できたら再生する URL が出る)"),
-            ActionDescription("switchChannel", "局を切り替える", parameters: ["channel": "channels の局の code"]),
-            ActionDescription("retryAfterStoppingStalled", "準備できないまま残っている配信を止めて、もう一度頼む"),
-            ActionDescription("end", "見終わった。配信を止めてチューナーを空ける (画面は閉じない。閉じるのは app の closePlayer)"),
+            IntrospectionAction("appear", "画面を開いた。局名と番組名を出すため、チャンネルと番組表を読む", .appear),
+            IntrospectionAction("start", "配信を頼む (準備できたら再生する URL が出る)", .start),
+            IntrospectionAction("switchChannel", "局を切り替える", .string("channel", "channels の局の code")) { code in
+                guard self.state.channels.contains(where: { $0.code == code }) else {
+                    throw IntrospectionError.unavailable("チャンネル \(code) はライブ視聴で見られません")
+                }
+                return .switchChannel(code)
+            },
+            IntrospectionAction("retryAfterStoppingStalled", "準備できないまま残っている配信を止めて、もう一度頼む", .retryAfterStoppingStalled),
+            IntrospectionAction("end", "見終わった。配信を止めてチューナーを空ける (画面は閉じない。閉じるのは app の closePlayer)", .end),
         ]
-    }
-
-    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        switch name {
-        case "appear": return .appear
-        case "start": return .start
-        case "switchChannel":
-            let code = try arguments.string("channel")
-            guard state.channels.contains(where: { $0.code == code }) else {
-                throw IntrospectionError.unavailable("チャンネル \(code) はライブ視聴で見られません")
-            }
-            return .switchChannel(code)
-        case "retryAfterStoppingStalled": return .retryAfterStoppingStalled
-        case "end": return .end
-        default: throw IntrospectionError.unknownAction(name)
-        }
     }
 }

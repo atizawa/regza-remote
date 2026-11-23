@@ -66,15 +66,10 @@ extension ProgramListViewModel: IntrospectableActions {
     public var introspectionName: String { "programList" }
     public var isBusy: Bool { work.isBusy }
 
-    public var introspectionActions: [ActionDescription] {
-        [ActionDescription("appear", "画面を開いたときと同じく読み込む"), ActionDescription("reload", "番組を読み直す")]
-    }
-
-    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        switch name {
-        case "appear": return .appear
-        case "reload": return .reload
-        default: throw IntrospectionError.unknownAction(name)
-        }
+    public var introspectionTable: [IntrospectionAction<Action>] {
+        [
+            IntrospectionAction("appear", "画面を開いたときと同じく読み込む", .appear),
+            IntrospectionAction("reload", "番組を読み直す", .reload),
+        ]
     }
 }

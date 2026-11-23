@@ -168,24 +168,15 @@ extension GuideSearchViewModel: IntrospectableActions {
 
     public var isBusy: Bool { isIndexing }
 
-    public var introspectionActions: [ActionDescription] {
+    public var introspectionTable: [IntrospectionAction<Action>] {
         [
-            ActionDescription("setText", "探す言葉を入れる (「明日の夜のドラマ」など)", parameters: ["text": "探す言葉"]),
-            ActionDescription("removeCondition", "読み取った条件を外す", parameters: ["index": "conditions の何番目か (0 から)"]),
-            ActionDescription("searchLiterally", "条件を読み取らず、打った言葉そのままで探す"),
+            IntrospectionAction("setText", "探す言葉を入れる (「明日の夜のドラマ」など)", .string("text", "探す言葉")) { .setText($0) },
+            IntrospectionAction("removeCondition", "読み取った条件を外す", .int("index", "conditions の何番目か (0 から)")) { index in
+                let conditions = self.state.conditions
+                guard conditions.indices.contains(index) else { throw IntrospectionError.invalidArgument("index") }
+                return .removeCondition(conditions[index].condition)
+            },
+            IntrospectionAction("searchLiterally", "条件を読み取らず、打った言葉そのままで探す", .searchLiterally),
         ]
-    }
-
-    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        switch name {
-        case "setText": return .setText(try arguments.string("text"))
-        case "removeCondition":
-            let index = try arguments.int("index")
-            let conditions = state.conditions
-            guard conditions.indices.contains(index) else { throw IntrospectionError.invalidArgument("index") }
-            return .removeCondition(conditions[index].condition)
-        case "searchLiterally": return .searchLiterally
-        default: throw IntrospectionError.unknownAction(name)
-        }
     }
 }

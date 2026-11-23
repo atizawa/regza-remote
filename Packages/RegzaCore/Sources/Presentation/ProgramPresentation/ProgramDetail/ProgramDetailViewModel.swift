@@ -137,32 +137,24 @@ extension ProgramDetailViewModel: IntrospectableActions {
     public var introspectionName: String { "programDetail" }
     public var isBusy: Bool { work.isBusy }
 
-    public var introspectionActions: [ActionDescription] {
+    public var introspectionTable: [IntrospectionAction<Action>] {
         [
-            ActionDescription("appear", "画面を開いたときと同じく読み込む"),
-            ActionDescription("reserve", "録画予約する", parameters: ["series": "true なら連ドラ予約"]),
-            ActionDescription("cancelReservation", "予約を取り消す"),
-            ActionDescription("tune", "この局に切り替える", parameters: ["startOver": "true なら番組を最初から再生する"]),
+            IntrospectionAction("appear", "画面を開いたときと同じく読み込む", .appear),
+            IntrospectionAction("reserve", "録画予約する", .bool("series", "true なら連ドラ予約")) { series in
+                guard self.state.canReserve else { throw IntrospectionError.unavailable("終わった番組は予約できません") }
+                return .reserve(series: series)
+            },
+            IntrospectionAction("cancelReservation", "予約を取り消す") {
+                guard self.state.isReserved else { throw IntrospectionError.unavailable("この番組は予約していません") }
+                return .cancelReservation
+            },
+            IntrospectionAction("tune", "この局に切り替える", .bool("startOver", "true なら番組を最初から再生する")) { startOver in
+                let state = self.state
+                guard startOver ? state.canStartOver : state.canTune else {
+                    throw IntrospectionError.unavailable(startOver ? "この番組は最初から見られません" : "放送中の番組ではありません")
+                }
+                return .tune(startOver: startOver)
+            },
         ]
-    }
-
-    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        let state = state
-        switch name {
-        case "appear": return .appear
-        case "reserve":
-            guard state.canReserve else { throw IntrospectionError.unavailable("終わった番組は予約できません") }
-            return .reserve(series: try arguments.bool("series"))
-        case "cancelReservation":
-            guard state.isReserved else { throw IntrospectionError.unavailable("この番組は予約していません") }
-            return .cancelReservation
-        case "tune":
-            let startOver = try arguments.bool("startOver")
-            guard startOver ? state.canStartOver : state.canTune else {
-                throw IntrospectionError.unavailable(startOver ? "この番組は最初から見られません" : "放送中の番組ではありません")
-            }
-            return .tune(startOver: startOver)
-        default: throw IntrospectionError.unknownAction(name)
-        }
     }
 }

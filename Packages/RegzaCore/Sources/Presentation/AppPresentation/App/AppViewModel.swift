@@ -281,59 +281,39 @@ extension AppViewModel: IntrospectableActions {
         return children
     }
 
-    public var introspectionActions: [ActionDescription] {
-        [
-            ActionDescription("selectTab", "タブを選ぶ", parameters: ["tab": Tab.allCases.map(\.rawValue).joined(separator: " | ")]),
-            ActionDescription("openPrograms", "いまのタブで 1 チャンネルの番組表を開く", parameters: ["channel": "チャンネルの code"]),
-            ActionDescription("openProgram", "いまのタブで番組の詳細を開く", parameters: ["channel": "チャンネルの code", "program": "番組の id"]),
-            ActionDescription("openSearch", "いまのタブで番組表の検索を開く"),
-            ActionDescription("back", "いまのタブで 1 つ戻る"),
-            ActionDescription(
-                "setPath", "タブの path をまとめて変える (iOS で戻るスワイプをしたときと同じ)",
-                parameters: ["tab": Tab.allCases.map(\.rawValue).joined(separator: " | "), "path": "ls の paths と同じ形の画面の並び"]
-            ),
-            ActionDescription("showSettings", "設定を開く"),
-            ActionDescription("closeSettings", "設定を閉じる (保存しない)"),
-            ActionDescription("showNowPlaying", "いま映っているものの詳細を開く"),
-            ActionDescription("closeNowPlaying", "いま映っているものの詳細を閉じる"),
-            ActionDescription("play", "アプリで見る (ライブ視聴)", parameters: ["channel": "チャンネルの code"]),
-            ActionDescription("closePlayer", "ライブ視聴を閉じる"),
-            ActionDescription("prepareRoutes", "戻る道の画面に要るもの (チャンネルと番組表) を読み込む"),
+    public var introspectionTable: [IntrospectionAction<Action>] {
+        let channel = ActionParameter<String>.string("channel", "チャンネルの code")
+        let tab = ActionParameter<Tab>.choice("tab")
+        return [
+            IntrospectionAction("selectTab", "タブを選ぶ", tab) { .selectTab($0) },
+            IntrospectionAction("openPrograms", "いまのタブで 1 チャンネルの番組表を開く", channel) {
+                .push(.channelPrograms(channelCode: try self.channel($0).code))
+            },
+            IntrospectionAction("openProgram", "いまのタブで番組の詳細を開く", channel, .int("program", "番組の id")) { code, id in
+                let channel = try self.channel(code)
+                guard self.guideUseCase.program(id: id, channelCode: channel.code) != nil else {
+                    throw IntrospectionError.unavailable("番組 \(id) は番組表にありません")
+                }
+                return .push(.programDetail(programID: id, channelCode: channel.code))
+            },
+            IntrospectionAction("openSearch", "いまのタブで番組表の検索を開く", .push(.search)),
+            IntrospectionAction("back", "いまのタブで 1 つ戻る", .pop),
+            IntrospectionAction(
+                "setPath", "タブの path をまとめて変える (iOS で戻るスワイプをしたときと同じ)", tab,
+                .array("path", "ls の paths と同じ形の画面の並び")
+            ) { tab, routes in .setPath(tab, try routes.map(Self.route)) },
+            IntrospectionAction("showSettings", "設定を開く", .showSettings),
+            IntrospectionAction("closeSettings", "設定を閉じる (保存しない)", .closeSettings),
+            IntrospectionAction("showNowPlaying", "いま映っているものの詳細を開く", .showNowPlaying),
+            IntrospectionAction("closeNowPlaying", "いま映っているものの詳細を閉じる", .closeNowPlaying),
+            IntrospectionAction("play", "アプリで見る (ライブ視聴)", channel) { code in
+                let channel = try self.channel(code)
+                guard self.streamUseCase.canStream else { throw IntrospectionError.unavailable("ライブ視聴が設定されていません") }
+                return .play(channelCode: channel.code)
+            },
+            IntrospectionAction("closePlayer", "ライブ視聴を閉じる", .closePlayer),
+            IntrospectionAction("prepareRoutes", "戻る道の画面に要るもの (チャンネルと番組表) を読み込む", .prepareRoutes),
         ]
-    }
-
-    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        switch name {
-        case "selectTab":
-            guard let tab = Tab(rawValue: try arguments.string("tab")) else { throw IntrospectionError.invalidArgument("tab") }
-            return .selectTab(tab)
-        case "openPrograms":
-            return .push(.channelPrograms(channelCode: try channel(arguments).code))
-        case "openProgram":
-            let channel = try channel(arguments)
-            let id = try arguments.int("program")
-            guard guideUseCase.program(id: id, channelCode: channel.code) != nil else {
-                throw IntrospectionError.unavailable("番組 \(id) は番組表にありません")
-            }
-            return .push(.programDetail(programID: id, channelCode: channel.code))
-        case "openSearch": return .push(.search)
-        case "back": return .pop
-        case "setPath":
-            guard let tab = Tab(rawValue: try arguments.string("tab")) else { throw IntrospectionError.invalidArgument("tab") }
-            guard case .array(let routes) = arguments["path"] ?? .array([]) else { throw IntrospectionError.invalidArgument("path") }
-            return .setPath(tab, try routes.map(Self.route))
-        case "showSettings": return .showSettings
-        case "closeSettings": return .closeSettings
-        case "showNowPlaying": return .showNowPlaying
-        case "closeNowPlaying": return .closeNowPlaying
-        case "play":
-            let channel = try channel(arguments)
-            guard streamUseCase.canStream else { throw IntrospectionError.unavailable("ライブ視聴が設定されていません") }
-            return .play(channelCode: channel.code)
-        case "closePlayer": return .closePlayer
-        case "prepareRoutes": return .prepareRoutes
-        default: throw IntrospectionError.unknownAction(name)
-        }
     }
 
     /// ls の paths と同じ形の画面 ({"channelPrograms": {"channelCode": …}} や "search")
@@ -352,9 +332,8 @@ extension AppViewModel: IntrospectableActions {
         throw IntrospectionError.invalidArgument("path")
     }
 
-    /// 引数 channel の code のチャンネル
-    private func channel(_ arguments: [String: JSONValue]) throws -> ChannelItem {
-        let code = try arguments.string("channel")
+    /// code のチャンネル
+    private func channel(_ code: String) throws -> ChannelItem {
         guard let channel = channelUseCase.channel(code: code) else {
             throw IntrospectionError.unavailable("チャンネル \(code) はテレビに登録されていません")
         }

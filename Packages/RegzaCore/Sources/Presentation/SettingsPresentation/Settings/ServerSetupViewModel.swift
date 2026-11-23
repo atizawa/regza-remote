@@ -137,33 +137,18 @@ public final class ServerSetupViewModel {
 extension ServerSetupViewModel {
     var isBusy: Bool { work.isBusy }
 
-    static var introspectionActions: [ActionDescription] {
-        let server = ServerSetupServer.allCases.map(\.rawValue).joined(separator: " | ")
+    /// 設定の操作の表に入れる、この部品の操作 (名前の前に server. を付けて見せる)
+    var introspectionTable: [IntrospectionAction<ServerSetupAction>] {
+        let server = ActionParameter<Server>.choice("server")
         return [
-            ActionDescription("setHost", "アドレスを入れる", parameters: ["server": server, "host": "192.0.2.2 か 192.0.2.2:40772"]),
-            ActionDescription("setAddress", "アドレスの欄を変える (ポートはそのまま)", parameters: ["server": server, "address": "192.0.2.2"]),
-            ActionDescription("setPort", "ポートの欄を変える (空なら標準のポート)", parameters: ["server": server, "port": "40772"]),
-            ActionDescription("scan", "同じネットワークで探す", parameters: ["server": server]),
-            ActionDescription("suggestStreamHost", "Mirakurun と同じサーバーの EPGStation を探す"),
-            ActionDescription("unlink", "連携を解除する (番組表を外すとライブ視聴も外れる)", parameters: ["server": server]),
+            IntrospectionAction("setHost", "アドレスを入れる", server, .string("host", "192.0.2.2 か 192.0.2.2:40772")) { .setHost($0, $1) },
+            IntrospectionAction("setAddress", "アドレスの欄を変える (ポートはそのまま)", server, .string("address", "192.0.2.2")) {
+                .setAddress($0, $1)
+            },
+            IntrospectionAction("setPort", "ポートの欄を変える (空なら標準のポート)", server, .string("port", "40772")) { .setPort($0, $1) },
+            IntrospectionAction("scan", "同じネットワークで探す", server) { .scan($0) },
+            IntrospectionAction("suggestStreamHost", "Mirakurun と同じサーバーの EPGStation を探す", .suggestStreamHost),
+            IntrospectionAction("unlink", "連携を解除する (番組表を外すとライブ視聴も外れる)", server) { .unlink($0) },
         ]
-    }
-
-    func introspectionAction(_ name: String, _ arguments: [String: JSONValue]) throws -> ServerSetupAction {
-        func server() throws -> ServerSetupServer {
-            guard let server = ServerSetupServer(rawValue: try arguments.string("server")) else {
-                throw IntrospectionError.invalidArgument("server")
-            }
-            return server
-        }
-        switch name {
-        case "setHost": return .setHost(try server(), try arguments.string("host"))
-        case "setAddress": return .setAddress(try server(), try arguments.string("address"))
-        case "setPort": return .setPort(try server(), try arguments.string("port"))
-        case "scan": return .scan(try server())
-        case "suggestStreamHost": return .suggestStreamHost
-        case "unlink": return .unlink(try server())
-        default: throw IntrospectionError.unknownAction(name)
-        }
     }
 }

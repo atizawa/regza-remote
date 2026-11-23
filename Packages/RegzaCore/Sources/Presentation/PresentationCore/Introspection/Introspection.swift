@@ -37,14 +37,17 @@ extension Introspectable {
     }
 }
 
-/// 名前と引数の操作を、画面の Action の型に置き換えられる ViewModel。置き換えは 1 か所 (action(_:_:)) に書き、
-/// CLI (perform) と Android の振る舞いのテストの相手 (置き換えた Action を Android と同じ道で送る) の両方で使う
+/// 名前と引数の操作を、画面の Action の型に置き換えられる ViewModel。置き換えは操作の表 (introspectionTable) の 1 か所に書き、
+/// CLI (perform) と Android の振る舞いのテストの相手 (置き換えた Action を Android と同じ道で送る) の両方で使う。
+/// 操作の一覧 (introspectionActions) と置き換え (action(_:_:)) は、表から作る
 @MainActor
 public protocol IntrospectableActions: Introspectable {
     associatedtype State
     associatedtype Action
     var state: State { get }
-    /// 名前と引数の操作を Action にする (その状態ではできない操作なら投げる)
+    /// 受け付ける操作の表。操作ごとに、名前・説明・引数と、引数の値から Action を作る処理を 1 つにまとめる
+    var introspectionTable: [IntrospectionAction<Action>] { get }
+    /// 名前と引数の操作を Action にする (その状態ではできない操作なら投げる)。既定では表から引く
     func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action
     func send(_ action: Action)
     /// CLI と振る舞いのテストに見せる state の JSON。既定は state をそのまま JSON にする
@@ -61,6 +64,148 @@ extension IntrospectableActions {
 
     public func perform(_ action: String, _ arguments: [String: JSONValue]) throws {
         send(try self.action(action, arguments))
+    }
+
+    public var introspectionActions: [ActionDescription] { introspectionTable.map(\.description) }
+
+    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
+        guard let entry = introspectionTable.first(where: { $0.description.name == name }) else {
+            throw IntrospectionError.unknownAction(name)
+        }
+        return try entry.make(arguments)
+    }
+}
+
+/// 受け付ける操作 1 つ。名前・説明・引数と、引数の値から Action を作る処理を 1 か所に書く
+/// (一覧に見せる名前と引数が、受け付ける名前と読む引数から作られ、ずれようがないように)
+@MainActor
+public struct IntrospectionAction<Action> {
+    /// 一覧に見せる説明 (引数の名前と説明は、引数から作る)
+    public let description: ActionDescription
+    let make: @MainActor ([String: JSONValue]) throws -> Action
+
+    /// 引数を読み、その値で Action を作る操作 (その状態ではできない操作なら、make が投げる)
+    public init<each Value>(
+        _ name: String, _ summary: String, _ parameters: repeat ActionParameter<each Value>,
+        make: @escaping @MainActor (repeat each Value) throws -> Action
+    ) {
+        var descriptions: [String: String] = [:]
+        // 同じ名前の引数は書かない (ソースの見張り SourceGuards が確かめる)
+        for parameter in repeat each parameters { descriptions[parameter.name] = parameter.summary }
+        description = ActionDescription(name, summary, parameters: descriptions)
+        self.make = { arguments in try make(repeat try (each parameters).read(in: arguments)) }
+    }
+
+    /// 引数のない、いつでも送れる操作
+    public init(_ name: String, _ summary: String, _ action: Action) {
+        description = ActionDescription(name, summary)
+        make = { _ in action }
+    }
+
+    private init(description: ActionDescription, make: @escaping @MainActor ([String: JSONValue]) throws -> Action) {
+        self.description = description
+        self.make = make
+    }
+
+    /// 部品の操作を、親の操作にする (名前に接頭辞を付け、Action を親の Action の case に入れる)
+    public func prefixed<Parent>(_ prefix: String, _ transform: @escaping (Action) -> Parent) -> IntrospectionAction<Parent> {
+        let make = make
+        return IntrospectionAction<Parent>(
+            description: ActionDescription(prefix + description.name, description.summary, parameters: description.parameters),
+            make: { transform(try make($0)) })
+    }
+}
+
+/// 操作の引数 1 つ。名前・説明と、JSON の値の読み方を 1 か所に書く。
+/// 読み方には宣言した名前の値だけを渡すので、一覧に見せる名前と読む名前はずれない
+public struct ActionParameter<Value> {
+    public let name: String
+    public let summary: String
+    /// 名前の値 (省かれたら nil) を読む
+    let read: (JSONValue?) throws(IntrospectionError) -> Value
+
+    /// - Parameter read: 名前の値 (省かれたら nil) を読む。読めなければ、その名前で invalidArgument や missingArgument を投げる
+    public init(_ name: String, _ summary: String, read: @escaping (JSONValue?) throws(IntrospectionError) -> Value) {
+        self.name = name
+        self.summary = summary
+        self.read = read
+    }
+
+    /// 引数の中から、宣言した名前の値を読む
+    func read(in arguments: [String: JSONValue]) throws(IntrospectionError) -> Value {
+        try read(arguments[name])
+    }
+
+    /// 省いてよい引数 (省くか null なら nil)
+    public var optional: ActionParameter<Value?> {
+        let read = read
+        return ActionParameter<Value?>(name, summary) { value throws(IntrospectionError) in
+            value == nil || value == .null ? nil : try read(value)
+        }
+    }
+}
+
+extension ActionParameter where Value == String {
+    /// 文字列の引数
+    public static func string(_ name: String, _ summary: String) -> Self {
+        Self(name, summary) { value throws(IntrospectionError) in try value.string(name) }
+    }
+}
+
+extension ActionParameter where Value == Int {
+    /// 数の引数
+    public static func int(_ name: String, _ summary: String) -> Self {
+        Self(name, summary) { value throws(IntrospectionError) in try value.int(name) }
+    }
+}
+
+extension ActionParameter where Value == Bool {
+    /// 真偽の引数 (省くと false)
+    public static func bool(_ name: String, _ summary: String) -> Self {
+        Self(name, summary) { value throws(IntrospectionError) in try value.bool(name) }
+    }
+}
+
+extension ActionParameter where Value == [JSONValue] {
+    /// JSON の配列のままの引数 (省くと空。配列でなければ受け付けない。中の読み方は操作が決める)
+    public static func array(_ name: String, _ summary: String) -> Self {
+        Self(name, summary) { value throws(IntrospectionError) in
+            guard let value else { return [] }
+            guard case .array(let values) = value else { throw .invalidArgument(name) }
+            return values
+        }
+    }
+}
+
+extension ActionParameter {
+    /// 決まった値から選ぶ引数。説明は選べる値の一覧 (label で文字にしたもの)
+    public static func choice(_ name: String, from values: [Value], label: @escaping (Value) -> String) -> Self {
+        Self(name, values.map(label).joined(separator: " | ")) { value throws(IntrospectionError) in
+            let text = try value.string(name)
+            guard let value = values.first(where: { label($0) == text }) else { throw .invalidArgument(name) }
+            return value
+        }
+    }
+}
+
+extension ActionParameter where Value: RawRepresentable, Value.RawValue == String {
+    /// 決まった値から raw value で選ぶ引数
+    public static func choice(_ name: String, from values: [Value]) -> Self {
+        choice(name, from: values, label: \.rawValue)
+    }
+}
+
+extension ActionParameter where Value: CaseIterable {
+    /// どの case からも選べる引数
+    public static func choice(_ name: String, label: @escaping (Value) -> String) -> Self {
+        choice(name, from: Array(Value.allCases), label: label)
+    }
+}
+
+extension ActionParameter where Value: CaseIterable & RawRepresentable, Value.RawValue == String {
+    /// どの case からも raw value で選べる引数
+    public static func choice(_ name: String) -> Self {
+        choice(name, from: Array(Value.allCases))
     }
 }
 
@@ -209,15 +354,25 @@ public struct Introspector {
 
 extension [String: JSONValue] {
     /// 文字列の引数
-    public func string(_ name: String) throws(IntrospectionError) -> String {
-        guard let value = self[name] else { throw .missingArgument(name) }
+    public func string(_ name: String) throws(IntrospectionError) -> String { try self[name].string(name) }
+
+    /// 数の引数
+    public func int(_ name: String) throws(IntrospectionError) -> Int { try self[name].int(name) }
+
+    /// 真偽の引数 (なければ false)
+    public func bool(_ name: String) throws(IntrospectionError) -> Bool { try self[name].bool(name) }
+}
+
+/// 引数 1 つの値 (省かれたら nil) の読み方。name は、読めなかったときに知らせる引数の名前
+extension JSONValue? {
+    func string(_ name: String) throws(IntrospectionError) -> String {
+        guard let value = self else { throw .missingArgument(name) }
         guard case .string(let text) = value else { throw .invalidArgument(name) }
         return text
     }
 
-    /// 数の引数
-    public func int(_ name: String) throws(IntrospectionError) -> Int {
-        guard let value = self[name] else { throw .missingArgument(name) }
+    func int(_ name: String) throws(IntrospectionError) -> Int {
+        guard let value = self else { throw .missingArgument(name) }
         switch value {
         case .number(let number) where number == number.rounded(): return Int(number)
         case .string(let text): if let number = Int(text) { return number }
@@ -226,9 +381,8 @@ extension [String: JSONValue] {
         throw .invalidArgument(name)
     }
 
-    /// 真偽の引数 (なければ false)
-    public func bool(_ name: String) throws(IntrospectionError) -> Bool {
-        switch self[name] {
+    func bool(_ name: String) throws(IntrospectionError) -> Bool {
+        switch self {
         case nil: return false
         case .bool(let flag): return flag
         default: throw .invalidArgument(name)

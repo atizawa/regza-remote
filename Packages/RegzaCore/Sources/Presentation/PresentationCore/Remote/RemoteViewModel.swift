@@ -256,44 +256,24 @@ extension RemoteViewModel: IntrospectableActions {
     public var introspectionName: String { "remote" }
     public var isBusy: Bool { work.isBusy }
 
-    public var introspectionActions: [ActionDescription] {
+    public var introspectionTable: [IntrospectionAction<Action>] {
         [
-            ActionDescription("press", "リモコンのボタンを押す", parameters: ["key": RegzaKey.allCases.map { "\($0)" }.joined(separator: " | ")]),
-            ActionDescription("seek", "録画の再生位置を移す", parameters: ["seconds": "秒"]),
-            ActionDescription(
-                "selectBand", "放送の種類を選ぶ (省くと選ばない)", parameters: ["band": BroadcastBand.allCases.map(\.rawValue).joined(separator: " | ")]),
-            ActionDescription("loadChannels", "チャンネル一覧を読む", parameters: ["force": "true なら読み直す"]),
-            ActionDescription("tune", "選局する", parameters: ["channel": "チャンネルの code"]),
-            ActionDescription("refresh", "いま映っているものを取り直す"),
-            ActionDescription("startPolling", "2 秒ごとに取り直す"),
-            ActionDescription("stopPolling", "取り直しをやめる"),
-            ActionDescription("lockScreenStartFailed", "ロック画面の表示を始められなかったことを出す"),
+            IntrospectionAction("press", "リモコンのボタンを押す", .choice("key", label: { "\($0)" })) { .press($0) },
+            IntrospectionAction("seek", "録画の再生位置を移す", .int("seconds", "秒")) { .seek($0) },
+            IntrospectionAction("selectBand", "放送の種類を選ぶ (省くと選ばない)", ActionParameter<BroadcastBand>.choice("band").optional) {
+                .selectBand($0)
+            },
+            IntrospectionAction("loadChannels", "チャンネル一覧を読む", .bool("force", "true なら読み直す")) { .loadChannels(force: $0) },
+            IntrospectionAction("tune", "選局する", .string("channel", "チャンネルの code")) { code in
+                guard self.channels.contains(where: { $0.code == code }) else {
+                    throw IntrospectionError.unavailable("チャンネル \(code) はテレビに登録されていません")
+                }
+                return .tune(code)
+            },
+            IntrospectionAction("refresh", "いま映っているものを取り直す", .refresh),
+            IntrospectionAction("startPolling", "2 秒ごとに取り直す", .startPolling),
+            IntrospectionAction("stopPolling", "取り直しをやめる", .stopPolling),
+            IntrospectionAction("lockScreenStartFailed", "ロック画面の表示を始められなかったことを出す", .lockScreenStartFailed),
         ]
-    }
-
-    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        switch name {
-        case "press":
-            let name = try arguments.string("key")
-            guard let key = RegzaKey.allCases.first(where: { "\($0)" == name }) else { throw IntrospectionError.invalidArgument("key") }
-            return .press(key)
-        case "seek": return .seek(try arguments.int("seconds"))
-        case "selectBand":
-            guard arguments["band"] != nil else { return .selectBand(nil) }
-            guard let band = BroadcastBand(rawValue: try arguments.string("band")) else { throw IntrospectionError.invalidArgument("band") }
-            return .selectBand(band)
-        case "loadChannels": return .loadChannels(force: try arguments.bool("force"))
-        case "tune":
-            let code = try arguments.string("channel")
-            guard channels.contains(where: { $0.code == code }) else {
-                throw IntrospectionError.unavailable("チャンネル \(code) はテレビに登録されていません")
-            }
-            return .tune(code)
-        case "refresh": return .refresh
-        case "startPolling": return .startPolling
-        case "stopPolling": return .stopPolling
-        case "lockScreenStartFailed": return .lockScreenStartFailed
-        default: throw IntrospectionError.unknownAction(name)
-        }
     }
 }

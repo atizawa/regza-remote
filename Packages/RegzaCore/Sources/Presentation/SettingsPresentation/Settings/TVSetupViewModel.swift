@@ -209,45 +209,31 @@ public final class TVSetupViewModel {
 extension TVSetupViewModel {
     var isBusy: Bool { work.isBusy }
 
-    static var introspectionActions: [ActionDescription] {
+    /// 設定の操作の表に入れる、この部品の操作 (名前の前に tv. を付けて見せる)
+    var introspectionTable: [IntrospectionAction<TVSetupAction>] {
         [
-            ActionDescription("appear", "テレビの登録の画面を開いた (未設定なら探し始める)"),
-            ActionDescription("setShowingManualEntry", "ユーザー名とパスワードの入力欄を開く・閉じる", parameters: ["isShowing": "true | false"]),
-            ActionDescription("setHost", "テレビの IP アドレスを入れる", parameters: ["host": "IP アドレス"]),
-            ActionDescription("setUser", "ユーザー名を入れる (PIN 登録に対応していない機種)", parameters: ["user": "ユーザー名"]),
-            ActionDescription("setPassword", "パスワードを入れる (PIN 登録に対応していない機種)", parameters: ["password": "パスワード"]),
-            ActionDescription("scan", "同じネットワークのテレビを探す"),
-            ActionDescription("select", "見つかったテレビを選ぶ (未登録なら PIN を表示させる)", parameters: ["host": "devices の host"]),
-            ActionDescription("startPairing", "テレビに PIN を表示させる"),
-            ActionDescription("setPIN", "テレビに表示された PIN を入れる", parameters: ["pin": "PIN"]),
-            ActionDescription("confirmPairing", "PIN で登録して保存する"),
-            ActionDescription("cancelPairing", "PIN の登録をやめる"),
-            ActionDescription("test", "入力した接続情報でつながるか試す"),
-            ActionDescription("close", "テレビの登録の画面を閉じた (PIN を入れずに閉じたら、テレビの PIN 表示を消す)"),
+            IntrospectionAction("appear", "テレビの登録の画面を開いた (未設定なら探し始める)", .appear),
+            IntrospectionAction("setShowingManualEntry", "ユーザー名とパスワードの入力欄を開く・閉じる", .bool("isShowing", "true | false")) {
+                .setShowingManualEntry($0)
+            },
+            IntrospectionAction("setHost", "テレビの IP アドレスを入れる", .string("host", "IP アドレス")) { .setHost($0) },
+            IntrospectionAction("setUser", "ユーザー名を入れる (PIN 登録に対応していない機種)", .string("user", "ユーザー名")) { .setUser($0) },
+            IntrospectionAction("setPassword", "パスワードを入れる (PIN 登録に対応していない機種)", .string("password", "パスワード")) {
+                .setPassword($0)
+            },
+            IntrospectionAction("scan", "同じネットワークのテレビを探す", .scan),
+            IntrospectionAction("select", "見つかったテレビを選ぶ (未登録なら PIN を表示させる)", .string("host", "devices の host")) { host in
+                guard self.devices.contains(where: { $0.host == host }) else {
+                    throw IntrospectionError.unavailable("テレビ \(host) は見つかっていません")
+                }
+                return .select(host)
+            },
+            IntrospectionAction("startPairing", "テレビに PIN を表示させる", .startPairing),
+            IntrospectionAction("setPIN", "テレビに表示された PIN を入れる", .string("pin", "PIN")) { .setPIN($0) },
+            IntrospectionAction("confirmPairing", "PIN で登録して保存する", .confirmPairing),
+            IntrospectionAction("cancelPairing", "PIN の登録をやめる", .cancelPairing),
+            IntrospectionAction("test", "入力した接続情報でつながるか試す", .test),
+            IntrospectionAction("close", "テレビの登録の画面を閉じた (PIN を入れずに閉じたら、テレビの PIN 表示を消す)", .close),
         ]
-    }
-
-    func introspectionAction(_ name: String, _ arguments: [String: JSONValue]) throws -> TVSetupAction {
-        switch name {
-        case "appear": return .appear
-        case "setShowingManualEntry": return .setShowingManualEntry(try arguments.bool("isShowing"))
-        case "setHost": return .setHost(try arguments.string("host"))
-        case "setUser": return .setUser(try arguments.string("user"))
-        case "setPassword": return .setPassword(try arguments.string("password"))
-        case "scan": return .scan
-        case "select":
-            let host = try arguments.string("host")
-            guard devices.contains(where: { $0.host == host }) else {
-                throw IntrospectionError.unavailable("テレビ \(host) は見つかっていません")
-            }
-            return .select(host)
-        case "startPairing": return .startPairing
-        case "setPIN": return .setPIN(try arguments.string("pin"))
-        case "confirmPairing": return .confirmPairing
-        case "cancelPairing": return .cancelPairing
-        case "test": return .test
-        case "close": return .close
-        default: throw IntrospectionError.unknownAction(name)
-        }
     }
 }

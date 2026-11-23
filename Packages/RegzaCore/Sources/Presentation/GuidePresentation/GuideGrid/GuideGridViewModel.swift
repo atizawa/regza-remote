@@ -137,24 +137,17 @@ extension GuideGridViewModel: IntrospectableActions {
         ])
     }
 
-    public var introspectionActions: [ActionDescription] {
+    public var introspectionTable: [IntrospectionAction<Action>] {
         [
-            ActionDescription("load", "番組表を読む"),
-            ActionDescription("selectDay", "日付を選ぶ (省くと今日)", parameters: ["day": "days の day (ISO 8601)"]),
+            IntrospectionAction("load", "番組表を読む", .load),
+            IntrospectionAction("selectDay", "日付を選ぶ (省くと今日)", ActionParameter<String>.string("day", "days の day (ISO 8601)").optional) {
+                text in
+                guard let text else { return .selectDay(nil) }
+                guard let day = self.state.days.compactMap(\.date).first(where: { $0.formatted(.iso8601) == text }) else {
+                    throw IntrospectionError.invalidArgument("day")
+                }
+                return .selectDay(day)
+            },
         ]
-    }
-
-    public func action(_ name: String, _ arguments: [String: JSONValue]) throws -> Action {
-        switch name {
-        case "load": return .load
-        case "selectDay":
-            guard arguments["day"] != nil else { return .selectDay(nil) }
-            let text = try arguments.string("day")
-            guard let day = state.days.compactMap(\.date).first(where: { $0.formatted(.iso8601) == text }) else {
-                throw IntrospectionError.invalidArgument("day")
-            }
-            return .selectDay(day)
-        default: throw IntrospectionError.unknownAction(name)
-        }
     }
 }
