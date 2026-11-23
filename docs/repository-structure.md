@@ -25,7 +25,8 @@ docs/                    このアプリによらない、設計と開発のド�
 ```
 Sources/
   RegzaSharedModels/     画面に出す UI の型（iOS と Android で共有）
-  RegzaDomain/           Data・Repository の約束・UseCase・SharedModel への変換
+  AppErrors/             どのアプリにも共通のエラー（文言を引く code・通信の失敗・API の問題の詳細）
+  RegzaDomain/           Data・Repository の約束・UseCase・SharedModel への変換・このアプリ固有の失敗
   RegzaTVAPI/ など       外部の API ごとの型とクライアント（ビルドのときに OpenAPI の定義から生成。設定は openapi-generator-config.yaml）
   RegzaInfrastructure/   API クライアントを使う Repository の実装・通信と保存の受け口・API の型から Data への変換
   Presentation/          ViewModel・State・Action（<モジュール>/<画面>/ に ViewModel・State/・Action/）
