@@ -96,6 +96,7 @@ CI だけで使うタスクは `select-ci-xcode`（共通の設定の Xcode を�
 | 単体のテスト | Repository・UseCase・ViewModel | `mise run test-swift-shared` |
 | 契約のテスト | 偽物のサーバーの返事を本物の API クライアントで読めること・API の定義のどの操作にも答えること | 同上（`FakeServersContractTests`） |
 | 構成の決まりのテスト | 依存の向き・画面の名前（iOS の部品と Android のフォルダ） | `mise run test-swift-apple`（`LayerTests`・`ScreenNamingTests`） |
+| ソースの見張り | 型やモジュールの依存では守れない決まり（今の時刻の読み方・エラーの文言・UseCase の持ち方・操作の表） | `mise run test-swift-shared`（`Tools/SourceGuards`） |
 | 振る舞いのテスト | 画面を描かずに、ViewModel の state と操作を iOS 側と Android 側で同じように確かめる | `mise run test-behavior` |
 | 画面のテスト | 設定の入力・画面の移り変わり・入力の復元・外観の切り替えを、実際の画面で | `mise run test-ui-ios`・`test-ui-android`（[UITests/README.md](../UITests/README.md)） |
 | 端末のテスト | Android の .so・JNI・Looper・通信・TLS・state の購読・復元・ウィジェット・通知 | `mise run test-android-runtime` |
@@ -187,7 +188,7 @@ ANDROID_SERIAL=emulator-5554 mise run test-android-runtime   # 端末が何台�
 - State/ と Action/ には 1 つのファイルに 1 つの型を置き、名前は画面の名前で始める（State の中で使う enum も State/ に置く）。ここに置いた型だけが Java のクラスになる
 - ViewModel のドメインを使う init やプロパティは `package` にする。State と Action の public なプロパティには型を書く（書いていなければ道具が止まる）
 - 部品に分けた ViewModel には `typealias Action` を書かない（書くと Android から直接送れてしまう）
-- `IntrospectableActions` にして `action(_:_:)` を書く。state を要約したり伏せたりするときは `introspectionJSON(of:)` に書く
+- `IntrospectableActions` にして、受け付ける操作の表 `introspectionTable` を書く（操作ごとに `IntrospectionAction(名前, 説明, 引数…) { 引数の値 in Action }`）。state を要約したり伏せたりするときは `introspectionJSON(of:)` に書く
 - 画面の復元に保存するものは `<画面>RestorationState` として機能に置く
 - テストを `Tests/RegzaCoreTests/RegzaPresentation/ViewModels/` に足す
 

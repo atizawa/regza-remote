@@ -14,7 +14,7 @@ Design/                  デザイントークン（色・余白の JSON。両 O
 Localization/            文言の生成ツール（定義元は iOS の String Catalog）
 BehaviorTests/           振る舞いのテスト（Bun・TypeScript。iOS 側と Android 側に同じテストを流す）
 UITests/                 画面のテスト（Maestro）と、そのための HTTP スタブ
-Tools/                   開発の道具（モックの生成・ktlint の独自の規則）
+Tools/                   開発の道具（モックの生成・ktlint の独自の規則・ソースを読む見張り）
 scripts/                 道具の版を確かめるスクリプト
 docs/                    このアプリによらない、設計と開発のドキュメント
 .github/workflows/       CI（mise のタスクを流す）
