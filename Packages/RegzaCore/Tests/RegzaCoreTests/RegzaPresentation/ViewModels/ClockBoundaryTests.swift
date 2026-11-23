@@ -58,17 +58,3 @@ import Testing
         #expect(!viewModel.state.canReserve)
     }
 }
-
-/// 共有の Swift は今の時刻を `Date()` で直接読まず、組み立てが渡す時計 (AppClock) から読む (時刻の境目をテストで確かめられるように)。
-/// 偽物のサーバーは場面を作るために今の時刻を使ってよい。待つ時間は ContinuousClock で測る
-@Suite struct ClockUsageGuardTests {
-    @Test func sharedSwiftReadsTimeOnlyFromAppClock() throws {
-        let lines = try SourceLine.read(under: "Packages/RegzaCore/Sources") {
-            !$0.hasPrefix("RegzaFakeServers/") && $0 != "RegzaDomain/Data/AppClock.swift"
-        }
-        #expect(!lines.isEmpty)
-        for line in lines where line.code.contains("Date()") {
-            Issue.record("\(line.location) が Date() を直接読んでいます。時計 (AppClock) から読んでください")
-        }
-    }
-}

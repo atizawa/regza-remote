@@ -101,12 +101,12 @@ dir = "{{ config_root }}/Design"
 run = ["bun install --frozen-lockfile", "bun test", "bun generate.ts --check"]
 
 [tasks.test-swift-shared]
-description = "Apple の環境がなくても流せる Swift のパッケージのテスト (共有の部分・Android の窓口・つなぎを作る道具)。Linux でも流す"
+description = "Apple の環境がなくても流せる Swift のパッケージのテスト (共有の部分・Android の窓口・つなぎを作る道具・ソースの見張り)。Linux でも流す"
 dir = "{{ config_root }}"
 shell = "bash -c"
 run = '''
 set -euo pipefail
-for package in Packages/RegzaCore Android/RegzaAndroidBridge Android/ScreenGlue; do
+for package in Packages/RegzaCore Android/RegzaAndroidBridge Android/ScreenGlue Tools/SourceGuards; do
   echo "== $package"
   (cd "$package" && swift test)
 done

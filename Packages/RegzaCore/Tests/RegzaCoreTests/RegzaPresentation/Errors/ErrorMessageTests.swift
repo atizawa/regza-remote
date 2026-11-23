@@ -176,22 +176,6 @@ import Testing
     }
 }
 
-/// 画面に出すエラーの文言は ErrorMessage だけが作る。`localizedDescription` を読んでよいのは ErrorMessage だけ
-/// (OS のエラーは、通信が種類 (ConnectionFailure) に分けて RegzaError にし、OS の文言は使わない)
-@Suite struct ErrorMessageUsageGuardTests {
-    @Test func onlyErrorMessageReadsLocalizedDescription() throws {
-        let shared = try SourceLine.read(under: "Packages/RegzaCore/Sources") {
-            !$0.hasPrefix("RegzaFakeServers/") && $0 != "Presentation/PresentationCore/Errors/ErrorMessage.swift"
-        }
-        let bridge = try SourceLine.read(under: "Android/RegzaAndroidBridge/Sources")
-        let iOS = try SourceLine.read(under: "iOS/RegzaKit/Sources")
-        #expect(!shared.isEmpty && !bridge.isEmpty && !iOS.isEmpty)
-        for line in shared + bridge + iOS where line.code.contains(".localizedDescription") {
-            Issue.record("\(line.location) がエラーの文言を直接読んでいます。ErrorMessage.text で文言にしてください")
-        }
-    }
-}
-
 /// 通信が返事を受け取れなかったときは、OS によらず同じ文言にする
 @Suite struct ConnectionFailureTests {
     @Test func everyKindHasAppWording() {
