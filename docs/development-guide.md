@@ -190,6 +190,9 @@ ANDROID_SERIAL=emulator-5554 mise run test-android-runtime   # 端末が何台�
 - 部品に分けた ViewModel には `typealias Action` を書かない（書くと Android から直接送れてしまう）
 - `IntrospectableActions` にして、受け付ける操作の表 `introspectionTable` を書く（操作ごとに `IntrospectionAction(名前, 説明, 引数…) { 引数の値 in Action }`）。state を要約したり伏せたりするときは `introspectionJSON(of:)` に書く
 - 画面の復元に保存するものは `<画面>RestorationState` として機能に置く
+- 続きを読む一覧は、State に「続きがあり、いま読み込める」（読み込み中は false）を、Action に「続きを読む」を置く。
+  画面は、一覧の末尾が見えたときに送る（iOS は末尾の行の `onAppear`、Android は `:ui:common` の `LoadMoreWhenEndVisible`）。
+  Compose の一覧は見えていない行を先に組み立てるので、Android は行の中で送らない（スクロールしていないのに続きを読みに行く）
 - テストを `Tests/RegzaCoreTests/RegzaPresentation/ViewModels/` に足す
 
 ### 2. アプリ全体から開けるようにする
